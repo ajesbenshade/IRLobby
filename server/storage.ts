@@ -27,7 +27,7 @@ import {
   type ChatRoom
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ne, sql, not, inArray } from "drizzle-orm";
+import { eq, and, desc, ne, sql, not, inArray, or, ilike } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -79,6 +79,7 @@ export interface IStorage {
   getUserFriends(userId: string): Promise<any[]>;
   getUserFriendRequests(userId: string): Promise<any[]>;
   areFriends(userId1: string, userId2: string): Promise<boolean>;
+  searchUsers(query: string, currentUserId: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -611,6 +612,54 @@ export class DatabaseStorage implements IStorage {
       ))
       .limit(1);
     return friendship.length > 0;
+  }
+
+  async searchUsers(query: string, currentUserId: string): Promise<any[]> {
+    const searchResults = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        rating: users.rating,
+      })
+      .from(users)
+      .where(and(
+        ne(users.id, currentUserId),
+        or(
+          ilike(users.firstName, `%${query}%`),
+          ilike(users.lastName, `%${query}%`),
+          ilike(users.email, `%${query}%`)
+        )
+      ))
+      .limit(20);
+
+    // Check friendship status for each user
+    const usersWithFriendshipStatus = await Promise.all(
+      searchResults.map(async (user) => {
+        const areFriends = await this.areFriends(currentUserId, user.id);
+        
+        // Check if there's a pending friend request
+        const pendingRequest = await db
+          .select()
+          .from(userFriends)
+          .where(and(
+            eq(userFriends.status, 'pending'),
+            sql`(${userFriends.requesterId} = ${currentUserId} AND ${userFriends.receiverId} = ${user.id}) OR (${userFriends.requesterId} = ${user.id} AND ${userFriends.receiverId} = ${currentUserId})`
+          ))
+          .limit(1);
+
+        return {
+          ...user,
+          isFriend: areFriends,
+          hasPendingRequest: pendingRequest.length > 0,
+          isRequestSentByMe: pendingRequest.length > 0 && pendingRequest[0].requesterId === currentUserId,
+        };
+      })
+    );
+
+    return usersWithFriendshipStatus;
   }
 }
 

@@ -47,11 +47,11 @@ export const users = pgTable("users", {
   pushNotifications: boolean("push_notifications").default(true),
   emailNotifications: boolean("email_notifications").default(true),
   // Enhanced profile fields for better evaluation
-  age: integer("age"),
+  birthDate: timestamp("birth_date"),
   occupation: varchar("occupation"),
   experienceLevel: varchar("experience_level"), // beginner, intermediate, advanced, expert
   activityPreferences: jsonb("activity_preferences").$type<string[]>().default([]),
-  profileGallery: jsonb("profile_gallery").$type<string[]>().default([]),
+  profileGallery: jsonb("profile_gallery").$type<string[]>().default([]), // Up to 12 additional photos
   socialLinks: jsonb("social_links").$type<{instagram?: string, twitter?: string, linkedin?: string}>().default({}),
   emergencyContact: jsonb("emergency_contact").$type<{name: string, phone: string, relationship: string}>(),
   languages: jsonb("languages").$type<string[]>().default([]),

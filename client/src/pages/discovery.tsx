@@ -8,7 +8,8 @@ import ActivityDetailsModal from "@/components/ActivityDetailsModal";
 import MatchSuccessModal from "@/components/MatchSuccessModal";
 import FilterModal from "@/components/FilterModal";
 import NotificationCenter from "@/components/NotificationCenter";
-import { Filter, MapPin, Bell, RefreshCw } from "lucide-react";
+import MapView from "@/components/MapView";
+import { Filter, MapPin, Bell, RefreshCw, Map } from "lucide-react";
 import type { Activity } from "@shared/schema";
 
 export default function Discovery() {
@@ -18,6 +19,7 @@ export default function Discovery() {
   const [matchedActivity, setMatchedActivity] = useState<Activity | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
@@ -124,6 +126,14 @@ export default function Discovery() {
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
               </span>
             )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-10 h-10 p-0"
+            onClick={() => setShowMapView(true)}
+          >
+            <Map className="w-5 h-5 text-gray-600" />
           </Button>
           <Button 
             variant="ghost" 

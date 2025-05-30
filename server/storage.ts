@@ -57,6 +57,9 @@ export interface IStorage {
   getHostApplications(hostId: string): Promise<any[]>;
   getUserApplications(userId: string): Promise<any[]>;
   
+  // Location-based operations
+  getNearbyActivities(userId: string, latitude: number, longitude: number, maxDistance: number, filters: any): Promise<Activity[]>;
+  
   // Chat operations
   getOrCreateChatRoom(activityId: number): Promise<ChatRoom>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
@@ -435,6 +438,60 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(activities, eq(activityApplications.activityId, activities.id))
       .where(eq(activityApplications.userId, userId))
       .orderBy(desc(activityApplications.appliedAt));
+  }
+
+  // Location-based operations
+  async getNearbyActivities(userId: string, latitude: number, longitude: number, maxDistance: number = 25, filters: any = {}): Promise<Activity[]> {
+    // Get activities the user has already swiped on
+    const swipedActivityIds = await db
+      .select({ activityId: activitySwipes.activityId })
+      .from(activitySwipes)
+      .where(eq(activitySwipes.userId, userId));
+    
+    const swipedIds = swipedActivityIds.map(s => s.activityId);
+
+    let baseConditions = [
+      ne(activities.hostId, userId),
+      eq(activities.status, 'active'),
+      sql`${activities.dateTime} > NOW()`,
+      sql`${activities.latitude} IS NOT NULL`,
+      sql`${activities.longitude} IS NOT NULL`
+    ];
+
+    if (swipedIds.length > 0) {
+      baseConditions.push(not(inArray(activities.id, swipedIds)));
+    }
+
+    // Apply filters
+    if (filters.category && filters.category !== "All Categories") {
+      baseConditions.push(eq(activities.category, filters.category));
+    }
+
+    if (filters.priceRange && filters.priceRange.length === 2) {
+      baseConditions.push(
+        sql`${activities.price} >= ${filters.priceRange[0]} AND ${activities.price} <= ${filters.priceRange[1]}`
+      );
+    }
+
+    // Distance calculation using Haversine formula
+    const distanceFormula = sql`(
+      3959 * acos(
+        cos(radians(${latitude})) * 
+        cos(radians(${activities.latitude})) * 
+        cos(radians(${activities.longitude}) - radians(${longitude})) + 
+        sin(radians(${latitude})) * 
+        sin(radians(${activities.latitude}))
+      )
+    )`;
+
+    baseConditions.push(sql`${distanceFormula} <= ${maxDistance}`);
+
+    return await db
+      .select()
+      .from(activities)
+      .where(and(...baseConditions))
+      .orderBy(distanceFormula)
+      .limit(50);
   }
 }
 

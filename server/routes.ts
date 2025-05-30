@@ -37,18 +37,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/activities/discover', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { location, category, limit = 20 } = req.query;
-      
-      const activities = await storage.getDiscoverableActivities(userId, {
-        location: location as string,
-        category: category as string,
-        limit: parseInt(limit as string),
-      });
-      
+      const activities = await storage.getDiscoverableActivities(userId, req.query);
       res.json(activities);
     } catch (error) {
       console.error("Error fetching discoverable activities:", error);
       res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  app.get('/api/activities/nearby', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { latitude, longitude, maxDistance = 25, ...filters } = req.query;
+      
+      if (!latitude || !longitude) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+      }
+
+      const activities = await storage.getNearbyActivities(
+        userId,
+        parseFloat(latitude),
+        parseFloat(longitude),
+        parseInt(maxDistance),
+        filters
+      );
+      
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching nearby activities:", error);
+      res.status(500).json({ message: "Failed to fetch nearby activities" });
     }
   });
 

@@ -321,6 +321,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Friend management routes
+  app.post('/api/friends/request', isAuthenticated, async (req: any, res) => {
+    try {
+      const requesterId = req.user.claims.sub;
+      const { receiverId } = req.body;
+      
+      if (requesterId === receiverId) {
+        return res.status(400).json({ message: "Cannot send friend request to yourself" });
+      }
+
+      const friendship = await storage.sendFriendRequest(requesterId, receiverId);
+      res.json(friendship);
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      res.status(400).json({ message: "Failed to send friend request" });
+    }
+  });
+
+  app.post('/api/friends/accept/:friendshipId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { friendshipId } = req.params;
+      const friendship = await storage.acceptFriendRequest(parseInt(friendshipId));
+      res.json(friendship);
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+      res.status(400).json({ message: "Failed to accept friend request" });
+    }
+  });
+
+  app.post('/api/friends/reject/:friendshipId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { friendshipId } = req.params;
+      const friendship = await storage.rejectFriendRequest(parseInt(friendshipId));
+      res.json(friendship);
+    } catch (error) {
+      console.error("Error rejecting friend request:", error);
+      res.status(400).json({ message: "Failed to reject friend request" });
+    }
+  });
+
+  app.get('/api/friends', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const friends = await storage.getUserFriends(userId);
+      res.json(friends);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+      res.status(500).json({ message: "Failed to fetch friends" });
+    }
+  });
+
+  app.get('/api/friends/requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getUserFriendRequests(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching friend requests:", error);
+      res.status(500).json({ message: "Failed to fetch friend requests" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket server setup

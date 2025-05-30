@@ -111,6 +111,15 @@ export default function Profile() {
           <Button 
             variant="outline" 
             className="w-full justify-start"
+            onClick={() => setShowFriendsModal(true)}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Manage Friends
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="w-full justify-start"
             onClick={() => {/* TODO: Navigate to edit profile */}}
           >
             <Edit className="w-4 h-4 mr-2" />
@@ -145,6 +154,12 @@ export default function Profile() {
           </Button>
         </div>
       </div>
+
+      {/* Friends Modal */}
+      <FriendsModal 
+        isOpen={showFriendsModal} 
+        onClose={() => setShowFriendsModal(false)} 
+      />
     </div>
   );
 }

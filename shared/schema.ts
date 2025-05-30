@@ -35,10 +35,16 @@ export const users = pgTable("users", {
   bio: text("bio"),
   interests: jsonb("interests").$type<string[]>().default([]),
   location: varchar("location"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   rating: real("rating").default(5.0),
   totalRatings: integer("total_ratings").default(0),
   eventsHosted: integer("events_hosted").default(0),
   eventsAttended: integer("events_attended").default(0),
+  isVerified: boolean("is_verified").default(false),
+  verificationLevel: varchar("verification_level").default("none"), // none, email, phone, id
+  pushNotifications: boolean("push_notifications").default(true),
+  emailNotifications: boolean("email_notifications").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -50,14 +56,29 @@ export const activities = pgTable("activities", {
   description: text("description"),
   category: varchar("category").notNull(),
   location: varchar("location").notNull(),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   dateTime: timestamp("date_time").notNull(),
+  endDateTime: timestamp("end_date_time"),
   maxParticipants: integer("max_participants").notNull(),
   currentParticipants: integer("current_participants").default(0),
+  waitlistCount: integer("waitlist_count").default(0),
   isPrivate: boolean("is_private").default(false),
   tags: jsonb("tags").$type<string[]>().default([]),
   imageUrl: varchar("image_url"),
+  imageUrls: jsonb("image_urls").$type<string[]>().default([]),
   price: real("price").default(0),
-  status: varchar("status").default("active"), // active, cancelled, completed
+  currency: varchar("currency").default("USD"),
+  requiresApproval: boolean("requires_approval").default(false),
+  ageRestriction: varchar("age_restriction"), // 18+, 21+, all_ages
+  skillLevel: varchar("skill_level"), // beginner, intermediate, advanced, all_levels
+  equipmentProvided: boolean("equipment_provided").default(false),
+  equipmentRequired: text("equipment_required"),
+  weatherDependent: boolean("weather_dependent").default(false),
+  status: varchar("status").default("active"), // active, cancelled, completed, full
+  cancellationReason: text("cancellation_reason"),
+  recurringPattern: varchar("recurring_pattern"), // weekly, monthly, none
+  reminderSent: boolean("reminder_sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -102,6 +123,60 @@ export const userRatings = pgTable("user_ratings", {
   activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
   rating: integer("rating").notNull(),
   comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityReviews = pgTable("activity_reviews", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  rating: integer("rating").notNull(),
+  review: text("review"),
+  photos: jsonb("photos").$type<string[]>().default([]),
+  helpful: integer("helpful").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userFriends = pgTable("user_friends", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  friendId: varchar("friend_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: varchar("status").default("pending"), // pending, accepted, blocked
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityWaitlist = pgTable("activity_waitlist", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  position: integer("position").notNull(),
+  notified: boolean("notified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar("type").notNull(), // match, message, activity_update, reminder, waitlist
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityTemplates = pgTable("activity_templates", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar("name").notNull(),
+  category: varchar("category").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  defaultDuration: integer("default_duration"), // minutes
+  defaultMaxParticipants: integer("default_max_participants"),
+  isPublic: boolean("is_public").default(false),
+  useCount: integer("use_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

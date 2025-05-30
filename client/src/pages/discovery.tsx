@@ -6,7 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import SwipeCard from "@/components/SwipeCard";
 import ActivityDetailsModal from "@/components/ActivityDetailsModal";
 import MatchSuccessModal from "@/components/MatchSuccessModal";
-import { Filter, MapPin } from "lucide-react";
+import FilterModal from "@/components/FilterModal";
+import NotificationCenter from "@/components/NotificationCenter";
+import { Filter, MapPin, Bell, RefreshCw } from "lucide-react";
 import type { Activity } from "@shared/schema";
 
 export default function Discovery() {
@@ -14,10 +16,19 @@ export default function Discovery() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showMatchSuccess, setShowMatchSuccess] = useState(false);
   const [matchedActivity, setMatchedActivity] = useState<Activity | null>(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [filters, setFilters] = useState({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities/discover'],
+    queryKey: ['/api/activities/discover', filters],
+    retry: 1,
+  });
+
+  const { data: unreadNotifications = 0 } = useQuery({
+    queryKey: ['/api/notifications/unread-count'],
     retry: 1,
   });
 
@@ -53,6 +64,18 @@ export default function Discovery() {
 
   const handleReject = () => handleSwipe('pass');
   const handleJoin = () => handleSwipe('like');
+
+  const handleApplyFilters = (newFilters: any) => {
+    setFilters(newFilters);
+    setCurrentActivityIndex(0);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['/api/activities/discover'] });
+    setCurrentActivityIndex(0);
+    setIsRefreshing(false);
+  };
 
   if (isLoading) {
     return (

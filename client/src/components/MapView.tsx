@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Navigation, Calendar, Users, Filter, List } from "lucide-react";
 import { format } from "date-fns";
 
@@ -21,16 +22,17 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [searchRadius, setSearchRadius] = useState("25");
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, filters],
+    queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
     queryFn: async () => {
       if (!userLocation) return [];
       
       const params = new URLSearchParams({
         latitude: userLocation.latitude.toString(),
         longitude: userLocation.longitude.toString(),
-        maxDistance: '100',
+        maxDistance: searchRadius,
         ...Object.fromEntries(
           Object.entries(filters).map(([key, value]) => [key, String(value)])
         )
@@ -146,17 +148,37 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   return (
     <div className="flex-1 flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">Map View</h2>
-          <p className="text-sm text-gray-500">
-            {activities.length} activities within {filters.maxDistance?.[0] || 25} miles
-          </p>
+      <div className="bg-white shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Map View</h2>
+            <p className="text-sm text-gray-500">
+              {activities.length} activities within {searchRadius} miles
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onToggleView}>
+            <List className="w-4 h-4 mr-1" />
+            List View
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={onToggleView}>
-          <List className="w-4 h-4 mr-1" />
-          List View
-        </Button>
+        
+        {/* Radius Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Search Radius:</span>
+          <Select value={searchRadius} onValueChange={setSearchRadius}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5 miles</SelectItem>
+              <SelectItem value="10">10 miles</SelectItem>
+              <SelectItem value="25">25 miles</SelectItem>
+              <SelectItem value="50">50 miles</SelectItem>
+              <SelectItem value="100">100 miles</SelectItem>
+              <SelectItem value="200">200 miles</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Map Placeholder */}

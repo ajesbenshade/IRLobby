@@ -104,6 +104,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Photo upload routes
+  app.post('/api/upload/photo', isAuthenticated, async (req: any, res) => {
+    try {
+      const { photoData, type } = req.body; // type: 'profile' or 'gallery'
+      
+      if (!photoData) {
+        return res.status(400).json({ message: "Photo data is required" });
+      }
+
+      const userId = req.user.claims.sub;
+      
+      // In a real app, you'd upload to a service like AWS S3, Cloudinary, etc.
+      // For now, we'll store the base64 data directly (not recommended for production)
+      const photoUrl = photoData; // This would be the URL returned from your upload service
+      
+      if (type === 'profile') {
+        // Update profile image
+        await storage.updateUser(userId, { profileImageUrl: photoUrl });
+      } else if (type === 'gallery') {
+        // Add to gallery
+        const user = await storage.getUser(userId);
+        const currentGallery = user?.profileGallery || [];
+        
+        if (currentGallery.length >= 12) {
+          return res.status(400).json({ message: "Maximum 12 photos allowed in gallery" });
+        }
+        
+        const updatedGallery = [...currentGallery, photoUrl];
+        await storage.updateUser(userId, { profileGallery: updatedGallery });
+      }
+
+      res.json({ success: true, photoUrl });
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      res.status(500).json({ message: "Failed to upload photo" });
+    }
+  });
+
+  app.delete('/api/upload/photo/:index', isAuthenticated, async (req: any, res) => {
+    try {
+      const photoIndex = parseInt(req.params.index);
+      const userId = req.user.claims.sub;
+      
+      const user = await storage.getUser(userId);
+      const currentGallery = user?.profileGallery || [];
+      
+      if (photoIndex < 0 || photoIndex >= currentGallery.length) {
+        return res.status(400).json({ message: "Invalid photo index" });
+      }
+      
+      const updatedGallery = currentGallery.filter((_, index) => index !== photoIndex);
+      await storage.updateUser(userId, { profileGallery: updatedGallery });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting photo:", error);
+      res.status(500).json({ message: "Failed to delete photo" });
+    }
+  });
+
   app.post('/api/activities', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

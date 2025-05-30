@@ -11,6 +11,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 export default function Profile() {
   const { user } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const handleLogout = () => {
     window.location.href = '/api/logout';
@@ -112,10 +113,19 @@ export default function Profile() {
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={() => {/* TODO: Navigate to edit profile */}}
+            onClick={() => setShowEditModal(true)}
           >
             <Edit className="w-4 h-4 mr-2" />
             Edit Profile
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="w-full justify-start"
+            onClick={() => setShowFriendsModal(true)}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Friends
           </Button>
 
           <Button 
@@ -146,6 +156,18 @@ export default function Profile() {
           </Button>
         </div>
       </div>
+
+      {/* Modals */}
+      <FriendsModal 
+        isOpen={showFriendsModal} 
+        onClose={() => setShowFriendsModal(false)} 
+      />
+      
+      <EditProfileModal 
+        isOpen={showEditModal} 
+        onClose={() => setShowEditModal(false)}
+        user={user}
+      />
     </div>
   );
 }

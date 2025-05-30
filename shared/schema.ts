@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   real,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -151,10 +152,11 @@ export const activityReviews = pgTable("activity_reviews", {
 
 export const userFriends = pgTable("user_friends", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  friendId: varchar("friend_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: varchar("status").default("pending"), // pending, accepted, blocked
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const activityWaitlist = pgTable("activity_waitlist", {
@@ -200,6 +202,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   sentMessages: many(chatMessages),
   givenRatings: many(userRatings, { relationName: "rater" }),
   receivedRatings: many(userRatings, { relationName: "rated" }),
+  sentFriendRequests: many(userFriends, { relationName: "requester" }),
+  receivedFriendRequests: many(userFriends, { relationName: "receiver" }),
 }));
 
 export const activitiesRelations = relations(activities, ({ one, many }) => ({
@@ -268,6 +272,19 @@ export const userRatingsRelations = relations(userRatings, ({ one }) => ({
   activity: one(activities, {
     fields: [userRatings.activityId],
     references: [activities.id],
+  }),
+}));
+
+export const userFriendsRelations = relations(userFriends, ({ one }) => ({
+  requester: one(users, {
+    fields: [userFriends.requesterId],
+    references: [users.id],
+    relationName: "requester",
+  }),
+  receiver: one(users, {
+    fields: [userFriends.receiverId],
+    references: [users.id],
+    relationName: "receiver",
   }),
 }));
 

@@ -265,8 +265,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Broadcast to WebSocket clients
       broadcastToActivity(activityId, {
-        type: 'new_message',
-        message: messageWithSender,
+        type: 'chat_message',
+        activityId: activityId,
+        data: messageWithSender,
       });
       
       res.status(201).json(messageWithSender);
@@ -559,11 +560,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const activityKey = `activity_${activityId}`;
     const activityClients = clients.get(activityKey);
     
+    console.log(`Broadcasting to activity ${activityId}, clients: ${activityClients?.size || 0}`);
+    
     if (activityClients) {
       const message = JSON.stringify(data);
       activityClients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
+          console.log(`Message sent to client for activity ${activityId}`);
         }
       });
     }

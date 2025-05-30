@@ -1,0 +1,123 @@
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Clock, CheckCircle } from "lucide-react";
+import { format } from "date-fns";
+
+interface MatchesProps {
+  onOpenChat: (activityId: number) => void;
+  showUserActivities?: boolean;
+}
+
+export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
+  const { data: matches = [], isLoading } = useQuery({
+    queryKey: ['/api/matches'],
+    retry: 1,
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Confirmed
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 pb-20 min-h-screen">
+      <header className="bg-white shadow-sm p-4">
+        <h2 className="text-xl font-bold text-gray-800">
+          {showUserActivities ? "My Activities" : "Your Matches"}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {showUserActivities ? "Activities you've joined" : "Events you're part of"}
+        </p>
+      </header>
+
+      <div className="p-4 space-y-4">
+        {matches.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No matches yet</h3>
+            <p className="text-gray-500">Start swiping to find activities you love!</p>
+          </div>
+        ) : (
+          matches.map((match: any) => (
+            <Card key={match.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0 overflow-hidden">
+                    {match.activity.imageUrl ? (
+                      <img 
+                        src={match.activity.imageUrl} 
+                        alt={match.activity.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                        <span className="text-primary font-semibold text-lg">
+                          {match.activity.title.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {match.activity.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {format(new Date(match.activity.dateTime), 'MMM d, h:mm a')}
+                    </p>
+                    <div className="mt-1">
+                      {getStatusBadge(match.status)}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-shrink-0">
+                    {match.status === 'approved' ? (
+                      <Button 
+                        size="sm"
+                        onClick={() => onOpenChat(match.activity.id)}
+                        className="w-10 h-10 p-0 bg-primary rounded-full relative"
+                      >
+                        <MessageCircle className="w-5 h-5 text-white" />
+                        {/* TODO: Add notification badge for unread messages */}
+                      </Button>
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

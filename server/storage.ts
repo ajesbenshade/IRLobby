@@ -615,6 +615,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchUsers(query: string, currentUserId: string): Promise<any[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    
     const searchResults = await db
       .select({
         id: users.id,
@@ -628,9 +630,9 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         ne(users.id, currentUserId),
         or(
-          ilike(users.firstName, `%${query}%`),
-          ilike(users.lastName, `%${query}%`),
-          ilike(users.email, `%${query}%`)
+          sql`LOWER(${users.firstName}) LIKE ${searchTerm}`,
+          sql`LOWER(${users.lastName}) LIKE ${searchTerm}`,
+          sql`LOWER(${users.email}) LIKE ${searchTerm}`
         )
       ))
       .limit(20);

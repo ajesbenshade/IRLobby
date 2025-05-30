@@ -8,6 +8,7 @@ import {
   chatMessages,
   userRatings,
   userFriends,
+  activityReviews,
   type User, 
   type UpsertUser,
   type Activity,
@@ -80,6 +81,13 @@ export interface IStorage {
   getUserFriendRequests(userId: string): Promise<any[]>;
   areFriends(userId1: string, userId2: string): Promise<boolean>;
   searchUsers(query: string, currentUserId: string): Promise<any[]>;
+  
+  // Review operations
+  createActivityReview(review: any): Promise<any>;
+  getActivityReviews(activityId: number): Promise<any[]>;
+  getUserAttendedActivities(userId: string): Promise<any[]>;
+  canUserReviewActivity(userId: string, activityId: number): Promise<boolean>;
+  hasUserReviewedActivity(userId: string, activityId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -671,6 +679,99 @@ export class DatabaseStorage implements IStorage {
       console.error("Search error:", error);
       return [];
     }
+  }
+
+  // Review operations implementation
+  async createActivityReview(review: any): Promise<any> {
+    const [newReview] = await db
+      .insert(activityReviews)
+      .values(review)
+      .returning();
+    return newReview;
+  }
+
+  async getActivityReviews(activityId: number): Promise<any[]> {
+    const reviews = await db
+      .select({
+        id: activityReviews.id,
+        rating: activityReviews.rating,
+        review: activityReviews.review,
+        photos: activityReviews.photos,
+        helpful: activityReviews.helpful,
+        createdAt: activityReviews.createdAt,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(activityReviews)
+      .leftJoin(users, eq(activityReviews.userId, users.id))
+      .where(eq(activityReviews.activityId, activityId))
+      .orderBy(desc(activityReviews.createdAt));
+
+    return reviews;
+  }
+
+  async getUserAttendedActivities(userId: string): Promise<any[]> {
+    // Get activities the user attended (where there's a match and activity is completed)
+    const attendedActivities = await db
+      .select({
+        id: activities.id,
+        title: activities.title,
+        location: activities.location,
+        dateTime: activities.dateTime,
+        hostId: activities.hostId,
+        category: activities.category,
+        status: activities.status,
+        host: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(activities)
+      .leftJoin(users, eq(activities.hostId, users.id))
+      .leftJoin(activityMatches, eq(activityMatches.activityId, activities.id))
+      .where(and(
+        eq(activityMatches.userId, userId),
+        eq(activityMatches.status, 'accepted'),
+        lt(activities.dateTime, new Date()) // Only past activities
+      ))
+      .orderBy(desc(activities.dateTime));
+
+    return attendedActivities;
+  }
+
+  async canUserReviewActivity(userId: string, activityId: number): Promise<boolean> {
+    // Check if user attended the activity and it's completed
+    const match = await db
+      .select()
+      .from(activityMatches)
+      .leftJoin(activities, eq(activityMatches.activityId, activities.id))
+      .where(and(
+        eq(activityMatches.userId, userId),
+        eq(activityMatches.activityId, activityId),
+        eq(activityMatches.status, 'accepted'),
+        lt(activities.dateTime, new Date()) // Activity is in the past
+      ))
+      .limit(1);
+
+    return match.length > 0;
+  }
+
+  async hasUserReviewedActivity(userId: string, activityId: number): Promise<boolean> {
+    const existingReview = await db
+      .select()
+      .from(activityReviews)
+      .where(and(
+        eq(activityReviews.userId, userId),
+        eq(activityReviews.activityId, activityId)
+      ))
+      .limit(1);
+
+    return existingReview.length > 0;
   }
 }
 

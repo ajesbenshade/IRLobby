@@ -21,6 +21,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Populate sample data on startup
+  try {
+    await storage.populateSampleData();
+    console.log("Sample data populated successfully");
+  } catch (error) {
+    console.error("Error populating sample data:", error);
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {

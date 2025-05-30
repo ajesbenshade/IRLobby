@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ export default function Discovery() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState({
+    category: 'All Categories',
+    skillLevel: 'All Levels',
     sortBy: 'date',
     participantRange: [1, 50],
     showPrivateEvents: true,

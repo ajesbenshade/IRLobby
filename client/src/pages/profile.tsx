@@ -185,44 +185,56 @@ export default function Profile() {
                   Statistics
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm">Rating</span>
+              <CardContent className="space-y-6">
+                {/* Rating Section */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-full">
+                      <Star className="h-5 w-5 text-yellow-600 fill-current" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-lg">{user.rating?.toFixed(1) || '5.0'}</div>
+                      <div className="text-sm text-gray-600">Overall Rating</div>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">{user.rating?.toFixed(1) || '5.0'}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-sm font-medium text-gray-700">
                       {user.totalRatings || 0} reviews
                     </div>
                   </div>
                 </div>
 
-                <Separator />
-
+                {/* Events Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">{user.eventsHosted || 0}</div>
-                    <div className="text-xs text-gray-500">Events Hosted</div>
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border text-center">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {user.eventsHosted || 0}
+                    </div>
+                    <div className="text-sm text-gray-600 font-medium">Events Hosted</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">{user.eventsAttended || 0}</div>
-                    <div className="text-xs text-gray-500">Events Attended</div>
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border text-center">
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {user.eventsAttended || 0}
+                    </div>
+                    <div className="text-sm text-gray-600 font-medium">Events Attended</div>
                   </div>
                 </div>
 
+                {/* Reliability Section */}
                 {user.reliability && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-green-500" />
-                        <span className="text-sm">Reliability</span>
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <Clock className="h-5 w-5 text-green-600" />
                       </div>
-                      <div className="font-semibold">{user.reliability.toFixed(1)}/5.0</div>
+                      <div>
+                        <div className="font-semibold text-lg text-green-700">
+                          {user.reliability.toFixed(1)}/5.0
+                        </div>
+                        <div className="text-sm text-gray-600">Reliability Score</div>
+                      </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>

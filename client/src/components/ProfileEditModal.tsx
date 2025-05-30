@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Plus, X, MapPin, Briefcase, Globe, Star } from "lucide-react";
+import PhotoUpload from "@/components/PhotoUpload";
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -137,8 +138,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser }: Profi
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="photos">Photos</TabsTrigger>
             <TabsTrigger value="interests">Interests</TabsTrigger>
             <TabsTrigger value="experience">Experience</TabsTrigger>
             <TabsTrigger value="contact">Contact</TabsTrigger>
@@ -215,6 +217,15 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser }: Profi
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="photos" className="space-y-4">
+            <PhotoUpload
+              currentProfilePhoto={currentUser?.profileImageUrl}
+              currentGallery={currentUser?.profileGallery || []}
+              onProfilePhotoUpdate={(url) => setProfile(prev => ({ ...prev, profileImageUrl: url }))}
+              onGalleryUpdate={(gallery) => setProfile(prev => ({ ...prev, profileGallery: gallery }))}
+            />
           </TabsContent>
 
           <TabsContent value="interests" className="space-y-4">

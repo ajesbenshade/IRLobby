@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Label } from "@/components/ui/label";
 import { 
   User, 
   MapPin, 
@@ -32,7 +31,7 @@ import {
 import FriendsModal from "@/components/FriendsModal";
 import ProfileEditModal from "@/components/ProfileEditModal";
 
-export default function Profile() {
+export default function EnhancedProfile() {
   const { user, isLoading } = useAuth();
   const [showFriends, setShowFriends] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -95,7 +94,7 @@ export default function Profile() {
                 <Avatar className="h-32 w-32 border-4 border-white">
                   <AvatarImage src={user.profileImageUrl} alt={fullName} />
                   <AvatarFallback className="text-2xl">
-                    {fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                    {fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="mt-16 space-y-2">
@@ -243,7 +242,7 @@ export default function Profile() {
                         <div key={platform} className="flex items-center gap-2">
                           {getSocialIcon(platform)}
                           <span className="text-sm capitalize">{platform}</span>
-                          <span className="text-sm text-gray-600">{username as string}</span>
+                          <span className="text-sm text-gray-600">{username}</span>
                         </div>
                       )
                     ))}

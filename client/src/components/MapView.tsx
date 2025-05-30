@@ -125,13 +125,26 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
     if (window.google && window.google.maps) {
       initMap();
     } else {
-      // Load Google Maps script
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initMap;
-      document.head.appendChild(script);
+      // Load Google Maps script - check if already exists
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGoogleMap`;
+        script.async = true;
+        script.defer = true;
+        
+        // Set up global callback
+        (window as any).initGoogleMap = initMap;
+        
+        script.onerror = () => {
+          console.error('Failed to load Google Maps API');
+        };
+        
+        document.head.appendChild(script);
+      } else {
+        // Script already loaded, just init
+        setTimeout(initMap, 100);
+      }
     }
 
     // Get user location on mount

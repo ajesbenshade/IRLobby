@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, UserPlus, Check, X, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import UserProfileModal from "./UserProfileModal";
 
 interface FriendsModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface FriendsModalProps {
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -100,6 +103,23 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
   const handleRejectRequest = (friendshipId: number) => {
     rejectFriendRequestMutation.mutate(friendshipId);
+  };
+
+  const handleViewProfile = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserProfile(true);
+  };
+
+  const handleCloseProfile = () => {
+    setShowUserProfile(false);
+    setSelectedUserId(null);
+  };
+
+  const handleSendFriendRequestFromProfile = () => {
+    if (selectedUserId) {
+      handleSendFriendRequest(selectedUserId);
+      handleCloseProfile();
+    }
   };
 
   return (
@@ -235,7 +255,10 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                   searchResults.map((user: any) => (
                     <Card key={user.id} className="p-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
+                        <div 
+                          className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors"
+                          onClick={() => handleViewProfile(user.id)}
+                        >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={user.profileImageUrl} />
                             <AvatarFallback>
@@ -243,7 +266,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium hover:text-primary">
                               {user.firstName} {user.lastName}
                             </p>
                             <p className="text-sm text-muted-foreground">
@@ -303,6 +326,17 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
           </Button>
         </div>
       </DialogContent>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          isOpen={showUserProfile}
+          onClose={handleCloseProfile}
+          userId={selectedUserId}
+          onSendFriendRequest={handleSendFriendRequestFromProfile}
+          showActions={true}
+        />
+      )}
     </Dialog>
   );
 }

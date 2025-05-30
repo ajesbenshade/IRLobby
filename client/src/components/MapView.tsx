@@ -23,7 +23,23 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities/nearby', userLocation, filters],
+    queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, filters],
+    queryFn: async () => {
+      if (!userLocation) return [];
+      
+      const params = new URLSearchParams({
+        latitude: userLocation.latitude.toString(),
+        longitude: userLocation.longitude.toString(),
+        maxDistance: '25',
+        ...Object.fromEntries(
+          Object.entries(filters).map(([key, value]) => [key, String(value)])
+        )
+      });
+      
+      const response = await fetch(`/api/activities/nearby?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch nearby activities');
+      return response.json();
+    },
     enabled: !!userLocation,
     retry: 1,
   });

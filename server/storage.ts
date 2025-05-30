@@ -152,7 +152,7 @@ export class DatabaseStorage implements IStorage {
             ne(activities.hostId, userId),
             eq(activities.status, 'active'),
             sql`${activities.dateTime} > NOW()`,
-            notIn(activities.id, swipedIds)
+            not(inArray(activities.id, swipedIds))
           )
         )
         .orderBy(desc(activities.createdAt))

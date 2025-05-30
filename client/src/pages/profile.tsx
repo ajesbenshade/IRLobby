@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Settings, HelpCircle, Star, LogOut } from "lucide-react";
+import { Edit, Settings, HelpCircle, Star, LogOut, Users } from "lucide-react";
+import FriendsModal from "@/components/FriendsModal";
 
 export default function Profile() {
   const { user } = useAuth();
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
 
   const handleLogout = () => {
     window.location.href = '/api/logout';

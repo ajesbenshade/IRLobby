@@ -106,6 +106,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   };
 
   const handleViewProfile = (userId: string) => {
+    console.log("Viewing profile for user:", userId);
     setSelectedUserId(userId);
     setShowUserProfile(true);
   };
@@ -309,12 +310,52 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
             )}
 
             {searchQuery.length < 2 && (
-              <div className="text-center py-8 space-y-2">
-                <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">Search for users to add as friends</p>
-                <p className="text-sm text-muted-foreground">
-                  Type at least 2 characters to start searching
-                </p>
+              <div className="space-y-4">
+                <div className="text-center py-8 space-y-2">
+                  <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="text-muted-foreground">Search for users to add as friends</p>
+                  <p className="text-sm text-muted-foreground">
+                    Type at least 2 characters to start searching
+                  </p>
+                </div>
+                
+                {/* Test users for profile viewing */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Or try viewing these sample profiles:</p>
+                  <div className="grid gap-2">
+                    {[
+                      { id: 'user_friend_1', name: 'Sarah Johnson', email: 'sarah.adventures@email.com' },
+                      { id: 'user_friend_2', name: 'Mike Chen', email: 'mike.techie@email.com' },
+                      { id: 'user_friend_3', name: 'Emma Davis', email: 'emma.wellness@email.com' }
+                    ].map((user) => (
+                      <Card key={user.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div 
+                            className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
+                            onClick={() => handleViewProfile(user.id)}
+                          >
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>
+                                {user.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{user.name}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewProfile(user.id)}
+                          >
+                            View Profile
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </TabsContent>

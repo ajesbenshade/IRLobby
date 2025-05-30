@@ -33,6 +33,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profileData = req.body;
+      
+      // Calculate profile completeness
+      const completeness = calculateProfileCompleteness(profileData);
+      profileData.profileCompleteness = completeness;
+      profileData.updatedAt = new Date();
+      
+      const updatedUser = await storage.updateUser(userId, profileData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Helper function to calculate profile completeness
+  function calculateProfileCompleteness(profile: any): number {
+    let score = 20; // Base score for having an account
+    
+    if (profile.firstName && profile.lastName) score += 10;
+    if (profile.bio && profile.bio.length > 50) score += 15;
+    if (profile.age) score += 5;
+    if (profile.occupation) score += 5;
+    if (profile.location) score += 10;
+    if (profile.interests && profile.interests.length >= 3) score += 10;
+    if (profile.activityPreferences && profile.activityPreferences.length >= 2) score += 10;
+    if (profile.languages && profile.languages.length >= 1) score += 5;
+    if (profile.personalityTraits && profile.personalityTraits.length >= 3) score += 10;
+    
+    return Math.min(score, 100);
+  }
+
   // Activity routes
   app.get('/api/activities/discover', isAuthenticated, async (req: any, res) => {
     try {

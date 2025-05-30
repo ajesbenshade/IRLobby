@@ -9,9 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { insertActivitySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, MapPin } from "lucide-react";
+import ActivityTemplateModal from "@/components/ActivityTemplateModal";
+import HostDashboard from "@/components/HostDashboard";
+import { Camera, MapPin, Settings, Users } from "lucide-react";
 import { z } from "zod";
 
 const formSchema = insertActivitySchema.extend({
@@ -40,6 +43,8 @@ const categories = [
 const participantOptions = [2, 4, 6, 8, 10, 15, 20];
 
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showHostDashboard, setShowHostDashboard] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -242,6 +247,56 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                 </FormItem>
               )}
             />
+
+            {/* Event Privacy Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Event Privacy</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="isPrivate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Private Event</FormLabel>
+                        <div className="text-sm text-gray-500">
+                          Only approved participants can join
+                        </div>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="requiresApproval"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Requires Approval</FormLabel>
+                        <div className="text-sm text-gray-500">
+                          Review each application before accepting
+                        </div>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
             {/* Submit Button */}
             <Button 

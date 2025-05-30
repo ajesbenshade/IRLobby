@@ -321,6 +321,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user by ID
+  app.get('/api/users/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Failed to fetch user' });
+    }
+  });
+
+  // Get user reviews
+  app.get('/api/users/:userId/reviews', isAuthenticated, async (req: any, res) => {
+    try {
+      const reviews = await storage.getUserReviews(req.params.userId);
+      res.json(reviews);
+    } catch (error) {
+      console.error('Error fetching user reviews:', error);
+      res.status(500).json({ message: 'Failed to fetch user reviews' });
+    }
+  });
+
   // Friend management routes
   app.post('/api/friends/request', isAuthenticated, async (req: any, res) => {
     try {

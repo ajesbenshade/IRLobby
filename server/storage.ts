@@ -504,6 +504,114 @@ export class DatabaseStorage implements IStorage {
       .orderBy(distanceFormula)
       .limit(50);
   }
+
+  // Friend operations
+  async sendFriendRequest(requesterId: string, receiverId: string): Promise<UserFriend> {
+    const [friendship] = await db
+      .insert(userFriends)
+      .values({
+        requesterId,
+        receiverId,
+        status: 'pending'
+      })
+      .returning();
+    return friendship;
+  }
+
+  async acceptFriendRequest(friendshipId: number): Promise<UserFriend> {
+    const [friendship] = await db
+      .update(userFriends)
+      .set({ 
+        status: 'accepted',
+        updatedAt: new Date()
+      })
+      .where(eq(userFriends.id, friendshipId))
+      .returning();
+    return friendship;
+  }
+
+  async rejectFriendRequest(friendshipId: number): Promise<UserFriend> {
+    const [friendship] = await db
+      .update(userFriends)
+      .set({ 
+        status: 'rejected',
+        updatedAt: new Date()
+      })
+      .where(eq(userFriends.id, friendshipId))
+      .returning();
+    return friendship;
+  }
+
+  async getUserFriends(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: userFriends.id,
+        friendId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        email: users.email,
+        status: userFriends.status,
+        createdAt: userFriends.createdAt
+      })
+      .from(userFriends)
+      .leftJoin(users, eq(userFriends.receiverId, users.id))
+      .where(and(
+        eq(userFriends.requesterId, userId),
+        eq(userFriends.status, 'accepted')
+      ))
+      .union(
+        db.select({
+          id: userFriends.id,
+          friendId: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          email: users.email,
+          status: userFriends.status,
+          createdAt: userFriends.createdAt
+        })
+        .from(userFriends)
+        .leftJoin(users, eq(userFriends.requesterId, users.id))
+        .where(and(
+          eq(userFriends.receiverId, userId),
+          eq(userFriends.status, 'accepted')
+        ))
+      );
+  }
+
+  async getUserFriendRequests(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: userFriends.id,
+        requesterId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        email: users.email,
+        status: userFriends.status,
+        createdAt: userFriends.createdAt
+      })
+      .from(userFriends)
+      .leftJoin(users, eq(userFriends.requesterId, users.id))
+      .where(and(
+        eq(userFriends.receiverId, userId),
+        eq(userFriends.status, 'pending')
+      ))
+      .orderBy(desc(userFriends.createdAt));
+  }
+
+  async areFriends(userId1: string, userId2: string): Promise<boolean> {
+    const friendship = await db
+      .select()
+      .from(userFriends)
+      .where(and(
+        eq(userFriends.status, 'accepted'),
+        sql`(${userFriends.requesterId} = ${userId1} AND ${userFriends.receiverId} = ${userId2}) OR (${userFriends.requesterId} = ${userId2} AND ${userFriends.receiverId} = ${userId1})`
+      ))
+      .limit(1);
+    return friendship.length > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

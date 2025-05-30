@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   bio: text("bio"),
   interests: jsonb("interests").$type<string[]>().default([]),
+  photoAlbum: jsonb("photo_album").$type<string[]>().default([]),
   location: varchar("location"),
   latitude: real("latitude"),
   longitude: real("longitude"),

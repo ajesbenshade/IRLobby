@@ -21,27 +21,33 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
   const queryClient = useQueryClient();
 
   const { data: messages, isLoading } = useQuery({
-    queryKey: [`/api/chat-rooms/${chatRoomId}/messages`],
+    queryKey: [`/api/activities/${chatRoomId}/chat`],
   });
 
-  const { isConnected } = useWebSocket(chatRoomId, (newMessage) => {
-    // Add new message to the cache
-    queryClient.setQueryData(
-      [`/api/chat-rooms/${chatRoomId}/messages`],
-      (oldMessages: any[]) => {
-        if (!oldMessages) return [newMessage.data];
-        return [...oldMessages, newMessage.data];
+  const { isConnected } = useWebSocket({
+    onMessage: (newMessage) => {
+      if (newMessage.type === 'chat_message' && newMessage.activityId === chatRoomId) {
+        // Add new message to the cache
+        queryClient.setQueryData(
+          [`/api/activities/${chatRoomId}/chat`],
+          (oldMessages: any[]) => {
+            if (!oldMessages) return [newMessage.data];
+            return [...oldMessages, newMessage.data];
+          }
+        );
       }
-    );
+    }
   });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
-      const response = await apiRequest("POST", `/api/chat-rooms/${chatRoomId}/messages`, {
-        message: messageText,
-        messageType: "text",
+      return await apiRequest(`/api/activities/${chatRoomId}/chat`, {
+        method: 'POST',
+        body: JSON.stringify({
+          message: messageText,
+          messageType: "text",
+        })
       });
-      return response.json();
     },
     onSuccess: () => {
       setMessage("");

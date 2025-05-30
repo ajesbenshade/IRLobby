@@ -43,7 +43,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser }: Profi
     firstName: currentUser?.firstName || "",
     lastName: currentUser?.lastName || "",
     bio: currentUser?.bio || "",
-    age: currentUser?.age || "",
+    birthDate: currentUser?.birthDate || null,
     occupation: currentUser?.occupation || "",
     location: currentUser?.location || "",
     experienceLevel: currentUser?.experienceLevel || "Beginner",
@@ -69,8 +69,13 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser }: Profi
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       onClose();
     },
-    onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Profile update error:", error);
+      toast({ 
+        title: "Failed to update profile", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
 

@@ -328,6 +328,12 @@ export const insertUserRatingSchema = createInsertSchema(userRatings).omit({
   createdAt: true,
 });
 
+export const insertUserFriendSchema = createInsertSchema(userFriends).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -343,4 +349,6 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertUserRating = z.infer<typeof insertUserRatingSchema>;
 export type UserRating = typeof userRatings.$inferSelect;
+export type InsertUserFriend = z.infer<typeof insertUserFriendSchema>;
+export type UserFriend = typeof userFriends.$inferSelect;
 export type ChatRoom = typeof chatRooms.$inferSelect;

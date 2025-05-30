@@ -40,7 +40,7 @@ const categories = [
   "Gaming"
 ];
 
-const participantOptions = [2, 4, 6, 8, 10, 15, 20];
+const participantOptions = Array.from({ length: 50 }, (_, i) => i + 1);
 
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
   const [showTemplateModal, setShowTemplateModal] = useState(false);

@@ -7,6 +7,7 @@ import {
   chatRooms,
   chatMessages,
   userRatings,
+  userFriends,
   type User, 
   type UpsertUser,
   type Activity,
@@ -21,6 +22,8 @@ import {
   type ChatMessage,
   type InsertUserRating,
   type UserRating,
+  type InsertUserFriend,
+  type UserFriend,
   type ChatRoom
 } from "@shared/schema";
 import { db } from "./db";
@@ -68,6 +71,14 @@ export interface IStorage {
   
   // Rating operations
   createUserRating(rating: InsertUserRating): Promise<UserRating>;
+  
+  // Friend operations
+  sendFriendRequest(requesterId: string, receiverId: string): Promise<UserFriend>;
+  acceptFriendRequest(friendshipId: number): Promise<UserFriend>;
+  rejectFriendRequest(friendshipId: number): Promise<UserFriend>;
+  getUserFriends(userId: string): Promise<any[]>;
+  getUserFriendRequests(userId: string): Promise<any[]>;
+  areFriends(userId1: string, userId2: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {

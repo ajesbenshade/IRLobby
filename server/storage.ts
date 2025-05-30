@@ -776,14 +776,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserReviews(userId: string): Promise<any[]> {
+    // Get reviews ABOUT this user (reviews they received)
     const reviews = await db
       .select({
         id: userRatings.id,
         rating: userRatings.rating,
         comment: userRatings.comment,
         createdAt: userRatings.createdAt,
-        reviewType: userRatings.reviewType,
-        wouldRecommend: userRatings.wouldRecommend,
         reviewer: {
           id: users.id,
           firstName: users.firstName,
@@ -798,9 +797,9 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(userRatings)
-      .innerJoin(users, eq(userRatings.raterId, users.id))
+      .innerJoin(users, eq(userRatings.raterId, users.id)) // The person who wrote the review
       .leftJoin(activities, eq(userRatings.activityId, activities.id))
-      .where(eq(userRatings.ratedUserId, userId))
+      .where(eq(userRatings.ratedUserId, userId)) // Reviews about this user
       .orderBy(desc(userRatings.createdAt));
 
     return reviews;

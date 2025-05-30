@@ -33,10 +33,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
   const sendFriendRequestMutation = useMutation({
     mutationFn: async (receiverId: string) => {
-      return await apiRequest("/api/friends/request", {
-        method: "POST",
-        body: JSON.stringify({ receiverId }),
-      });
+      return await apiRequest("/api/friends/request", "POST", { receiverId });
     },
     onSuccess: () => {
       toast({ title: "Friend request sent!" });
@@ -50,9 +47,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
   const acceptFriendRequestMutation = useMutation({
     mutationFn: async (friendshipId: number) => {
-      return await apiRequest(`/api/friends/accept/${friendshipId}`, {
-        method: "POST",
-      });
+      return await apiRequest(`/api/friends/accept/${friendshipId}`, "POST");
     },
     onSuccess: () => {
       toast({ title: "Friend request accepted!" });
@@ -66,9 +61,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
   const rejectFriendRequestMutation = useMutation({
     mutationFn: async (friendshipId: number) => {
-      return await apiRequest(`/api/friends/reject/${friendshipId}`, {
-        method: "POST",
-      });
+      return await apiRequest(`/api/friends/reject/${friendshipId}`, "POST");
     },
     onSuccess: () => {
       toast({ title: "Friend request rejected" });

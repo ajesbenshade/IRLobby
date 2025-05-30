@@ -173,25 +173,25 @@ export default function Discovery() {
           />
         )}
 
-        {/* Action buttons */}
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 flex space-x-6">
+        {/* Action buttons - Fixed position to avoid cutoff */}
+        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 flex items-center space-x-6 z-50">
           <Button
             variant="outline"
             size="lg"
             onClick={handleReject}
             disabled={swipeMutation.isPending}
-            className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50"
+            className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-lg bg-white"
           >
-            ✕
+            <span className="text-2xl">✕</span>
           </Button>
           
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowDetailsModal(true)}
-            className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+            className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-50 shadow-lg bg-white"
           >
-            ℹ
+            <span className="text-lg">ℹ</span>
           </Button>
           
           <Button
@@ -199,9 +199,9 @@ export default function Discovery() {
             size="lg"
             onClick={handleJoin}
             disabled={swipeMutation.isPending}
-            className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50"
+            className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 shadow-lg bg-white"
           >
-            ♥
+            <span className="text-2xl">♥</span>
           </Button>
         </div>
       </div>

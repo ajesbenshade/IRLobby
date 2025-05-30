@@ -126,22 +126,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (swipeType === 'like') {
         const activity = await storage.getActivity(activityId);
         if (activity) {
-          // Auto-approve for now (in real app, host would approve)
-          const match = await storage.createActivityMatch({
-            userId,
-            activityId,
-            status: 'approved',
-            joinedAt: new Date(),
-          });
-          
-          // Notify via WebSocket
-          broadcastToActivity(activityId, {
-            type: 'new_match',
-            match,
-            user: await storage.getUser(userId),
-          });
-          
-          res.json({ swipe, match });
+          if (activity.isPrivate || activity.requiresApproval) {
+            // For private events, create an application instead of direct match
+            const application = await storage.createActivityApplication({
+              userId,
+              activityId,
+              hostId: activity.hostId,
+              message: req.body.message || null,
+            });
+            
+            res.json({ swipe, applied: true, activity });
+          } else {
+            // For public events, create immediate match
+            const match = await storage.createActivityMatch({
+              userId,
+              activityId,
+              status: 'approved',
+              joinedAt: new Date(),
+            });
+            
+            // Notify via WebSocket
+            broadcastToActivity(activityId, {
+              type: 'new_match',
+              match,
+              user: await storage.getUser(userId),
+            });
+            
+            res.json({ swipe, match });
+          }
         }
       } else {
         res.json({ swipe });

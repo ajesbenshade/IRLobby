@@ -41,6 +41,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add sample events endpoint
+  app.post('/api/admin/populate-events', async (req, res) => {
+    try {
+      const additionalEvents = [
+        { title: "Sunrise Hike at Wissahickon", location: "Wissahickon Valley Park", hostId: "user_1", category: "adventure", dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 40.0379, longitude: -75.2096, description: "Early morning hike through scenic trails. Coffee and donuts after!", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
+        { title: "Jazz Night at Chris' Jazz Cafe", location: "Chris' Jazz Cafe", hostId: "user_2", category: "entertainment", dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), maxParticipants: 40, latitude: 39.9496, longitude: -75.1503, description: "Live jazz performances in an intimate setting.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Basketball Pickup Game", location: "Palumbo Playground", hostId: "user_3", category: "sports", dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), maxParticipants: 10, latitude: 39.9259, longitude: -75.1476, description: "Casual pickup basketball. All skill levels welcome.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Farmers Market Exploration", location: "Clark Park Farmers Market", hostId: "user_4", category: "food", dateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000), maxParticipants: 8, latitude: 39.9489, longitude: -75.2280, description: "Discover local vendors and fresh produce.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Escape Room Challenge", location: "Center City", hostId: "user_5", category: "social", dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), maxParticipants: 6, latitude: 39.9496, longitude: -75.1503, description: "Test your problem-solving skills.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Morning Swim Session", location: "FDR Park Pool", hostId: "user_6", category: "fitness", dateTime: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9010, longitude: -75.1896, description: "Lap swimming followed by healthy breakfast.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
+        { title: "Karaoke Night", location: "Center City Bar", hostId: "user_7", category: "entertainment", dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), maxParticipants: 25, latitude: 39.9496, longitude: -75.1570, description: "Sing your heart out at the best karaoke spot!", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Chess Tournament", location: "Rittenhouse Square", hostId: "user_8", category: "social", dateTime: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), maxParticipants: 16, latitude: 39.9489, longitude: -75.1725, description: "Outdoor chess tournament in the park.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
+        { title: "Mural Arts Tour", location: "Northern Liberties", hostId: "user_9", category: "culture", dateTime: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9735, longitude: -75.1404, description: "Guided tour of Philadelphia's incredible murals.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Rooftop Yoga", location: "Center City Rooftop", hostId: "user_10", category: "wellness", dateTime: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), maxParticipants: 20, latitude: 39.9496, longitude: -75.1652, description: "Yoga with stunning city skyline views.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Ice Skating Fun", location: "Dilworth Park", hostId: "user_11", category: "sports", dateTime: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000), maxParticipants: 18, latitude: 39.9537, longitude: -75.1652, description: "Ice skating followed by hot chocolate.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Craft Beer Workshop", location: "Fishtown Brewery", hostId: "user_12", category: "learning", dateTime: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9735, longitude: -75.1354, description: "Learn the art of craft beer brewing.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
+        { title: "Dog Park Meetup", location: "Schuylkill River Park", hostId: "user_13", category: "social", dateTime: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000), maxParticipants: 20, latitude: 39.9656, longitude: -75.1896, description: "Bring your furry friends for socialization!", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Ghost Tour", location: "Old City", hostId: "user_14", category: "entertainment", dateTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9496, longitude: -75.1503, description: "Spooky walking tour through historic Philadelphia.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Ping Pong Tournament", location: "Center City", hostId: "user_15", category: "sports", dateTime: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), maxParticipants: 16, latitude: 39.9496, longitude: -75.1652, description: "Competitive ping pong with prizes.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
+        { title: "Urban Sketching", location: "Society Hill", hostId: "user_16", category: "arts", dateTime: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000), maxParticipants: 10, latitude: 39.9426, longitude: -75.1503, description: "Sketch beautiful architecture and scenes.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Improv Comedy Workshop", location: "Center City Studio", hostId: "user_17", category: "learning", dateTime: new Date(Date.now() + 17 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9496, longitude: -75.1570, description: "Learn improv techniques and have fun.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
+        { title: "Food Truck Festival", location: "Penn's Landing", hostId: "user_18", category: "food", dateTime: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), maxParticipants: 50, latitude: 39.9496, longitude: -75.1404, description: "Sample cuisines from the best food trucks.", skillLevel: "all", isPrivate: false, requiresApplication: false },
+        { title: "Morning Tai Chi", location: "Washington Square Park", hostId: "user_19", category: "wellness", dateTime: new Date(Date.now() + 19 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9426, longitude: -75.1570, description: "Gentle tai chi practice in peaceful setting.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
+        { title: "Vintage Shopping Tour", location: "Queen Village", hostId: "user_20", category: "social", dateTime: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), maxParticipants: 8, latitude: 39.9359, longitude: -75.1503, description: "Explore the best vintage shops.", skillLevel: "all", isPrivate: false, requiresApplication: false }
+      ];
+
+      for (const eventData of additionalEvents) {
+        await storage.createActivity(eventData);
+      }
+
+      res.json({ message: `Added ${additionalEvents.length} new events successfully` });
+    } catch (error) {
+      console.error("Error adding events:", error);
+      res.status(500).json({ message: "Failed to add events" });
+    }
+  });
+
   app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

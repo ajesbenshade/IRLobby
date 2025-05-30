@@ -389,11 +389,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { query } = req.query;
       const currentUserId = req.user.claims.sub;
       
+      console.log("Search query:", query, "Current user:", currentUserId);
+      
       if (!query || query.length < 2) {
         return res.json([]);
       }
       
       const users = await storage.searchUsers(query, currentUserId);
+      console.log("Search results:", users.length, "users found");
       res.json(users);
     } catch (error) {
       console.error("Error searching users:", error);

@@ -615,53 +615,62 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchUsers(query: string, currentUserId: string): Promise<any[]> {
-    const searchTerm = `%${query.toLowerCase()}%`;
-    
-    const searchResults = await db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        profileImageUrl: users.profileImageUrl,
-        rating: users.rating,
-      })
-      .from(users)
-      .where(and(
-        ne(users.id, currentUserId),
-        or(
-          sql`LOWER(${users.firstName}) LIKE ${searchTerm}`,
-          sql`LOWER(${users.lastName}) LIKE ${searchTerm}`,
-          sql`LOWER(${users.email}) LIKE ${searchTerm}`
+    try {
+      console.log("Searching for:", query, "excluding user:", currentUserId);
+      
+      // Simple search using SQL with proper escaping
+      const searchResults = await db.execute(sql`
+        SELECT id, first_name, last_name, email, profile_image_url, rating
+        FROM users 
+        WHERE id != ${currentUserId}
+        AND (
+          LOWER(first_name) LIKE LOWER(${`%${query}%`}) OR 
+          LOWER(last_name) LIKE LOWER(${`%${query}%`}) OR 
+          LOWER(email) LIKE LOWER(${`%${query}%`})
         )
-      ))
-      .limit(20);
+        LIMIT 20
+      `);
 
-    // Check friendship status for each user
-    const usersWithFriendshipStatus = await Promise.all(
-      searchResults.map(async (user) => {
-        const areFriends = await this.areFriends(currentUserId, user.id);
-        
-        // Check if there's a pending friend request
-        const pendingRequest = await db
-          .select()
-          .from(userFriends)
-          .where(and(
-            eq(userFriends.status, 'pending'),
-            sql`(${userFriends.requesterId} = ${currentUserId} AND ${userFriends.receiverId} = ${user.id}) OR (${userFriends.requesterId} = ${user.id} AND ${userFriends.receiverId} = ${currentUserId})`
-          ))
-          .limit(1);
+      console.log("Raw search results:", searchResults.rows.length);
 
-        return {
-          ...user,
-          isFriend: areFriends,
-          hasPendingRequest: pendingRequest.length > 0,
-          isRequestSentByMe: pendingRequest.length > 0 && pendingRequest[0].requesterId === currentUserId,
-        };
-      })
-    );
+      // Format results and check friendship status
+      const usersWithFriendshipStatus = await Promise.all(
+        searchResults.rows.map(async (row: any) => {
+          const user = {
+            id: row.id,
+            firstName: row.first_name,
+            lastName: row.last_name,
+            email: row.email,
+            profileImageUrl: row.profile_image_url,
+            rating: row.rating,
+          };
 
-    return usersWithFriendshipStatus;
+          const areFriends = await this.areFriends(currentUserId, user.id);
+          
+          // Check if there's a pending friend request
+          const pendingRequest = await db.execute(sql`
+            SELECT requester_id FROM user_friends 
+            WHERE status = 'pending' 
+            AND ((requester_id = ${currentUserId} AND receiver_id = ${user.id}) 
+                 OR (requester_id = ${user.id} AND receiver_id = ${currentUserId}))
+            LIMIT 1
+          `);
+
+          return {
+            ...user,
+            isFriend: areFriends,
+            hasPendingRequest: pendingRequest.rows.length > 0,
+            isRequestSentByMe: pendingRequest.rows.length > 0 && pendingRequest.rows[0].requester_id === currentUserId,
+          };
+        })
+      );
+
+      console.log("Final formatted results:", usersWithFriendshipStatus.length);
+      return usersWithFriendshipStatus;
+    } catch (error) {
+      console.error("Search error:", error);
+      return [];
+    }
   }
 }
 

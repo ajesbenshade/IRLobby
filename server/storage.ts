@@ -143,21 +143,8 @@ export class DatabaseStorage implements IStorage {
     
     const swipedIds = swipedActivityIds.map(s => s.activityId);
     
-    let query = db
-      .select()
-      .from(activities)
-      .where(
-        and(
-          ne(activities.hostId, userId), // Don't show user's own activities
-          eq(activities.status, 'active'),
-          sql`${activities.dateTime} > NOW()` // Only future activities
-        )
-      )
-      .orderBy(desc(activities.createdAt))
-      .limit(limit);
-
     if (swipedIds.length > 0) {
-      query = db
+      return await db
         .select()
         .from(activities)
         .where(
@@ -165,14 +152,25 @@ export class DatabaseStorage implements IStorage {
             ne(activities.hostId, userId),
             eq(activities.status, 'active'),
             sql`${activities.dateTime} > NOW()`,
-            sql`${activities.id} NOT IN (${swipedIds.join(',')})`
+            sql`${activities.id} NOT IN (${swipedIds.map(id => id).join(',')})`
+          )
+        )
+        .orderBy(desc(activities.createdAt))
+        .limit(limit);
+    } else {
+      return await db
+        .select()
+        .from(activities)
+        .where(
+          and(
+            ne(activities.hostId, userId),
+            eq(activities.status, 'active'),
+            sql`${activities.dateTime} > NOW()`
           )
         )
         .orderBy(desc(activities.createdAt))
         .limit(limit);
     }
-
-    return await query;
   }
 
   async updateActivity(id: number, data: Partial<Activity>): Promise<Activity> {

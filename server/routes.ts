@@ -464,11 +464,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const updatedUser = await storage.updateUser(userId, req.body);
+      console.log("Profile update request:", { userId, body: req.body });
+      
+      // Clean the data - remove undefined values and ensure proper types
+      const cleanData = Object.fromEntries(
+        Object.entries(req.body).filter(([_, value]) => value !== undefined)
+      );
+      
+      console.log("Cleaned data:", cleanData);
+      const updatedUser = await storage.updateUser(userId, cleanData);
+      console.log("Profile updated successfully:", updatedUser);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
-      res.status(500).json({ message: "Failed to update profile" });
+      res.status(500).json({ message: "Failed to update profile", error: error.message });
     }
   });
 

@@ -24,8 +24,8 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [searchRadius, setSearchRadius] = useState("25");
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
@@ -61,12 +61,12 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   }, [activities]);
 
   const loadGoogleMaps = () => {
-    if (window.google) {
+    if ((window as any).google) {
       return;
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDptAUAkTz9QEq1fOODRWHFrLD7-we5Crw&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = initializeMap;
@@ -76,6 +76,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const initializeMap = () => {
     if (!mapRef.current || !userLocation) return;
 
+    const google = (window as any).google;
     const map = new google.maps.Map(mapRef.current, {
       center: { lat: userLocation.latitude, lng: userLocation.longitude },
       zoom: 12,
@@ -107,6 +108,8 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const updateMapMarkers = () => {
     if (!mapInstanceRef.current) return;
 
+    const google = (window as any).google;
+    
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];

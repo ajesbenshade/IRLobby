@@ -20,14 +20,57 @@ export default function Discovery() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({
+    sortBy: 'date',
+    participantRange: [1, 50],
+    showPrivateEvents: true,
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: activities = [], isLoading } = useQuery({
+  const { data: rawActivities = [], isLoading } = useQuery({
     queryKey: ['/api/activities/discover', filters],
     retry: 1,
   });
+
+  // Apply client-side filtering and sorting
+  const activities = useMemo(() => {
+    let filtered = rawActivities.filter((activity: any) => {
+      // Filter by category
+      if (filters.category && filters.category !== 'All Categories' && activity.category !== filters.category) {
+        return false;
+      }
+      
+      // Filter by skill level
+      if (filters.skillLevel && filters.skillLevel !== 'All Levels' && activity.skillLevel !== filters.skillLevel) {
+        return false;
+      }
+      
+      // Filter by participant count
+      if (filters.participantRange) {
+        const currentParticipants = activity.currentParticipants || 0;
+        if (currentParticipants < filters.participantRange[0] || currentParticipants > filters.participantRange[1]) {
+          return false;
+        }
+      }
+      
+      // Filter by private events visibility
+      if (!filters.showPrivateEvents && activity.isPrivate) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    // Apply sorting
+    if (filters.sortBy === 'participants') {
+      filtered.sort((a: any, b: any) => (b.currentParticipants || 0) - (a.currentParticipants || 0));
+    } else if (filters.sortBy === 'date') {
+      filtered.sort((a: any, b: any) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    }
+    
+    return filtered;
+  }, [rawActivities, filters]);
 
   const { data: unreadNotifications = 0 } = useQuery({
     queryKey: ['/api/notifications/unread-count'],

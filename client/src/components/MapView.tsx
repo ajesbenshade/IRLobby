@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Navigation, Calendar, Users, Filter, List } from "lucide-react";
+import { MapPin, Calendar, Users, List } from "lucide-react";
 import { format } from "date-fns";
 
 interface MapViewProps {
@@ -13,370 +12,119 @@ interface MapViewProps {
   filters: any;
 }
 
-interface UserLocation {
-  latitude: number;
-  longitude: number;
-}
-
 export default function MapView({ onActivitySelect, onToggleView, filters }: MapViewProps) {
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<any>(null);
-  const [searchRadius, setSearchRadius] = useState("25");
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
-    queryFn: async () => {
-      if (!userLocation) return [];
-      
-      const params = new URLSearchParams({
-        latitude: userLocation.latitude.toString(),
-        longitude: userLocation.longitude.toString(),
-        maxDistance: searchRadius,
-        ...Object.fromEntries(
-          Object.entries(filters).map(([key, value]) => [key, String(value)])
-        )
-      });
-      
-      const response = await fetch(`/api/activities/nearby?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch nearby activities');
-      return response.json();
-    },
-    enabled: !!userLocation,
-    retry: 1,
+    queryKey: ["/api/activities/discover", filters],
   });
 
-  useEffect(() => {
-    requestLocation();
-    loadGoogleMaps();
-  }, []);
-
-  useEffect(() => {
-    if (mapInstanceRef.current && activities.length > 0) {
-      updateMapMarkers();
+  const filteredActivities = activities.filter((activity: any) => {
+    if (filters.category && filters.category !== 'all' && activity.category !== filters.category) {
+      return false;
     }
-  }, [activities]);
-
-  const loadGoogleMaps = () => {
-    if ((window as any).google) {
-      return;
+    if (filters.skillLevel && filters.skillLevel !== 'all' && activity.skillLevel !== filters.skillLevel) {
+      return false;
     }
+    return true;
+  });
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDptAUAkTz9QEq1fOODRWHFrLD7-we5Crw&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = initializeMap;
-    document.head.appendChild(script);
-  };
-
-  const initializeMap = () => {
-    if (!mapRef.current || !userLocation) return;
-
-    const google = (window as any).google;
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: userLocation.latitude, lng: userLocation.longitude },
-      zoom: 12,
-      styles: [
-        {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }]
-        }
-      ]
-    });
-
-    mapInstanceRef.current = map;
-
-    // Add user location marker
-    new google.maps.Marker({
-      position: { lat: userLocation.latitude, lng: userLocation.longitude },
-      map: map,
-      title: "Your Location",
-      icon: {
-        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
-        scaledSize: new google.maps.Size(24, 24),
-      }
-    });
-
-    updateMapMarkers();
-  };
-
-  const updateMapMarkers = () => {
-    if (!mapInstanceRef.current) return;
-
-    const google = (window as any).google;
-    
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    // Add activity markers
-    activities.forEach((activity: any) => {
-      if (activity.latitude && activity.longitude) {
-        const marker = new google.maps.Marker({
-          position: { lat: activity.latitude, lng: activity.longitude },
-          map: mapInstanceRef.current,
-          title: activity.title,
-          icon: {
-            url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23E11D48'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E",
-            scaledSize: new google.maps.Size(32, 32),
-          }
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 8px; max-width: 250px;">
-              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
-              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
-              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${format(new Date(activity.dateTime), 'MMM d, yyyy • h:mm a')}</p>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.category}</span>
-                <span style="color: #666; font-size: 14px;">$${activity.price}</span>
-              </div>
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(mapInstanceRef.current, marker);
-          setSelectedActivity(activity);
-        });
-
-        markersRef.current.push(marker);
-      }
-    });
-  };
-
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by this browser");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLocationError(null);
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError("Location access denied. Please enable location permissions to find nearby activities.");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError("Location information is unavailable.");
-            break;
-          case error.TIMEOUT:
-            setLocationError("Location request timed out.");
-            break;
-          default:
-            setLocationError("An unknown error occurred while retrieving location.");
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // 5 minutes
-      }
-    );
-  };
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 3959; // Earth's radius in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      "Sports & Fitness": "bg-red-100 text-red-700",
-      "Food & Drinks": "bg-orange-100 text-orange-700",
-      "Outdoor Adventures": "bg-green-100 text-green-700",
-      "Arts & Culture": "bg-purple-100 text-purple-700",
-      "Nightlife": "bg-pink-100 text-pink-700",
-      "Learning": "bg-blue-100 text-blue-700",
-      "Technology": "bg-gray-100 text-gray-700",
-      "Music": "bg-indigo-100 text-indigo-700",
-      "Social": "bg-yellow-100 text-yellow-700",
-      "Gaming": "bg-cyan-100 text-cyan-700",
-    };
-    return colors[category] || "bg-gray-100 text-gray-700";
-  };
-
-  if (locationError) {
+  if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Location Required</h3>
-            <p className="text-gray-600 mb-4">{locationError}</p>
-            <Button onClick={requestLocation} className="w-full">
-              <Navigation className="w-4 h-4 mr-2" />
-              Enable Location
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!userLocation || isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-gray-500">Finding nearby activities...</p>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Map View</h2>
-            <p className="text-sm text-gray-500">
-              {activities.length} activities within {searchRadius} miles
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onToggleView}>
-            <List className="w-4 h-4 mr-1" />
-            List View
+      <div className="bg-white border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleView}
+            className="flex items-center gap-2"
+          >
+            <List className="h-4 w-4" />
+            Card View
           </Button>
         </div>
         
-        {/* Radius Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Search Radius:</span>
-          <Select value={searchRadius} onValueChange={setSearchRadius}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5 miles</SelectItem>
-              <SelectItem value="10">10 miles</SelectItem>
-              <SelectItem value="25">25 miles</SelectItem>
-              <SelectItem value="50">50 miles</SelectItem>
-              <SelectItem value="100">100 miles</SelectItem>
-              <SelectItem value="200">200 miles</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="text-sm text-gray-600">
+          {filteredActivities.length} activities available
         </div>
       </div>
 
-      {/* Interactive Google Map */}
-      <div className="relative h-96">
-        <div 
-          ref={mapRef} 
-          className="w-full h-full"
-          style={{ minHeight: '400px' }}
-        />
-        
-        {/* Your Location Indicator */}
-        {userLocation && (
-          <div className="absolute top-4 left-4 bg-white shadow-md rounded-lg px-3 py-2 flex items-center gap-2 z-10">
-            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium text-gray-700">Your Location</span>
-          </div>
-        )}
-      </div>
-
       {/* Activities List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {activities.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No activities found nearby</p>
-              <p className="text-sm text-gray-400">Try adjusting your distance filter</p>
-            </CardContent>
-          </Card>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {filteredActivities.length === 0 ? (
+          <div className="text-center py-8">
+            <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
+            <p className="text-gray-500">Try adjusting your filters or check back later for new activities.</p>
+          </div>
         ) : (
-          activities.map((activity: any) => {
-            const distance = userLocation && activity.latitude && activity.longitude
-              ? calculateDistance(
-                  userLocation.latitude,
-                  userLocation.longitude,
-                  activity.latitude,
-                  activity.longitude
-                )
-              : null;
-
-            return (
-              <Card 
-                key={activity.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => onActivitySelect(activity)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-lg truncate flex-1 pr-2">
-                      {activity.title}
-                    </h3>
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs ${getCategoryColor(activity.category)}`}
-                    >
-                      {activity.category}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span className="truncate">{activity.location}</span>
-                      {distance && (
-                        <span className="text-blue-600 font-medium">
-                          {distance.toFixed(1)} mi
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{format(new Date(activity.dateTime), "MMM dd, h:mm a")}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span>{activity.currentParticipants || 0}/{activity.maxParticipants}</span>
-                      </div>
+          filteredActivities.map((activity: any) => (
+            <Card 
+              key={activity.id} 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => onActivitySelect(activity)}
+            >
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-lg text-gray-900">{activity.title}</h3>
+                    <div className="flex items-center text-gray-600 text-sm mt-1">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {activity.location}
                     </div>
                   </div>
+                  <Badge variant="secondary">
+                    {activity.category}
+                  </Badge>
+                </div>
 
-                  {activity.description && (
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                      {activity.description}
-                    </p>
-                  )}
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {format(new Date(activity.dateTime), 'MMM d, h:mm a')}
+                  </div>
+                  <div className="flex items-center">
+                    <Users className="h-4 w-4 mr-1" />
+                    {activity.currentParticipants || 0}/{activity.maxParticipants}
+                  </div>
+                </div>
 
-                  {activity.isPrivate && (
-                    <Badge variant="outline" className="mt-2 text-xs">
-                      Private Event
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
+                {activity.description && (
+                  <p className="text-gray-700 text-sm line-clamp-2 mb-3">
+                    {activity.description}
+                  </p>
+                )}
+
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    {activity.skillLevel && (
+                      <Badge variant="outline" className="text-xs">
+                        {activity.skillLevel}
+                      </Badge>
+                    )}
+                    {activity.isPrivate && (
+                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                        Private
+                      </Badge>
+                    )}
+                  </div>
+                  <Button size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    onActivitySelect(activity);
+                  }}>
+                    View Details
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
     </div>

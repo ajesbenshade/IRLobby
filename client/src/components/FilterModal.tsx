@@ -46,9 +46,6 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
     ageRestriction: currentFilters.ageRestriction || "All Ages",
     tags: currentFilters.tags || [],
     location: currentFilters.location || "",
-    sortBy: currentFilters.sortBy || "date",
-    participantRange: currentFilters.participantRange || [1, 50],
-    showPrivateEvents: currentFilters.showPrivateEvents !== false,
   });
 
   const [newTag, setNewTag] = useState("");
@@ -86,9 +83,6 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
       ageRestriction: "All Ages",
       tags: [],
       location: "",
-      sortBy: "date",
-      participantRange: [1, 50],
-      showPrivateEvents: true,
     });
   };
 
@@ -131,41 +125,12 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
             </div>
           </div>
 
-          {/* Sort By */}
-          <div>
-            <Label>Sort By</Label>
-            <Select value={filters.sortBy} onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date (Newest First)</SelectItem>
-                <SelectItem value="distance">Distance (Closest First)</SelectItem>
-                <SelectItem value="participants">Most Participants</SelectItem>
-                <SelectItem value="popularity">Most Popular</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Distance */}
           <div>
             <Label>Max Distance: {filters.maxDistance[0]} miles</Label>
             <Slider
               value={filters.maxDistance}
               onValueChange={(value) => setFilters(prev => ({ ...prev, maxDistance: value }))}
-              max={50}
-              min={1}
-              step={1}
-              className="mt-2"
-            />
-          </div>
-
-          {/* Participant Count Range */}
-          <div>
-            <Label>Number of People: {filters.participantRange[0]} - {filters.participantRange[1]} participants</Label>
-            <Slider
-              value={filters.participantRange}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, participantRange: value }))}
               max={50}
               min={1}
               step={1}

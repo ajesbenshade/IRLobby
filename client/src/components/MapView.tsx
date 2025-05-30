@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [searchRadius, setSearchRadius] = useState("25");
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
@@ -48,7 +51,102 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
 
   useEffect(() => {
     requestLocation();
+    loadGoogleMaps();
   }, []);
+
+  useEffect(() => {
+    if (mapInstanceRef.current && activities.length > 0) {
+      updateMapMarkers();
+    }
+  }, [activities]);
+
+  const loadGoogleMaps = () => {
+    if (window.google) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeMap;
+    document.head.appendChild(script);
+  };
+
+  const initializeMap = () => {
+    if (!mapRef.current || !userLocation) return;
+
+    const map = new google.maps.Map(mapRef.current, {
+      center: { lat: userLocation.latitude, lng: userLocation.longitude },
+      zoom: 12,
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
+
+    mapInstanceRef.current = map;
+
+    // Add user location marker
+    new google.maps.Marker({
+      position: { lat: userLocation.latitude, lng: userLocation.longitude },
+      map: map,
+      title: "Your Location",
+      icon: {
+        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
+        scaledSize: new google.maps.Size(24, 24),
+      }
+    });
+
+    updateMapMarkers();
+  };
+
+  const updateMapMarkers = () => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // Add activity markers
+    activities.forEach((activity: any) => {
+      if (activity.latitude && activity.longitude) {
+        const marker = new google.maps.Marker({
+          position: { lat: activity.latitude, lng: activity.longitude },
+          map: mapInstanceRef.current,
+          title: activity.title,
+          icon: {
+            url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23E11D48'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E",
+            scaledSize: new google.maps.Size(32, 32),
+          }
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px; max-width: 250px;">
+              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${format(new Date(activity.dateTime), 'MMM d, yyyy • h:mm a')}</p>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.category}</span>
+                <span style="color: #666; font-size: 14px;">$${activity.price}</span>
+              </div>
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(mapInstanceRef.current, marker);
+          setSelectedActivity(activity);
+        });
+
+        markersRef.current.push(marker);
+      }
+    });
+  };
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -181,21 +279,21 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         </div>
       </div>
 
-      {/* Map Placeholder */}
-      <div className="relative bg-gray-100 h-64 flex items-center justify-center">
-        <div className="text-center text-gray-500">
-          <MapPin className="w-12 h-12 mx-auto mb-2" />
-          <p className="text-sm">Interactive map would be integrated here</p>
-          <p className="text-xs">Using services like Google Maps or Mapbox</p>
-        </div>
+      {/* Interactive Google Map */}
+      <div className="relative h-96">
+        <div 
+          ref={mapRef} 
+          className="w-full h-full"
+          style={{ minHeight: '400px' }}
+        />
         
-        {/* Location marker overlay */}
-        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Navigation className="w-4 h-4 text-blue-500" />
-            <span>Your Location</span>
+        {/* Your Location Indicator */}
+        {userLocation && (
+          <div className="absolute top-4 left-4 bg-white shadow-md rounded-lg px-3 py-2 flex items-center gap-2 z-10">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium text-gray-700">Your Location</span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Activities List */}

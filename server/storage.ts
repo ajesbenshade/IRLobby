@@ -88,6 +88,7 @@ export interface IStorage {
   getUserAttendedActivities(userId: string): Promise<any[]>;
   canUserReviewActivity(userId: string, activityId: number): Promise<boolean>;
   hasUserReviewedActivity(userId: string, activityId: number): Promise<boolean>;
+  getUserReviews(userId: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -772,6 +773,37 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return existingReview.length > 0;
+  }
+
+  async getUserReviews(userId: string): Promise<any[]> {
+    const reviews = await db
+      .select({
+        id: userRatings.id,
+        rating: userRatings.rating,
+        comment: userRatings.comment,
+        createdAt: userRatings.createdAt,
+        reviewType: userRatings.reviewType,
+        wouldRecommend: userRatings.wouldRecommend,
+        reviewer: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        },
+        activity: {
+          id: activities.id,
+          title: activities.title,
+          location: activities.location,
+          dateTime: activities.dateTime,
+        }
+      })
+      .from(userRatings)
+      .innerJoin(users, eq(userRatings.raterId, users.id))
+      .leftJoin(activities, eq(userRatings.activityId, activities.id))
+      .where(eq(userRatings.ratedUserId, userId))
+      .orderBy(desc(userRatings.createdAt));
+
+    return reviews;
   }
 }
 

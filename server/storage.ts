@@ -86,8 +86,8 @@ export class DatabaseStorage implements IStorage {
   // Sample data population
   async populateSampleData(): Promise<void> {
     // Check if data already exists
-    const existingUsers = await db.select().from(users).limit(1);
-    if (existingUsers.length > 5) return; // Don't repopulate if data exists
+    const existingActivities = await db.select().from(activities);
+    if (existingActivities.length > 50) return; // Don't repopulate if we have enough data
 
     const sampleUsers = [
       { id: "user_1", email: "alex.martinez@email.com", firstName: "Alex", lastName: "Martinez", profileImageUrl: "https://i.pravatar.cc/150?u=alex", location: "Center City, Philadelphia", occupation: "Software Engineer", bio: "Love hiking, rock climbing, and trying new restaurants. Always up for an adventure!" },

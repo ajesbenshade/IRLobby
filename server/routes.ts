@@ -421,6 +421,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Review endpoints
+  app.get('/api/activities/:activityId/reviews', isAuthenticated, async (req: any, res) => {
+    try {
+      const { activityId } = req.params;
+      const reviews = await storage.getActivityReviews(parseInt(activityId));
+      res.json(reviews);
+    } catch (error) {
+      console.error("Error fetching activity reviews:", error);
+      res.status(500).json({ message: "Failed to fetch activity reviews" });
+    }
+  });
+
+  app.post('/api/activities/:activityId/reviews', isAuthenticated, async (req: any, res) => {
+    try {
+      const { activityId } = req.params;
+      const currentUserId = req.user.claims.sub;
+      const { rating, review, photos = [] } = req.body;
+
+      // Check if user can review this activity
+      const canReview = await storage.canUserReviewActivity(currentUserId, parseInt(activityId));
+      if (!canReview) {
+        return res.status(403).json({ message: "You can only review activities you've attended" });
+      }
+
+      // Check if user has already reviewed this activity
+      const hasReviewed = await storage.hasUserReviewedActivity(currentUserId, parseInt(activityId));
+      if (hasReviewed) {
+        return res.status(409).json({ message: "You have already reviewed this activity" });
+      }
+
+      const newReview = await storage.createActivityReview({
+        activityId: parseInt(activityId),
+        userId: currentUserId,
+        rating,
+        review,
+        photos
+      });
+
+      res.status(201).json(newReview);
+    } catch (error) {
+      console.error("Error creating activity review:", error);
+      res.status(500).json({ message: "Failed to create activity review" });
+    }
+  });
+
+  app.get('/api/users/:userId/attended-activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user.claims.sub;
+
+      // Only allow users to view their own attended activities
+      if (userId !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const attendedActivities = await storage.getUserAttendedActivities(userId);
+      res.json(attendedActivities);
+    } catch (error) {
+      console.error("Error fetching attended activities:", error);
+      res.status(500).json({ message: "Failed to fetch attended activities" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket server setup

@@ -256,7 +256,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                     <Card key={user.id} className="p-3">
                       <div className="flex items-center justify-between">
                         <div 
-                          className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors"
+                          className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
                           onClick={() => handleViewProfile(user.id)}
                         >
                           <Avatar className="h-10 w-10">

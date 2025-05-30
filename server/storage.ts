@@ -28,7 +28,7 @@ import {
   type ChatRoom
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ne, sql, not, inArray, or, ilike } from "drizzle-orm";
+import { eq, and, desc, ne, sql, not, inArray, or, ilike, lt } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {

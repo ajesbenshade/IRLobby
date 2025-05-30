@@ -456,6 +456,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/friends/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      const userId = req.user.claims.sub;
+      
+      if (!q || typeof q !== 'string') {
+        return res.json([]);
+      }
+      
+      const results = await storage.searchUsers(q, userId);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
+  // Sample data population route (for development)
+  app.post('/api/populate-sample-data', async (req, res) => {
+    try {
+      await storage.populateSampleData();
+      res.json({ message: "Sample data populated successfully" });
+    } catch (error) {
+      console.error("Error populating sample data:", error);
+      res.status(500).json({ message: "Failed to populate sample data" });
+    }
+  });
+
   app.get('/api/friends', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

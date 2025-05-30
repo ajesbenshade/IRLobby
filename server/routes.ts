@@ -21,14 +21,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Populate sample data on startup
-  try {
-    await storage.populateSampleData();
-    console.log("Sample data populated successfully");
-  } catch (error) {
-    console.error("Error populating sample data:", error);
-  }
-
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -41,78 +33,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add sample events endpoint
-  app.post('/api/admin/populate-events', async (req, res) => {
-    try {
-      const additionalEvents = [
-        { title: "Sunrise Hike at Wissahickon", location: "Wissahickon Valley Park", hostId: "user_1", category: "adventure", dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 40.0379, longitude: -75.2096, description: "Early morning hike through scenic trails. Coffee and donuts after!", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
-        { title: "Jazz Night at Chris' Jazz Cafe", location: "Chris' Jazz Cafe", hostId: "user_2", category: "entertainment", dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), maxParticipants: 40, latitude: 39.9496, longitude: -75.1503, description: "Live jazz performances in an intimate setting.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Basketball Pickup Game", location: "Palumbo Playground", hostId: "user_3", category: "sports", dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), maxParticipants: 10, latitude: 39.9259, longitude: -75.1476, description: "Casual pickup basketball. All skill levels welcome.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Farmers Market Exploration", location: "Clark Park Farmers Market", hostId: "user_4", category: "food", dateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000), maxParticipants: 8, latitude: 39.9489, longitude: -75.2280, description: "Discover local vendors and fresh produce.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Escape Room Challenge", location: "Center City", hostId: "user_5", category: "social", dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), maxParticipants: 6, latitude: 39.9496, longitude: -75.1503, description: "Test your problem-solving skills.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Morning Swim Session", location: "FDR Park Pool", hostId: "user_6", category: "fitness", dateTime: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9010, longitude: -75.1896, description: "Lap swimming followed by healthy breakfast.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
-        { title: "Karaoke Night", location: "Center City Bar", hostId: "user_7", category: "entertainment", dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), maxParticipants: 25, latitude: 39.9496, longitude: -75.1570, description: "Sing your heart out at the best karaoke spot!", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Chess Tournament", location: "Rittenhouse Square", hostId: "user_8", category: "social", dateTime: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), maxParticipants: 16, latitude: 39.9489, longitude: -75.1725, description: "Outdoor chess tournament in the park.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
-        { title: "Mural Arts Tour", location: "Northern Liberties", hostId: "user_9", category: "culture", dateTime: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9735, longitude: -75.1404, description: "Guided tour of Philadelphia's incredible murals.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Rooftop Yoga", location: "Center City Rooftop", hostId: "user_10", category: "wellness", dateTime: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), maxParticipants: 20, latitude: 39.9496, longitude: -75.1652, description: "Yoga with stunning city skyline views.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Ice Skating Fun", location: "Dilworth Park", hostId: "user_11", category: "sports", dateTime: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000), maxParticipants: 18, latitude: 39.9537, longitude: -75.1652, description: "Ice skating followed by hot chocolate.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Craft Beer Workshop", location: "Fishtown Brewery", hostId: "user_12", category: "learning", dateTime: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9735, longitude: -75.1354, description: "Learn the art of craft beer brewing.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
-        { title: "Dog Park Meetup", location: "Schuylkill River Park", hostId: "user_13", category: "social", dateTime: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000), maxParticipants: 20, latitude: 39.9656, longitude: -75.1896, description: "Bring your furry friends for socialization!", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Ghost Tour", location: "Old City", hostId: "user_14", category: "entertainment", dateTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9496, longitude: -75.1503, description: "Spooky walking tour through historic Philadelphia.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Ping Pong Tournament", location: "Center City", hostId: "user_15", category: "sports", dateTime: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), maxParticipants: 16, latitude: 39.9496, longitude: -75.1652, description: "Competitive ping pong with prizes.", skillLevel: "intermediate", isPrivate: false, requiresApplication: false },
-        { title: "Urban Sketching", location: "Society Hill", hostId: "user_16", category: "arts", dateTime: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000), maxParticipants: 10, latitude: 39.9426, longitude: -75.1503, description: "Sketch beautiful architecture and scenes.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Improv Comedy Workshop", location: "Center City Studio", hostId: "user_17", category: "learning", dateTime: new Date(Date.now() + 17 * 24 * 60 * 60 * 1000), maxParticipants: 12, latitude: 39.9496, longitude: -75.1570, description: "Learn improv techniques and have fun.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
-        { title: "Food Truck Festival", location: "Penn's Landing", hostId: "user_18", category: "food", dateTime: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), maxParticipants: 50, latitude: 39.9496, longitude: -75.1404, description: "Sample cuisines from the best food trucks.", skillLevel: "all", isPrivate: false, requiresApplication: false },
-        { title: "Morning Tai Chi", location: "Washington Square Park", hostId: "user_19", category: "wellness", dateTime: new Date(Date.now() + 19 * 24 * 60 * 60 * 1000), maxParticipants: 15, latitude: 39.9426, longitude: -75.1570, description: "Gentle tai chi practice in peaceful setting.", skillLevel: "beginner", isPrivate: false, requiresApplication: false },
-        { title: "Vintage Shopping Tour", location: "Queen Village", hostId: "user_20", category: "social", dateTime: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), maxParticipants: 8, latitude: 39.9359, longitude: -75.1503, description: "Explore the best vintage shops.", skillLevel: "all", isPrivate: false, requiresApplication: false }
-      ];
-
-      for (const eventData of additionalEvents) {
-        await storage.createActivity(eventData);
-      }
-
-      res.json({ message: `Added ${additionalEvents.length} new events successfully` });
-    } catch (error) {
-      console.error("Error adding events:", error);
-      res.status(500).json({ message: "Failed to add events" });
-    }
-  });
-
-  app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const profileData = req.body;
-      
-      // Calculate profile completeness
-      const completeness = calculateProfileCompleteness(profileData);
-      profileData.profileCompleteness = completeness;
-      profileData.updatedAt = new Date();
-      
-      const updatedUser = await storage.updateUser(userId, profileData);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      res.status(500).json({ message: "Failed to update profile" });
-    }
-  });
-
-  // Helper function to calculate profile completeness
-  function calculateProfileCompleteness(profile: any): number {
-    let score = 20; // Base score for having an account
-    
-    if (profile.firstName && profile.lastName) score += 10;
-    if (profile.bio && profile.bio.length > 50) score += 15;
-    if (profile.age) score += 5;
-    if (profile.occupation) score += 5;
-    if (profile.location) score += 10;
-    if (profile.interests && profile.interests.length >= 3) score += 10;
-    if (profile.activityPreferences && profile.activityPreferences.length >= 2) score += 10;
-    if (profile.languages && profile.languages.length >= 1) score += 5;
-    if (profile.personalityTraits && profile.personalityTraits.length >= 3) score += 10;
-    
-    return Math.min(score, 100);
-  }
-
   // Activity routes
   app.get('/api/activities/discover', isAuthenticated, async (req: any, res) => {
     try {
@@ -121,17 +41,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(activities);
     } catch (error) {
       console.error("Error fetching discoverable activities:", error);
-      res.status(500).json({ message: "Failed to fetch activities" });
-    }
-  });
-
-  // Public endpoint to check activities (no auth required)
-  app.get('/api/public/activities', async (req, res) => {
-    try {
-      const activities = await storage.getDiscoverableActivities("user_1", req.query);
-      res.json({ count: activities.length, activities: activities.slice(0, 5) });
-    } catch (error) {
-      console.error("Error fetching all activities:", error);
       res.status(500).json({ message: "Failed to fetch activities" });
     }
   });
@@ -157,66 +66,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching nearby activities:", error);
       res.status(500).json({ message: "Failed to fetch nearby activities" });
-    }
-  });
-
-  // Photo upload routes
-  app.post('/api/upload/photo', isAuthenticated, async (req: any, res) => {
-    try {
-      const { photoData, type } = req.body; // type: 'profile' or 'gallery'
-      
-      if (!photoData) {
-        return res.status(400).json({ message: "Photo data is required" });
-      }
-
-      const userId = req.user.claims.sub;
-      
-      // In a real app, you'd upload to a service like AWS S3, Cloudinary, etc.
-      // For now, we'll store the base64 data directly (not recommended for production)
-      const photoUrl = photoData; // This would be the URL returned from your upload service
-      
-      if (type === 'profile') {
-        // Update profile image
-        await storage.updateUser(userId, { profileImageUrl: photoUrl });
-      } else if (type === 'gallery') {
-        // Add to gallery
-        const user = await storage.getUser(userId);
-        const currentGallery = user?.profileGallery || [];
-        
-        if (currentGallery.length >= 12) {
-          return res.status(400).json({ message: "Maximum 12 photos allowed in gallery" });
-        }
-        
-        const updatedGallery = [...currentGallery, photoUrl];
-        await storage.updateUser(userId, { profileGallery: updatedGallery });
-      }
-
-      res.json({ success: true, photoUrl });
-    } catch (error) {
-      console.error("Error uploading photo:", error);
-      res.status(500).json({ message: "Failed to upload photo" });
-    }
-  });
-
-  app.delete('/api/upload/photo/:index', isAuthenticated, async (req: any, res) => {
-    try {
-      const photoIndex = parseInt(req.params.index);
-      const userId = req.user.claims.sub;
-      
-      const user = await storage.getUser(userId);
-      const currentGallery = user?.profileGallery || [];
-      
-      if (photoIndex < 0 || photoIndex >= currentGallery.length) {
-        return res.status(400).json({ message: "Invalid photo index" });
-      }
-      
-      const updatedGallery = currentGallery.filter((_, index) => index !== photoIndex);
-      await storage.updateUser(userId, { profileGallery: updatedGallery });
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting photo:", error);
-      res.status(500).json({ message: "Failed to delete photo" });
     }
   });
 
@@ -464,110 +313,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log("Profile update request:", { userId, body: req.body });
-      
-      // Clean the data - remove undefined values and ensure proper types
-      const cleanData = Object.fromEntries(
-        Object.entries(req.body).filter(([_, value]) => value !== undefined)
-      );
-      
-      console.log("Cleaned data:", cleanData);
-      const updatedUser = await storage.updateUser(userId, cleanData);
-      console.log("Profile updated successfully:", updatedUser);
+      const updatedUser = await storage.updateUser(userId, req.body);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
-      res.status(500).json({ message: "Failed to update profile", error: error.message });
-    }
-  });
-
-  // Friend management routes
-  app.post('/api/friends/request', isAuthenticated, async (req: any, res) => {
-    try {
-      const requesterId = req.user.claims.sub;
-      const { receiverId } = req.body;
-      
-      if (requesterId === receiverId) {
-        return res.status(400).json({ message: "Cannot send friend request to yourself" });
-      }
-
-      const friendship = await storage.sendFriendRequest(requesterId, receiverId);
-      res.json(friendship);
-    } catch (error) {
-      console.error("Error sending friend request:", error);
-      res.status(400).json({ message: "Failed to send friend request" });
-    }
-  });
-
-  app.post('/api/friends/accept/:friendshipId', isAuthenticated, async (req: any, res) => {
-    try {
-      const { friendshipId } = req.params;
-      const friendship = await storage.acceptFriendRequest(parseInt(friendshipId));
-      res.json(friendship);
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
-      res.status(400).json({ message: "Failed to accept friend request" });
-    }
-  });
-
-  app.post('/api/friends/reject/:friendshipId', isAuthenticated, async (req: any, res) => {
-    try {
-      const { friendshipId } = req.params;
-      const friendship = await storage.rejectFriendRequest(parseInt(friendshipId));
-      res.json(friendship);
-    } catch (error) {
-      console.error("Error rejecting friend request:", error);
-      res.status(400).json({ message: "Failed to reject friend request" });
-    }
-  });
-
-  app.get('/api/friends/search', isAuthenticated, async (req: any, res) => {
-    try {
-      const { q } = req.query;
-      const userId = req.user.claims.sub;
-      
-      if (!q || typeof q !== 'string') {
-        return res.json([]);
-      }
-      
-      const results = await storage.searchUsers(q, userId);
-      res.json(results);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      res.status(500).json({ message: "Failed to search users" });
-    }
-  });
-
-  // Sample data population route (for development)
-  app.post('/api/populate-sample-data', async (req, res) => {
-    try {
-      await storage.populateSampleData();
-      res.json({ message: "Sample data populated successfully" });
-    } catch (error) {
-      console.error("Error populating sample data:", error);
-      res.status(500).json({ message: "Failed to populate sample data" });
-    }
-  });
-
-  app.get('/api/friends', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const friends = await storage.getUserFriends(userId);
-      res.json(friends);
-    } catch (error) {
-      console.error("Error fetching friends:", error);
-      res.status(500).json({ message: "Failed to fetch friends" });
-    }
-  });
-
-  app.get('/api/friends/requests', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const requests = await storage.getUserFriendRequests(userId);
-      res.json(requests);
-    } catch (error) {
-      console.error("Error fetching friend requests:", error);
-      res.status(500).json({ message: "Failed to fetch friend requests" });
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 

@@ -153,7 +153,10 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                 {friends.map((friend: any) => (
                   <Card key={friend.id} className="p-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div 
+                        className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
+                        onClick={() => handleViewProfile(friend.friendId)}
+                      >
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={friend.profileImageUrl} />
                           <AvatarFallback>
@@ -161,7 +164,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium hover:text-primary">
                             {friend.firstName} {friend.lastName}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -169,7 +172,16 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                           </p>
                         </div>
                       </div>
-                      <Badge variant="secondary">Friends</Badge>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewProfile(friend.friendId)}
+                        >
+                          View Profile
+                        </Button>
+                        <Badge variant="secondary">Friends</Badge>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -191,7 +203,10 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                 {friendRequests.map((request: any) => (
                   <Card key={request.id} className="p-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div 
+                        className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
+                        onClick={() => handleViewProfile(request.requesterId)}
+                      >
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={request.profileImageUrl} />
                           <AvatarFallback>
@@ -199,7 +214,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium hover:text-primary">
                             {request.firstName} {request.lastName}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -208,6 +223,13 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewProfile(request.requesterId)}
+                        >
+                          View Profile
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => handleAcceptRequest(request.id)}

@@ -101,6 +101,18 @@ export const activityMatches = pgTable("activity_matches", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const activityApplications = pgTable("activity_applications", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  hostId: varchar("host_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: varchar("status").default("pending"), // pending, approved, rejected
+  message: text("message"), // Optional message from applicant
+  hostMessage: text("host_message"), // Optional message from host
+  appliedAt: timestamp("applied_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
 export const chatRooms = pgTable("chat_rooms", {
   id: serial("id").primaryKey(),
   activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
@@ -283,6 +295,12 @@ export const insertActivityMatchSchema = createInsertSchema(activityMatches).omi
   createdAt: true,
 });
 
+export const insertActivityApplicationSchema = createInsertSchema(activityApplications).omit({
+  id: true,
+  appliedAt: true,
+  reviewedAt: true,
+});
+
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   id: true,
   createdAt: true,
@@ -302,6 +320,8 @@ export type InsertActivitySwipe = z.infer<typeof insertActivitySwipeSchema>;
 export type ActivitySwipe = typeof activitySwipes.$inferSelect;
 export type InsertActivityMatch = z.infer<typeof insertActivityMatchSchema>;
 export type ActivityMatch = typeof activityMatches.$inferSelect;
+export type InsertActivityApplication = z.infer<typeof insertActivityApplicationSchema>;
+export type ActivityApplication = typeof activityApplications.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertUserRating = z.infer<typeof insertUserRatingSchema>;

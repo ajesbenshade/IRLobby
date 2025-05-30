@@ -3,6 +3,7 @@ import {
   activities,
   activitySwipes,
   activityMatches,
+  activityApplications,
   chatRooms,
   chatMessages,
   userRatings,
@@ -14,6 +15,8 @@ import {
   type ActivitySwipe,
   type InsertActivityMatch,
   type ActivityMatch,
+  type InsertActivityApplication,
+  type ActivityApplication,
   type InsertChatMessage,
   type ChatMessage,
   type InsertUserRating,
@@ -46,6 +49,13 @@ export interface IStorage {
   updateActivityMatch(id: number, data: Partial<ActivityMatch>): Promise<ActivityMatch>;
   getUserMatches(userId: string): Promise<any[]>;
   isUserParticipant(userId: string, activityId: number): Promise<boolean>;
+  
+  // Application operations for private events
+  createActivityApplication(application: InsertActivityApplication): Promise<ActivityApplication>;
+  updateActivityApplication(id: number, data: Partial<ActivityApplication>): Promise<ActivityApplication>;
+  getActivityApplications(activityId: number): Promise<any[]>;
+  getHostApplications(hostId: string): Promise<any[]>;
+  getUserApplications(userId: string): Promise<any[]>;
   
   // Chat operations
   getOrCreateChatRoom(activityId: number): Promise<ChatRoom>;
@@ -331,6 +341,100 @@ export class DatabaseStorage implements IStorage {
       .values(rating)
       .returning();
     return newRating;
+  }
+
+  // Application operations for private events
+  async createActivityApplication(application: InsertActivityApplication): Promise<ActivityApplication> {
+    const [newApplication] = await db
+      .insert(activityApplications)
+      .values(application)
+      .returning();
+    return newApplication;
+  }
+
+  async updateActivityApplication(id: number, data: Partial<ActivityApplication>): Promise<ActivityApplication> {
+    const [updatedApplication] = await db
+      .update(activityApplications)
+      .set({ ...data, reviewedAt: new Date() })
+      .where(eq(activityApplications.id, id))
+      .returning();
+    return updatedApplication;
+  }
+
+  async getActivityApplications(activityId: number): Promise<any[]> {
+    return await db
+      .select({
+        id: activityApplications.id,
+        status: activityApplications.status,
+        message: activityApplications.message,
+        hostMessage: activityApplications.hostMessage,
+        appliedAt: activityApplications.appliedAt,
+        reviewedAt: activityApplications.reviewedAt,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          email: users.email,
+        }
+      })
+      .from(activityApplications)
+      .leftJoin(users, eq(activityApplications.userId, users.id))
+      .where(eq(activityApplications.activityId, activityId))
+      .orderBy(desc(activityApplications.appliedAt));
+  }
+
+  async getHostApplications(hostId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: activityApplications.id,
+        status: activityApplications.status,
+        message: activityApplications.message,
+        appliedAt: activityApplications.appliedAt,
+        activity: {
+          id: activities.id,
+          title: activities.title,
+          dateTime: activities.dateTime,
+          location: activities.location,
+        },
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        }
+      })
+      .from(activityApplications)
+      .leftJoin(activities, eq(activityApplications.activityId, activities.id))
+      .leftJoin(users, eq(activityApplications.userId, users.id))
+      .where(and(
+        eq(activityApplications.hostId, hostId),
+        eq(activityApplications.status, 'pending')
+      ))
+      .orderBy(desc(activityApplications.appliedAt));
+  }
+
+  async getUserApplications(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: activityApplications.id,
+        status: activityApplications.status,
+        message: activityApplications.message,
+        hostMessage: activityApplications.hostMessage,
+        appliedAt: activityApplications.appliedAt,
+        reviewedAt: activityApplications.reviewedAt,
+        activity: {
+          id: activities.id,
+          title: activities.title,
+          dateTime: activities.dateTime,
+          location: activities.location,
+          isPrivate: activities.isPrivate,
+        }
+      })
+      .from(activityApplications)
+      .leftJoin(activities, eq(activityApplications.activityId, activities.id))
+      .where(eq(activityApplications.userId, userId))
+      .orderBy(desc(activityApplications.appliedAt));
   }
 }
 

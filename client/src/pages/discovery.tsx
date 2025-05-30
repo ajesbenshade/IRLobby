@@ -48,10 +48,10 @@ export default function Discovery() {
         return false;
       }
       
-      // Filter by participant count
+      // Filter by participant count - check max participants instead of current
       if (filters.participantRange) {
-        const currentParticipants = activity.currentParticipants || 0;
-        if (currentParticipants < filters.participantRange[0] || currentParticipants > filters.participantRange[1]) {
+        const maxParticipants = activity.max_participants || activity.maxParticipants || 0;
+        if (maxParticipants < filters.participantRange[0] || maxParticipants > filters.participantRange[1]) {
           return false;
         }
       }

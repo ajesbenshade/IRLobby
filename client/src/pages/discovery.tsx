@@ -233,6 +233,21 @@ export default function Discovery() {
           />
         </>
       )}
+
+      {/* Map View Modal */}
+      {showMapView && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <MapView
+            onActivitySelect={(activity) => {
+              setCurrentActivityIndex(activities.findIndex((a: any) => a.id === activity.id));
+              setShowMapView(false);
+              setShowDetailsModal(true);
+            }}
+            onToggleView={() => setShowMapView(false)}
+            filters={filters}
+          />
+        </div>
+      )}
     </div>
   );
 }

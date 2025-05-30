@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { insertActivitySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import ActivityTemplateModal from "@/components/ActivityTemplateModal";
 import HostDashboard from "@/components/HostDashboard";
-import { Camera, MapPin, Settings, Users } from "lucide-react";
+import { Camera, MapPin, Settings, Users, Locate } from "lucide-react";
 import { z } from "zod";
 
 const formSchema = insertActivitySchema.extend({

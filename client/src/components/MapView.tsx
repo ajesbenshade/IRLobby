@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { MapPin, Calendar, Users, List, Navigation, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
@@ -19,18 +20,48 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [maxDistance, setMaxDistance] = useState([25]); // Distance in miles
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ["/api/activities/discover", filters],
   });
 
+  // Function to calculate distance between two points in miles
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
   const filteredActivities = activities.filter((activity: any) => {
+    // Filter by category
     if (filters.category && filters.category !== 'all' && activity.category !== filters.category) {
       return false;
     }
+    
+    // Filter by skill level
     if (filters.skillLevel && filters.skillLevel !== 'all' && activity.skillLevel !== filters.skillLevel) {
       return false;
     }
+    
+    // Filter by distance if user location is available
+    if (userLocation && activity.latitude && activity.longitude) {
+      const distance = calculateDistance(
+        userLocation.lat, 
+        userLocation.lng, 
+        activity.latitude, 
+        activity.longitude
+      );
+      if (distance > maxDistance[0]) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -234,8 +265,26 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
           </Button>
         </div>
         
-        <div className="text-sm text-gray-600">
-          {filteredActivities.length} activities on map
+        <div className="flex items-center gap-4">
+          {userLocation && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Within:</span>
+              <div className="w-24">
+                <Slider
+                  value={maxDistance}
+                  onValueChange={setMaxDistance}
+                  max={50}
+                  min={1}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+              <span className="text-gray-600 font-medium">{maxDistance[0]} mi</span>
+            </div>
+          )}
+          <div className="text-sm text-gray-600">
+            {filteredActivities.length} activities
+          </div>
         </div>
       </div>
 

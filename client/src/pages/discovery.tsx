@@ -48,10 +48,10 @@ export default function Discovery() {
         return false;
       }
       
-      // Filter by participant count - check max participants instead of current
+      // Filter by participant count - event creator always counts as 1 participant
       if (filters.participantRange) {
-        const maxParticipants = activity.max_participants || activity.maxParticipants || 0;
-        if (maxParticipants < filters.participantRange[0] || maxParticipants > filters.participantRange[1]) {
+        const currentParticipants = Math.max(1, (activity.current_participants || activity.currentParticipants || 0));
+        if (currentParticipants < filters.participantRange[0] || currentParticipants > filters.participantRange[1]) {
           return false;
         }
       }

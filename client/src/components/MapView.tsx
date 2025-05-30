@@ -30,7 +30,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
       const params = new URLSearchParams({
         latitude: userLocation.latitude.toString(),
         longitude: userLocation.longitude.toString(),
-        maxDistance: '25',
+        maxDistance: '100',
         ...Object.fromEntries(
           Object.entries(filters).map(([key, value]) => [key, String(value)])
         )

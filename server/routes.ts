@@ -125,6 +125,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint to check activities (no auth required)
+  app.get('/api/public/activities', async (req, res) => {
+    try {
+      const activities = await storage.getDiscoverableActivities("user_1", req.query);
+      res.json({ count: activities.length, activities: activities.slice(0, 5) });
+    } catch (error) {
+      console.error("Error fetching all activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
   app.get('/api/activities/nearby', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

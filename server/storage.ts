@@ -34,6 +34,7 @@ import { eq, and, desc, ne, sql, not, inArray, or, ilike, lt } from "drizzle-orm
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserWithStats(id: string): Promise<any>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   updateUserRatingStats(userId: string): Promise<void>;
@@ -96,6 +97,43 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserWithStats(id: string): Promise<any> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    if (!user) return undefined;
+
+    // Calculate rating statistics
+    const ratingStats = await db
+      .select({
+        avgRating: sql<number>`CAST(AVG(${userRatings.rating}) AS DECIMAL(3,1))`,
+        totalRatings: sql<number>`COUNT(${userRatings.id})`,
+      })
+      .from(userRatings)
+      .where(eq(userRatings.ratedUserId, id));
+
+    // Count events hosted
+    const eventsHosted = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(activities)
+      .where(eq(activities.hostId, id));
+
+    // Count events attended
+    const eventsAttended = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(activityMatches)
+      .where(and(
+        eq(activityMatches.userId, id),
+        eq(activityMatches.status, 'accepted')
+      ));
+
+    return {
+      ...user,
+      rating: ratingStats[0]?.avgRating || null,
+      totalRatings: ratingStats[0]?.totalRatings || 0,
+      eventsHosted: eventsHosted[0]?.count || 0,
+      eventsAttended: eventsAttended[0]?.count || 0,
+    };
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user by ID
   app.get('/api/users/:userId', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.params.userId);
+      const user = await storage.getUserWithStats(req.params.userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }

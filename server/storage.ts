@@ -21,7 +21,7 @@ import {
   type ChatRoom
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ne, sql } from "drizzle-orm";
+import { eq, and, desc, ne, sql, not, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -152,7 +152,7 @@ export class DatabaseStorage implements IStorage {
             ne(activities.hostId, userId),
             eq(activities.status, 'active'),
             sql`${activities.dateTime} > NOW()`,
-            sql`${activities.id} NOT IN (${swipedIds.map(id => id).join(',')})`
+            notIn(activities.id, swipedIds)
           )
         )
         .orderBy(desc(activities.createdAt))

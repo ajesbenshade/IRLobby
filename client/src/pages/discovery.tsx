@@ -111,9 +111,38 @@ export default function Discovery() {
           <h2 className="text-xl font-bold text-gray-800">Discover Events</h2>
           <p className="text-sm text-gray-500">Find activities near you</p>
         </div>
-        <Button variant="ghost" size="sm" className="w-10 h-10 p-0">
-          <Filter className="w-5 h-5 text-gray-600" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-10 h-10 p-0 relative"
+            onClick={() => setShowNotifications(true)}
+          >
+            <Bell className="w-5 h-5 text-gray-600" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-10 h-10 p-0"
+            onClick={() => setShowFilterModal(true)}
+          >
+            <Filter className="w-5 h-5 text-gray-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-10 h-10 p-0"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </header>
 
       {/* Swipe Cards Container */}

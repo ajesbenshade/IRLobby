@@ -234,6 +234,20 @@ export default function Discovery() {
         </>
       )}
 
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApplyFilters={handleApplyFilters}
+        currentFilters={filters}
+      />
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+
       {/* Map View Modal */}
       {showMapView && (
         <div className="fixed inset-0 z-50 bg-white">

@@ -13,8 +13,8 @@ export default function Landing() {
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Heart className="text-primary text-3xl" />
         </div>
-        <h1 className="text-4xl font-bold text-white mb-2">SwipeEvents</h1>
-        <p className="text-purple-100 text-lg">Find your tribe, join the fun</p>
+        <h1 className="text-4xl font-bold text-white mb-2">LIYF</h1>
+        <p className="text-purple-100 text-lg">Life Is Your Function</p>
       </div>
 
       <div className="w-full max-w-md space-y-6 mb-8">

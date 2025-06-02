@@ -88,9 +88,12 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto" aria-describedby="filter-description">
         <DialogHeader>
           <DialogTitle>Filter Activities</DialogTitle>
+          <p id="filter-description" className="text-sm text-gray-600">
+            Set your preferences to find activities that match your interests
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -148,6 +151,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
               min={0}
               step={5}
               className="mt-2"
+              minStepsBetweenThumbs={1}
             />
           </div>
 

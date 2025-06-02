@@ -28,7 +28,7 @@ import {
   type ChatRoom
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ne, sql, not, inArray, or, ilike, lt } from "drizzle-orm";
+import { eq, and, desc, ne, sql, not, inArray, or, ilike, lt, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -205,7 +205,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDiscoverableActivities(userId: string, filters: any): Promise<Activity[]> {
-    const { limit = 20 } = filters;
+    const { 
+      limit = 20, 
+      category, 
+      maxDistance,
+      priceRange,
+      skillLevel,
+      ageRestriction 
+    } = filters;
     
     // Get activities that the user hasn't swiped on yet
     const swipedActivityIds = await db
@@ -215,34 +222,49 @@ export class DatabaseStorage implements IStorage {
     
     const swipedIds = swipedActivityIds.map(s => s.activityId);
     
+    // Build where conditions
+    const whereConditions = [
+      ne(activities.hostId, userId),
+      eq(activities.status, 'active'),
+      sql`${activities.dateTime} > NOW()`
+    ];
+
+    // Add swipe filter
     if (swipedIds.length > 0) {
-      return await db
-        .select()
-        .from(activities)
-        .where(
-          and(
-            ne(activities.hostId, userId),
-            eq(activities.status, 'active'),
-            sql`${activities.dateTime} > NOW()`,
-            not(inArray(activities.id, swipedIds))
-          )
-        )
-        .orderBy(desc(activities.createdAt))
-        .limit(limit);
-    } else {
-      return await db
-        .select()
-        .from(activities)
-        .where(
-          and(
-            ne(activities.hostId, userId),
-            eq(activities.status, 'active'),
-            sql`${activities.dateTime} > NOW()`
-          )
-        )
-        .orderBy(desc(activities.createdAt))
-        .limit(limit);
+      whereConditions.push(not(inArray(activities.id, swipedIds)));
     }
+
+    // Add category filter
+    if (category && category !== "All Categories") {
+      whereConditions.push(eq(activities.category, category));
+    }
+
+    // Add price range filter
+    if (priceRange && Array.isArray(priceRange)) {
+      const [minPrice, maxPrice] = priceRange;
+      if (typeof minPrice === 'number' && typeof maxPrice === 'number') {
+        whereConditions.push(sql`${activities.price} BETWEEN ${minPrice} AND ${maxPrice}`);
+      }
+    }
+
+    // Add skill level filter
+    if (skillLevel && skillLevel !== "All Levels") {
+      whereConditions.push(eq(activities.skillLevel, skillLevel));
+    }
+
+    // Add age restriction filter
+    if (ageRestriction && ageRestriction !== "All Ages") {
+      whereConditions.push(eq(activities.ageRestriction, ageRestriction));
+    }
+
+    let query = db
+      .select()
+      .from(activities)
+      .where(and(...whereConditions))
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
+
+    return await query;
   }
 
   async updateActivity(id: number, data: Partial<Activity>): Promise<Activity> {

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Clock, Users, Star } from "lucide-react";
 import { format } from "date-fns";
-import type { Activity } from "@shared/schema";
+import type { Activity } from "@shared/client-types";
 
 interface SwipeCardProps {
   activity: Activity & {

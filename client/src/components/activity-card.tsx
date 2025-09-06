@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Users, Star } from "lucide-react";
 import { format } from "date-fns";
-import type { Activity } from "@shared/schema";
+import type { Activity } from "@shared/client-types";
 
 interface ActivityCardProps {
   activity: Activity & { host?: any; participants?: any[] };

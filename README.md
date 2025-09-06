@@ -22,7 +22,15 @@
 
 ## Getting Started
 
-### 🚀 Deploy to Railway (Recommended)
+### 🚀 Deploy for FREE with Supabase + Vercel (Easiest)
+1. **Set up Supabase**: Free PostgreSQL database
+2. **Deploy backend to Vercel**: Free Node.js hosting
+3. **Deploy frontend to Vercel**: Free React hosting
+4. **Your app is live!** 🎉
+
+See [SUPABASE_VERCEL_DEPLOYMENT.md](SUPABASE_VERCEL_DEPLOYMENT.md) for detailed instructions.
+
+### 🏗️ Deploy to Railway (Recommended for Full Control)
 1. **Sign up for Railway**: [railway.app](https://railway.app)
 2. **Push code to GitHub**
 3. **Connect Railway to your repo**
@@ -30,6 +38,14 @@
 5. **Your app is live!** 🎉
 
 See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions.
+
+### 🐳 Deploy to VULTR (Self-hosted)
+1. **Get VULTR VPS**: $6/month Ubuntu server
+2. **Run deployment scripts**: Automated Docker setup
+3. **SSL certificates**: Free Let's Encrypt
+4. **Full control** over your infrastructure
+
+See [VULTR_DEPLOYMENT.md](VULTR_DEPLOYMENT.md) for detailed instructions.
 
 ## Deployment
 

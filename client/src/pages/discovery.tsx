@@ -10,7 +10,7 @@ import FilterModal from "@/components/FilterModal";
 import NotificationCenter from "@/components/NotificationCenter";
 import MapView from "@/components/MapView";
 import { Filter, MapPin, Bell, RefreshCw, Map } from "lucide-react";
-import type { Activity } from "@shared/schema";
+import type { Activity } from "@shared/client-types";
 
 export default function Discovery() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);

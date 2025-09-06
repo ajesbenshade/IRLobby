@@ -9,6 +9,7 @@
     "build:client": "vite build client",
     "build:server": "esbuild server/index.ts --platform=node --packages=external --external:fs --external:path --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
+    "vercel-build": "npm run build:client && npm run build:server",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:seed": "cross-env NODE_ENV=development tsx server/seedDatabase.ts"

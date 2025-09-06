@@ -12,13 +12,13 @@ export default defineConfig({
   plugins,
   resolve: {
     alias: {
-      "@": path.resolve(process.cwd(), "client", "src"),
-      "@shared": path.resolve(process.cwd(), "shared"),
+      "@": path.resolve(__dirname, "client", "src"),
+      "@shared": path.resolve(__dirname, "shared"),
     },
   },
   root: "client",
   build: {
-    outDir: path.resolve(process.cwd(), "dist", "public"),
+    outDir: path.resolve(__dirname, "../dist", "public"),
     emptyOutDir: true,
   },
 });

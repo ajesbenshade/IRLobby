@@ -4,7 +4,6 @@ import path from "path";
 // Removed top-level import of 'vite' to prevent production from requiring it
 import { type Server } from "http";
 import { nanoid } from "nanoid";
-import { fileURLToPath } from 'url';
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

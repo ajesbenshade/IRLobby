@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { insertActivitySchema } from "@shared/schema";
+import { insertActivitySchema } from "@shared/client-types";
 import { useToast } from "@/hooks/use-toast";
 import ActivityTemplateModal from "@/components/ActivityTemplateModal";
 import HostDashboard from "@/components/HostDashboard";

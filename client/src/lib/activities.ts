@@ -1,4 +1,4 @@
-import type { Activity } from "@shared/schema";
+import type { Activity } from "@shared/client-types";
 
 export function calculateMatchScore(userInterests: string[], activityTags: string[]): number {
   if (!userInterests.length || !activityTags.length) return 0;

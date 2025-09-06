@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { X, Heart, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Activity } from "@shared/schema";
+import type { Activity } from "@shared/client-types";
 
 interface SwipeStackProps {
   activities: Activity[];

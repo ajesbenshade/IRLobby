@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Users } from "lucide-react";
 import { format } from "date-fns";
-import type { ChatMessage } from "@shared/schema";
+import type { ChatMessage } from "@shared/client-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import UserProfileModal from "@/components/UserProfileModal";
 

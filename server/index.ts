@@ -50,8 +50,28 @@ app.use((req, res, next) => {
 
 // Early health check endpoint - BEFORE any middleware
 app.get('/api/health', (_req, res) => {
-  console.log('Health check requested at', new Date().toISOString());
-  res.status(200).json({ status: 'ok', phase: 'pre-init', timestamp: new Date().toISOString() });
+  const fs = require('fs');
+  const path = require('path');
+  const distPath = path.resolve(process.cwd(), "dist", "public");
+  
+  const buildStatus = {
+    cwd: process.cwd(),
+    distExists: fs.existsSync(path.resolve(process.cwd(), "dist")),
+    publicExists: fs.existsSync(distPath),
+    indexExists: fs.existsSync(path.resolve(distPath, "index.html")),
+    directoryContents: fs.existsSync(process.cwd()) ? fs.readdirSync(process.cwd()) : [],
+    distContents: fs.existsSync(path.resolve(process.cwd(), "dist")) ? fs.readdirSync(path.resolve(process.cwd(), "dist")) : [],
+    publicContents: fs.existsSync(distPath) ? fs.readdirSync(distPath) : []
+  };
+  
+  console.log('Build status check:', JSON.stringify(buildStatus, null, 2));
+  
+  res.status(200).json({ 
+    status: 'ok', 
+    phase: 'pre-init', 
+    timestamp: new Date().toISOString(),
+    buildStatus: buildStatus
+  });
 });
 
 // Add another health check after middleware setup

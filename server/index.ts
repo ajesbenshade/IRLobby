@@ -131,7 +131,9 @@ async function runMigrations() {
   console.log('NODE_ENV:', process.env.NODE_ENV);
   console.log('PORT:', process.env.PORT);
   console.log('DATABASE_URL available:', !!process.env.DATABASE_URL);
-  
+  console.log('Current working directory:', process.cwd());
+  console.log('Directory contents:', require('fs').readdirSync(process.cwd()));
+
   // Conditionally import vite functions only in development
   if (process.env.NODE_ENV !== 'production') {
     try {

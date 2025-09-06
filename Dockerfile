@@ -1,6 +1,9 @@
 # Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
+# Force rebuild to ensure client files are created
+RUN echo "Build timestamp: $(date)"
+
 # Install curl for health checks
 RUN apk add --no-cache curl
 

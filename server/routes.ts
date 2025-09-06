@@ -24,6 +24,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // User endpoint for current user
   app.get('/api/user', isAuthenticated, async (req: any, res) => {
     try {

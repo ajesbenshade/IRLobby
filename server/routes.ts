@@ -26,6 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
+    console.log('Health check requested at', new Date().toISOString());
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 

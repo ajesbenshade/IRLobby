@@ -70,6 +70,8 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0", // Use 0.0.0.0 for Railway
   }, () => {
+    console.log(`🚀 IRLobby server started successfully on port ${port}`);
+    console.log(`📊 Health check available at http://localhost:${port}/api/health`);
     log(`serving on port ${port}`);
   });
 })();

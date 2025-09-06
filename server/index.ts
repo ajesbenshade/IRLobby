@@ -48,11 +48,32 @@ app.use((req, res, next) => {
 async function runMigrations() {
   try {
     console.log("🔄 Running database migrations...");
+    console.log("DATABASE_URL available:", !!process.env.DATABASE_URL);
+    
     const { execSync } = await import('child_process');
-    execSync('npx drizzle-kit push', { stdio: 'inherit', env: { ...process.env } });
+    const result = execSync('npx drizzle-kit push', { 
+      stdio: 'pipe', 
+      env: { ...process.env },
+      encoding: 'utf8'
+    });
+    
+    console.log("Migration output:", result);
     console.log("✅ Database migrations completed successfully");
   } catch (error) {
     console.error("❌ Database migration failed:", error);
+    console.error("Migration error details:", error.message);
+    console.error("Migration stderr:", error.stderr);
+    
+    // Try a simple database connection test
+    try {
+      console.log("🔍 Testing database connection...");
+      const { db } = await import('./db');
+      await db.execute('SELECT 1');
+      console.log("✅ Database connection successful");
+    } catch (dbError) {
+      console.error("❌ Database connection failed:", dbError instanceof Error ? dbError.message : String(dbError));
+    }
+    
     // Don't exit process, just log the error
     // The app might still work if tables already exist
   }

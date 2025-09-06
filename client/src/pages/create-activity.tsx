@@ -10,12 +10,35 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { insertActivitySchema } from "@shared/client-types";
 import { useToast } from "@/hooks/use-toast";
 import ActivityTemplateModal from "@/components/ActivityTemplateModal";
 import HostDashboard from "@/components/HostDashboard";
 import { Camera, MapPin, Settings, Users, Locate } from "lucide-react";
 import { z } from "zod";
+
+const insertActivitySchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
+  location: z.string().min(1, "Location is required"),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  dateTime: z.date(),
+  endDateTime: z.date().optional(),
+  maxParticipants: z.number().min(1, "At least 1 participant required"),
+  isPrivate: z.boolean().default(false),
+  tags: z.array(z.string()).default([]),
+  imageUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).default([]),
+  price: z.number().default(0),
+  currency: z.string().default("USD"),
+  requiresApproval: z.boolean().default(false),
+  ageRestriction: z.string().optional(),
+  skillLevel: z.string().optional(),
+  equipmentProvided: z.boolean().default(false),
+  equipmentRequired: z.string().optional(),
+  weatherDependent: z.boolean().default(false),
+});
 
 const formSchema = insertActivitySchema.extend({
   dateTime: z.string().min(1, "Date and time is required"),

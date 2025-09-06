@@ -159,7 +159,7 @@ export default function SwipeCard({
                 {activity.currentParticipants || 0}/{activity.maxParticipants} people
               </span>
             </div>
-            {activity.price > 0 && (
+            {activity.price && activity.price > 0 && (
               <span className="text-sm font-medium text-green-600">
                 ${activity.price}
               </span>

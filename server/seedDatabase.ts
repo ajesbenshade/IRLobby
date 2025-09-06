@@ -59,7 +59,7 @@ const getRandomLocation = () => {
 };
 
 // Helper function to get random items from an array
-const getRandomItems = (array, min, max) => {
+const getRandomItems = (array: any[], min: number, max: number) => {
   const count = Math.floor(Math.random() * (max - min + 1)) + min;
   const shuffled = [...array].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);

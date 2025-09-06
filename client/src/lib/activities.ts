@@ -42,7 +42,7 @@ export function getActivityCategory(category: string): { color: string; emoji: s
 
 export function isActivitySuitableForUser(activity: Activity, userPreferences: any): boolean {
   // Basic suitability checks
-  if (activity.datetime && new Date(activity.datetime) < new Date()) {
+  if (activity.dateTime && new Date(activity.dateTime) < new Date()) {
     return false; // Past event
   }
   
@@ -50,7 +50,7 @@ export function isActivitySuitableForUser(activity: Activity, userPreferences: a
     return false; // Inactive event
   }
   
-  if (activity.currentParticipants >= activity.maxParticipants) {
+  if (activity.currentParticipants && activity.currentParticipants >= activity.maxParticipants) {
     return false; // Full event
   }
   

@@ -63,7 +63,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
   const handleRemoveTag = (tagToRemove: string) => {
     setFilters(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag: string) => tag !== tagToRemove)
     }));
   };
 
@@ -251,7 +251,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
             </div>
             {filters.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {filters.tags.map((tag, index) => (
+                {filters.tags.map((tag: string, index: number) => (
                   <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => handleRemoveTag(tag)}>
                     {tag} ×
                   </Badge>

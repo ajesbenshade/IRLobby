@@ -28,8 +28,17 @@ if (!process.env.DATABASE_URL) {
   pool = null as any;
   db = null as any;
 } else {
-  // Always use pg with connection string
-  pool = new PgPool({ connectionString: process.env.DATABASE_URL, ssl: false });
+  // Enable SSL for providers like DigitalOcean where it's required by default
+  const useSSL = (
+    /sslmode=require|verify-(full|ca)/i.test(process.env.DATABASE_URL) ||
+    process.env.PGSSLMODE === 'require' ||
+    process.env.DATABASE_SSL === 'true'
+  );
+
+  pool = new PgPool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: useSSL ? { rejectUnauthorized: false } : false,
+  });
   db = drizzle(pool, { schema });
 }
 

@@ -216,7 +216,7 @@ export default function Discovery() {
       {/* Swipe Cards Container */}
       <div className="relative p-4 h-full">
         {/* Background cards for stacking effect */}
-        {activities.slice(currentActivityIndex + 1, currentActivityIndex + 3).map((activity, index) => (
+        {activities.slice(currentActivityIndex + 1, currentActivityIndex + 3).map((activity: any, index: number) => (
           <Card 
             key={activity.id}
             className={`absolute inset-x-4 top-4 bg-white rounded-2xl shadow-lg transform ${

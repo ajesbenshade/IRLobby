@@ -98,7 +98,7 @@ export default function ActivityDetailsModal({
             </span>
           </div>
           
-          {activity.price > 0 && (
+          {activity.price && activity.price > 0 && (
             <div className="flex items-center text-gray-600">
               <DollarSign className="w-5 h-5 mr-3 flex-shrink-0" />
               <span>${activity.price}</span>

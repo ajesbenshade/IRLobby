@@ -57,7 +57,7 @@ export function ActivityCard({ activity, style, className = "" }: ActivityCardPr
           <div className="flex items-center text-gray-600">
             <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
-              {format(new Date(activity.datetime), "MMM d, h:mm a")}
+              {format(new Date(activity.dateTime), "MMM d, h:mm a")}
             </span>
           </div>
 

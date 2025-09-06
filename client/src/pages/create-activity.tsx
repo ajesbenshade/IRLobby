@@ -241,6 +241,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                       placeholder="Tell people what to expect, what to bring, and why they should join!"
                       rows={4}
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -288,7 +289,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                       </div>
                       <FormControl>
                         <Switch
-                          checked={field.value}
+                          checked={field.value || false}
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>

@@ -69,7 +69,7 @@ export function SwipeStack({
     
     const activity = activities[currentIndex];
     swipeMutation.mutate({
-      activityId: activity.id,
+      activityId: activity.id.toString(),
       direction,
     });
   };

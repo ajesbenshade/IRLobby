@@ -105,6 +105,8 @@ async function runMigrations() {
     }
     
     // Create tables manually using raw SQL
+    // Create tables one by one for better error handling
+    console.log("🔨 Creating users table...");
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR PRIMARY KEY,
@@ -140,11 +142,15 @@ async function runMigrations() {
         max_distance INTEGER DEFAULT 25,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-      
+      )
+    `);
+    console.log("✅ Users table created");
+    
+    console.log("🔨 Creating activities table...");
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS activities (
         id SERIAL PRIMARY KEY,
-        host_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        host_id VARCHAR NOT NULL,
         title VARCHAR NOT NULL,
         description TEXT,
         category VARCHAR NOT NULL,
@@ -174,43 +180,88 @@ async function runMigrations() {
         reminder_sent BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
-      );
-      
+      )
+    `);
+    console.log("✅ Activities table created");
+    
+    console.log("🔨 Creating activity_swipes table...");
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS activity_swipes (
         id SERIAL PRIMARY KEY,
-        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        user_id VARCHAR NOT NULL,
+        activity_id INTEGER NOT NULL,
         swipe_type VARCHAR NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
-      );
-      
+      )
+    `);
+    console.log("✅ Activity_swipes table created");
+    
+    console.log("🔨 Creating activity_matches table...");
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS activity_matches (
         id SERIAL PRIMARY KEY,
-        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        user_id VARCHAR NOT NULL,
+        activity_id INTEGER NOT NULL,
         status VARCHAR DEFAULT 'pending',
         joined_at TIMESTAMP,
         left_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
-      );
-      
+      )
+    `);
+    console.log("✅ Activity_matches table created");
+    
+    console.log("🔨 Creating chat_rooms table...");
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_rooms (
         id SERIAL PRIMARY KEY,
-        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        activity_id INTEGER NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
-      );
-      
+      )
+    `);
+    console.log("✅ Chat_rooms table created");
+    
+    console.log("🔨 Creating chat_messages table...");
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id SERIAL PRIMARY KEY,
-        chat_room_id INTEGER NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
-        sender_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        chat_room_id INTEGER NOT NULL,
+        sender_id VARCHAR NOT NULL,
         message TEXT NOT NULL,
         message_type VARCHAR DEFAULT 'text',
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
     `);
+    console.log("✅ Chat_messages table created");
     
-    console.log("✅ Database tables created successfully");
+    // Add foreign key constraints after all tables are created
+    console.log("🔗 Adding foreign key constraints...");
+    await pool.query(`
+      ALTER TABLE activities ADD CONSTRAINT fk_activities_host_id 
+      FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE;
+      
+      ALTER TABLE activity_swipes ADD CONSTRAINT fk_activity_swipes_user_id 
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+      
+      ALTER TABLE activity_swipes ADD CONSTRAINT fk_activity_swipes_activity_id 
+      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
+      
+      ALTER TABLE activity_matches ADD CONSTRAINT fk_activity_matches_user_id 
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+      
+      ALTER TABLE activity_matches ADD CONSTRAINT fk_activity_matches_activity_id 
+      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
+      
+      ALTER TABLE chat_rooms ADD CONSTRAINT fk_chat_rooms_activity_id 
+      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
+      
+      ALTER TABLE chat_messages ADD CONSTRAINT fk_chat_messages_chat_room_id 
+      FOREIGN KEY (chat_room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE;
+      
+      ALTER TABLE chat_messages ADD CONSTRAINT fk_chat_messages_sender_id 
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE;
+    `);
+    console.log("✅ Foreign key constraints added");
+    
     await pool.end();
   } catch (error) {
     console.error("❌ Database migration failed:", error);

@@ -8,7 +8,7 @@ import { Edit, Settings, HelpCircle, Star, LogOut, Users } from "lucide-react";
 import FriendsModal from "@/components/FriendsModal";
 import EditProfileModal from "@/components/EditProfileModal";
 
-export default function Profile() {
+export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
   const { user } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -96,7 +96,7 @@ export default function Profile() {
             <h3 className="font-semibold text-gray-800 mb-3">Interests</h3>
             <div className="flex flex-wrap gap-2">
               {user.interests && user.interests.length > 0 ? (
-                user.interests.map((interest, index) => (
+                user.interests.map((interest: string, index: number) => (
                   <Badge key={index} variant="secondary" className="bg-primary/10 text-primary">
                     {interest}
                   </Badge>
@@ -131,7 +131,7 @@ export default function Profile() {
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={() => {/* TODO: Navigate to settings */}}
+            onClick={() => onNavigate && onNavigate('settings')}
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
@@ -140,7 +140,7 @@ export default function Profile() {
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={() => {/* TODO: Navigate to help */}}
+            onClick={() => onNavigate && onNavigate('help-support')}
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             Help & Support

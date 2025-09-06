@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  passwordHash: varchar("password_hash"),  // Add password hash field for local authentication
   profileImageUrl: varchar("profile_image_url"),
   bio: text("bio"),
   interests: jsonb("interests").$type<string[]>().default([]),
@@ -47,6 +48,17 @@ export const users = pgTable("users", {
   verificationLevel: varchar("verification_level").default("none"), // none, email, phone, id
   pushNotifications: boolean("push_notifications").default(true),
   emailNotifications: boolean("email_notifications").default(true),
+  activityReminders: boolean("activity_reminders").default(true),
+  newMatchNotifications: boolean("new_match_notifications").default(true),
+  messageNotifications: boolean("message_notifications").default(true),
+  profileVisibility: varchar("profile_visibility").default("public"), // public, friends, private
+  locationSharing: boolean("location_sharing").default(true),
+  showAge: boolean("show_age").default(true),
+  showEmail: boolean("show_email").default(false),
+  theme: varchar("theme").default("system"), // light, dark, system
+  language: varchar("language").default("en"),
+  distanceUnit: varchar("distance_unit").default("miles"), // miles, kilometers
+  maxDistance: integer("max_distance").default(25),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

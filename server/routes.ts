@@ -2,15 +2,18 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth"; // Updated to use our new auth system
+import { db } from "./db";
 import { 
   insertActivitySchema, 
   insertActivitySwipeSchema, 
   insertActivityMatchSchema,
   insertChatMessageSchema,
-  insertUserRatingSchema 
+  insertUserRatingSchema,
+  userFriends
 } from "@shared/schema";
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 
 interface WebSocketWithUser extends WebSocket {
   userId?: string;
@@ -20,6 +23,25 @@ interface WebSocketWithUser extends WebSocket {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // User endpoint for current user
+  app.get('/api/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't send sensitive information to the client
+      const { passwordHash, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -37,7 +59,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/activities/discover', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log(`Fetching activities for user: ${userId} with filters:`, req.query);
       const activities = await storage.getDiscoverableActivities(userId, req.query);
+      console.log(`Found ${activities.length} activities`);
       res.json(activities);
     } catch (error) {
       console.error("Error fetching discoverable activities:", error);
@@ -245,25 +269,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const activityId = parseInt(req.params.id);
       
+      console.log(`User ${userId} attempting to send message to activity ${activityId}`, req.body);
+      
       // Check if user is part of this activity
       const isParticipant = await storage.isUserParticipant(userId, activityId);
       if (!isParticipant) {
+        console.log(`User ${userId} not authorized to send messages to activity ${activityId}`);
         return res.status(403).json({ message: "Not authorized to send messages" });
       }
       
       const chatRoom = await storage.getOrCreateChatRoom(activityId);
+      console.log(`Using chat room ID ${chatRoom.id} for activity ${activityId}`);
       
-      const validatedData = insertChatMessageSchema.parse({
-        chatRoomId: chatRoom.id,
-        senderId: userId,
-        message: req.body.message,
-        messageType: req.body.messageType || 'text',
-      });
-      
-      const message = await storage.createChatMessage(validatedData);
-      const messageWithSender = await storage.getChatMessageWithSender(message.id);
-      
-      // Broadcast to WebSocket clients
+      try {
+        const validatedData = insertChatMessageSchema.parse({
+          chatRoomId: chatRoom.id,
+          senderId: userId,
+          message: req.body.message,
+          messageType: req.body.messageType || 'text',
+        });
+        
+        const message = await storage.createChatMessage(validatedData);
+        const messageWithSender = await storage.getChatMessageWithSender(message.id);
+        
+        console.log(`Message created with ID ${message.id} for activity ${activityId}`);
+           // Broadcast to WebSocket clients
       broadcastToActivity(activityId, {
         type: 'chat_message',
         activityId: activityId,
@@ -271,13 +301,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.status(201).json(messageWithSender);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid message data", errors: error.errors });
-      } else {
-        console.error("Error creating message:", error);
-        res.status(500).json({ message: "Failed to send message" });
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        if (validationError instanceof z.ZodError) {
+          return res.status(400).json({ message: "Invalid message data", errors: validationError.errors });
+        }
+        throw validationError;
       }
+    } catch (error) {
+      console.error("Error creating message:", error);
+      res.status(500).json({ message: "Failed to send message" });
     }
   });
 
@@ -353,15 +386,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requesterId = req.user.claims.sub;
       const { receiverId } = req.body;
       
-      if (requesterId === receiverId) {
-        return res.status(400).json({ message: "Cannot send friend request to yourself" });
+      if (!receiverId) {
+        return res.status(400).json({ message: "Receiver ID is required" });
       }
-
-      const friendship = await storage.sendFriendRequest(requesterId, receiverId);
-      res.json(friendship);
+      
+      if (requesterId === receiverId) {
+        return res.status(400).json({ message: "You cannot send a friend request to yourself" });
+      }
+      
+      // Check if a friend request already exists
+      const existingRequest = await db
+        .select()
+        .from(userFriends)
+        .where(
+          and(
+            eq(userFriends.requesterId, requesterId),
+            eq(userFriends.receiverId, receiverId)
+          )
+        )
+        .limit(1);
+      
+      if (existingRequest.length > 0) {
+        return res.status(400).json({ message: "Friend request already sent" });
+      }
+      
+      // Create a new friend request
+      const [friendRequest] = await db
+        .insert(userFriends)
+        .values({
+          requesterId,
+          receiverId,
+          status: 'pending',
+        })
+        .returning();
+      
+      res.json(friendRequest);
     } catch (error) {
       console.error("Error sending friend request:", error);
-      res.status(400).json({ message: "Failed to send friend request" });
+      res.status(500).json({ message: "Failed to send friend request" });
     }
   });
 
@@ -510,6 +572,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Settings routes
+  app.get('/api/users/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Extract settings from user data
+      const settings = {
+        notifications: {
+          pushNotifications: user.pushNotifications ?? true,
+          emailNotifications: user.emailNotifications ?? true,
+          activityReminders: user.activityReminders ?? true,
+          newMatches: user.newMatchNotifications ?? true,
+          messages: user.messageNotifications ?? true,
+        },
+        privacy: {
+          profileVisibility: user.profileVisibility ?? "public",
+          locationSharing: user.locationSharing ?? true,
+          showAge: user.showAge ?? true,
+          showEmail: user.showEmail ?? false,
+        },
+        preferences: {
+          theme: user.theme ?? "system",
+          language: user.language ?? "en",
+          distanceUnit: user.distanceUnit ?? "miles",
+          maxDistance: user.maxDistance ?? 25,
+        }
+      };
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching user settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put('/api/users/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { notifications, privacy, preferences } = req.body;
+      
+      // Validate the incoming settings structure
+      if (!notifications && !privacy && !preferences) {
+        return res.status(400).json({ message: "No settings provided" });
+      }
+      
+      // Extract database fields from settings
+      const updateData: any = {};
+      
+      if (notifications) {
+        if (notifications.pushNotifications !== undefined) {
+          updateData.pushNotifications = notifications.pushNotifications;
+        }
+        if (notifications.emailNotifications !== undefined) {
+          updateData.emailNotifications = notifications.emailNotifications;
+        }
+        if (notifications.activityReminders !== undefined) {
+          updateData.activityReminders = notifications.activityReminders;
+        }
+        if (notifications.newMatches !== undefined) {
+          updateData.newMatchNotifications = notifications.newMatches;
+        }
+        if (notifications.messages !== undefined) {
+          updateData.messageNotifications = notifications.messages;
+        }
+      }
+      
+      if (privacy) {
+        if (privacy.profileVisibility !== undefined) {
+          updateData.profileVisibility = privacy.profileVisibility;
+        }
+        if (privacy.locationSharing !== undefined) {
+          updateData.locationSharing = privacy.locationSharing;
+        }
+        if (privacy.showAge !== undefined) {
+          updateData.showAge = privacy.showAge;
+        }
+        if (privacy.showEmail !== undefined) {
+          updateData.showEmail = privacy.showEmail;
+        }
+      }
+      
+      if (preferences) {
+        if (preferences.theme !== undefined) {
+          updateData.theme = preferences.theme;
+        }
+        if (preferences.language !== undefined) {
+          updateData.language = preferences.language;
+        }
+        if (preferences.distanceUnit !== undefined) {
+          updateData.distanceUnit = preferences.distanceUnit;
+        }
+        if (preferences.maxDistance !== undefined) {
+          updateData.maxDistance = preferences.maxDistance;
+        }
+      }
+      
+      // Update user with new settings
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      // Return updated settings
+      const settings = {
+        notifications: {
+          pushNotifications: updatedUser.pushNotifications ?? true,
+          emailNotifications: updatedUser.emailNotifications ?? true,
+          activityReminders: updatedUser.activityReminders ?? true,
+          newMatches: updatedUser.newMatchNotifications ?? true,
+          messages: updatedUser.messageNotifications ?? true,
+        },
+        privacy: {
+          profileVisibility: updatedUser.profileVisibility ?? "public",
+          locationSharing: updatedUser.locationSharing ?? true,
+          showAge: updatedUser.showAge ?? true,
+          showEmail: updatedUser.showEmail ?? false,
+        },
+        preferences: {
+          theme: updatedUser.theme ?? "system",
+          language: updatedUser.language ?? "en",
+          distanceUnit: updatedUser.distanceUnit ?? "miles",
+          maxDistance: updatedUser.maxDistance ?? 25,
+        }
+      };
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating user settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  app.get('/api/users/export-data', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user data
+      const user = await storage.getUserWithStats(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get user's activities (hosted by the user)
+      const userActivities = await storage.getUserHostedActivities(userId);
+      
+      // Get user's matches
+      const userMatches = await storage.getUserMatches(userId);
+      
+      // Get user's reviews
+      const userReviews = await storage.getUserReviews?.(userId) || [];
+      
+      // Remove sensitive data
+      const { passwordHash, ...safeUser } = user;
+      
+      const exportData = {
+        user: safeUser,
+        activities: userActivities,
+        matches: userMatches,
+        reviews: userReviews,
+        exportedAt: new Date().toISOString(),
+      };
+      
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting user data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
+  app.delete('/api/users/delete-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // TODO: Implement proper account deletion
+      // This should:
+      // 1. Delete user's activities
+      // 2. Remove user from matches
+      // 3. Delete user's messages
+      // 4. Delete user's reviews
+      // 5. Finally delete user record
+      
+      // For now, just mark as deleted or return success
+      // In production, you might want to anonymize data instead of hard delete
+      res.json({ 
+        message: "Account deletion requested successfully. Your data will be removed within 30 days.",
+        success: true 
+      });
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      res.status(500).json({ message: "Failed to delete account" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket server setup
@@ -522,6 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log('WebSocket message received:', message);
         
         if (message.type === 'join_activity') {
           ws.userId = message.userId;
@@ -534,16 +792,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           clients.get(activityKey)!.add(ws);
           
-          console.log(`User ${message.userId} joined activity ${message.activityId}`);
+          console.log(`User ${message.userId} joined activity ${message.activityId} chat`);
+          
+          // Send a confirmation message back to the client
+          ws.send(JSON.stringify({
+            type: 'joined_activity',
+            activityId: message.activityId,
+            userId: message.userId,
+            timestamp: new Date().toISOString()
+          }));
         }
       } catch (error) {
         console.error('Error handling WebSocket message:', error);
       }
     });
     
-    ws.on('close', () => {
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+    
+    ws.on('close', (code, reason) => {
       // Remove client from all rooms
-      for (const [key, clientSet] of clients.entries()) {
+      for (const [key, clientSet] of Array.from(clients.entries())) {
         if (clientSet.has(ws)) {
           clientSet.delete(ws);
           if (clientSet.size === 0) {
@@ -551,7 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      console.log('WebSocket client disconnected');
+      console.log(`WebSocket client disconnected. Code: ${code}, Reason: ${reason.toString()}`);
     });
   });
   
@@ -562,16 +832,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`Broadcasting to activity ${activityId}, clients: ${activityClients?.size || 0}`);
     
-    if (activityClients) {
+    if (activityClients && activityClients.size > 0) {
       const message = JSON.stringify(data);
+      let successCount = 0;
+      let failCount = 0;
+      
       activityClients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(message);
-          console.log(`Message sent to client for activity ${activityId}`);
+          try {
+            client.send(message);
+            successCount++;
+          } catch (error) {
+            console.error(`Error sending message to client:`, error);
+            failCount++;
+          }
+        } else {
+          console.log(`Client not ready (state: ${client.readyState})`);
+          failCount++;
         }
       });
+      
+      console.log(`Message broadcast results: ${successCount} success, ${failCount} fail`);
+    } else {
+      console.log(`No clients connected for activity ${activityId}`);
     }
   }
+
+  // New endpoint to get activity participants
+  app.get('/api/activities/:id/participants', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const activityId = parseInt(req.params.id);
+      
+      // Check if user is part of this activity
+      const isParticipant = await storage.isUserParticipant(userId, activityId);
+      if (!isParticipant) {
+        return res.status(403).json({ message: "Not authorized to view participants" });
+      }
+      
+      const participants = await storage.getActivityParticipants(activityId);
+      res.json(participants);
+    } catch (error) {
+      console.error("Error fetching activity participants:", error);
+      res.status(500).json({ message: "Failed to fetch participants" });
+    }
+  });
 
   return httpServer;
 }

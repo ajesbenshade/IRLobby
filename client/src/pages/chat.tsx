@@ -6,9 +6,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Users } from "lucide-react";
 import { format } from "date-fns";
 import type { ChatMessage } from "@shared/schema";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import UserProfileModal from "@/components/UserProfileModal";
 
 interface ChatProps {
   activityId: number;
@@ -20,30 +22,100 @@ export default function Chat({ activityId, onBack }: ChatProps) {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
-  const { data: messages = [], isLoading } = useQuery({
+  const openUserProfile = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsUserProfileModalOpen(true);
+  };
+
+  const closeUserProfile = () => {
+    setIsUserProfileModalOpen(false);
+    setSelectedUserId(null);
+  };
+
+  // Fetch messages with proper error handling
+  const { data: messages = [], isLoading, error } = useQuery({
     queryKey: ['/api/activities', activityId, 'chat'],
+    queryFn: async () => {
+      console.log(`Fetching chat messages for activity: ${activityId}`);
+      try {
+        const response = await apiRequest('GET', `/api/activities/${activityId}/chat`);
+        const data = await response.json();
+        console.log(`Fetched ${data.length} chat messages`);
+        return data;
+      } catch (err) {
+        console.error('Error fetching chat messages:', err);
+        throw err;
+      }
+    },
     retry: 1,
   });
 
-  const { data: activity } = useQuery({
+  useEffect(() => {
+    if (error) {
+      console.error('Chat messages fetch error:', error);
+    }
+  }, [error]);
+
+  const { data: activity, isLoading: isActivityLoading } = useQuery({
     queryKey: ['/api/activities', activityId],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/activities/${activityId}`);
+      return response.json();
+    },
     retry: 1,
   });
+
+  // Fetch participants for this activity
+  const { data: participants = [], isLoading: isParticipantsLoading } = useQuery({
+    queryKey: ['/api/activities', activityId, 'participants'],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', `/api/activities/${activityId}/participants`);
+        return response.json();
+      } catch (err) {
+        console.error('Error fetching participants:', err);
+        throw err;
+      }
+    },
+    retry: 1,
+    enabled: !!activityId,
+  });
+
+  const sendFriendRequest = async (userId: string) => {
+    try {
+      // Call API to send friend request
+      console.log(`Sending friend request to user ${userId}`);
+      const response = await apiRequest('POST', '/api/friends/request', { 
+        receiverId: userId 
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Failed to send friend request:', error);
+    }
+  };
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
+      console.log(`Sending message to activity ${activityId}: ${messageText}`);
       const response = await apiRequest('POST', `/api/activities/${activityId}/chat`, {
         message: messageText,
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Message sent successfully:', data);
       setMessage("");
       queryClient.invalidateQueries({ 
         queryKey: ['/api/activities', activityId, 'chat'] 
       });
     },
+    onError: (error) => {
+      console.error('Failed to send message:', error);
+    }
   });
 
   const { sendMessage: sendWebSocketMessage } = useWebSocket({
@@ -106,6 +178,15 @@ export default function Chat({ activityId, onBack }: ChatProps) {
             {activity?.currentParticipants || 0} participants
           </p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1"
+          onClick={() => setIsParticipantsModalOpen(true)}
+        >
+          <Users className="w-4 h-4" />
+          <span>Participants</span>
+        </Button>
       </header>
 
       {/* Messages */}
@@ -128,7 +209,10 @@ export default function Chat({ activityId, onBack }: ChatProps) {
               >
                 <div className={`flex items-end space-x-2 max-w-xs ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   {!isOwnMessage && (
-                    <Avatar className="w-8 h-8">
+                    <Avatar 
+                      className="w-8 h-8 cursor-pointer" 
+                      onClick={() => openUserProfile(msg.senderId)}
+                    >
                       <AvatarImage src={msg.sender?.profileImageUrl} />
                       <AvatarFallback className="text-xs">
                         {senderInitials}
@@ -142,7 +226,10 @@ export default function Chat({ activityId, onBack }: ChatProps) {
                       : 'bg-gray-100 text-gray-800'
                   }`}>
                     {!isOwnMessage && (
-                      <p className="text-xs opacity-70 mb-1">
+                      <p 
+                        className="text-xs opacity-70 mb-1 cursor-pointer hover:underline" 
+                        onClick={() => openUserProfile(msg.senderId)}
+                      >
                         {msg.sender?.firstName || msg.sender?.email?.split('@')[0] || 'User'}
                       </p>
                     )}
@@ -182,6 +269,67 @@ export default function Chat({ activityId, onBack }: ChatProps) {
           </Button>
         </div>
       </div>
+
+      {/* Participants Modal */}
+      <Dialog open={isParticipantsModalOpen} onOpenChange={setIsParticipantsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Participants</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {isParticipantsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : participants.length === 0 ? (
+              <p className="text-center text-gray-500">No participants found</p>
+            ) : (
+              participants.map((participant: any) => (
+                <div key={participant.id} className="flex items-center space-x-4">
+                  <Avatar 
+                    className="cursor-pointer" 
+                    onClick={() => openUserProfile(participant.id)}
+                  >
+                    <AvatarImage src={participant.profileImageUrl} alt={participant.firstName} />
+                    <AvatarFallback>
+                      {participant.firstName?.[0] || participant.email?.[0] || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 
+                        className="text-sm font-medium text-gray-900 cursor-pointer hover:underline"
+                        onClick={() => openUserProfile(participant.id)}
+                      >
+                        {participant.firstName} {participant.lastName}
+                      </h4>
+                      {participant.isHost && (
+                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">Host</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">{participant.email}</p>
+                  </div>
+                  {user?.id !== participant.id && (
+                    <Button onClick={() => sendFriendRequest(participant.id)} size="sm">
+                      Add Friend
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          isOpen={isUserProfileModalOpen}
+          onClose={closeUserProfile}
+          userId={selectedUserId}
+          onSendFriendRequest={user?.id !== selectedUserId ? () => sendFriendRequest(selectedUserId) : undefined}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,8 @@
 FROM node:18-alpine
 
 # Force rebuild to ensure client files are created
-RUN echo "Build timestamp: $(date)"
+ARG BUILD_DATE
+RUN echo "Build timestamp: $BUILD_DATE"
 
 # Install curl for health checks
 RUN apk add --no-cache curl

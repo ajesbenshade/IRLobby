@@ -6,6 +6,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { getSession } from "./auth"; // Import session middleware from our new auth system
 import cookieParser from "cookie-parser"; // Import cookie-parser for handling cookies
+import fs from 'fs';
+import path from 'path';
 
 // Define vite functions with proper type signatures
 let setupVite: (app: any, server: any) => Promise<void> = async () => {};
@@ -50,8 +52,6 @@ app.use((req, res, next) => {
 
 // Early health check endpoint - BEFORE any middleware
 app.get('/api/health', (_req, res) => {
-  const fs = require('fs');
-  const path = require('path');
   const distPath = path.resolve(process.cwd(), "dist", "public");
   
   const buildStatus = {
@@ -83,8 +83,6 @@ app.get('/api/health/post-init', (_req, res) => {
 
 // Debug endpoint to check if build files exist
 app.get('/api/debug/build-status', (_req, res) => {
-  const fs = require('fs');
-  const path = require('path');
   const distPath = path.resolve(process.cwd(), "dist", "public");
   
   const debugInfo = {

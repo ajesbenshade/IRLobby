@@ -7,19 +7,10 @@ import { registerRoutes } from "./routes";
 import { getSession } from "./auth"; // Import session middleware from our new auth system
 import cookieParser from "cookie-parser"; // Import cookie-parser for handling cookies
 
-// Conditionally import vite functions only in development
-let setupVite: any, serveStatic: any, log: any;
-if (process.env.NODE_ENV !== 'production') {
-  const viteModule = await import("./vite");
-  setupVite = viteModule.setupVite;
-  serveStatic = viteModule.serveStatic;
-  log = viteModule.log;
-} else {
-  // In production, provide no-op functions
-  setupVite = async () => {};
-  serveStatic = () => {};
-  log = console.log;
-}
+// Define vite functions with proper type signatures
+let setupVite: (app: any, server: any) => Promise<void> = async () => {};
+let serveStatic: (app: any) => void = () => {};
+let log: (message: string, source?: string) => void = console.log;
 
 const app = express();
 app.use(express.json());
@@ -141,6 +132,21 @@ async function runMigrations() {
   console.log('PORT:', process.env.PORT);
   console.log('DATABASE_URL available:', !!process.env.DATABASE_URL);
   
+  // Conditionally import vite functions only in development
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const viteModule = await import("./vite");
+      setupVite = viteModule.setupVite;
+      serveStatic = viteModule.serveStatic;
+      log = viteModule.log;
+      console.log('✅ Vite functions loaded for development');
+    } catch (error) {
+      console.warn('⚠️ Failed to load vite functions:', error);
+    }
+  } else {
+    console.log('📦 Production mode - using static file serving');
+  }
+
   try {
     // Run database migrations first
     await runMigrations();

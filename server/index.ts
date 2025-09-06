@@ -70,7 +70,8 @@ app.get('/api/health', (_req, res) => {
     status: 'ok', 
     phase: 'pre-init', 
     timestamp: new Date().toISOString(),
-    buildStatus: buildStatus
+    buildStatus: buildStatus,
+    testMessage: 'This is a test to see if Railway deploys latest code'
   });
 });
 

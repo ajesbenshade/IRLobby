@@ -50,19 +50,128 @@ async function runMigrations() {
     console.log("🔄 Running database migrations...");
     console.log("DATABASE_URL available:", !!process.env.DATABASE_URL);
     
-    const { execSync } = await import('child_process');
-    const result = execSync('npx drizzle-kit push', { 
-      stdio: 'pipe', 
-      env: { ...process.env },
-      encoding: 'utf8'
-    });
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL environment variable is not set");
+    }
+
+    // Import required modules
+    const { Pool } = await import('pg');
     
-    console.log("Migration output:", result);
-    console.log("✅ Database migrations completed successfully");
+    console.log("📋 Connecting to database...");
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    
+    console.log("📋 Creating tables...");
+    // Create tables manually using raw SQL
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR PRIMARY KEY,
+        email VARCHAR UNIQUE,
+        first_name VARCHAR,
+        last_name VARCHAR,
+        password_hash VARCHAR,
+        profile_image_url VARCHAR,
+        bio TEXT,
+        interests JSONB DEFAULT '[]'::jsonb,
+        photo_album JSONB DEFAULT '[]'::jsonb,
+        location VARCHAR,
+        latitude REAL,
+        longitude REAL,
+        rating REAL DEFAULT 5.0,
+        total_ratings INTEGER DEFAULT 0,
+        events_hosted INTEGER DEFAULT 0,
+        events_attended INTEGER DEFAULT 0,
+        is_verified BOOLEAN DEFAULT false,
+        verification_level VARCHAR DEFAULT 'none',
+        push_notifications BOOLEAN DEFAULT true,
+        email_notifications BOOLEAN DEFAULT true,
+        activity_reminders BOOLEAN DEFAULT true,
+        new_match_notifications BOOLEAN DEFAULT true,
+        message_notifications BOOLEAN DEFAULT true,
+        profile_visibility VARCHAR DEFAULT 'public',
+        location_sharing BOOLEAN DEFAULT true,
+        show_age BOOLEAN DEFAULT true,
+        show_email BOOLEAN DEFAULT false,
+        theme VARCHAR DEFAULT 'system',
+        language VARCHAR DEFAULT 'en',
+        distance_unit VARCHAR DEFAULT 'miles',
+        max_distance INTEGER DEFAULT 25,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS activities (
+        id SERIAL PRIMARY KEY,
+        host_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR NOT NULL,
+        description TEXT,
+        category VARCHAR NOT NULL,
+        location VARCHAR NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        date_time TIMESTAMP NOT NULL,
+        end_date_time TIMESTAMP,
+        max_participants INTEGER NOT NULL,
+        current_participants INTEGER DEFAULT 0,
+        waitlist_count INTEGER DEFAULT 0,
+        is_private BOOLEAN DEFAULT false,
+        tags JSONB DEFAULT '[]'::jsonb,
+        image_url VARCHAR,
+        image_urls JSONB DEFAULT '[]'::jsonb,
+        price REAL DEFAULT 0,
+        currency VARCHAR DEFAULT 'USD',
+        requires_approval BOOLEAN DEFAULT false,
+        age_restriction VARCHAR,
+        skill_level VARCHAR,
+        equipment_provided BOOLEAN DEFAULT false,
+        equipment_required TEXT,
+        weather_dependent BOOLEAN DEFAULT false,
+        status VARCHAR DEFAULT 'active',
+        cancellation_reason TEXT,
+        recurring_pattern VARCHAR,
+        reminder_sent BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS activity_swipes (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        swipe_type VARCHAR NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS activity_matches (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        status VARCHAR DEFAULT 'pending',
+        joined_at TIMESTAMP,
+        left_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS chat_rooms (
+        id SERIAL PRIMARY KEY,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        chat_room_id INTEGER NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        sender_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        message TEXT NOT NULL,
+        message_type VARCHAR DEFAULT 'text',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    
+    console.log("✅ Database tables created successfully");
+    await pool.end();
   } catch (error) {
     console.error("❌ Database migration failed:", error);
-    console.error("Migration error details:", error.message);
-    console.error("Migration stderr:", error.stderr);
+    console.error("Migration error details:", error instanceof Error ? error.message : String(error));
     
     // Try a simple database connection test
     try {

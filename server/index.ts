@@ -49,7 +49,7 @@ async function runMigrations() {
   try {
     console.log("🔄 Running database migrations...");
     console.log("DATABASE_URL available:", !!process.env.DATABASE_URL);
-    console.log("DATABASE_URL value:", process.env.DATABASE_URL ? "Set (hidden for security)" : "Not set");
+    console.log("DATABASE_URL starts with:", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + "..." : "Not set");
     console.log("NODE_ENV:", process.env.NODE_ENV);
     console.log("RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT);
     
@@ -61,12 +61,32 @@ async function runMigrations() {
     const { Pool } = await import('pg');
     
     console.log("📋 Connecting to database...");
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Add connection options for Railway
+    const pool = new Pool({ 
+      connectionString: process.env.DATABASE_URL,
+      connectionTimeoutMillis: 10000, // 10 second timeout
+      query_timeout: 10000,
+      ssl: false // Railway internal connections don't need SSL
+    });
+    
+    // Wait a bit for database to be fully ready
+    console.log("⏳ Waiting for database to be ready...");
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Test the connection first
     console.log("🔍 Testing database connection...");
-    const testResult = await pool.query('SELECT 1 as test');
-    console.log("✅ Database connection successful:", testResult.rows[0]);
+    let testResult;
+    try {
+      testResult = await pool.query('SELECT 1 as test');
+      console.log("✅ Database connection successful:", testResult.rows[0]);
+    } catch (connError) {
+      console.error("❌ Database connection test failed:", connError instanceof Error ? connError.message : String(connError));
+      // Try one more time after a longer wait
+      console.log("⏳ Retrying connection in 5 seconds...");
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      testResult = await pool.query('SELECT 1 as test');
+      console.log("✅ Database connection successful on retry:", testResult.rows[0]);
+    }
     
     console.log("📋 Creating tables...");
     // First check if tables already exist

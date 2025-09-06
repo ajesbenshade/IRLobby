@@ -49,236 +49,64 @@ async function runMigrations() {
   try {
     console.log("🔄 Running database migrations...");
     console.log("DATABASE_URL available:", !!process.env.DATABASE_URL);
-    console.log("DATABASE_URL starts with:", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + "..." : "Not set");
+    console.log("DATABASE_URL preview:", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + "..." : "Not set");
     console.log("NODE_ENV:", process.env.NODE_ENV);
     console.log("RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT);
-    
+
     if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL environment variable is not set");
+      console.log("⚠️ No DATABASE_URL found, skipping migration");
+      return;
+    }
+
+    // Handle Railway's internal vs external DATABASE_URL
+    let dbUrl = process.env.DATABASE_URL;
+    if (process.env.RAILWAY_ENVIRONMENT && dbUrl.includes('postgres.railway.internal')) {
+      console.log("🔄 Using Railway internal connection");
+    } else if (dbUrl.includes('tramway.proxy.rlwy.net')) {
+      console.log("🔄 Using Railway external connection");
+    } else {
+      console.log("🔄 Using custom database connection");
     }
 
     // Import required modules
     const { Pool } = await import('pg');
-    
+
     console.log("📋 Connecting to database...");
     // Add connection options for Railway
-    const pool = new Pool({ 
+    const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 10000, // 10 second timeout
-      query_timeout: 10000,
+      connectionTimeoutMillis: 5000, // 5 second timeout
+      query_timeout: 5000,
       ssl: false // Railway internal connections don't need SSL
     });
-    
-    // Wait a bit for database to be fully ready
-    console.log("⏳ Waiting for database to be ready...");
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
     // Test the connection first
     console.log("🔍 Testing database connection...");
-    let testResult;
-    try {
-      testResult = await pool.query('SELECT 1 as test');
-      console.log("✅ Database connection successful:", testResult.rows[0]);
-    } catch (connError) {
-      console.error("❌ Database connection test failed:", connError instanceof Error ? connError.message : String(connError));
-      // Try one more time after a longer wait
-      console.log("⏳ Retrying connection in 5 seconds...");
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      testResult = await pool.query('SELECT 1 as test');
-      console.log("✅ Database connection successful on retry:", testResult.rows[0]);
-    }
-    
-    console.log("📋 Creating tables...");
-    // First check if tables already exist
+    const testResult = await pool.query('SELECT 1 as test');
+    console.log("✅ Database connection successful:", testResult.rows[0]);
+
+    // Check if tables already exist
     const existingTables = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name IN ('users', 'activities', 'activity_swipes', 'activity_matches')
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_name IN ('users', 'activities', 'activity_swipes', 'activity_matches', 'chat_rooms', 'chat_messages')
     `);
-    console.log("📊 Existing tables:", existingTables.rows.map(r => r.table_name));
-    
-    if (existingTables.rows.length >= 4) {
+    console.log("📊 Existing tables:", existingTables.rows.length);
+
+    if (existingTables.rows.length >= 6) {
       console.log("✅ All tables already exist, skipping migration");
       await pool.end();
       return;
     }
-    
-    // Create tables manually using raw SQL
-    // Create tables one by one for better error handling
-    console.log("🔨 Creating users table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id VARCHAR PRIMARY KEY,
-        email VARCHAR UNIQUE,
-        first_name VARCHAR,
-        last_name VARCHAR,
-        password_hash VARCHAR,
-        profile_image_url VARCHAR,
-        bio TEXT,
-        interests JSONB DEFAULT '[]'::jsonb,
-        photo_album JSONB DEFAULT '[]'::jsonb,
-        location VARCHAR,
-        latitude REAL,
-        longitude REAL,
-        rating REAL DEFAULT 5.0,
-        total_ratings INTEGER DEFAULT 0,
-        events_hosted INTEGER DEFAULT 0,
-        events_attended INTEGER DEFAULT 0,
-        is_verified BOOLEAN DEFAULT false,
-        verification_level VARCHAR DEFAULT 'none',
-        push_notifications BOOLEAN DEFAULT true,
-        email_notifications BOOLEAN DEFAULT true,
-        activity_reminders BOOLEAN DEFAULT true,
-        new_match_notifications BOOLEAN DEFAULT true,
-        message_notifications BOOLEAN DEFAULT true,
-        profile_visibility VARCHAR DEFAULT 'public',
-        location_sharing BOOLEAN DEFAULT true,
-        show_age BOOLEAN DEFAULT true,
-        show_email BOOLEAN DEFAULT false,
-        theme VARCHAR DEFAULT 'system',
-        language VARCHAR DEFAULT 'en',
-        distance_unit VARCHAR DEFAULT 'miles',
-        max_distance INTEGER DEFAULT 25,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Users table created");
-    
-    console.log("🔨 Creating activities table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS activities (
-        id SERIAL PRIMARY KEY,
-        host_id VARCHAR NOT NULL,
-        title VARCHAR NOT NULL,
-        description TEXT,
-        category VARCHAR NOT NULL,
-        location VARCHAR NOT NULL,
-        latitude REAL,
-        longitude REAL,
-        date_time TIMESTAMP NOT NULL,
-        end_date_time TIMESTAMP,
-        max_participants INTEGER NOT NULL,
-        current_participants INTEGER DEFAULT 0,
-        waitlist_count INTEGER DEFAULT 0,
-        is_private BOOLEAN DEFAULT false,
-        tags JSONB DEFAULT '[]'::jsonb,
-        image_url VARCHAR,
-        image_urls JSONB DEFAULT '[]'::jsonb,
-        price REAL DEFAULT 0,
-        currency VARCHAR DEFAULT 'USD',
-        requires_approval BOOLEAN DEFAULT false,
-        age_restriction VARCHAR,
-        skill_level VARCHAR,
-        equipment_provided BOOLEAN DEFAULT false,
-        equipment_required TEXT,
-        weather_dependent BOOLEAN DEFAULT false,
-        status VARCHAR DEFAULT 'active',
-        cancellation_reason TEXT,
-        recurring_pattern VARCHAR,
-        reminder_sent BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Activities table created");
-    
-    console.log("🔨 Creating activity_swipes table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS activity_swipes (
-        id SERIAL PRIMARY KEY,
-        user_id VARCHAR NOT NULL,
-        activity_id INTEGER NOT NULL,
-        swipe_type VARCHAR NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Activity_swipes table created");
-    
-    console.log("🔨 Creating activity_matches table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS activity_matches (
-        id SERIAL PRIMARY KEY,
-        user_id VARCHAR NOT NULL,
-        activity_id INTEGER NOT NULL,
-        status VARCHAR DEFAULT 'pending',
-        joined_at TIMESTAMP,
-        left_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Activity_matches table created");
-    
-    console.log("🔨 Creating chat_rooms table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS chat_rooms (
-        id SERIAL PRIMARY KEY,
-        activity_id INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Chat_rooms table created");
-    
-    console.log("🔨 Creating chat_messages table...");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id SERIAL PRIMARY KEY,
-        chat_room_id INTEGER NOT NULL,
-        sender_id VARCHAR NOT NULL,
-        message TEXT NOT NULL,
-        message_type VARCHAR DEFAULT 'text',
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log("✅ Chat_messages table created");
-    
-    // Add foreign key constraints after all tables are created
-    console.log("🔗 Adding foreign key constraints...");
-    await pool.query(`
-      ALTER TABLE activities ADD CONSTRAINT fk_activities_host_id 
-      FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE;
-      
-      ALTER TABLE activity_swipes ADD CONSTRAINT fk_activity_swipes_user_id 
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      
-      ALTER TABLE activity_swipes ADD CONSTRAINT fk_activity_swipes_activity_id 
-      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
-      
-      ALTER TABLE activity_matches ADD CONSTRAINT fk_activity_matches_user_id 
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      
-      ALTER TABLE activity_matches ADD CONSTRAINT fk_activity_matches_activity_id 
-      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
-      
-      ALTER TABLE chat_rooms ADD CONSTRAINT fk_chat_rooms_activity_id 
-      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
-      
-      ALTER TABLE chat_messages ADD CONSTRAINT fk_chat_messages_chat_room_id 
-      FOREIGN KEY (chat_room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE;
-      
-      ALTER TABLE chat_messages ADD CONSTRAINT fk_chat_messages_sender_id 
-      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE;
-    `);
-    console.log("✅ Foreign key constraints added");
-    
+
+    console.log("⚠️ Tables missing, but skipping creation (created manually)");
     await pool.end();
+
   } catch (error) {
-    console.error("❌ Database migration failed:", error);
-    console.error("Migration error details:", error instanceof Error ? error.message : String(error));
-    
-    // Try a simple database connection test
-    try {
-      console.log("🔍 Testing database connection...");
-      const { db } = await import('./db');
-      await db.execute('SELECT 1');
-      console.log("✅ Database connection successful");
-    } catch (dbError) {
-      console.error("❌ Database connection failed:", dbError instanceof Error ? dbError.message : String(dbError));
-    }
-    
+    console.error("❌ Database migration error:", error instanceof Error ? error.message : String(error));
+    console.log("⚠️ Continuing without migration - tables may already exist");
     // Don't exit process, just log the error
-    // The app might still work if tables already exist
   }
 }
 

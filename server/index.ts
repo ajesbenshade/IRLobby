@@ -4,9 +4,22 @@ dotenv.config({ path: process.cwd() + '/.env' });
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { getSession } from "./auth"; // Import session middleware from our new auth system
 import cookieParser from "cookie-parser"; // Import cookie-parser for handling cookies
+
+// Conditionally import vite functions only in development
+let setupVite: any, serveStatic: any, log: any;
+if (process.env.NODE_ENV !== 'production') {
+  const viteModule = await import("./vite");
+  setupVite = viteModule.setupVite;
+  serveStatic = viteModule.serveStatic;
+  log = viteModule.log;
+} else {
+  // In production, provide no-op functions
+  setupVite = async () => {};
+  serveStatic = () => {};
+  log = console.log;
+}
 
 const app = express();
 app.use(express.json());

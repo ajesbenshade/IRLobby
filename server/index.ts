@@ -60,6 +60,27 @@ app.get('/api/health/post-init', (_req, res) => {
   res.status(200).json({ status: 'ok', phase: 'post-init', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint to check if build files exist
+app.get('/api/debug/build-status', (_req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const distPath = path.resolve(process.cwd(), "dist", "public");
+  
+  const debugInfo = {
+    cwd: process.cwd(),
+    distExists: fs.existsSync(path.resolve(process.cwd(), "dist")),
+    publicExists: fs.existsSync(distPath),
+    indexExists: fs.existsSync(path.resolve(distPath, "index.html")),
+    directoryContents: fs.existsSync(process.cwd()) ? fs.readdirSync(process.cwd()) : [],
+    distContents: fs.existsSync(path.resolve(process.cwd(), "dist")) ? fs.readdirSync(path.resolve(process.cwd(), "dist")) : [],
+    publicContents: fs.existsSync(distPath) ? fs.readdirSync(distPath) : [],
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('Build status debug:', JSON.stringify(debugInfo, null, 2));
+  res.json(debugInfo);
+});
+
 // Run database migrations on startup
 async function runMigrations() {
   try {
@@ -132,7 +153,7 @@ async function runMigrations() {
   console.log('PORT:', process.env.PORT);
   console.log('DATABASE_URL available:', !!process.env.DATABASE_URL);
   console.log('Current working directory:', process.cwd());
-  console.log('Directory contents:', require('fs').readdirSync(process.cwd()));
+  console.log('Directory contents:', (await import('fs')).readdirSync(process.cwd()));
 
   // Conditionally import vite functions only in development
   if (process.env.NODE_ENV !== 'production') {

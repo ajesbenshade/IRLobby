@@ -24,7 +24,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
       id: 'matches',
       label: 'Matches',
       icon: MessageCircle,
-      badge: 0, // TODO: Connect to real notification count
+      badge: 0,
     },
     {
       id: 'create',

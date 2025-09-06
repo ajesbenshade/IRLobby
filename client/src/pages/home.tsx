@@ -5,6 +5,8 @@ import Matches from "./matches";
 import CreateActivity from "./create-activity";
 import Profile from "./profile";
 import Chat from "./chat";
+import Settings from "./settings";
+import HelpSupport from "./help-support";
 import { useState } from "react";
 
 export default function Home() {
@@ -29,7 +31,11 @@ export default function Home() {
           setCurrentScreen('chat');
         }} showUserActivities />;
       case 'profile':
-        return <Profile />;
+        return <Profile onNavigate={setCurrentScreen} />;
+      case 'settings':
+        return <Settings onBack={() => setCurrentScreen('profile')} />;
+      case 'help-support':
+        return <HelpSupport onBack={() => setCurrentScreen('profile')} />;
       case 'chat':
         return chatActivityId ? (
           <Chat 

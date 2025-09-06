@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@db:5432/irlobby_app
+      - SESSION_SECRET=dev-session-secret
+      - JWT_SECRET=dev-jwt-secret
+      - GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+      - VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - irlobby-network
+    command: npm run dev
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=irlobby_app
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - irlobby-network
+
+volumes:
+  postgres_data:
+
+networks:
+  irlobby-network:
+    driver: bridge

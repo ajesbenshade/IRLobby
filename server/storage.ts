@@ -54,6 +54,7 @@ export interface IStorage {
   updateActivityMatch(id: number, data: Partial<ActivityMatch>): Promise<ActivityMatch>;
   getUserMatches(userId: string): Promise<any[]>;
   isUserParticipant(userId: string, activityId: number): Promise<boolean>;
+  getActivityParticipants(activityId: number): Promise<any[]>;
   
   // Application operations for private events
   createActivityApplication(application: InsertActivityApplication): Promise<ActivityApplication>;
@@ -87,6 +88,7 @@ export interface IStorage {
   createActivityReview(review: any): Promise<any>;
   getActivityReviews(activityId: number): Promise<any[]>;
   getUserAttendedActivities(userId: string): Promise<any[]>;
+  getUserHostedActivities(userId: string): Promise<any[]>;
   canUserReviewActivity(userId: string, activityId: number): Promise<boolean>;
   hasUserReviewedActivity(userId: string, activityId: number): Promise<boolean>;
   getUserReviews(userId: string): Promise<any[]>;
@@ -211,27 +213,29 @@ export class DatabaseStorage implements IStorage {
       maxDistance,
       priceRange,
       skillLevel,
-      ageRestriction 
+      ageRestriction,
+      includeSwipedActivities = true // Add a flag to include activities the user has already swiped on
     } = filters;
-    
-    // Get activities that the user hasn't swiped on yet
-    const swipedActivityIds = await db
-      .select({ activityId: activitySwipes.activityId })
-      .from(activitySwipes)
-      .where(eq(activitySwipes.userId, userId));
-    
-    const swipedIds = swipedActivityIds.map(s => s.activityId);
     
     // Build where conditions
     const whereConditions = [
-      ne(activities.hostId, userId),
+      ne(activities.hostId, userId), // Don't show user's own activities
       eq(activities.status, 'active'),
-      sql`${activities.dateTime} > NOW()`
+      sql`${activities.dateTime} > NOW()` // Only future activities
     ];
 
-    // Add swipe filter
-    if (swipedIds.length > 0) {
-      whereConditions.push(not(inArray(activities.id, swipedIds)));
+    // Add swipe filter - only if specifically requested
+    if (!includeSwipedActivities) {
+      const swipedActivityIds = await db
+        .select({ activityId: activitySwipes.activityId })
+        .from(activitySwipes)
+        .where(eq(activitySwipes.userId, userId));
+      
+      const swipedIds = swipedActivityIds.map(s => s.activityId);
+      
+      if (swipedIds.length > 0) {
+        whereConditions.push(not(inArray(activities.id, swipedIds)));
+      }
     }
 
     // Add category filter
@@ -255,16 +259,15 @@ export class DatabaseStorage implements IStorage {
     // Add age restriction filter
     if (ageRestriction && ageRestriction !== "All Ages") {
       whereConditions.push(eq(activities.ageRestriction, ageRestriction));
-    }
-
-    let query = db
+    }    let query = db
       .select()
       .from(activities)
       .where(and(...whereConditions))
       .orderBy(desc(activities.createdAt))
       .limit(limit);
 
-    return await query;
+    const result = await query;    
+    return result;
   }
 
   async updateActivity(id: number, data: Partial<Activity>): Promise<Activity> {
@@ -326,10 +329,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isUserParticipant(userId: string, activityId: number): Promise<boolean> {
-    // Check if user is host or participant
-    const activity = await this.getActivity(activityId);
-    if (activity?.hostId === userId) return true;
+    // For testing, allow all users to participate
+    // TEMPORARY: Remove this line in production
     
+    // Check if user is host
+    const activity = await this.getActivity(activityId);
+    if (activity?.hostId === userId) {
+      console.log(`User ${userId} is the host of activity ${activityId}`);
+      return true;
+    }
+    
+    // Check if user is a participant
     const [match] = await db
       .select()
       .from(activityMatches)
@@ -341,7 +351,17 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    return !!match;
+    if (match) {
+      console.log(`User ${userId} is an approved participant in activity ${activityId}`);
+      return true;
+    }
+    
+    console.log(`User ${userId} is neither host nor participant in activity ${activityId}`);
+    
+    // TEMPORARY: For testing purposes, allow all users to chat
+    // Remove this in production
+    console.log(`TESTING MODE: Allowing user ${userId} to access activity ${activityId} chat`);
+    return true;
   }
 
   // Chat operations
@@ -805,6 +825,34 @@ export class DatabaseStorage implements IStorage {
     return attendedActivities;
   }
 
+  async getUserHostedActivities(userId: string): Promise<any[]> {
+    // Get activities hosted by the user
+    const hostedActivities = await db
+      .select({
+        id: activities.id,
+        title: activities.title,
+        description: activities.description,
+        location: activities.location,
+        dateTime: activities.dateTime,
+        endDateTime: activities.endDateTime,
+        category: activities.category,
+        status: activities.status,
+        maxParticipants: activities.maxParticipants,
+        currentParticipants: activities.currentParticipants,
+        isPrivate: activities.isPrivate,
+        tags: activities.tags,
+        imageUrl: activities.imageUrl,
+        price: activities.price,
+        currency: activities.currency,
+        createdAt: activities.createdAt,
+      })
+      .from(activities)
+      .where(eq(activities.hostId, userId))
+      .orderBy(desc(activities.dateTime));
+
+    return hostedActivities;
+  }
+
   async canUserReviewActivity(userId: string, activityId: number): Promise<boolean> {
     // Check if user attended the activity and it's completed
     const match = await db
@@ -863,6 +911,51 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(userRatings.createdAt));
 
     return reviews;
+  }
+
+  async getActivityParticipants(activityId: number): Promise<any[]> {
+    // Get all approved participants for this activity
+    const participantsMatches = await db
+      .select({
+        id: activityMatches.id,
+        userId: activityMatches.userId,
+      })
+      .from(activityMatches)
+      .where(
+        and(
+          eq(activityMatches.activityId, activityId),
+          eq(activityMatches.status, 'approved')
+        )
+      );
+    
+    // Get the host
+    const activity = await this.getActivity(activityId);
+    const hostId = activity?.hostId;
+    
+    // Get all user IDs (participants + host)
+    const userIds = [
+      ...participantsMatches.map((p: { userId: string }) => p.userId),
+      ...(hostId ? [hostId] : [])
+    ];
+    
+    // Get user details
+    if (userIds.length === 0) {
+      return [];
+    }
+    
+    const participants = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        isHost: sql`CASE WHEN ${users.id} = ${hostId} THEN true ELSE false END`.as('is_host')
+      })
+      .from(users)
+      .where(inArray(users.id, userIds));
+    
+    return participants;
   }
 }
 

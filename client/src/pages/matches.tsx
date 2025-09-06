@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
 
 interface MatchesProps {
   onOpenChat: (activityId: number) => void;
@@ -11,10 +14,28 @@ interface MatchesProps {
 }
 
 export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
-  const { data: matches = [], isLoading } = useQuery({
+  const { data: matches = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/matches'],
     retry: 1,
   });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+
+  const openProfileModal = (match: any) => {
+    setSelectedMatch(match);
+    setIsModalOpen(true);
+  };
+
+  const closeProfileModal = () => {
+    setIsModalOpen(false);
+    setSelectedMatch(null);
+  };
+
+  const sendFriendRequest = (userId: string) => {
+    // Call API to send friend request
+    console.log(`Sending friend request to user ${userId}`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -47,13 +68,20 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
 
   return (
     <div className="bg-gray-50 pb-20 min-h-screen">
-      <header className="bg-white shadow-sm p-4">
-        <h2 className="text-xl font-bold text-gray-800">
-          {showUserActivities ? "My Activities" : "Your Matches"}
-        </h2>
-        <p className="text-sm text-gray-500">
-          {showUserActivities ? "Activities you've joined" : "Events you're part of"}
-        </p>
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">
+            {showUserActivities ? "My Activities" : "Your Matches"}
+          </h2>
+          <p className="text-sm text-gray-500">
+            {showUserActivities ? "Activities you've joined" : "Events you're part of"}
+          </p>
+        </div>
+        {matches.length > 0 && (
+          <Button onClick={() => openProfileModal(matches[0])} variant="outline">
+            View Group Profiles
+          </Button>
+        )}
       </header>
 
       <div className="p-4 space-y-4">
@@ -104,7 +132,6 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
                         className="w-10 h-10 p-0 bg-primary rounded-full relative"
                       >
                         <MessageCircle className="w-5 h-5 text-white" />
-                        {/* TODO: Add notification badge for unread messages */}
                       </Button>
                     ) : (
                       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
@@ -118,6 +145,32 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
           ))
         )}
       </div>
+
+      {/* Profile Modal */}
+      <Dialog open={isModalOpen} onOpenChange={closeProfileModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Group Profiles</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedMatch?.participants?.map((participant: any) => (
+              <div key={participant.id} className="flex items-center space-x-4">
+                <Avatar>
+                  <AvatarImage src={participant.profileImageUrl} alt={participant.firstName} />
+                  <AvatarFallback>{participant.firstName[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">{participant.firstName} {participant.lastName}</h4>
+                  <p className="text-sm text-gray-500">{participant.email}</p>
+                </div>
+                <Button onClick={() => sendFriendRequest(participant.id)} size="sm">
+                  Add Friend
+                </Button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

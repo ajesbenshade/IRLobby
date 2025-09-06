@@ -24,19 +24,77 @@ export default function Discovery() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: activities = [], isLoading } = useQuery({
+  // Get auth token from localStorage
+  const token = localStorage.getItem('authToken');
+
+  // Use the token in the API request
+  const { data: activities = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/activities/discover', filters],
+    queryFn: async () => {
+      console.log('Fetching activities with token:', !!token);
+      
+      const response = await fetch('/api/activities/discover', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Activities response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error fetching activities:', errorText);
+        throw new Error('Failed to fetch activities');
+      }
+      
+      const data = await response.json();
+      console.log('Found activities:', data.length);
+      return data;
+    },
+    enabled: !!token, // Only run the query if we have a token
     retry: 1,
   });
 
+  // Debugging effect
+  useEffect(() => {
+    if (error) {
+      console.error('Activity fetch error:', error);
+    }
+    
+    if (activities && activities.length === 0 && !isLoading) {
+      console.log('No activities found. Auth token present:', !!token);
+    }
+  }, [activities, error, isLoading, token]);
+
   const { data: unreadNotifications = 0 } = useQuery({
     queryKey: ['/api/notifications/unread-count'],
+    queryFn: async () => {
+      const response = await fetch('/api/notifications/unread-count', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch notification count');
+      }
+      
+      return response.json();
+    },
+    enabled: !!token,
     retry: 1,
   });
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, swipeType }: { activityId: number; swipeType: 'like' | 'pass' }) => {
-      const response = await apiRequest('POST', `/api/activities/${activityId}/swipe`, { swipeType });
+      const response = await fetch(`/api/activities/${activityId}/swipe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ swipeType })
+      });
       return response.json();
     },
     onSuccess: (data) => {

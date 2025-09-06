@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 interface ChatWindowProps {
-  chatRoomId: string;
+  chatRoomId: string; // This is actually the activityId
   onClose: () => void;
 }
 
@@ -20,18 +20,63 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: messages, isLoading } = useQuery({
+  // Correct query key to match server route
+  const { data: messages = [], isLoading, error } = useQuery({
     queryKey: [`/api/activities/${chatRoomId}/chat`],
+    queryFn: async () => {
+      console.log(`Fetching chat messages for activity: ${chatRoomId}`);
+      try {
+        const response = await fetch(`/api/activities/${chatRoomId}/chat`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch chat messages: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`Fetched ${data.length} chat messages`);
+        return data;
+      } catch (err) {
+        console.error('Error fetching chat messages:', err);
+        throw err;
+      }
+    }
   });
 
-  const { isConnected } = useWebSocket({
+  // Log any errors
+  useEffect(() => {
+    if (error) {
+      console.error('Chat messages fetch error:', error);
+    }
+  }, [error]);
+
+  const { isConnected, sendMessage: sendWebSocketMessage } = useWebSocket({
+    onOpen: () => {
+      console.log('WebSocket connected, joining activity chat');
+      // Join the activity chat room
+      if (user) {
+        sendWebSocketMessage({
+          type: 'join_activity',
+          activityId: parseInt(chatRoomId),
+          userId: user.id
+        });
+      }
+    },
     onMessage: (newMessage) => {
-      if (newMessage.type === 'chat_message' && newMessage.activityId === chatRoomId) {
+      console.log('WebSocket message received:', newMessage);
+      if (newMessage.type === 'chat_message' && newMessage.activityId === parseInt(chatRoomId)) {
+        console.log('New chat message received, updating cache');
         // Add new message to the cache
         queryClient.setQueryData(
           [`/api/activities/${chatRoomId}/chat`],
-          (oldMessages: any[]) => {
-            if (!oldMessages) return [newMessage.data];
+          (oldMessages: any[] = []) => {
+            // Check if message already exists to avoid duplicates
+            const exists = oldMessages.some(m => m.id === newMessage.data.id);
+            if (exists) return oldMessages;
             return [...oldMessages, newMessage.data];
           }
         );
@@ -41,18 +86,24 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
-      return await apiRequest(`/api/activities/${chatRoomId}/chat`, {
-        method: 'POST',
-        body: JSON.stringify({
+      console.log(`Sending message to activity ${chatRoomId}: ${messageText}`);
+      return await apiRequest(
+        'POST', 
+        `/api/activities/${chatRoomId}/chat`, 
+        {
           message: messageText,
           messageType: "text",
-        })
-      });
+        }
+      );
     },
     onSuccess: () => {
+      console.log('Message sent successfully');
       setMessage("");
       scrollToBottom();
     },
+    onError: (error) => {
+      console.error('Failed to send message:', error);
+    }
   });
 
   const handleSendMessage = () => {

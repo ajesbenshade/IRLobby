@@ -1,11 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heart, Users, Calendar, MapPin } from "lucide-react";
+import AuthForm from "@/components/auth-form"; // Import the AuthForm component
+import { useAuth } from "@/hooks/useAuth"; // Import the useAuth hook
+import { useEffect } from "react";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = '/api/login';
-  };
+  const { isAuthenticated, handleAuthentication } = useAuth();
+
+  useEffect(() => {
+    // Redirect to home if already authenticated
+    if (isAuthenticated) {
+      window.location.href = '/home';
+    }
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-purple-700 flex flex-col justify-center items-center p-6">
@@ -13,10 +21,16 @@ export default function Landing() {
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Heart className="text-primary text-3xl" />
         </div>
-        <h1 className="text-4xl font-bold text-white mb-2">LIYF</h1>
-        <p className="text-purple-100 text-lg">Life Is Your Function</p>
+        <h1 className="text-4xl font-bold text-white mb-2">IRLobby</h1>
+        <p className="text-purple-100 text-lg">Your Lobby for IRL Meetups</p>
       </div>
 
+      {/* Authentication form */}
+      <div className="w-full max-w-md mb-8">
+        <AuthForm onAuthenticated={handleAuthentication} />
+      </div>
+
+      {/* Feature cards */}
       <div className="w-full max-w-md space-y-6 mb-8">
         <Card className="bg-white/10 backdrop-blur border-white/20">
           <CardContent className="p-6">
@@ -57,7 +71,7 @@ export default function Landing() {
 
       <div className="w-full max-w-md space-y-4">
         <Button 
-          onClick={handleLogin}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="w-full bg-white text-primary py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-lg"
         >
           Get Started

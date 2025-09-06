@@ -22,42 +22,52 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return;
     }
 
+    // Determine correct WebSocket URL based on current environment
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
     
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    console.log('Connecting to WebSocket at:', wsUrl);
+    
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      console.log('WebSocket connected');
-      options.onOpen?.();
-    };
+      ws.onopen = () => {
+        setIsConnected(true);
+        console.log('WebSocket connected successfully');
+        options.onOpen?.();
+      };
 
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        options.onMessage?.(message);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('WebSocket message received:', message);
+          options.onMessage?.(message);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    ws.onclose = () => {
-      setIsConnected(false);
-      console.log('WebSocket disconnected');
-      options.onClose?.();
-      
-      // Attempt to reconnect after 3 seconds
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, 3000);
-    };
+      ws.onclose = (event) => {
+        setIsConnected(false);
+        console.log('WebSocket disconnected with code:', event.code, event.reason);
+        options.onClose?.();
+        
+        // Attempt to reconnect after 3 seconds
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting to reconnect WebSocket...');
+          connect();
+        }, 3000);
+      };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      options.onError?.(error);
-    };
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        options.onError?.(error);
+      };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+    }
   };
 
   const disconnect = () => {

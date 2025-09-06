@@ -21,12 +21,21 @@ if (!process.env.JWT_SECRET) {
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: 'sessions',
-  });
+  
+  let sessionStore;
+  try {
+    sessionStore = new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      ttl: sessionTtl,
+      tableName: 'sessions',
+    });
+    console.log('Session store initialized successfully');
+  } catch (error) {
+    console.warn('Failed to initialize session store, using memory store:', error);
+    // Fallback to memory store if DB connection fails
+    sessionStore = new session.MemoryStore();
+  }
   
   // Set a default SESSION_SECRET for local development
   if (!process.env.SESSION_SECRET) {

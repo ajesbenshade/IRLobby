@@ -19,15 +19,18 @@ console.log("PORT:", process.env.PORT || "Not set (defaulting to 4001)");
 console.log("NODE_ENV:", process.env.NODE_ENV || "Not set");
 console.log("RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT || "Not set");
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
-}
-
 let pool: PgPool;
 let db: NodePgDatabase<typeof schema>;
 
-// Always use pg with connection string
-pool = new PgPool({ connectionString: process.env.DATABASE_URL, ssl: false });
-db = drizzle(pool, { schema });
+if (!process.env.DATABASE_URL) {
+  console.warn("⚠️ DATABASE_URL not set. Database operations will fail until configured.");
+  // Set to null to prevent runtime errors
+  pool = null as any;
+  db = null as any;
+} else {
+  // Always use pg with connection string
+  pool = new PgPool({ connectionString: process.env.DATABASE_URL, ssl: false });
+  db = drizzle(pool, { schema });
+}
 
 export { pool, db };

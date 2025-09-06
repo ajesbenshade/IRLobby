@@ -1,10 +1,18 @@
+import dotenv from "dotenv";
+// Load environment variables before importing any other modules
+dotenv.config({ path: process.cwd() + '/.env' });
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { getSession } from "./auth"; // Import session middleware from our new auth system
+import cookieParser from "cookie-parser"; // Import cookie-parser for handling cookies
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser()); // Add cookie-parser middleware
+app.use(getSession()); // Add session middleware
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -56,14 +64,11 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Serve on Railway's provided port or default to 4001
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 4001;
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
+    host: "0.0.0.0", // Use 0.0.0.0 for Railway
   }, () => {
     log(`serving on port ${port}`);
   });

@@ -44,9 +44,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Early health check endpoint
+// Early health check endpoint - BEFORE any middleware
 app.get('/api/health', (_req, res) => {
+  console.log('Health check requested at', new Date().toISOString());
   res.status(200).json({ status: 'ok', phase: 'pre-init', timestamp: new Date().toISOString() });
+});
+
+// Add another health check after middleware setup
+app.get('/api/health/post-init', (_req, res) => {
+  console.log('Post-init health check requested at', new Date().toISOString());
+  res.status(200).json({ status: 'ok', phase: 'post-init', timestamp: new Date().toISOString() });
 });
 
 // Run database migrations on startup
@@ -116,11 +123,18 @@ async function runMigrations() {
 }
 
 (async () => {
+  console.log('🚀 Starting IRLobby server initialization...');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('PORT:', process.env.PORT);
+  console.log('DATABASE_URL available:', !!process.env.DATABASE_URL);
+  
   try {
     // Run database migrations first
     await runMigrations();
     
+    console.log('📋 Registering routes...');
     const server = await registerRoutes(app);
+    console.log('✅ Routes registered successfully');
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -134,14 +148,20 @@ async function runMigrations() {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
+      console.log('🔧 Setting up Vite development server...');
       await setupVite(app, server);
+      console.log('✅ Vite development server ready');
     } else {
+      console.log('📦 Setting up static file serving...');
       // Never import client vite config in production to avoid __dirname issues
       serveStatic(app);
+      console.log('✅ Static file serving ready');
     }
 
     // Serve on Railway's provided port or default to 4001
     const port = process.env.PORT ? parseInt(process.env.PORT) : 4001;
+    console.log(`🌐 Starting server on port ${port}...`);
+    
     server.listen({
       port,
       host: "0.0.0.0", // Use 0.0.0.0 for Railway
@@ -152,6 +172,7 @@ async function runMigrations() {
     });
   } catch (error) {
     console.error('❌ Failed to start IRLobby server:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 })();

@@ -44,8 +44,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// Run database migrations on startup
+async function runMigrations() {
+  try {
+    console.log("🔄 Running database migrations...");
+    const { execSync } = await import('child_process');
+    execSync('npx drizzle-kit push', { stdio: 'inherit', env: { ...process.env } });
+    console.log("✅ Database migrations completed successfully");
+  } catch (error) {
+    console.error("❌ Database migration failed:", error);
+    // Don't exit process, just log the error
+    // The app might still work if tables already exist
+  }
+}
+
 (async () => {
   try {
+    // Run database migrations first
+    await runMigrations();
+    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

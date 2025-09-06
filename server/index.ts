@@ -44,6 +44,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Early health check endpoint
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', phase: 'pre-init', timestamp: new Date().toISOString() });
+});
+
 // Run database migrations on startup
 async function runMigrations() {
   try {
@@ -131,6 +136,7 @@ async function runMigrations() {
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
+      // Never import client vite config in production to avoid __dirname issues
       serveStatic(app);
     }
 

@@ -3,8 +3,8 @@ import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../client/vite.config";
 import { nanoid } from "nanoid";
+import { fileURLToPath } from 'url';
 
 const viteLogger = createLogger();
 
@@ -20,24 +20,27 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Build a minimal Vite config in code to avoid importing client/vite.config.ts
+  const reactPlugin = (await import("@vitejs/plugin-react")).default;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    allowedHosts: true as const,
   };
 
   const vite = await createViteServer({
-    ...viteConfig,
     configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      },
-    },
+    plugins: [reactPlugin()],
+    root: path.resolve(process.cwd(), "client"),
     server: serverOptions,
     appType: "custom",
+    resolve: {
+      alias: {
+        "@": path.resolve(process.cwd(), "client", "src"),
+        "@shared": path.resolve(process.cwd(), "shared"),
+      },
+    },
   });
 
   app.use(vite.middlewares);
@@ -46,13 +49,12 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        process.cwd(),
         "client",
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
+      // always reload the index.html file from disk in case it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,

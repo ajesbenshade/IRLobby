@@ -11,7 +11,7 @@ import {
   insertChatMessageSchema,
   insertUserRatingSchema,
   userFriends
-} from "@shared/schema";
+} from "../shared/schema";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 

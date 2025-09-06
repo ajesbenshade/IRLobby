@@ -26,7 +26,7 @@ import {
   type InsertUserFriend,
   type UserFriend,
   type ChatRoom
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ne, sql, not, inArray, or, ilike, lt, gte, lte } from "drizzle-orm";
 

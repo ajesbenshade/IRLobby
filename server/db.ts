@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 // import { Pool, neonConfig } from '@neondatabase/serverless';
 // import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
 // import ws from "ws";
-import * as schema from "@shared/schema";
+import * as schema from "../shared/schema";
 import dotenv from "dotenv";
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 

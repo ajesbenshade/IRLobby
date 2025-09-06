@@ -31,6 +31,29 @@
 
 See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions.
 
+## Deployment
+
+See RAILWAY_DEPLOYMENT.md for Railway specific steps.
+
+### DigitalOcean App Platform
+
+To avoid a double build (Node autodetect + Docker), force App Platform to use the Dockerfile:
+
+- Ensure `Dockerfile` exists at the repo root.
+- Use the App Spec under `.do/app.yaml` or `.do/deploy.template.yaml` which sets `dockerfile_path: ./Dockerfile`.
+- In the App creation wizard, choose “Use existing app spec” and point to `.do/app.yaml`, or select Dockerfile when prompted.
+
+Environment variables:
+
+- `NODE_ENV=production`
+- `DATABASE_URL` (append `?sslmode=require` for DO PostgreSQL or set `PGSSLMODE=require`)
+- Any required app secrets (SESSION_SECRET, JWT_SECRET, etc.)
+
+Build/Run inside Docker:
+
+- Build: `npm run build` (builds client to `dist/public` and server to `dist/index.js`)
+- Start: `npm start` (uses PORT provided by DO)
+
 ### Quick Start with Docker (Recommended)
 
 1. **Clone the repository**

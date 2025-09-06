@@ -333,3 +333,4 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     </div>
   );
 }
+// Force rebuild

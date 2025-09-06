@@ -49,6 +49,9 @@ async function runMigrations() {
   try {
     console.log("🔄 Running database migrations...");
     console.log("DATABASE_URL available:", !!process.env.DATABASE_URL);
+    console.log("DATABASE_URL value:", process.env.DATABASE_URL ? "Set (hidden for security)" : "Not set");
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT);
     
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL environment variable is not set");
@@ -60,7 +63,27 @@ async function runMigrations() {
     console.log("📋 Connecting to database...");
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     
+    // Test the connection first
+    console.log("🔍 Testing database connection...");
+    const testResult = await pool.query('SELECT 1 as test');
+    console.log("✅ Database connection successful:", testResult.rows[0]);
+    
     console.log("📋 Creating tables...");
+    // First check if tables already exist
+    const existingTables = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('users', 'activities', 'activity_swipes', 'activity_matches')
+    `);
+    console.log("📊 Existing tables:", existingTables.rows.map(r => r.table_name));
+    
+    if (existingTables.rows.length >= 4) {
+      console.log("✅ All tables already exist, skipping migration");
+      await pool.end();
+      return;
+    }
+    
     // Create tables manually using raw SQL
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (

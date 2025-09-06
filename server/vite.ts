@@ -1,12 +1,10 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
+// Removed top-level import of 'vite' to prevent production from requiring it
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import { fileURLToPath } from 'url';
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -22,6 +20,9 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   // Build a minimal Vite config in code to avoid importing client/vite.config.ts
   const reactPlugin = (await import("@vitejs/plugin-react")).default;
+
+  // Dynamically import vite to avoid requiring it in production bundles
+  const { createServer: createViteServer } = await import('vite');
 
   const serverOptions = {
     middlewareMode: true,
@@ -63,7 +64,8 @@ export async function setupVite(app: Express, server: Server) {
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      // vite.ssrFixStacktrace may not be available if vite fails; guard it
+      try { vite.ssrFixStacktrace(e as Error); } catch {}
       next(e);
     }
   });

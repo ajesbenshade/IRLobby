@@ -3,9 +3,13 @@ from django.contrib.auth import authenticate
 from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
+    firstName = serializers.CharField(source='first_name', required=False)
+    lastName = serializers.CharField(source='last_name', required=False)
+    profileImageUrl = serializers.URLField(source='avatar_url', required=False)
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'bio', 'avatar_url', 'location', 'preferences', 'latitude', 'longitude')
+        fields = ('id', 'username', 'email', 'firstName', 'lastName', 'bio', 'profileImageUrl', 'location', 'preferences', 'latitude', 'longitude')
         read_only_fields = ('id',)
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

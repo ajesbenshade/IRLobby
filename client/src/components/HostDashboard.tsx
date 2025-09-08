@@ -20,7 +20,7 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
   const [hostMessage, setHostMessage] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: applications = [], isLoading } = useQuery<any>({
     queryKey: ['/api/host/applications'],
     retry: 1,
     enabled: isOpen,

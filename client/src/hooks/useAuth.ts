@@ -17,13 +17,13 @@ export function useAuth() {
   
   // Fetch user data if token exists
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/users/profile"],
     enabled: !!token,
     retry: false,
     queryFn: async () => {
       if (!token) return null;
       
-      const response = await fetch('/api/user', {
+      const response = await fetch('/api/users/profile/', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -48,14 +48,15 @@ export function useAuth() {
   // Handle logout
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/logout');
+      await fetch('/api/auth/logout/', { method: 'POST' });
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
       localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('userId');
       setToken(null);
-      queryClient.setQueryData(["/api/user"], null);
+      queryClient.setQueryData(["/api/users/profile"], null);
     }
   }, [queryClient]);
 

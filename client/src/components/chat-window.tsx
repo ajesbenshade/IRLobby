@@ -87,6 +87,15 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
       console.log(`Sending message to activity ${chatRoomId}: ${messageText}`);
+      
+      // Send via WebSocket for real-time updates
+      sendWebSocketMessage({
+        type: 'send_message',
+        activityId: parseInt(chatRoomId),
+        message: messageText
+      });
+      
+      // Also send via HTTP to ensure it's saved to database
       return await apiRequest(
         'POST', 
         `/api/activities/${chatRoomId}/chat`, 

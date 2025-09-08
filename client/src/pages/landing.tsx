@@ -16,13 +16,13 @@ export default function Landing() {
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary to-purple-700 flex flex-col justify-center items-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-green-700 flex flex-col justify-center items-center p-6">
       <div className="text-center mb-8 animate-fade-in">
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Heart className="text-primary text-3xl" />
         </div>
         <h1 className="text-4xl font-bold text-white mb-2">IRLobby</h1>
-        <p className="text-purple-100 text-lg">Your Lobby for IRL Meetups</p>
+        <p className="text-green-100 text-lg">Your Lobby for IRL Meetups</p>
       </div>
 
       {/* Authentication form */}

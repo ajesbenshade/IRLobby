@@ -249,6 +249,10 @@ def populate_test_data_api(request):
         return Response({
             'error': f'Failed to populate test data: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
     """Reset password with token"""
     uidb64 = request.data.get('uid')
     token = request.data.get('token')

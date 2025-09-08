@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import User
 from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
 
@@ -16,8 +18,17 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def register(request):
+    print(f"DEBUG: Register view called with method: {request.method}")
+    print(f"DEBUG: Request data: {request.data}")
+    print(f"DEBUG: Request headers: {dict(request.headers)}")
+
     serializer = UserRegistrationSerializer(data=request.data)
+    print(f"DEBUG: Serializer is valid: {serializer.is_valid()}")
+    if not serializer.is_valid():
+        print(f"DEBUG: Serializer errors: {serializer.errors}")
+
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
@@ -32,6 +43,7 @@ def register(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def login(request):
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():

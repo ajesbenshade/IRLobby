@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Activity, ActivityParticipant
 from .serializers import ActivitySerializer, ActivityParticipantSerializer
 
@@ -49,6 +51,7 @@ class HostedActivitiesView(generics.ListAPIView):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def join_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
@@ -67,6 +70,7 @@ def join_activity(request, pk):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def leave_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
@@ -80,6 +84,7 @@ def leave_activity(request, pk):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def activity_chat(request, pk):
     """Get chat messages for an activity or send a message"""
     activity = get_object_or_404(Activity, pk=pk)

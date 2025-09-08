@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from activities.models import Activity
 from matches.models import Match
 from .models import Swipe
@@ -21,6 +23,7 @@ class SwipeListView(generics.ListCreateAPIView):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def swipe_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user

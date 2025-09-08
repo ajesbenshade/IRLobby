@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework_simplejwt.tokens import RefreshToken
 import requests
 from .serializers import UserSerializer
@@ -36,6 +38,7 @@ def twitter_oauth_url(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def twitter_oauth_callback(request):
     """Handle Twitter OAuth callback"""
     code = request.data.get('code')

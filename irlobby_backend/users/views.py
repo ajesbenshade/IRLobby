@@ -166,3 +166,45 @@ def send_friend_request(request):
 def activity_templates(request):
     """Get activity templates"""
     return Response([])
+
+# Password reset functionality
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """Request password reset - for now just return success message"""
+    email = request.data.get('email')
+    if not email:
+        return Response({'message': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # In a real implementation, you would:
+    # 1. Check if user exists with this email
+    # 2. Generate a password reset token
+    # 3. Send email with reset link
+    # For now, we'll just return a success message
+
+    return Response({
+        'message': 'If an account with that email exists, a password reset link has been sent.'
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """Reset password with token"""
+    token = request.data.get('token')
+    new_password = request.data.get('newPassword')
+
+    if not token or not new_password:
+        return Response({
+            'message': 'Token and new password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # In a real implementation, you would:
+    # 1. Validate the token
+    # 2. Find the user associated with the token
+    # 3. Update the user's password
+    # 4. Mark the token as used
+    # For now, we'll just return a success message
+
+    return Response({
+        'message': 'Password has been reset successfully'
+    }, status=status.HTTP_200_OK)

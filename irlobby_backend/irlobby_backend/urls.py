@@ -22,7 +22,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from users.views import logout_view
+from users.views import logout_view, request_password_reset, reset_password
 
 def home(request):
     return render(request, 'index.html')
@@ -40,6 +40,8 @@ urlpatterns = [
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/twitter/', include('users.oauth_urls')),
+    path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
+    path('api/auth/reset-password/', reset_password, name='reset-password'),
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),
     path('api/swipes/', include('swipes.urls')),

@@ -22,4 +22,7 @@ urlpatterns = [
     path('friends/request/', views.send_friend_request, name='send-friend-request'),
     # Temporary activity templates endpoint
     path('activity-templates/', views.activity_templates, name='activity-templates'),
+    # Password reset endpoints
+    path('request-password-reset/', views.request_password_reset, name='request-password-reset'),
+    path('reset-password/', views.reset_password, name='reset-password'),
 ]

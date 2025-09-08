@@ -19,7 +19,7 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000
 
-  - type: postgres
+  - type: postgresql
     name: irlobby-db
     plan: starter
 

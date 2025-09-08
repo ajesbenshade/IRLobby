@@ -22,8 +22,6 @@ services:
   - type: pserv
     name: irlobby-db
     runtime: postgresql
-    databaseName: irlobby_prod
-    user: irlobby_user
     plan: starter
 
   - type: worker

@@ -3,6 +3,9 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 urlpatterns = [
+    # Test data endpoint (temporary) - moved to top
+    path('populate-test-data/', views.populate_test_data_api, name='populate-test-data'),
+    path('test/', views.test_endpoint, name='test-endpoint'),
     path('profile/', views.UserProfileView.as_view(), name='user-profile'),
     path('register/', views.register, name='user-register'),
     path('login/', views.login, name='user-login'),
@@ -25,7 +28,4 @@ urlpatterns = [
     # Password reset endpoints
     path('request-password-reset/', views.request_password_reset, name='request-password-reset'),
     path('reset-password/', views.reset_password, name='reset-password'),
-    # Test data endpoint (temporary)
-    path('populate-test-data/', views.populate_test_data_api, name='populate-test-data'),
-    path('test/', views.test_endpoint, name='test-endpoint'),
 ]

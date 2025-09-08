@@ -1,5 +1,5 @@
 # IRLobby Render Configuration - Updated for Render PostgreSQL
-# Last updated: September 8, 2025 - Force redeploy
+# Last updated: September 8, 2025 - Force redeploy 2
 services:
   - type: web
     name: irlobby-backend

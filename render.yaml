@@ -1,7 +1,3 @@
-databases:
-  - name: irlobby-db
-    plan: starter
-
 services:
   - type: web
     name: irlobby-backend
@@ -17,9 +13,7 @@ services:
       - key: ALLOWED_HOSTS
         value: irlobby-backend.onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: irlobby-db
-          property: connectionString
+        value: postgresql://postgres:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlzb2R3dWltZnRpeHNzZXlvY3puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjU3NTQsImV4cCI6MjA3Mjc0MTc1NH0.QJaUKsd5n09pxTc2EnNnRqwXw665VECH8NKcrI9zLW4@isodwuimftixsseyoczn.supabase.co:5432/postgres
       - key: CORS_ALLOWED_ORIGINS
         value: https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000
 
@@ -37,6 +31,4 @@ services:
       - key: ALLOWED_HOSTS
         value: irlobby-channels.onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: irlobby-db
-          property: connectionString
+        value: postgresql://postgres:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlzb2R3dWltZnRpeHNzZXlvY3puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjU3NTQsImV4cCI6MjA3Mjc0MTc1NH0.QJaUKsd5n09pxTc2EnNnRqwXw665VECH8NKcrI9zLW4@isodwuimftixsseyoczn.supabase.co:5432/postgres

@@ -21,7 +21,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from users.views import logout_view, request_password_reset, reset_password
+from users.views import logout_view, request_password_reset, reset_password, populate_test_data_api
 
 def home(request):
     return HttpResponse("IRLobby Backend API")
@@ -41,6 +41,8 @@ urlpatterns = [
     # path('api/auth/twitter/', include('users.oauth_urls')),  # Temporarily commented out
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
     path('api/auth/reset-password/', reset_password, name='reset-password'),
+    # Temporary populate endpoint - moved to main urls
+    path('api/populate-test-data/', populate_test_data_api, name='populate-test-data'),
     # Temporary test path - moved before users include
     path('api/test-users/', lambda request: HttpResponse('Test working'), name='test-users'),
     path('api/users/', include('users.urls')),

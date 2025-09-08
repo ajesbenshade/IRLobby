@@ -1,7 +1,7 @@
 services:
   - type: web
     name: irlobby-backend
-    runtime: python3
+    runtime: python
     rootDir: irlobby_backend
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "gunicorn irlobby_backend.wsgi:application --bind 0.0.0.0:$PORT"
@@ -23,10 +23,11 @@ services:
     name: irlobby-db
     runtime: postgresql
     plan: starter
+    startCommand: "postgres"
 
   - type: worker
     name: irlobby-channels
-    runtime: python3
+    runtime: python
     rootDir: irlobby_backend
     buildCommand: "pip install -r requirements.txt"
     startCommand: "daphne -b 0.0.0.0 -p 8001 irlobby_backend.asgi:application"

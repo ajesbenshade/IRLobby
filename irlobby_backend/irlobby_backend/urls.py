@@ -50,5 +50,7 @@ urlpatterns = [
     path('api/messages/', include('chat.urls')),
     path('api/reviews/', include('reviews.urls')),
     path('api/logout/', logout_view, name='logout'),
+    # Temporary test path - moved to end
+    path('api/test-users/', lambda request: HttpResponse('Test working'), name='test-users'),
     re_path(r'^(?!api|admin).*$', react_app),  # Serve React for non-API routes
 ]

@@ -1,3 +1,5 @@
+# IRLobby Render Configuration - Updated for Render PostgreSQL
+# Last updated: September 8, 2025
 services:
   - type: web
     name: irlobby-backend

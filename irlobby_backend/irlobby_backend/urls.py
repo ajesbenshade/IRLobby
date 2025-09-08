@@ -42,9 +42,9 @@ urlpatterns = [
     path('api/auth/twitter/', include('users.oauth_urls')),
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
     path('api/auth/reset-password/', reset_password, name='reset-password'),
+    # Temporary test path - moved before users include
+    path('api/test-users/', lambda request: JsonResponse({'message': 'Test working'}), name='test-users'),
     path('api/users/', include('users.urls')),
-    # Temporary test path
-    path('api/test-users/', lambda request: JsonResponse({'message': 'Users include working'}), name='test-users'),
     path('api/activities/', include('activities.urls')),
     path('api/swipes/', include('swipes.urls')),
     path('api/matches/', include('matches.urls')),

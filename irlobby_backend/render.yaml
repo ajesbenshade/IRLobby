@@ -24,9 +24,13 @@ services:
     envVars:
       - key: DEBUG
         value: false
+      - key: DJANGO_SETTINGS_MODULE
+        value: irlobby_backend.settings
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
         value: irlobby-channels.onrender.com
       - key: DATABASE_URL
         value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://irlobby-1o5wz870g-aaron-esbenshades-projects.vercel.app

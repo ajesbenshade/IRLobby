@@ -28,7 +28,7 @@ def home(request):
     return HttpResponse("IRLobby Backend API")
 
 def react_app(request):
-    return render(request, 'index.html')
+    return HttpResponse("IRLobby Backend API - React App")
 
 def health_check(request):
     return JsonResponse({'status': 'ok'})

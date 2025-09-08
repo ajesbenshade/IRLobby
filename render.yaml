@@ -22,7 +22,6 @@ services:
   - type: pserv
     name: irlobby-db
     plan: starter
-    startCommand: "postgres"
 
   - type: worker
     name: irlobby-channels

@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -43,7 +43,7 @@ urlpatterns = [
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
     path('api/auth/reset-password/', reset_password, name='reset-password'),
     # Temporary test path - moved before users include
-    path('api/test-users/', lambda request: JsonResponse({'message': 'Test working'}), name='test-users'),
+    path('api/test-users/', lambda request: HttpResponse('Test working'), name='test-users'),
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),
     path('api/swipes/', include('swipes.urls')),

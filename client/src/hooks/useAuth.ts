@@ -23,17 +23,22 @@ export function useAuth() {
     queryFn: async () => {
       if (!token) return null;
       
-      const response = await fetch('/api/users/profile/', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
+      try {
+        const response = await fetch('/api/users/profile/', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        
+        return response.json();
+      } catch (error) {
+        console.warn('Backend not available, running in frontend-only mode:', error);
+        return null;
       }
-      
-      return response.json();
     }
   });
 

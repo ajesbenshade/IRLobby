@@ -226,7 +226,29 @@ def request_password_reset(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def reset_password(request):
+def populate_test_data_api(request):
+    """API endpoint to populate test data (for production use)"""
+    # Simple security check - you might want to add proper authentication
+    secret_key = request.data.get('secret_key')
+    if secret_key != 'irlobby_test_data_secret_2025':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+
+        # Capture command output
+        output = StringIO()
+        call_command('populate_test_data', stdout=output, verbosity=1)
+
+        return Response({
+            'message': 'Test data populated successfully',
+            'output': output.getvalue()
+        })
+    except Exception as e:
+        return Response({
+            'error': f'Failed to populate test data: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     """Reset password with token"""
     uidb64 = request.data.get('uid')
     token = request.data.get('token')

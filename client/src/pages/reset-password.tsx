@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -7,21 +7,25 @@ import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 
 const ResetPasswordPage = () => {
-  const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Basic token validation (you might want to do more)
+  // Extract uid and token from URL search params
+  const uid = searchParams.get('uid');
+  const token = searchParams.get('token');
+
+  // Validate required parameters
   useEffect(() => {
-    if (!token) {
-      setError('Invalid or missing reset token.');
-      toast({ title: 'Error', description: 'Invalid or missing reset token.', variant: 'destructive' });
+    if (!uid || !token) {
+      setError('Invalid or missing reset link parameters.');
+      toast({ title: 'Error', description: 'Invalid or missing reset link parameters.', variant: 'destructive' });
     }
-  }, [token]);
+  }, [uid, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +34,9 @@ const ResetPasswordPage = () => {
       toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
       return;
     }
-    if (!token) {
-        setError('Missing reset token.');
-        toast({ title: 'Error', description: 'Missing reset token.', variant: 'destructive' });
+    if (!uid || !token) {
+        setError('Missing reset link parameters.');
+        toast({ title: 'Error', description: 'Missing reset link parameters.', variant: 'destructive' });
         return;
     }
 
@@ -46,7 +50,7 @@ const ResetPasswordPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token, newPassword: password }),
+        body: JSON.stringify({ uid, token, newPassword: password }),
       });
 
       // Check if response is HTML (indicates backend endpoint not available)
@@ -138,7 +142,7 @@ const ResetPasswordPage = () => {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading || !token}>
+            <Button type="submit" className="w-full" disabled={isLoading || !uid || !token}>
               {isLoading ? 'Resetting...' : 'Reset Password'}
             </Button>
           </form>

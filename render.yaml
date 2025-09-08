@@ -22,7 +22,7 @@ services:
     runtime: python
     rootDir: irlobby_backend
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "daphne -b 0.0.0.0 -p 8001 irlobby_backend.asgi:application"
+    startCommand: "DJANGO_SETTINGS_MODULE=irlobby_backend.settings daphne -b 0.0.0.0 -p 8001 irlobby_backend.asgi:application"
     envVars:
       - key: DEBUG
         value: false

@@ -1,0 +1,92 @@
+import { useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { Label } from '../components/ui/label';
+import { toast } from '../hooks/use-toast';
+import { Link } from 'react-router-dom';
+
+const ForgotPasswordPage = () => {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to request password reset');
+      }
+
+      setMessage('If an account with that email exists, a password reset link has been sent.');
+      toast({
+        title: 'Success',
+        description: 'Password reset link sent (if email exists).',
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setMessage(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to request password reset',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Forgot Password</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email address and we'll send you a link to reset your password.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="your@email.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
+          </form>
+          {message && <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">{message}</p>}
+          <div className="mt-4 text-center text-sm">
+            <Link to="/" className="font-medium text-primary hover:underline">
+              Back to Login
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default ForgotPasswordPage;

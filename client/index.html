@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <title>IRLobby - Your Lobby for IRL Meetups</title>
+    <meta name="description" content="IRLobby is the social activity matching app that combines Tinder-style swiping with event hosting. Your lobby for IRL meetups - discover activities, meet new people, and join events in your area." />
+    <meta name="keywords" content="IRL meetups, social activities, event hosting, activity matching, real life connections, local events, social app, meetups, networking" />
+    <meta name="author" content="IRLobby" />
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="IRLobby - Your Lobby for IRL Meetups" />
+    <meta property="og:description" content="Your lobby for IRL meetups! Swipe through activities, meet new people, and discover events in your area." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://irlobby.app" />
+    <meta property="og:site_name" content="IRLobby" />
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="IRLobby - Your Lobby for IRL Meetups" />
+    <meta name="twitter:description" content="Your lobby for IRL meetups! Swipe through activities, meet new people, and discover events in your area." />
+    
+    <!-- PWA meta tags -->
+    <meta name="theme-color" content="#6366F1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="IRLobby" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <style>
+      /* Prevent flash of unstyled content */
+      html {
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+      
+      /* Loading spinner styles */
+      .loading-spinner {
+        border: 2px solid #f3f4f6;
+        border-top: 2px solid #6366f1;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Prevent zoom on input focus on iOS */
+      @media screen and (-webkit-min-device-pixel-ratio: 0) {
+        select,
+        textarea,
+        input[type="text"],
+        input[type="password"],
+        input[type="datetime"],
+        input[type="datetime-local"],
+        input[type="date"],
+        input[type="month"],
+        input[type="time"],
+        input[type="week"],
+        input[type="number"],
+        input[type="email"],
+        input[type="url"],
+        input[type="search"],
+        input[type="tel"],
+        input[type="color"] {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Loading state -->
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f9fafb;">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- Replit development banner -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>

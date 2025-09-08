@@ -21,7 +21,7 @@ export default function Landing() {
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Heart className="text-primary text-3xl" />
         </div>
-        <h1 className="text-4xl font-bold text-white mb-2">IRLobby</h1>
+        <h1 className="text-4xl font-bold text-white mb-2">IRLobby - UPDATED</h1>
         <p className="text-green-100 text-lg">Your Lobby for IRL Meetups</p>
       </div>
 

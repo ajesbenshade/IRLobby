@@ -40,10 +40,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.twitter',
     'channels',
     'users',
     'activities',
@@ -54,6 +59,24 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'users.User'
+
+# Django AllAuth settings
+SITE_ID = 1
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Social Account Providers
+SOCIALACCOUNT_PROVIDERS = {
+    'twitter': {
+        'APP': {
+            'client_id': config('TWITTER_CLIENT_ID', default=''),
+            'secret': config('TWITTER_CLIENT_SECRET', default=''),
+            'key': ''
+        }
+    }
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -78,6 +101,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'irlobby_backend.urls'
@@ -112,7 +136,6 @@ DATABASES = {
         default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=True,
     )
 }
 

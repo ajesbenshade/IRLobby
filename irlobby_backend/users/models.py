@@ -9,5 +9,9 @@ class User(AbstractUser):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
+    # OAuth fields
+    oauth_provider = models.CharField(max_length=50, blank=True, null=True)
+    oauth_id = models.CharField(max_length=100, blank=True, null=True)
+
     def __str__(self):
         return self.username

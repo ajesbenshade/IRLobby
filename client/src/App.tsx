@@ -9,6 +9,8 @@ import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/terms-of-service";
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,6 +27,8 @@ function AppRoutes() {
       />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
       {isAuthenticated && (
         <>
           {/* Add other authenticated routes here, e.g. profile, settings */}

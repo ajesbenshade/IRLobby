@@ -45,6 +45,7 @@ export function useAuth() {
   // Handle logout
   const logout = useCallback(async () => {
     try {
+      // Clear localStorage
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userId');
@@ -53,6 +54,15 @@ export function useAuth() {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  }, [queryClient]);
+
+  // Clear all stored auth data (for debugging/testing)
+  const clearAuthData = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+    setToken(null);
+    queryClient.clear();
   }, [queryClient]);
 
   // Handle token refresh
@@ -87,5 +97,6 @@ export function useAuth() {
     handleAuthentication,
     logout,
     refreshToken,
+    clearAuthData,
   };
 }

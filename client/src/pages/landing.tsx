@@ -80,6 +80,21 @@ export default function Landing() {
         <p className="text-center text-purple-100 text-sm">
           Join thousands of people discovering amazing activities
         </p>
+        
+        {/* Debug button to clear auth data */}
+        <div className="mt-4">
+          <button 
+            onClick={() => {
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('userId');
+              window.location.reload();
+            }}
+            className="text-xs text-purple-200 hover:text-white underline"
+          >
+            Clear stored login data
+          </button>
+        </div>
       </div>
     </div>
   );

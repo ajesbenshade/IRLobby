@@ -22,6 +22,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from users.views import logout_view
 
 def home(request):
     return render(request, 'index.html')
@@ -45,5 +46,7 @@ urlpatterns = [
     path('api/matches/', include('matches.urls')),
     path('api/messages/', include('chat.urls')),
     path('api/reviews/', include('reviews.urls')),
+    path('api/notifications/', include('users.urls')),  # Temporary: use users app for notifications
+    path('api/logout/', logout_view, name='logout'),
     re_path(r'^(?!api|admin).*$', react_app),  # Serve React for non-API routes
 ]

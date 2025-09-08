@@ -107,6 +107,9 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
+# Disable APPEND_SLASH for API endpoints to prevent 500 errors on POST requests
+APPEND_SLASH = False
+
 ROOT_URLCONF = 'irlobby_backend.urls'
 
 TEMPLATES = [

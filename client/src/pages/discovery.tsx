@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SwipeCard from "@/components/SwipeCard";
@@ -28,7 +27,7 @@ export default function Discovery() {
   const token = localStorage.getItem('authToken');
 
   // Use the token in the API request
-  const { data: activities = [], isLoading, error, refetch } = useQuery({
+  const { data: activities = [], isLoading, error } = useQuery({
     queryKey: ['/api/activities', filters],
     queryFn: async () => {
       console.log('Fetching activities with token:', !!token);

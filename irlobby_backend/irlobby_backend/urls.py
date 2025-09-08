@@ -38,7 +38,7 @@ urlpatterns = [
     path('api/health/', health_check, name='health'),
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # path('api/auth/twitter/', include('users.oauth_urls')),  # Temporarily commented out
+    path('api/auth/twitter/', include('users.oauth_urls')),
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
     path('api/auth/reset-password/', reset_password, name='reset-password'),
     # Temporary populate endpoint - moved to main urls

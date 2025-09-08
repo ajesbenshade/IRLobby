@@ -73,8 +73,60 @@
    - Backend API: http://localhost:8000
    - Django Admin: http://localhost:8000/admin
 
-### Environment Variables
+## 🚀 Production Deployment
 
+### Frontend (Vercel)
+The React frontend is configured for Vercel deployment:
+
+1. **Deploy to Vercel**
+   ```bash
+   cd client
+   npm install -g vercel
+   vercel login
+   vercel --prod
+   ```
+
+2. **Environment Variables** (set in Vercel dashboard):
+   ```
+   VITE_API_BASE_URL=https://your-backend-url.onrender.com
+   ```
+
+### Backend (Render)
+The Django backend is configured for Render with PostgreSQL:
+
+1. **Connect Repository to Render**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New" → "Blueprint"
+   - Connect your GitHub repository
+   - Render will detect `render.yaml` automatically
+
+2. **Environment Variables** (Render will prompt for these):
+   ```bash
+   DEBUG=False
+   SECRET_KEY=your-secret-key-here
+   ALLOWED_HOSTS=your-render-app-name.onrender.com
+   CORS_ALLOWED_ORIGINS=https://your-vercel-frontend-url.vercel.app
+   ```
+
+3. **Services Created**:
+   - **Web Service**: Django application with Gunicorn
+   - **Worker Service**: Daphne for WebSocket connections
+   - **PostgreSQL Database**: Production database
+
+### Deployment Architecture
+```
+Frontend (Vercel)
+    ↓ API calls
+Backend (Render - Django + DRF)
+    ↓ Database queries
+PostgreSQL (Render)
+    ↓ Real-time communication
+WebSocket Worker (Render - Daphne)
+```
+
+## Environment Variables
+
+### Development
 Copy `.env.example` to `.env` and configure:
 
 ```bash
@@ -85,6 +137,25 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Database Configuration
 DATABASE_URL=sqlite:///db.sqlite3
+```
+
+### Production
+Set these in your deployment platform:
+
+```bash
+# Django Configuration
+DEBUG=False
+SECRET_KEY=your-production-secret-key
+ALLOWED_HOSTS=your-backend-domain.onrender.com
+
+# Database Configuration (auto-set by Render)
+DATABASE_URL=postgresql://...
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
+
+# Frontend Configuration
+VITE_API_BASE_URL=https://your-backend-domain.onrender.com
 ```
 
 ## Project Structure

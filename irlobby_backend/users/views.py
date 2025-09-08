@@ -55,10 +55,8 @@ def login(request):
         refresh = RefreshToken.for_user(user)
         return Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
         })
     return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 

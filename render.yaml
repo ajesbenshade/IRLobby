@@ -21,7 +21,6 @@ services:
 
   - type: pserv
     name: irlobby-db
-    runtime: postgresql
     plan: starter
     startCommand: "postgres"
 

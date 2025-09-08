@@ -28,13 +28,37 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleTwitterOAuth = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiRequest('GET', '/api/auth/twitter/url/');
+      const data = await response.json();
+
+      if (response.ok && data.auth_url) {
+        // Open Twitter OAuth in a popup or redirect
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error('Failed to get Twitter OAuth URL');
+      }
+    } catch (error) {
+      console.error('Twitter OAuth error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start Twitter login',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
       console.log('Attempting login with:', formData.email);
-      
+
       const response = await apiRequest('POST', '/api/auth/token/', {
         username: formData.email, // Django expects username, but we'll use email
         password: formData.password,
@@ -121,7 +145,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
   return (
     <Card className="w-full max-w-md mx-auto">
-      <CardHeader>        <CardTitle className="text-2xl text-center">Welcome to IRLobby</CardTitle>
+      <CardHeader>
+        <CardTitle className="text-2xl text-center">Welcome to IRLobby</CardTitle>
         <CardDescription className="text-center">
           Your Lobby for IRL Meetups - Connect, Discover, Experience
         </CardDescription>
@@ -243,13 +268,51 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
             </form>
           </TabsContent>
         </Tabs>
-      </CardContent>      <CardFooter className="flex justify-center text-sm text-muted-foreground">
-        IRlobby - Where activities meet people
+
+        {/* OAuth Section */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleTwitterOAuth}
+              disabled={isLoading}
+            >
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                  fill="currentColor"
+                />
+              </svg>
+              {isLoading ? 'Connecting...' : 'Continue with X (Twitter)'}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">
+        <p>IRLobby - Where activities meet people</p>
+        <div className="flex space-x-4">
+          <a href="/privacy-policy" className="hover:underline">
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <a href="/terms-of-service" className="hover:underline">
+            Terms of Service
+          </a>
+        </div>
       </CardFooter>
     </Card>
   );
 };
 
 export default AuthForm;
-   
- 

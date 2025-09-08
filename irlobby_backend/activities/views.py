@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from .models import Activity, ActivityParticipant
 from .serializers import ActivitySerializer, ActivityParticipantSerializer
 

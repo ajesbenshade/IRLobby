@@ -5,7 +5,6 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from rest_framework_simplejwt.tokens import RefreshToken
 import requests
 from .serializers import UserSerializer

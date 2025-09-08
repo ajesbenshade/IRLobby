@@ -250,6 +250,12 @@ def populate_test_data_api(request):
             'error': f'Failed to populate test data: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_endpoint(request):
+    """Simple test endpoint"""
+    return Response({'message': 'Test endpoint working'})
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def reset_password(request):

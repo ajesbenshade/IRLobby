@@ -59,8 +59,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     try {
       console.log('Attempting login with:', formData.email);
 
-      const response = await apiRequest('POST', '/api/auth/token/', {
-        username: formData.email, // Django expects username, but we'll use email
+      const response = await apiRequest('POST', '/api/users/login/', {
+        email: formData.email,
         password: formData.password,
       });
 
@@ -76,10 +76,13 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       localStorage.setItem('authToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('userId', data.user.id);
-      console.log('Auth token stored:', data.access);
+      console.log('Login successful, token stored:', data.access);
 
-      // Call the onAuthenticated callback
-      onAuthenticated(data.access, data.user.id);
+      // Small delay to ensure token is stored before making authenticated requests
+      setTimeout(() => {
+        // Call the onAuthenticated callback
+        onAuthenticated(data.access, data.user.id);
+      }, 100);
 
       toast({
         title: 'Success',
@@ -123,9 +126,13 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       localStorage.setItem('authToken', data.tokens.access);
       localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
+      console.log('Registration successful, token stored:', data.tokens.access);
 
-      // Call the onAuthenticated callback
-      onAuthenticated(data.tokens.access, data.user.id);
+      // Small delay to ensure token is stored before making authenticated requests
+      setTimeout(() => {
+        // Call the onAuthenticated callback
+        onAuthenticated(data.tokens.access, data.user.id);
+      }, 100);
 
       toast({
         title: 'Success',

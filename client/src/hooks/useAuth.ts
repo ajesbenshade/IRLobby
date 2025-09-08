@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from 'react';
+import { apiRequest } from '../lib/queryClient';
 
 interface User {
   id: string;
@@ -24,16 +25,7 @@ export function useAuth() {
       if (!token) return null;
       
       try {
-        const response = await fetch('/api/users/profile/', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-        
+        const response = await apiRequest('GET', '/api/users/profile/');
         return response.json();
       } catch (error) {
         console.warn('Backend not available, running in frontend-only mode:', error);
@@ -53,24 +45,47 @@ export function useAuth() {
   // Handle logout
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/auth/logout/', { method: 'POST' });
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userId');
       setToken(null);
-      queryClient.setQueryData(["/api/users/profile"], null);
+      queryClient.clear();
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   }, [queryClient]);
 
+  // Handle token refresh
+  const refreshToken = useCallback(async () => {
+    const refresh = localStorage.getItem('refreshToken');
+    if (!refresh) {
+      logout();
+      return null;
+    }
+
+    try {
+      const response = await apiRequest('POST', '/api/users/token/refresh/', {
+        refresh: refresh
+      });
+      const data = await response.json();
+      
+      localStorage.setItem('authToken', data.access);
+      setToken(data.access);
+      return data.access;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      logout();
+      return null;
+    }
+  }, [logout]);
+
   return {
     user,
-    token,
-    isLoading,
     isAuthenticated: !!user,
+    isLoading,
+    token,
     handleAuthentication,
     logout,
+    refreshToken,
   };
 }

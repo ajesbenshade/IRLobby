@@ -52,7 +52,10 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    console.log('Sending Authorization header:', `Bearer ${token.substring(0, 20)}...`);
+  }
 
   console.log(`Making ${method} request to ${url} with token: ${token ? 'Yes' : 'No'}`);
 
@@ -68,6 +71,41 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     return res;
   } catch (error) {
     console.warn(`API request failed for ${method} ${url}:`, error);
+    
+    // If we get a 401 and have a refresh token, try to refresh
+    if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {
+      console.log('Attempting token refresh...');
+      try {
+        const refreshResponse = await fetch(`${baseUrl}/api/users/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: localStorage.getItem('refreshToken') })
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          localStorage.setItem('authToken', refreshData.access);
+          
+          // Retry the original request with new token
+          console.log('Token refreshed, retrying request...');
+          const retryHeaders = { ...headers };
+          retryHeaders['Authorization'] = `Bearer ${refreshData.access}`;
+          
+          const retryRes = await fetch(url, {
+            method,
+            headers: retryHeaders,
+            body: data !== undefined ? JSON.stringify(data) : undefined,
+            credentials: 'include',
+          });
+          
+          await throwIfResNotOk(retryRes);
+          return retryRes;
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+      }
+    }
+    
     // Return a mock response for development/demo purposes
     if (method === 'GET' && url.includes('/api/auth/twitter/url/')) {
       return new Response(JSON.stringify({ auth_url: '#' }), { status: 200 });

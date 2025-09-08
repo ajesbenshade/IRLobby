@@ -3,6 +3,11 @@
   "outputDirectory": "client/dist",
   "installCommand": "npm install --prefix client",
   "framework": "vite",
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

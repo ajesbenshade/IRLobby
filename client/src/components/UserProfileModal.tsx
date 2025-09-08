@@ -26,7 +26,7 @@ export default function UserProfileModal({
   const [showReviews, setShowReviews] = useState(false);
   
   // Fetch user profile data
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<any>({
     queryKey: [`/api/users/${userId}`],
     enabled: isOpen && !!userId,
   });

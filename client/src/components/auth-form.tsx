@@ -16,6 +16,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    passwordConfirm: '',
     firstName: '',
     lastName: '',
   });
@@ -32,13 +33,13 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     try {
       console.log('Attempting login with:', formData.email);
       
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/auth/token/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
+          username: formData.email, // Django expects username, but we'll use email
           password: formData.password,
         }),
       });
@@ -48,16 +49,17 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Login response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.detail || 'Login failed');
       }
 
-      // Store the token in localStorage
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userId', data.userId);
-      console.log('Auth token stored:', data.token);
+      // Store the tokens in localStorage (Django JWT format)
+      localStorage.setItem('authToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('userId', data.user.id);
+      console.log('Auth token stored:', data.access);
 
       // Call the onAuthenticated callback
-      onAuthenticated(data.token, data.userId);
+      onAuthenticated(data.access, data.user.id);
 
       toast({
         title: 'Success',
@@ -80,26 +82,36 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch('/api/users/register/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          username: formData.email, // Use email as username for simplicity
+          email: formData.email,
+          password: formData.password,
+          password_confirm: formData.passwordConfirm,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        // Handle Django's error format
+        const errorMessage = data.username?.[0] || data.email?.[0] || data.password?.[0] || data.detail || 'Registration failed';
+        throw new Error(errorMessage);
       }
 
-      // Store the token in localStorage
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userId', data.userId);
+      // Store the tokens in localStorage (Django JWT format)
+      localStorage.setItem('authToken', data.tokens.access);
+      localStorage.setItem('refreshToken', data.tokens.refresh);
+      localStorage.setItem('userId', data.user.id);
 
       // Call the onAuthenticated callback
-      onAuthenticated(data.token, data.userId);
+      onAuthenticated(data.tokens.access, data.user.id);
 
       toast({
         title: 'Success',
@@ -209,6 +221,17 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   type="password"
                   required
                   value={formData.password}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="passwordConfirm">Confirm Password</Label>
+                <Input
+                  id="passwordConfirm"
+                  name="passwordConfirm"
+                  type="password"
+                  required
+                  value={formData.passwordConfirm}
                   onChange={handleChange}
                 />
               </div>

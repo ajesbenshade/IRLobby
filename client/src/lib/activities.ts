@@ -1,12 +1,27 @@
-import type { Activity } from "@shared/client-types";
+// Local Activity type matching our Django model
+export type Activity = {
+  id: number;
+  host: string;
+  title: string;
+  description: string | null;
+  location: string;
+  latitude: number | null;
+  longitude: number | null;
+  time: string; // DateTime field
+  capacity: number;
+  tags: string[];
+  images: string[];
+  created_at: string;
+  participant_count: number;
+};
 
 export function calculateMatchScore(userInterests: string[], activityTags: string[]): number {
   if (!userInterests.length || !activityTags.length) return 0;
-  
-  const intersection = userInterests.filter(interest => 
+
+  const intersection = userInterests.filter(interest =>
     activityTags.some(tag => tag.toLowerCase().includes(interest.toLowerCase()))
   );
-  
+
   return intersection.length / Math.max(userInterests.length, activityTags.length);
 }
 
@@ -15,11 +30,11 @@ export function formatActivityTime(datetime: string): string {
   const now = new Date();
   const diffTime = date.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
   if (diffDays < 7) return `In ${diffDays} days`;
-  
+
   return date.toLocaleDateString();
 }
 
@@ -36,24 +51,20 @@ export function getActivityCategory(category: string): { color: string; emoji: s
     "Music": { color: "bg-violet-500", emoji: "🎵" },
     "Other": { color: "bg-gray-500", emoji: "📅" },
   };
-  
+
   return categories[category] || categories["Other"];
 }
 
 export function isActivitySuitableForUser(activity: Activity, userPreferences: any): boolean {
   // Basic suitability checks
-  if (activity.dateTime && new Date(activity.dateTime) < new Date()) {
+  if (activity.time && new Date(activity.time) < new Date()) {
     return false; // Past event
   }
-  
-  if (activity.status !== "active") {
-    return false; // Inactive event
-  }
-  
-  if (activity.currentParticipants && activity.currentParticipants >= activity.maxParticipants) {
+
+  if (activity.participant_count && activity.participant_count >= activity.capacity) {
     return false; // Full event
   }
-  
+
   // Add more sophisticated matching logic here
   return true;
 }

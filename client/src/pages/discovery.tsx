@@ -29,11 +29,11 @@ export default function Discovery() {
 
   // Use the token in the API request
   const { data: activities = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/activities/discover', filters],
+    queryKey: ['/api/activities', filters],
     queryFn: async () => {
       console.log('Fetching activities with token:', !!token);
       
-      const response = await fetch('/api/activities/discover', {
+      const response = await fetch('/api/activities/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

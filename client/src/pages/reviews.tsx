@@ -24,7 +24,7 @@ export default function Reviews() {
   const [reviewText, setReviewText] = useState("");
 
   // Fetch attended activities
-  const { data: attendedActivities = [] } = useQuery({
+  const { data: attendedActivities = [] } = useQuery<any>({
     queryKey: [`/api/users/${user?.id}/attended-activities`],
     enabled: !!user?.id,
   });

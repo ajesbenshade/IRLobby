@@ -15,39 +15,135 @@
 
 ## Technology Stack
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
-- **Backend**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
+- **Backend**: Django, Django REST Framework, Django Channels
+- **Database**: SQLite (development) / PostgreSQL (production)
 - **Real-time**: WebSocket for chat functionality
 - **UI Components**: Radix UI with custom styling
+- **Authentication**: JWT tokens
 
 ## Getting Started
 
-### 🚀 Deploy for FREE with Supabase + Vercel (Easiest)
-1. **Set up Supabase**: Free PostgreSQL database
-2. **Deploy backend to Vercel**: Free Node.js hosting
-3. **Deploy frontend to Vercel**: Free React hosting
-4. **Your app is live!** 🎉
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Git
 
-See [SUPABASE_VERCEL_DEPLOYMENT.md](SUPABASE_VERCEL_DEPLOYMENT.md) for detailed instructions.
+### Local Development Setup
 
-### 🏗️ Deploy to Railway (Recommended for Full Control)
-1. **Sign up for Railway**: [railway.app](https://railway.app)
-2. **Push code to GitHub**
-3. **Connect Railway to your repo**
-4. **Railway auto-deploys with Docker + PostgreSQL**
-5. **Your app is live!** 🎉
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd IRLobby
+   ```
 
-See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions.
+2. **Set up the Django backend**
+   ```bash
+   cd irlobby_backend
 
-### 🐳 Deploy to VULTR (Self-hosted)
-1. **Get VULTR VPS**: $6/month Ubuntu server
-2. **Run deployment scripts**: Automated Docker setup
-3. **SSL certificates**: Free Let's Encrypt
-4. **Full control** over your infrastructure
+   # Create virtual environment
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-See [VULTR_DEPLOYMENT.md](VULTR_DEPLOYMENT.md) for detailed instructions.
+   # Install dependencies
+   pip install -r requirements.txt
 
-## Deployment
+   # Run migrations
+   python manage.py migrate
+
+   # Create superuser (optional)
+   python manage.py createsuperuser
+
+   # Start Django server
+   python manage.py runserver
+   ```
+
+3. **Set up the React frontend**
+   ```bash
+   cd ../client
+
+   # Install dependencies
+   npm install
+
+   # Start development server
+   npm run dev
+   ```
+
+4. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8000
+   - Django Admin: http://localhost:8000/admin
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Django Configuration
+SECRET_KEY=your_django_secret_key_here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Configuration
+DATABASE_URL=sqlite:///db.sqlite3
+```
+
+## Project Structure
+
+```
+IRLobby/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── lib/           # Utilities and helpers
+│   │   ├── pages/         # Page components
+│   │   └── types/         # TypeScript types
+│   ├── vite.config.ts     # Vite configuration
+│   └── package.json
+├── irlobby_backend/        # Django backend
+│   ├── activities/         # Activities app
+│   ├── users/             # User management app
+│   ├── matches/           # Matching system app
+│   ├── chat/              # Chat functionality app
+│   ├── swipes/            # Swipe system app
+│   └── reviews/           # Review system app
+├── django_env/            # Python virtual environment
+└── README.md
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/token/` - Login
+- `POST /api/users/register/` - Register
+- `POST /api/auth/token/refresh/` - Refresh token
+
+### Activities
+- `GET /api/activities/` - List activities
+- `POST /api/activities/` - Create activity
+- `GET /api/activities/{id}/` - Get activity details
+- `PUT /api/activities/{id}/` - Update activity
+- `DELETE /api/activities/{id}/` - Delete activity
+- `POST /api/activities/{id}/join/` - Join activity
+- `POST /api/activities/{id}/leave/` - Leave activity
+- `GET /api/activities/{id}/chat/` - Get chat messages
+- `POST /api/activities/{id}/chat/` - Send chat message
+
+### Users
+- `GET /api/users/profile/` - Get user profile
+- `PUT /api/users/profile/` - Update user profile
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
 
 See RAILWAY_DEPLOYMENT.md for Railway specific steps.
 

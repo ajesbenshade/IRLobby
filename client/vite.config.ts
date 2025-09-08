@@ -9,7 +9,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@shared": path.resolve(__dirname, "../shared"),
     },
   },
   root: ".",
@@ -18,6 +17,12 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    middlewareMode: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
 });

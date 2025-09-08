@@ -16,7 +16,7 @@ interface NotificationCenterProps {
 export default function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading } = useQuery<any>({
     queryKey: ['/api/notifications'],
     retry: 1,
     enabled: isOpen,

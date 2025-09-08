@@ -17,7 +17,7 @@ interface ActivityTemplateModalProps {
 export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplate }: ActivityTemplateModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templates = [], isLoading } = useQuery<any>({
     queryKey: ['/api/activity-templates'],
     retry: 1,
     enabled: isOpen,

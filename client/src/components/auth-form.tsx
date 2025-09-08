@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from '../hooks/use-toast';
+import { apiRequest } from '../lib/queryClient';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
@@ -33,15 +34,9 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     try {
       console.log('Attempting login with:', formData.email);
       
-      const response = await fetch('/api/auth/token/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.email, // Django expects username, but we'll use email
-          password: formData.password,
-        }),
+      const response = await apiRequest('POST', '/api/auth/token/', {
+        username: formData.email, // Django expects username, but we'll use email
+        password: formData.password,
       });
 
       console.log('Login response status:', response.status);
@@ -82,19 +77,13 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/users/register/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.email, // Use email as username for simplicity
-          email: formData.email,
-          password: formData.password,
-          password_confirm: formData.passwordConfirm,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-        }),
+      const response = await apiRequest('POST', '/api/users/register/', {
+        username: formData.email, // Use email as username for simplicity
+        email: formData.email,
+        password: formData.password,
+        password_confirm: formData.passwordConfirm,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
       });
 
       const data = await response.json();

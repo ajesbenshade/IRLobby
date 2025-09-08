@@ -39,6 +39,12 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     throw new Error('Invalid arguments to apiRequest');
   }
 
+  // Prepend base URL for production
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  if (baseUrl && !url.startsWith('http')) {
+    url = `${baseUrl}${url}`;
+  }
+
   const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {};
 
@@ -71,9 +77,16 @@ export const getQueryFn =
 
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    console.log(`Query request to ${queryKey[0]} with token: ${token ? 'Yes' : 'No'}`);
+    let url = queryKey[0] as string;
+    // Prepend base URL for production
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    if (baseUrl && !url.startsWith('http')) {
+      url = `${baseUrl}${url}`;
+    }
 
-    const res = await fetch(queryKey[0] as string, {
+    console.log(`Query request to ${url} with token: ${token ? 'Yes' : 'No'}`);
+
+    const res = await fetch(url, {
       headers,
       credentials: 'include',
     });

@@ -25,7 +25,7 @@ from rest_framework_simplejwt.views import (
 from users.views import logout_view, request_password_reset, reset_password
 
 def home(request):
-    return render(request, 'index.html')
+    return HttpResponse("IRLobby Backend API")
 
 def react_app(request):
     return render(request, 'index.html')

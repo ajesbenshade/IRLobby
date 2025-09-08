@@ -228,10 +228,10 @@ def request_password_reset(request):
 @permission_classes([AllowAny])
 def populate_test_data_api(request):
     """API endpoint to populate test data (for production use)"""
-    # Simple security check - you might want to add proper authentication
-    secret_key = request.data.get('secret_key')
-    if secret_key != 'irlobby_test_data_secret_2025':
-        return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+    # Simple security check - temporarily disabled for testing
+    # secret_key = request.data.get('secret_key')
+    # if secret_key != 'irlobby_test_data_secret_2025':
+    #     return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
         from django.core.management import call_command

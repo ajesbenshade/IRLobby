@@ -12,18 +12,9 @@ services:
       - key: ALLOWED_HOSTS
         value: irlobby-backend.onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: irlobby-db
-          property: connectionString
+        value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
       - key: CORS_ALLOWED_ORIGINS
         value: https://irlobby-1o5wz870g-aaron-esbenshades-projects.vercel.app
-
-  - type: pserv
-    name: irlobby-db
-    runtime: postgresql
-    databaseName: irlobby_prod
-    user: irlobby_user
-    plan: starter
 
   - type: worker
     name: irlobby-channels
@@ -38,6 +29,4 @@ services:
       - key: ALLOWED_HOSTS
         value: irlobby-channels.onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: irlobby-db
-          property: connectionString
+        value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database

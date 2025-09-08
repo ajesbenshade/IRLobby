@@ -15,6 +15,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const [activeTab, setActiveTab] = useState('login');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     passwordConfirm: '',
@@ -78,7 +79,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
     try {
       const response = await apiRequest('POST', '/api/users/register/', {
-        username: formData.email, // Use email as username for simplicity
+        username: formData.username,
         email: formData.email,
         password: formData.password,
         password_confirm: formData.passwordConfirm,
@@ -168,6 +169,18 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
           </TabsContent>
           <TabsContent value="register">
             <form onSubmit={handleRegister} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="registerUsername">Username</Label>
+                <Input
+                  id="registerUsername"
+                  name="username"
+                  type="text"
+                  placeholder="username"
+                  required
+                  value={formData.username}
+                  onChange={handleChange}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input

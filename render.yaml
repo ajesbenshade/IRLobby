@@ -20,6 +20,22 @@ services:
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
         value: ****UXyweT
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USE_TLS
+        value: true
+      - key: EMAIL_HOST_USER
+        value: your-email@gmail.com
+      - key: EMAIL_HOST_PASSWORD
+        value: your-app-password
+      - key: DEFAULT_FROM_EMAIL
+        value: noreply@irlobby.com
+      - key: FRONTEND_URL
+        value: https://irlobby-l4sovrh3c-aaron-esbenshades-projects.vercel.app
 
   - type: worker
     name: irlobby-channels
@@ -44,3 +60,19 @@ services:
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
         value: ****UXyweT
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USE_TLS
+        value: true
+      - key: EMAIL_HOST_USER
+        value: your-email@gmail.com
+      - key: EMAIL_HOST_PASSWORD
+        value: your-app-password
+      - key: DEFAULT_FROM_EMAIL
+        value: noreply@irlobby.com
+      - key: FRONTEND_URL
+        value: https://irlobby-l4sovrh3c-aaron-esbenshades-projects.vercel.app

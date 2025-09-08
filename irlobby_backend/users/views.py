@@ -7,6 +7,12 @@ from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 from .models import User
 from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
 
@@ -171,16 +177,50 @@ def activity_templates(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def request_password_reset(request):
-    """Request password reset - for now just return success message"""
+    """Request password reset - sends email with reset link"""
     email = request.data.get('email')
     if not email:
         return Response({'message': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # In a real implementation, you would:
-    # 1. Check if user exists with this email
-    # 2. Generate a password reset token
-    # 3. Send email with reset link
-    # For now, we'll just return a success message
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        # Return success even if user doesn't exist for security
+        return Response({
+            'message': 'If an account with that email exists, a password reset link has been sent.'
+        }, status=status.HTTP_200_OK)
+
+    # Generate password reset token
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+    # Build reset URL
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+
+    # Send email
+    subject = 'Password Reset Request - IRLobby'
+    html_message = render_to_string('password_reset_email.html', {
+        'user': user,
+        'reset_url': reset_url,
+        'site_name': 'IRLobby',
+    })
+    text_message = render_to_string('password_reset_email.txt', {
+        'user': user,
+        'reset_url': reset_url,
+        'site_name': 'IRLobby',
+    })
+
+    try:
+        send_mail(
+            subject,
+            text_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=html_message,
+        )
+    except Exception as e:
+        # Log the error but don't expose it to the user
+        print(f"Failed to send password reset email: {e}")
 
     return Response({
         'message': 'If an account with that email exists, a password reset link has been sent.'
@@ -190,20 +230,43 @@ def request_password_reset(request):
 @permission_classes([AllowAny])
 def reset_password(request):
     """Reset password with token"""
+    uidb64 = request.data.get('uid')
     token = request.data.get('token')
     new_password = request.data.get('newPassword')
 
-    if not token or not new_password:
+    if not uidb64 or not token or not new_password:
         return Response({
-            'message': 'Token and new password are required'
+            'message': 'UID, token, and new password are required'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # In a real implementation, you would:
-    # 1. Validate the token
-    # 2. Find the user associated with the token
-    # 3. Update the user's password
-    # 4. Mark the token as used
-    # For now, we'll just return a success message
+    try:
+        # Decode the user ID
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return Response({
+            'message': 'Invalid reset link'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if token is valid
+    if not default_token_generator.check_token(user, token):
+        return Response({
+            'message': 'Invalid or expired reset token'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate password strength
+    if len(new_password) < 8:
+        return Response({
+            'message': 'Password must be at least 8 characters long'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Update password
+    user.set_password(new_password)
+    user.save()
+
+    # Invalidate all existing tokens for security
+    from rest_framework_simplejwt.tokens import RefreshToken
+    RefreshToken.for_user(user).blacklist()
 
     return Response({
         'message': 'Password has been reset successfully'

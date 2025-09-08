@@ -111,6 +111,7 @@ DATABASES = {
         default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
         conn_max_age=600,
         conn_health_checks=True,
+        ssl_require=True,
     )
 }
 
@@ -120,6 +121,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app",
+    "exp://localhost:8081",  # Expo development
 ]
 
 CORS_ALLOW_CREDENTIALS = True

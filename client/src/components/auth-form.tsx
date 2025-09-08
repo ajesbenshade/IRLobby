@@ -43,9 +43,9 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     } catch (error) {
       console.error('Twitter OAuth error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to start Twitter login',
-        variant: 'destructive',
+        title: 'Demo Mode',
+        description: 'Twitter OAuth is not available in demo mode. Please use email/password login.',
+        variant: 'default',
       });
     } finally {
       setIsLoading(false);

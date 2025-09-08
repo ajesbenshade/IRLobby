@@ -9,12 +9,36 @@ import FriendsModal from "@/components/FriendsModal";
 import EditProfileModal from "@/components/EditProfileModal";
 
 export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
+  const handleLogout = async () => {
+    try {
+      // Get the refresh token from localStorage
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      // Call the logout API to blacklist the refresh token
+      if (refreshToken) {
+        await fetch('/api/logout/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({ refresh: refreshToken })
+        });
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with logout even if API call fails
+    }
+
+    // Use the logout function from useAuth hook (clears localStorage and query cache)
+    await logout();
+    
+    // Redirect to login page
+    window.location.href = '/';
   };
 
   if (!user) {

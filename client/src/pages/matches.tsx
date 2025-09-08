@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MatchesProps {
   onOpenChat: (activityId: number) => void;
@@ -14,10 +15,23 @@ interface MatchesProps {
 }
 
 export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
-  const { data: matches = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/matches'],
+  const { user } = useAuth();
+
+  // Use different endpoints based on whether we're showing user activities or matches
+  const { data: activities = [], isLoading } = useQuery<any[]>({
+    queryKey: showUserActivities ? ['/api/activities/hosted'] : ['/api/matches'],
     retry: 1,
   });
+
+  // Also fetch attended activities if showing user activities
+  const { data: attendedActivities = [] } = useQuery<any[]>({
+    queryKey: showUserActivities && user ? [`/api/users/${user.id}/attended-activities`] : [],
+    retry: 1,
+    enabled: showUserActivities && !!user,
+  });
+
+  // Combine hosted and attended activities
+  const allActivities = showUserActivities ? [...activities, ...attendedActivities] : activities;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
@@ -77,36 +91,40 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
             {showUserActivities ? "Activities you've joined" : "Events you're part of"}
           </p>
         </div>
-        {matches.length > 0 && (
-          <Button onClick={() => openProfileModal(matches[0])} variant="outline">
+        {allActivities.length > 0 && !showUserActivities && (
+          <Button onClick={() => openProfileModal(allActivities[0])} variant="outline">
             View Group Profiles
           </Button>
         )}
       </header>
 
       <div className="p-4 space-y-4">
-        {matches.length === 0 ? (
+        {allActivities.length === 0 ? (
           <div className="text-center py-12">
             <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No matches yet</h3>
-            <p className="text-gray-500">Start swiping to find activities you love!</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {showUserActivities ? "No activities yet" : "No matches yet"}
+            </h3>
+            <p className="text-gray-500">
+              {showUserActivities ? "Create or join activities to see them here!" : "Start swiping to find activities you love!"}
+            </p>
           </div>
         ) : (
-          matches.map((match: any) => (
-            <Card key={match.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+          allActivities.map((activity: any) => (
+            <Card key={activity.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0 overflow-hidden">
-                    {match.activity.imageUrl ? (
+                    {activity.imageUrl || activity.imageUrls?.[0] ? (
                       <img 
-                        src={match.activity.imageUrl} 
-                        alt={match.activity.title}
+                        src={activity.imageUrl || activity.imageUrls?.[0]} 
+                        alt={activity.title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
                         <span className="text-primary font-semibold text-lg">
-                          {match.activity.title.charAt(0)}
+                          {activity.title.charAt(0)}
                         </span>
                       </div>
                     )}
@@ -114,21 +132,35 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
                   
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-gray-800 truncate">
-                      {match.activity.title}
+                      {activity.title}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(match.activity.dateTime), 'MMM d, h:mm a')}
+                      {format(new Date(activity.time || activity.dateTime), 'MMM d, h:mm a')}
                     </p>
                     <div className="mt-1">
-                      {getStatusBadge(match.status)}
+                      {showUserActivities ? (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                          {activity.host?.id === user?.id ? 'Hosting' : 'Joined'}
+                        </Badge>
+                      ) : (
+                        getStatusBadge(activity.status)
+                      )}
                     </div>
                   </div>
                   
                   <div className="flex-shrink-0">
-                    {match.status === 'approved' ? (
+                    {showUserActivities ? (
                       <Button 
                         size="sm"
-                        onClick={() => onOpenChat(match.activity.id)}
+                        onClick={() => onOpenChat(activity.id)}
+                        className="w-10 h-10 p-0 bg-primary rounded-full relative"
+                      >
+                        <MessageCircle className="w-5 h-5 text-white" />
+                      </Button>
+                    ) : activity.status === 'approved' ? (
+                      <Button 
+                        size="sm"
+                        onClick={() => onOpenChat(activity.activity?.id || activity.id)}
                         className="w-10 h-10 p-0 bg-primary rounded-full relative"
                       >
                         <MessageCircle className="w-5 h-5 text-white" />

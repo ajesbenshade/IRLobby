@@ -38,14 +38,14 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
       } else {
-        throw new Error('Failed to get Twitter OAuth URL');
+        throw new Error(data.error || 'Failed to get Twitter OAuth URL');
       }
     } catch (error) {
       console.error('Twitter OAuth error:', error);
       toast({
-        title: 'Demo Mode',
-        description: 'Twitter OAuth is not available in demo mode. Please use email/password login.',
-        variant: 'default',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to connect to X (Twitter)',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);

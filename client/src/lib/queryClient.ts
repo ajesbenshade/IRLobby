@@ -76,7 +76,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {
       console.log('Attempting token refresh...');
       try {
-        const refreshResponse = await fetch(`${baseUrl}/api/users/token/refresh/`, {
+        const refreshResponse = await fetch(`${baseUrl}/api/auth/token/refresh/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh: localStorage.getItem('refreshToken') })

@@ -28,7 +28,15 @@ export function useAuth() {
         const response = await apiRequest('GET', '/api/users/profile/');
         return response.json();
       } catch (error) {
-        console.warn('Backend not available, running in frontend-only mode:', error);
+        console.warn('Profile fetch failed:', error);
+        // If we get a 401, clear the invalid token
+        if (error instanceof Error && error.message.includes('401')) {
+          console.log('Token is invalid, clearing authentication');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userId');
+          setToken(null);
+        }
         return null;
       }
     }
@@ -74,7 +82,7 @@ export function useAuth() {
     }
 
     try {
-      const response = await apiRequest('POST', '/api/users/token/refresh/', {
+      const response = await apiRequest('POST', '/api/auth/token/refresh/', {
         refresh: refresh
       });
       const data = await response.json();

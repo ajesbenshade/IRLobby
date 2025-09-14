@@ -20,7 +20,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
       
       // Call the logout API to blacklist the refresh token
       if (refreshToken) {
-        await fetch('/api/logout/', {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/logout/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

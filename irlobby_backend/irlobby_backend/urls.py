@@ -54,5 +54,5 @@ urlpatterns = [
     path('api/logout/', logout_view, name='logout'),
     # Temporary test path - moved to end
     path('api/test/', lambda request: HttpResponse('Test working'), name='test'),
-    # re_path(r'^(?!api|admin).*$', react_app),  # Temporarily commented out
+    re_path(r'^(?!api|admin).*$', react_app),  # Serve React app for non-API routes
 ]

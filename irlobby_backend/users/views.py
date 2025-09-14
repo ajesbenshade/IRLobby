@@ -60,11 +60,6 @@ def login(request):
         })
     return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
-class UserDetailView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_attended_activities(request, pk):

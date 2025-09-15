@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ActivityCard } from "./activity-card";
 import { Button } from "@/components/ui/button";
 import { X, Heart, Info } from "lucide-react";
@@ -28,10 +28,20 @@ export function SwipeStack({
     rotation: number;
     opacity: number;
   } | null>(null);
+  const isAnimatingRef = useRef(false);
+  const wasDraggedRef = useRef(false);
   
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (isAnimatingRef.current) {
+        isAnimatingRef.current = false;
+      }
+    };
+  }, []);
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, direction }: { activityId: string; direction: string }) => {
@@ -65,19 +75,29 @@ export function SwipeStack({
   });
 
   const handleSwipe = (direction: "left" | "right") => {
-    if (currentIndex >= activities.length) return;
-    
-    const activity = activities[currentIndex];
-    swipeMutation.mutate({
-      activityId: activity.id.toString(),
-      direction,
-    });
+    if (currentIndex >= activities.length || isAnimatingRef.current) return;
+
+    // Animate card off-screen first
+    const rect = cardRef.current?.getBoundingClientRect();
+    const offscreenX = direction === 'right' ? (rect ? window.innerWidth - rect.left : 1000) : -(rect ? rect.right + window.innerWidth : 1000);
+    isAnimatingRef.current = true;
+    setDraggedCard(prev => prev ? ({ ...prev, x: offscreenX, rotation: direction === 'right' ? 30 : -30, opacity: 0 }) : prev);
+
+    // After animation delay, call mutation and reset animation state
+    setTimeout(() => {
+      const activity = activities[currentIndex];
+      swipeMutation.mutate({
+        activityId: activity.id.toString(),
+        direction,
+      });
+      isAnimatingRef.current = false;
+      setDraggedCard(null);
+    }, 300);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (currentIndex >= activities.length) return;
     
-    const touch = e.touches[0];
     setDraggedCard({
       index: currentIndex,
       x: 0,
@@ -85,10 +105,11 @@ export function SwipeStack({
       rotation: 0,
       opacity: 1,
     });
+    wasDraggedRef.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!draggedCard || currentIndex >= activities.length) return;
+    if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
     
     const touch = e.touches[0];
     const rect = cardRef.current?.getBoundingClientRect();
@@ -100,8 +121,14 @@ export function SwipeStack({
     const deltaX = touch.clientX - centerX;
     const deltaY = touch.clientY - centerY;
     
+    // Only handle horizontal swipes - prevent vertical scrolling
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      e.preventDefault();
+    }
+    
     const rotation = deltaX * 0.1;
     const opacity = Math.max(0.5, 1 - Math.abs(deltaX) / 300);
+    if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
     
     setDraggedCard({
       index: currentIndex,
@@ -113,15 +140,55 @@ export function SwipeStack({
   };
 
   const handleTouchEnd = () => {
-    if (!draggedCard || currentIndex >= activities.length) return;
+    if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
     
     const threshold = 100;
     
     if (Math.abs(draggedCard.x) > threshold) {
       const direction = draggedCard.x > 0 ? "right" : "left";
       handleSwipe(direction);
+      return; // wait for animation / mutation to advance index
     }
     
+    setDraggedCard(null);
+  };
+
+  // Mouse support for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (currentIndex >= activities.length || isAnimatingRef.current) return;
+    if (e.button !== 0) return; // Only left mouse button
+    e.preventDefault();
+    setDraggedCard({ index: currentIndex, x: 0, y: 0, rotation: 0, opacity: 1 });
+    wasDraggedRef.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
+    e.preventDefault();
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const deltaX = e.clientX - centerX;
+    const deltaY = e.clientY - centerY;
+    if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
+    const rotation = deltaX * 0.1;
+    const opacity = Math.max(0.5, 1 - Math.abs(deltaX) / 300);
+    setDraggedCard({ index: currentIndex, x: deltaX, y: deltaY, rotation, opacity });
+  };
+
+  const handleMouseUp = () => {
+    if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
+    const threshold = 100;
+    if (Math.abs(draggedCard.x) > threshold) {
+      const direction = draggedCard.x > 0 ? "right" : "left";
+      handleSwipe(direction);
+      return;
+    }
+    setDraggedCard(null);
+  };
+
+  const handleTouchCancel = () => {
     setDraggedCard(null);
   };
 
@@ -186,6 +253,10 @@ export function SwipeStack({
               onTouchStart={isActive ? handleTouchStart : undefined}
               onTouchMove={isActive ? handleTouchMove : undefined}
               onTouchEnd={isActive ? handleTouchEnd : undefined}
+              onTouchCancel={isActive ? handleTouchCancel : undefined}
+              onMouseDown={isActive ? handleMouseDown : undefined}
+              onMouseMove={isActive ? handleMouseMove : undefined}
+              onMouseUp={isActive ? handleMouseUp : undefined}
             >
               <ActivityCard activity={activity} />
             </div>

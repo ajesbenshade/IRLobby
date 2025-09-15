@@ -2,10 +2,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Users, Star } from "lucide-react";
 import { format } from "date-fns";
-import type { Activity } from "@shared/client-types";
+
+interface Activity {
+  title: string;
+  imageUrl?: string;
+  category: string;
+  location: string;
+  dateTime?: string;
+  currentParticipants?: number;
+  maxParticipants: number;
+  description: string;
+}
 
 interface ActivityCardProps {
-  activity: Activity & { host?: any; participants?: any[] };
+  activity: Activity & { host?: any; participants?: any[]; location?: string };
   style?: React.CSSProperties;
   className?: string;
 }
@@ -56,9 +66,9 @@ export function ActivityCard({ activity, style, className = "" }: ActivityCardPr
 
           <div className="flex items-center text-gray-600">
             <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="text-sm">
-              {format(new Date(activity.dateTime), "MMM d, h:mm a")}
-            </span>
+              <span className="text-sm">
+                {activity.dateTime ? format(new Date(activity.dateTime), 'MMM d, h:mm a') : ''}
+              </span>
           </div>
 
           <div className="flex items-center text-gray-600">

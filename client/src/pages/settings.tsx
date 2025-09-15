@@ -184,21 +184,30 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   };
 
   const deleteAccount = async () => {
-    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.')) {
       try {
-        const response = await fetch('/api/users/delete-account', {
+        const response = await fetch('/api/users/profile/delete/', {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
-        });        if (response.ok) {
+        });
+        
+        if (response.ok) {
+          // Clear all user data from local storage
           localStorage.removeItem('authToken');
-          if (onBack) onBack();
-          window.location.href = '/';
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userId');
+          
           toast({
             title: "Account deleted",
             description: "Your account has been permanently deleted.",
           });
+          
+          // Redirect to landing page
+          window.location.href = '/';
+        } else {
+          throw new Error('Failed to delete account');
         }
       } catch (error) {
         console.error('Error deleting account:', error);
@@ -484,7 +493,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               Delete Account
             </Button>
             <p className="text-xs text-gray-500">
-              This action cannot be undone. All your data will be permanently deleted.
+              This action cannot be undone. All your activities, swipes, matches, and reviews will be permanently deleted.
             </p>
           </CardContent>
         </Card>

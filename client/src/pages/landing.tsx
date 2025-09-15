@@ -4,16 +4,23 @@ import { Heart, Users, Calendar, MapPin } from "lucide-react";
 import AuthForm from "@/components/auth-form"; // Import the AuthForm component
 import { useAuth } from "@/hooks/useAuth"; // Import the useAuth hook
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Landing() {
   const { isAuthenticated, handleAuthentication } = useAuth();
+  const navigate = useNavigate();
+
+  // Create a wrapper function to handle authentication
+  const handleAuth = async (token: string, userId: string) => {
+    await handleAuthentication(token, userId);
+  };
 
   useEffect(() => {
     // Redirect to home if already authenticated
     if (isAuthenticated) {
-      window.location.href = '/home';
+      navigate('/');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-green-700 flex flex-col justify-center items-center p-6">
@@ -27,7 +34,7 @@ export default function Landing() {
 
       {/* Authentication form */}
       <div className="w-full max-w-md mb-8">
-        <AuthForm onAuthenticated={handleAuthentication} />
+        <AuthForm onAuthenticated={handleAuth} />
       </div>
 
       {/* Feature cards */}

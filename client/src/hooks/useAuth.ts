@@ -35,11 +35,14 @@ export function useAuth() {
   });
 
   // Handle authentication (login/register)
-  const handleAuthentication = useCallback((newToken: string, userId: string) => {
+  const handleAuthentication = useCallback(async (newToken: string, userId: string) => {
     localStorage.setItem('authToken', newToken);
     localStorage.setItem('userId', userId);
     setToken(newToken);
-    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    // Invalidate and refetch the user profile query
+    await queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
+    // Force a refetch to ensure the user data is loaded
+    await queryClient.refetchQueries({ queryKey: ["/api/users/profile"] });
   }, [queryClient]);
 
   // Handle logout

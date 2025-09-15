@@ -34,7 +34,10 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const response = await apiRequest('GET', '/api/auth/twitter/url/');
       const data = await response.json();
 
-      if (response.ok && data.auth_url) {
+      if (response.ok && data.auth_url && data.code_verifier) {
+        // Store the code_verifier for use in the callback
+        sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
+
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
       } else {

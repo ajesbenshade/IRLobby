@@ -11,6 +11,7 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
+import TwitterCallback from "@/pages/twitter-callback";
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,6 +26,7 @@ function AppRoutes() {
         path="/"
         element={isAuthenticated ? <Home /> : <Landing />}
       />
+      <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />

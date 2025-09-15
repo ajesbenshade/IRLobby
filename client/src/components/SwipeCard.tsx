@@ -33,6 +33,8 @@ export default function SwipeCard({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  // Track whether the pointer/touch actually moved enough to be considered a drag
+  const wasDraggedRef = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
@@ -40,6 +42,7 @@ export default function SwipeCard({
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
     });
+    wasDraggedRef.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -52,6 +55,8 @@ export default function SwipeCard({
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
       e.preventDefault();
       setDragOffset({ x: deltaX, y: 0 });
+      // mark that a drag occurred so clicks won't fire
+      if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
     }
   };
 
@@ -70,7 +75,48 @@ export default function SwipeCard({
     }
     
     // Reset position
+    // small timeout to allow any swipe animation to complete before resetting click blocker
+    setTimeout(() => {
+      wasDraggedRef.current = false;
+    }, 50);
     setDragOffset({ x: 0, y: 0 });
+  };
+
+  // Mouse support for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only left button
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setStartPos({ x: e.clientX, y: e.clientY });
+    wasDraggedRef.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startPos.x;
+    const deltaY = e.clientY - startPos.y;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      e.preventDefault();
+      setDragOffset({ x: deltaX, y: 0 });
+      if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const threshold = 100;
+    if (Math.abs(dragOffset.x) > threshold) {
+      if (dragOffset.x > 0) onSwipeRight(); else onSwipeLeft();
+    }
+    setTimeout(() => { wasDraggedRef.current = false; }, 50);
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  const handleTouchCancel = () => {
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
+    wasDraggedRef.current = false;
   };
 
   const rotation = dragOffset.x * 0.1;
@@ -89,6 +135,8 @@ export default function SwipeCard({
       ref={cardRef}
       className={`bg-white rounded-2xl shadow-xl cursor-grab active:cursor-grabbing select-none ${className}`}
       style={{
+        // Allow the browser to handle vertical scrolling while enabling horizontal swipe gestures
+        touchAction: 'pan-y',
         transform: `translateX(${dragOffset.x}px) rotate(${rotation}deg)`,
         opacity,
         transition: isDragging ? 'none' : 'transform 0.3s ease-out, opacity 0.3s ease-out',
@@ -96,7 +144,11 @@ export default function SwipeCard({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onClick={onShowDetails}
+      onTouchCancel={handleTouchCancel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onClick={() => { if (!wasDraggedRef.current) onShowDetails(); }}
     >
       <CardContent className="p-0">
         {/* Activity Image */}

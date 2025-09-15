@@ -6,9 +6,21 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 import requests
+import secrets
+import hashlib
+import base64
 from .serializers import UserSerializer
 
 User = get_user_model()
+
+def generate_code_verifier():
+    """Generate a random code verifier for PKCE"""
+    return secrets.token_urlsafe(32)
+
+def generate_code_challenge(code_verifier):
+    """Generate code challenge from code verifier"""
+    code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
+    return base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -18,7 +30,16 @@ def twitter_oauth_url(request):
     if not client_id:
         return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    redirect_uri = request.build_absolute_uri('/api/auth/twitter/callback/')
+    # Generate PKCE values
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
+
+    # Use explicit redirect URI based on environment
+    if getattr(settings, 'DEBUG', False):
+        redirect_uri = 'http://localhost:5173/auth/twitter/callback'
+    else:
+        redirect_uri = 'https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app/auth/twitter/callback'
+
     scope = 'tweet.read users.read email'
 
     auth_url = (
@@ -28,19 +49,27 @@ def twitter_oauth_url(request):
         f"redirect_uri={redirect_uri}&"
         f"scope={scope}&"
         f"state=state&"
-        f"code_challenge=challenge&"
-        f"code_challenge_method=plain"
+        f"code_challenge={code_challenge}&"
+        f"code_challenge_method=S256"
     )
 
-    return Response({'auth_url': auth_url})
+    return Response({
+        'auth_url': auth_url,
+        'code_verifier': code_verifier  # Frontend needs to store this for the callback
+    })
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def twitter_oauth_callback(request):
     """Handle Twitter OAuth callback"""
-    code = request.data.get('code')
+    code = request.GET.get('code')
+    code_verifier = request.GET.get('code_verifier')  # Frontend should pass this back
+
     if not code:
         return Response({'error': 'Authorization code required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not code_verifier:
+        return Response({'error': 'Code verifier required'}, status=status.HTTP_400_BAD_REQUEST)
 
     client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
     client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
@@ -48,16 +77,21 @@ def twitter_oauth_callback(request):
     if not client_id or not client_secret:
         return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # Use explicit redirect URI based on environment (must match the one used in authorization URL)
+    if getattr(settings, 'DEBUG', False):
+        redirect_uri = 'http://localhost:5173/auth/twitter/callback'
+    else:
+        redirect_uri = 'https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app/auth/twitter/callback'
+
     # Exchange code for access token
     token_url = "https://api.twitter.com/2/oauth2/token"
-    redirect_uri = request.build_absolute_uri('/api/auth/twitter/callback/')
 
     token_data = {
         'code': code,
         'grant_type': 'authorization_code',
         'client_id': client_id,
         'redirect_uri': redirect_uri,
-        'code_verifier': 'challenge'
+        'code_verifier': code_verifier
     }
 
     auth = (client_id, client_secret)

@@ -9,12 +9,13 @@ import FriendsModal from "@/components/FriendsModal";
 import EditProfileModal from "@/components/EditProfileModal";
 
 export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
+  const handleLogout = async () => {
+    await logout();
+    // Navigation to login page will happen automatically due to routing logic
   };
 
   if (!user) {

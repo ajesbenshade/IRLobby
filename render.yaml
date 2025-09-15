@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: irlobby_backend
     buildCommand: "pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput"
-    startCommand: "gunicorn irlobby_backend.wsgi:application --bind 0.0.0.0:$PORT"
+    startCommand: "DJANGO_SETTINGS_MODULE=irlobby_backend.settings daphne -b 0.0.0.0 -p $PORT irlobby_backend.asgi:application"
     envVars:
       - key: DEBUG
         value: false

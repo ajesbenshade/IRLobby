@@ -131,28 +131,12 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       const activityData = {
         ...data,
         dateTime: new Date(data.dateTime).toISOString(),
+        // For now, just store image data as base64 or file references
+        // This can be enhanced later with proper file upload
+        images: imagePreviews, // Store preview URLs for now
       };
-
-      // First create the activity
       const response = await apiRequest('POST', '/api/activities', activityData);
-      const activity = await response.json();
-
-      // If there are images, upload them
-      if (selectedImages.length > 0) {
-        const formData = new FormData();
-        selectedImages.forEach((file, index) => {
-          formData.append(`image_${index}`, file);
-        });
-
-        try {
-          await apiRequest('POST', `/api/activities/${activity.id}/images`, formData);
-        } catch (imageError) {
-          console.warn('Failed to upload images:', imageError);
-          // Don't fail the entire activity creation if image upload fails
-        }
-      }
-
-      return activity;
+      return response.json();
     },
     onSuccess: () => {
       toast({

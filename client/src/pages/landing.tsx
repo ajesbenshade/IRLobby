@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, Users, Calendar, MapPin } from "lucide-react";
+import { Users, Calendar, MapPin } from "lucide-react";
 import AuthForm from "@/components/auth-form"; // Import the AuthForm component
 import { useAuth } from "@/hooks/useAuth"; // Import the useAuth hook
 import { useEffect } from "react";
@@ -26,9 +26,9 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-primary to-green-700 flex flex-col justify-center items-center p-6">
       <div className="text-center mb-8 animate-fade-in">
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Heart className="text-primary text-3xl" />
+          <span className="text-primary text-2xl font-bold">IRL</span>
         </div>
-        <h1 className="text-4xl font-bold text-white mb-2">IRLobby - UPDATED</h1>
+        <h1 className="text-4xl font-bold text-white mb-2">IRLobby</h1>
         <p className="text-green-100 text-lg">Your Lobby for IRL Meetups</p>
       </div>
 

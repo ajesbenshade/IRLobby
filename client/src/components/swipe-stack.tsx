@@ -45,10 +45,13 @@ export function SwipeStack({
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, direction }: { activityId: string; direction: string }) => {
+      console.log('Making swipe request:', { activityId, direction });
       const response = await apiRequest("POST", `/api/swipes/${activityId}/swipe/`, {
         direction,
       });
-      return response.json();
+      const data = await response.json();
+      console.log('Swipe response:', data);
+      return data;
     },
     onSuccess: (data, variables) => {
       if (data.matched && variables.direction === "right") {
@@ -74,7 +77,12 @@ export function SwipeStack({
   });
 
   const handleSwipe = (direction: "left" | "right") => {
-    if (currentIndex >= activities.length || isAnimatingRef.current) return;
+    if (currentIndex >= activities.length || isAnimatingRef.current) {
+      console.log('Swipe blocked:', { currentIndex, activitiesLength: activities.length, isAnimating: isAnimatingRef.current });
+      return;
+    }
+
+    console.log('Handling swipe:', { direction, activityId: activities[currentIndex].id });
 
     // Animate card off-screen first
     const rect = cardRef.current?.getBoundingClientRect();

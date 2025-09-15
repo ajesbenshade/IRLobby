@@ -27,8 +27,10 @@ def generate_code_challenge(code_verifier):
 def twitter_oauth_url(request):
     """Get Twitter OAuth authorization URL"""
     client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
-    if not client_id:
-        return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if not client_id or client_id == '':
+        return Response({
+            'error': 'Twitter OAuth credentials not configured. Please set TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET environment variables.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Generate PKCE values
     code_verifier = generate_code_verifier()

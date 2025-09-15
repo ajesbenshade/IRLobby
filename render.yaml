@@ -19,7 +19,7 @@ services:
       - key: TWITTER_CLIENT_ID
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
-        value: ****UXyweT
+        value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR
 
   - type: worker
     name: irlobby-channels

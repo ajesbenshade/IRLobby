@@ -60,28 +60,29 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Attempting login with:', formData.email);
 
       const response = await apiRequest('POST', '/api/users/login/', {
-        email: formData.email,
+        username: formData.email,  // Backend expects 'username' field, we'll send email as username
         password: formData.password,
       });
 
       console.log('Login response status:', response.status);
       const data = await response.json();
       console.log('Login response data:', data);
+      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Login failed');
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      localStorage.setItem('authToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('authToken', data.tokens.access);
+      localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
-      console.log('Login successful, token stored:', data.access);
+      console.log('Login successful, token stored:', data.tokens.access);
 
       // Small delay to ensure token is stored before making authenticated requests
-      setTimeout(() => {
+      setTimeout(async () => {
         // Call the onAuthenticated callback
-        onAuthenticated(data.access, data.user.id);
+        await onAuthenticated(data.tokens.access, data.user.id);
       }, 100);
 
       toast({
@@ -129,9 +130,9 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Registration successful, token stored:', data.tokens.access);
 
       // Small delay to ensure token is stored before making authenticated requests
-      setTimeout(() => {
+      setTimeout(async () => {
         // Call the onAuthenticated callback
-        onAuthenticated(data.tokens.access, data.user.id);
+        await onAuthenticated(data.tokens.access, data.user.id);
       }, 100);
 
       toast({

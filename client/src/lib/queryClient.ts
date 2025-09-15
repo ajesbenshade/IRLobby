@@ -54,7 +54,9 @@ export async function apiRequest(...args: any[]): Promise<Response> {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-    console.log('Sending Authorization header:', `Bearer ${token.substring(0, 20)}...`);
+    console.log('Sending Authorization header:', `Bearer ${token}`);
+    console.log('Token length:', token.length);
+    console.log('Token starts with:', token.substring(0, 20));
   }
 
   console.log(`Making ${method} request to ${url} with token: ${token ? 'Yes' : 'No'}`);
@@ -64,7 +66,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
       method,
       headers,
       body: data !== undefined ? JSON.stringify(data) : undefined,
-      credentials: 'include',
+      // credentials: 'include',  // Remove credentials for production CORS
     });
 
     await throwIfResNotOk(res);
@@ -76,7 +78,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {
       console.log('Attempting token refresh...');
       try {
-        const refreshResponse = await fetch(`${baseUrl}/api/users/token/refresh/`, {
+        const refreshResponse = await fetch(`${baseUrl}/api/auth/token/refresh/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh: localStorage.getItem('refreshToken') })
@@ -95,7 +97,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
             method,
             headers: retryHeaders,
             body: data !== undefined ? JSON.stringify(data) : undefined,
-            credentials: 'include',
+            // credentials: 'include',  // Remove credentials for production CORS
           });
           
           await throwIfResNotOk(retryRes);
@@ -136,7 +138,7 @@ export const getQueryFn =
     try {
       const res = await fetch(url, {
         headers,
-        credentials: 'include',
+        // credentials: 'include',  // Remove credentials for production CORS
       });
 
       if (unauthorizedBehavior === 'returnNull' && res.status === 401) return null;

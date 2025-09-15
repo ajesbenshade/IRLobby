@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
-  "installCommand": "npm install",
+  "installCommand": "cd client && npm install",
   "framework": null,
   "rewrites": [
     {

@@ -60,6 +60,8 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   }
 
   console.log(`Making ${method} request to ${url} with token: ${token ? 'Yes' : 'No'}`);
+  console.log('Request headers:', headers);
+  console.log('Request body:', data);
 
   try {
     const res = await fetch(url, {
@@ -69,10 +71,18 @@ export async function apiRequest(...args: any[]): Promise<Response> {
       // credentials: 'include',  // Remove credentials for production CORS
     });
 
+    console.log('Response status:', res.status);
+    console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+
     await throwIfResNotOk(res);
     return res;
   } catch (error) {
-    console.warn(`API request failed for ${method} ${url}:`, error);
+    console.error(`API request failed for ${method} ${url}:`, error);
+    if (error instanceof Error) {
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     
     // If we get a 401 and have a refresh token, try to refresh
     if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {

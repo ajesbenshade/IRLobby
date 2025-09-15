@@ -54,7 +54,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return await apiRequest("/api/profile", {
+      return await apiRequest("/api/users/profile/", {
         method: "PATCH",
         body: JSON.stringify({
           ...data,
@@ -65,7 +65,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
     },
     onSuccess: () => {
       toast({ title: "Profile updated successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile/"] });
       onClose();
     },
     onError: () => {

@@ -23,6 +23,7 @@ import {
   Sun
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface UserSettings {
   notifications: {
@@ -78,17 +79,15 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
 
   const loadUserSettings = async () => {
     try {
-      const response = await fetch('/api/users/settings', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
+      const response = await apiRequest('GET', '/api/users/profile/');
       
       if (response.ok) {
-        const userSettings = await response.json();
+        const userData = await response.json();
         setSettings(prev => ({
           ...prev,
-          ...userSettings
+          preferences: userData.preferences || {},
+          notifications: userData.preferences?.notifications || prev.notifications,
+          privacy: userData.preferences?.privacy || prev.privacy,
         }));
       }
     } catch (error) {
@@ -99,21 +98,21 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     try {
       setLoading(true);
       
-      // Create the payload that matches backend expectations
-      const payload = { [section]: newSettings };
+      // For preferences, update the entire preferences object
+      const payload = section === 'preferences' 
+        ? { preferences: newSettings }
+        : { [section]: newSettings };
       
-      const response = await fetch('/api/users/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await apiRequest('PATCH', '/api/users/profile/', payload);
 
       if (response.ok) {
-        const updatedSettings = await response.json();
-        setSettings(updatedSettings);
+        const updatedUser = await response.json();
+        setSettings(prev => ({
+          ...prev,
+          preferences: updatedUser.preferences || {},
+          notifications: updatedUser.preferences?.notifications || prev.notifications,
+          privacy: updatedUser.preferences?.privacy || prev.privacy,
+        }));
         toast({
           title: "Settings updated",
           description: "Your settings have been saved successfully.",
@@ -122,7 +121,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
         throw new Error('Failed to update settings');
       }
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Failed to update settings:', error);
       toast({
         title: "Error",
         description: "Failed to update settings. Please try again.",
@@ -149,11 +148,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   };
   const exportData = async () => {
     try {
-      const response = await fetch('/api/users/profile/export/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
+      const response = await apiRequest('GET', '/api/users/profile/export/');
 
       if (response.ok) {
         const data = await response.json();
@@ -176,7 +171,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
         throw new Error('Failed to export data');
       }
     } catch (error) {
-      console.error('Error exporting data:', error);
+      console.error('Failed to export data:', error);
       toast({
         title: "Error",
         description: "Failed to export data. Please try again.",
@@ -188,34 +183,26 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   const deleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.')) {
       try {
-        const response = await fetch('/api/users/profile/delete/', {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
+        const response = await apiRequest('DELETE', '/api/users/profile/delete/');
+        
+        // Clear all user data from local storage
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userId');
+        
+        toast({
+          title: "Account deleted",
+          description: "Your account has been permanently deleted.",
         });
         
-        if (response.ok) {
-          // Clear all user data from local storage
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('userId');
-          
-          toast({
-            title: "Account deleted",
-            description: "Your account has been permanently deleted.",
-          });
-          
-          // Redirect to landing page
-          window.location.href = '/';
-        } else {
-          throw new Error('Failed to delete account');
-        }
-      } catch (error) {
+        // Redirect to landing page
+        window.location.href = '/';
+      } catch (error: any) {
         console.error('Error deleting account:', error);
+        const errorMessage = error.message || 'Failed to delete account. Please try again.';
         toast({
           title: "Error",
-          description: "Failed to delete account. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       }

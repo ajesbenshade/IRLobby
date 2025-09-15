@@ -45,8 +45,7 @@ export function SwipeStack({
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, direction }: { activityId: string; direction: string }) => {
-      const response = await apiRequest("POST", "/api/swipes", {
-        activityId,
+      const response = await apiRequest("POST", `/api/swipes/${activityId}/swipe/`, {
         direction,
       });
       return response.json();
@@ -225,7 +224,7 @@ export function SwipeStack({
         {visibleCards.map((activity, index) => {
           const isActive = index === 0;
           const absoluteIndex = currentIndex + index;
-          
+
           let style: React.CSSProperties = {
             position: "absolute",
             top: index * 4,
@@ -245,6 +244,11 @@ export function SwipeStack({
             style.transition = "transform 0.2s ease-out, opacity 0.2s ease-out";
           }
 
+          // Ensure location is a string to match ActivityCard's expected type
+                    // Provide a default for maxParticipants so the resulting object matches the non-optional Activity type
+                    // Provide a default for description so the object satisfies Activity's non-optional description field
+                    const activityWithLocation = { ...activity, location: activity.location || '', maxParticipants: activity.maxParticipants ?? 0, description: activity.description ?? '' };
+
           return (
             <div
               key={activity.id}
@@ -258,7 +262,7 @@ export function SwipeStack({
               onMouseMove={isActive ? handleMouseMove : undefined}
               onMouseUp={isActive ? handleMouseUp : undefined}
             >
-              <ActivityCard activity={activity} />
+              <ActivityCard activity={activityWithLocation} />
             </div>
           );
         })}

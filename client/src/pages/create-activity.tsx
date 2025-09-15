@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,8 +68,48 @@ const participantOptions = Array.from({ length: 50 }, (_, i) => i + 1);
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showHostDashboard, setShowHostDashboard] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    const totalFiles = selectedImages.length + newFiles.length;
+
+    if (totalFiles > 5) {
+      toast({
+        title: "Too many photos",
+        description: "You can only upload up to 5 photos per activity.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add new files to existing ones
+    setSelectedImages(prev => [...prev, ...newFiles]);
+
+    // Create previews for new files
+    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => {
+      // Revoke the object URL to prevent memory leaks
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -92,8 +132,27 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
         ...data,
         dateTime: new Date(data.dateTime).toISOString(),
       };
+
+      // First create the activity
       const response = await apiRequest('POST', '/api/activities', activityData);
-      return response.json();
+      const activity = await response.json();
+
+      // If there are images, upload them
+      if (selectedImages.length > 0) {
+        const formData = new FormData();
+        selectedImages.forEach((file, index) => {
+          formData.append(`image_${index}`, file);
+        });
+
+        try {
+          await apiRequest('POST', `/api/activities/${activity.id}/images`, formData);
+        } catch (imageError) {
+          console.warn('Failed to upload images:', imageError);
+          // Don't fail the entire activity creation if image upload fails
+        }
+      }
+
+      return activity;
     },
     onSuccess: () => {
       toast({
@@ -129,11 +188,56 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
             {/* Photo Upload */}
             <Card>
               <CardContent className="p-4">
-                <div className="w-full h-32 bg-gray-200 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
-                  <div className="text-center">
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Tap to add photos</p>
-                  </div>
+                <div className="space-y-4">
+                  {/* Selected Images Grid */}
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Upload Area */}
+                  {imagePreviews.length < 5 && (
+                    <div
+                      className="w-full h-32 bg-gray-200 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={handlePhotoClick}
+                    >
+                      <div className="text-center">
+                        <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">
+                          {imagePreviews.length === 0 ? "Tap to add photos" : "Add more photos"}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {imagePreviews.length}/5 photos
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hidden File Input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                 </div>
               </CardContent>
             </Card>

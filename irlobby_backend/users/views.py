@@ -126,3 +126,22 @@ def export_user_data(request):
             'error': 'Failed to export user data',
             'details': str(e)
         }, status=500)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_profile(request):
+    """Delete user profile and all associated data"""
+    user = request.user
+    
+    try:
+        with transaction.atomic():
+            # Delete the user - cascade deletes should handle related data
+            user.delete()
+        
+        return Response({"message": "Profile deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        
+    except Exception as e:
+        return Response({
+            'error': 'Failed to delete profile',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

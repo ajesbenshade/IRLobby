@@ -2,9 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Clock, Users, DollarSign, Star } from "lucide-react";
+import { MapPin, Clock, Users, Star } from "lucide-react";
 import { format } from "date-fns";
-import type { Activity } from "@shared/client-types";
+import type { Activity } from "@/types/activity";
 
 interface ActivityDetailsModalProps {
   activity: Activity & {
@@ -49,9 +49,9 @@ export default function ActivityDetailsModal({
 
         {/* Activity Image */}
         <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl mb-4 overflow-hidden">
-          {activity.imageUrl ? (
+          {activity.images && activity.images.length > 0 ? (
             <img 
-              src={activity.imageUrl} 
+              src={activity.images[0]} 
               alt={activity.title}
               className="w-full h-full object-cover"
             />
@@ -63,7 +63,9 @@ export default function ActivityDetailsModal({
                     {activity.title.charAt(0)}
                   </span>
                 </div>
-                <p className="text-white/80 font-medium">{activity.category}</p>
+                <p className="text-white/80 font-medium">
+                  {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+                </p>
               </div>
             </div>
           )}
@@ -75,7 +77,7 @@ export default function ActivityDetailsModal({
             {activity.title}
           </h2>
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            {activity.category}
+            {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
           </Badge>
         </div>
 
@@ -88,22 +90,15 @@ export default function ActivityDetailsModal({
           
           <div className="flex items-center text-gray-600">
             <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span>{format(new Date(activity.dateTime), 'EEEE, MMM d, yyyy • h:mm a')}</span>
+            <span>{format(new Date(activity.time), 'EEEE, MMM d, yyyy • h:mm a')}</span>
           </div>
           
           <div className="flex items-center text-gray-600">
             <Users className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
-              {activity.currentParticipants || 0} of {activity.maxParticipants} spots filled
+              {activity.participant_count || 0} of {activity.capacity} spots filled
             </span>
           </div>
-          
-          {activity.price && activity.price > 0 && (
-            <div className="flex items-center text-gray-600">
-              <DollarSign className="w-5 h-5 mr-3 flex-shrink-0" />
-              <span>${activity.price}</span>
-            </div>
-          )}
         </div>
 
         {/* Description */}

@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
-import type { Activity } from "@shared/client-types";
+import type { Activity } from "@/types/activity";
 
 interface MatchSuccessModalProps {
   activity: Activity | null;

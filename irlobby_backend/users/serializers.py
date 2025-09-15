@@ -27,25 +27,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    email = serializers.EmailField()
     password = serializers.CharField()
 
     def validate(self, attrs):
-        username = attrs.get('username')
+        email = attrs.get('email')
         password = attrs.get('password')
 
-        # Try to authenticate with username first
-        user = authenticate(username=username, password=password)
-
-        # If that fails, try with email
-        if not user:
-            try:
-                user_obj = User.objects.get(email=username)
-                user = authenticate(username=user_obj.username, password=password)
-            except User.DoesNotExist:
-                pass
+        # Try to authenticate with email
+        try:
+            user_obj = User.objects.get(email=email)
+            user = authenticate(username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            raise serializers.ValidationError('Invalid credentials')
 
         if not user:
             raise serializers.ValidationError('Invalid credentials')
+
         attrs['user'] = user
         return attrs

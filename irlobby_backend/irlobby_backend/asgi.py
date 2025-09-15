@@ -18,17 +18,21 @@ if not settings.configured:
 
 # Now safe to import Django components
 from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
 
-# Import routing after Django is set up
-import chat.routing
+# Try to import Channels components, fallback to basic ASGI if not available
+try:
+    from channels.routing import ProtocolTypeRouter, URLRouter
+    from channels.auth import AuthMiddlewareStack
+    import chat.routing
 
-application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            chat.routing.websocket_urlpatterns
-        )
-    ),
-})
+    application = ProtocolTypeRouter({
+        "http": get_asgi_application(),
+        "websocket": AuthMiddlewareStack(
+            URLRouter(
+                chat.routing.websocket_urlpatterns
+            )
+        ),
+    })
+except ImportError:
+    # Fallback to basic ASGI application if Channels is not properly configured
+    application = get_asgi_application()

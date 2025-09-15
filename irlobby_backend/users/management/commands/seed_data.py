@@ -228,6 +228,127 @@ class Command(BaseCommand):
                 'capacity': 14,
                 'tags': ['cooking', 'farmers market', 'local food'],
                 'hours_from_now': 72  # 3 days from now
+            },
+            # Youngstown, Ohio Activities
+            {
+                'title': 'Youngstown Brewery Tour',
+                'description': 'Take a guided tour of one of Youngstown\'s historic breweries. Learn about the brewing process and sample local craft beers.',
+                'location': 'PJ McIntyre\'s, Youngstown, OH',
+                'latitude': 41.0998,
+                'longitude': -80.6495,
+                'capacity': 12,
+                'tags': ['brewery', 'tour', 'craft beer', 'local'],
+                'hours_from_now': 48  # 2 days from now
+            },
+            {
+                'title': 'Mill Creek Park Hiking',
+                'description': 'Explore the beautiful trails of Mill Creek Park. Perfect for hiking, birdwatching, and enjoying nature in Youngstown.',
+                'location': 'Mill Creek Park, Youngstown, OH',
+                'latitude': 41.0781,
+                'longitude': -80.6767,
+                'capacity': 10,
+                'tags': ['hiking', 'nature', 'outdoors', 'park'],
+                'hours_from_now': 24  # 1 day from now
+            },
+            {
+                'title': 'Butler Institute of American Art Visit',
+                'description': 'Tour the Butler Institute, Ohio\'s first museum dedicated to American art. See works by famous American artists.',
+                'location': 'Butler Institute of American Art, Youngstown, OH',
+                'latitude': 41.1028,
+                'longitude': -80.6506,
+                'capacity': 15,
+                'tags': ['art', 'museum', 'culture', 'american art'],
+                'hours_from_now': 72  # 3 days from now
+            },
+            {
+                'title': 'Youngstown Farmers Market',
+                'description': 'Visit the historic West Federal Street Farmers Market. Sample local produce, artisanal goods, and meet local vendors.',
+                'location': 'West Federal Street Farmers Market, Youngstown, OH',
+                'latitude': 41.0995,
+                'longitude': -80.6512,
+                'capacity': 20,
+                'tags': ['farmers market', 'local food', 'shopping', 'community'],
+                'hours_from_now': 96  # 4 days from now
+            },
+            {
+                'title': 'Mahoning Valley Scrappers Baseball Game',
+                'description': 'Catch a minor league baseball game with the Mahoning Valley Scrappers. Great family entertainment with affordable tickets!',
+                'location': 'Eastwood Field, Niles, OH',
+                'latitude': 41.1828,
+                'longitude': -80.7656,
+                'capacity': 25,
+                'tags': ['baseball', 'sports', 'family', 'minor league'],
+                'hours_from_now': 120  # 5 days from now
+            },
+            {
+                'title': 'Downtown Youngstown Art Walk',
+                'description': 'Explore Youngstown\'s vibrant downtown art scene. Visit galleries, street art, and local artist studios.',
+                'location': 'Downtown Youngstown, OH',
+                'latitude': 41.0998,
+                'longitude': -80.6495,
+                'capacity': 8,
+                'tags': ['art', 'walking tour', 'urban', 'culture'],
+                'hours_from_now': 168  # 1 week from now
+            },
+            {
+                'title': 'Local Coffee Shop Meetup',
+                'description': 'Casual meetup at a local coffee shop. Great for conversation, trying new brews, and meeting fellow Youngstown residents.',
+                'location': 'Starbucks Reserve Roastery, Youngstown, OH',
+                'latitude': 41.1011,
+                'longitude': -80.6478,
+                'capacity': 6,
+                'tags': ['coffee', 'casual', 'meetup', 'conversation'],
+                'hours_from_now': 48  # 2 days from now
+            },
+            {
+                'title': 'Youngstown Theater Performance',
+                'description': 'Enjoy a live theater performance at the Youngstown Playhouse. Experience local talent in an intimate setting.',
+                'location': 'Youngstown Playhouse, Youngstown, OH',
+                'latitude': 41.0999,
+                'longitude': -80.6497,
+                'capacity': 18,
+                'tags': ['theater', 'performance', 'live entertainment', 'local'],
+                'hours_from_now': 144  # 6 days from now
+            },
+            {
+                'title': 'Boardman Park Disc Golf',
+                'description': 'Play a round of disc golf at Boardman Park. All skill levels welcome - we\'ll have discs available for beginners.',
+                'location': 'Boardman Park, Youngstown, OH',
+                'latitude': 41.0247,
+                'longitude': -80.6637,
+                'capacity': 12,
+                'tags': ['disc golf', 'sports', 'outdoors', 'casual'],
+                'hours_from_now': 72  # 3 days from now
+            },
+            {
+                'title': 'Youngstown Music Venue Show',
+                'description': 'Live music night at a local venue. Featuring local bands and musicians. Come enjoy the Youngstown music scene!',
+                'location': 'The Cellar, Youngstown, OH',
+                'latitude': 41.0998,
+                'longitude': -80.6495,
+                'capacity': 22,
+                'tags': ['music', 'live music', 'venue', 'local bands'],
+                'hours_from_now': 96  # 4 days from now
+            },
+            {
+                'title': 'Community Center Workshop',
+                'description': 'Hands-on workshop at the Youngstown Community Center. Learn new skills and meet your neighbors!',
+                'location': 'Youngstown Community Center, Youngstown, OH',
+                'latitude': 41.0998,
+                'longitude': -80.6495,
+                'capacity': 16,
+                'tags': ['workshop', 'community', 'learning', 'skills'],
+                'hours_from_now': 120  # 5 days from now
+            },
+            {
+                'title': 'Local Restaurant Food Tour',
+                'description': 'Explore Youngstown\'s diverse culinary scene. Visit multiple restaurants and sample different cuisines.',
+                'location': 'Downtown Youngstown, OH',
+                'latitude': 41.0998,
+                'longitude': -80.6495,
+                'capacity': 8,
+                'tags': ['food', 'restaurant', 'tour', 'cuisine'],
+                'hours_from_now': 168  # 1 week from now
             }
         ]
 

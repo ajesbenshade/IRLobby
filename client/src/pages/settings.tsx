@@ -149,7 +149,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   };
   const exportData = async () => {
     try {
-      const response = await fetch('/api/users/export-data', {
+      const response = await fetch('/api/users/profile/export/', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
         },
@@ -172,6 +172,8 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
           title: "Data exported",
           description: "Your data has been downloaded successfully.",
         });
+      } else {
+        throw new Error('Failed to export data');
       }
     } catch (error) {
       console.error('Error exporting data:', error);

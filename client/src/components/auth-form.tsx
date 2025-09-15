@@ -63,7 +63,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Attempting login with:', formData.email);
 
       const response = await apiRequest('POST', '/api/users/login/', {
-        email: formData.email,  // Send email field directly
+        email: formData.email,
         password: formData.password,
       });
 

@@ -144,16 +144,10 @@ DATABASES = {
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app",
-    "exp://localhost:8081",  # Expo development
-]
+# CORS settings - read allowed origins from environment to support dynamic deploy domains
+# Render/Prod sets CORS_ALLOWED_ORIGINS as a comma-separated env var (see render.yaml)
+raw_cors_origins = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081')
+CORS_ALLOWED_ORIGINS = [s.strip() for s in raw_cors_origins.split(',') if s.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Use CORS_ALLOWED_ORIGINS list in production

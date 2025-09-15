@@ -15,27 +15,32 @@ services:
       - key: DATABASE_URL
         value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
       - key: CORS_ALLOWED_ORIGINS
-        value: https://irlobby-l4sovrh3c-aaron-esbenshades-projects.vercel.app
+        value: https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app
       - key: TWITTER_CLIENT_ID
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
         value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR
-      - key: EMAIL_BACKEND
-        value: django.core.mail.backends.smtp.EmailBackend
-      - key: EMAIL_HOST
-        value: smtp.gmail.com
-      - key: EMAIL_PORT
-        value: 587
-      - key: EMAIL_USE_TLS
-        value: true
-      - key: EMAIL_HOST_USER
-        value: ajesbenshade@gmail.com
-      - key: EMAIL_HOST_PASSWORD
-        value: nrrz gagq bdrk fxbx
-      - key: DEFAULT_FROM_EMAIL
-        value: noreply@irlobby.com
-      - key: FRONTEND_URL
-        value: https://irlobby-l4sovrh3c-aaron-esbenshades-projects.vercel.app
 
-# Note: WebSocket support removed for initial deployment
-# Add Redis and proper WebSocket configuration later if needed
+  - type: worker
+    name: irlobby-channels
+    runtime: python
+    rootDir: irlobby_backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "DJANGO_SETTINGS_MODULE=irlobby_backend.settings daphne -b 0.0.0.0 -p 8001 irlobby_backend.asgi:application"
+    envVars:
+      - key: DEBUG
+        value: false
+      - key: DJANGO_SETTINGS_MODULE
+        value: irlobby_backend.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: irlobby-backend.onrender.com,irlobby-channels.onrender.com,localhost,127.0.0.1
+      - key: DATABASE_URL
+        value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://irlobby-ovkujb5lr-aaron-esbenshades-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081
+      - key: TWITTER_CLIENT_ID
+        value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
+      - key: TWITTER_CLIENT_SECRET
+        value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR

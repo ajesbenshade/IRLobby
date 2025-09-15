@@ -28,21 +28,21 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const markersRef = useRef<any[]>([]);
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities/nearby', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
+    queryKey: ['/api/activities', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
     queryFn: async () => {
       if (!userLocation) return [];
       
       const params = new URLSearchParams({
         latitude: userLocation.latitude.toString(),
         longitude: userLocation.longitude.toString(),
-        maxDistance: searchRadius,
+        radius: searchRadius,
         ...Object.fromEntries(
           Object.entries(filters).map(([key, value]) => [key, String(value)])
         )
       });
       
-      const response = await fetch(`/api/activities/nearby?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch nearby activities');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch activities');
       return response.json();
     },
     enabled: !!userLocation,
@@ -132,10 +132,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
             <div style="padding: 8px; max-width: 250px;">
               <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
               <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
-              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${format(new Date(activity.dateTime), 'MMM d, yyyy • h:mm a')}</p>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${format(new Date(activity.time), 'MMM d, yyyy • h:mm a')}</p>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.category}</span>
-                <span style="color: #666; font-size: 14px;">$${activity.price}</span>
+                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}</span>
               </div>
             </div>
           `
@@ -333,9 +332,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
                     </h3>
                     <Badge 
                       variant="secondary" 
-                      className={`text-xs ${getCategoryColor(activity.category)}`}
+                      className={`text-xs ${getCategoryColor(activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity')}`}
                     >
-                      {activity.category}
+                      {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
                     </Badge>
                   </div>
                   
@@ -353,11 +352,11 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{format(new Date(activity.dateTime), "MMM dd, h:mm a")}</span>
+                        <span>{format(new Date(activity.time), "MMM dd, h:mm a")}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4 text-gray-400" />
-                        <span>{activity.currentParticipants || 0}/{activity.maxParticipants}</span>
+                        <span>{activity.participant_count || 0}/{activity.capacity}</span>
                       </div>
                     </div>
                   </div>

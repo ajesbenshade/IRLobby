@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Clock, Users, Star } from "lucide-react";
 import { format } from "date-fns";
-import type { Activity } from "@shared/client-types";
+import type { Activity } from "@/types/activity";
 
 interface SwipeCardProps {
   activity: Activity & {
@@ -101,9 +101,9 @@ export default function SwipeCard({
       <CardContent className="p-0">
         {/* Activity Image */}
         <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-t-2xl flex items-center justify-center overflow-hidden">
-          {activity.imageUrl ? (
+          {activity.images && activity.images.length > 0 ? (
             <img 
-              src={activity.imageUrl} 
+              src={activity.images[0]} 
               alt={activity.title}
               className="w-full h-full object-cover"
             />
@@ -114,7 +114,9 @@ export default function SwipeCard({
                   {activity.title.charAt(0)}
                 </span>
               </div>
-              <p className="text-white/80 font-medium">{activity.category}</p>
+              <p className="text-white/80 font-medium">
+                {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+              </p>
             </div>
           )}
         </div>
@@ -126,7 +128,7 @@ export default function SwipeCard({
               {activity.title}
             </h3>
             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 flex-shrink-0">
-              {activity.category}
+              {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
             </Badge>
           </div>
 
@@ -140,7 +142,7 @@ export default function SwipeCard({
           <div className="flex items-center text-gray-600 mb-3">
             <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
-              {format(new Date(activity.dateTime), 'MMM d, h:mm a')}
+              {format(new Date(activity.time), 'MMM d, h:mm a')}
             </span>
           </div>
 
@@ -156,14 +158,9 @@ export default function SwipeCard({
             <div className="flex items-center">
               <Users className="w-4 h-4 mr-2 text-gray-500" />
               <span className="text-sm text-gray-600">
-                {activity.currentParticipants || 0}/{activity.maxParticipants} people
+                {activity.participant_count || 0}/{activity.capacity} people
               </span>
             </div>
-            {activity.price && activity.price > 0 && (
-              <span className="text-sm font-medium text-green-600">
-                ${activity.price}
-              </span>
-            )}
           </div>
 
           {/* Host Info */}

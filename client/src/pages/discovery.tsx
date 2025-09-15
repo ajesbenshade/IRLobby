@@ -10,7 +10,7 @@ import FilterModal from "@/components/FilterModal";
 import NotificationCenter from "@/components/NotificationCenter";
 import MapView from "@/components/MapView";
 import { Filter, MapPin, Bell, RefreshCw, Map } from "lucide-react";
-import type { Activity } from "@shared/client-types";
+import type { Activity } from "@/types/activity";
 
 export default function Discovery() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
@@ -33,11 +33,7 @@ export default function Discovery() {
     queryFn: async () => {
       console.log('Fetching activities with token:', !!token);
       
-      const response = await fetch('/api/activities/', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await apiRequest('GET', '/api/activities/');
       
       console.log('Activities response status:', response.status);
       
@@ -66,35 +62,21 @@ export default function Discovery() {
     }
   }, [activities, error, isLoading, token]);
 
-  const { data: unreadNotifications = 0 } = useQuery({
-    queryKey: ['/api/notifications/unread-count'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications/unread-count', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch notification count');
-      }
-      
-      return response.json();
-    },
-    enabled: !!token,
-    retry: 1,
-  });
+  // Comment out notifications for now since the endpoint doesn't exist
+  // const { data: unreadNotifications = 0 } = useQuery({
+  //   queryKey: ['/api/notifications/unread-count'],
+  //   queryFn: async () => {
+  //     const response = await apiRequest('GET', '/api/notifications/unread-count');
+  //     return response.json();
+  //   },
+  //   enabled: !!token,
+  //   retry: 1,
+  // });
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, swipeType }: { activityId: number; swipeType: 'like' | 'pass' }) => {
-      const response = await fetch(`/api/activities/${activityId}/swipe`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ swipeType })
-      });
+      const direction = swipeType === 'like' ? 'right' : 'left';
+      const response = await apiRequest('POST', `/api/swipes/${activityId}/swipe/`, { direction });
       return response.json();
     },
     onSuccess: (data) => {
@@ -132,7 +114,7 @@ export default function Discovery() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['/api/activities/discover'] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
     setCurrentActivityIndex(0);
     setIsRefreshing(false);
   };
@@ -179,11 +161,11 @@ export default function Discovery() {
             onClick={() => setShowNotifications(true)}
           >
             <Bell className="w-5 h-5 text-gray-600" />
-            {unreadNotifications > 0 && (
+            {/* {unreadNotifications > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
               </span>
-            )}
+            )} */}
           </Button>
           <Button 
             variant="ghost" 

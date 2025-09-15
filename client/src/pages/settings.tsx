@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useTheme } from "@/hooks/useTheme";
 
 interface UserSettings {
   notifications: {
@@ -49,6 +50,7 @@ interface UserSettings {
 export default function Settings({ onBack }: { onBack?: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setTheme } = useTheme();
   
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
@@ -83,12 +85,18 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       
       if (response.ok) {
         const userData = await response.json();
+        const loadedPreferences = userData.preferences || {};
         setSettings(prev => ({
           ...prev,
-          preferences: userData.preferences || {},
-          notifications: userData.preferences?.notifications || prev.notifications,
-          privacy: userData.preferences?.privacy || prev.privacy,
+          preferences: loadedPreferences,
+          notifications: loadedPreferences.notifications || prev.notifications,
+          privacy: loadedPreferences.privacy || prev.privacy,
         }));
+        
+        // Apply theme from loaded preferences
+        if (loadedPreferences.theme) {
+          setTheme(loadedPreferences.theme);
+        }
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -145,6 +153,11 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   const handlePreferenceChange = (key: keyof typeof settings.preferences, value: any) => {
     const newPreferences = { ...settings.preferences, [key]: value };
     updateSettings('preferences', newPreferences);
+    
+    // Apply theme change immediately
+    if (key === 'theme') {
+      setTheme(value);
+    }
   };
   const exportData = async () => {
     try {

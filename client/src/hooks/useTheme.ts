@@ -20,8 +20,12 @@ export function useTheme() {
 
     if (actualTheme === 'dark') {
       root.classList.add('dark');
+      // Add subtle dark theme enhancements
+      root.style.setProperty('--tw-ring-color', 'rgb(59 130 246 / 0.5)');
     } else {
       root.classList.remove('dark');
+      // Reset to light theme defaults
+      root.style.removeProperty('--tw-ring-color');
     }
   };
 

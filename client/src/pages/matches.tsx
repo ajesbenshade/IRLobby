@@ -41,14 +41,14 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
     switch (status) {
       case 'approved':
         return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
             <CheckCircle className="w-3 h-3 mr-1" />
             Confirmed
           </Badge>
         );
       case 'pending':
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
             <Clock className="w-3 h-3 mr-1" />
             Pending
           </Badge>
@@ -67,14 +67,14 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
   }
 
   return (
-    <div className="bg-gray-50 pb-20 min-h-screen">
-      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">
-            {showUserActivities ? "My Activities" : "Your Matches"}
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+            {showUserActivities ? 'My Activities' : 'Matches'}
           </h2>
-          <p className="text-sm text-gray-500">
-            {showUserActivities ? "Activities you've joined" : "Events you're part of"}
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {showUserActivities ? 'Activities you\'ve joined' : 'People who matched with you'}
           </p>
         </div>
         {matches.length > 0 && (
@@ -87,13 +87,13 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
       <div className="p-4 space-y-4">
         {matches.length === 0 ? (
           <div className="text-center py-12">
-            <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No matches yet</h3>
-            <p className="text-gray-500">Start swiping to find activities you love!</p>
+            <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No matches yet</h3>
+            <p className="text-gray-500 dark:text-gray-400">Start swiping to find activities you love!</p>
           </div>
         ) : (
           matches.map((match: any) => (
-            <Card key={match.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Card key={match.id} className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0 overflow-hidden">

@@ -9,13 +9,18 @@ import FriendsModal from "@/components/FriendsModal";
 import EditProfileModal from "@/components/EditProfileModal";
 
 export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    // Navigation to login page will happen automatically due to routing logic
+    try {
+      await logout();
+      // Force navigation to landing page after logout
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   if (!user) {
@@ -29,18 +34,18 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <div className="bg-gray-50 pb-20 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
       {/* Header with Profile Info */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="p-4 text-center">
-          <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-white shadow-lg">
+          <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
             <AvatarImage src={user.profileImageUrl || undefined} />
             <AvatarFallback className="text-xl font-bold bg-primary text-white">
               {initials}
             </AvatarFallback>
           </Avatar>
           
-          <h2 className="text-xl font-bold text-gray-800">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
             {user.firstName && user.lastName 
               ? `${user.firstName} ${user.lastName}`
               : user.email?.split('@')[0] || 'User'
@@ -48,15 +53,15 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           </h2>
           
           {user.bio && (
-            <p className="text-gray-600 mt-1">{user.bio}</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>
           )}
           
           <div className="flex items-center justify-center mt-2">
             <Star className="w-4 h-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
               {user.rating?.toFixed(1) || '5.0'}
             </span>
-            <span className="text-sm text-gray-500 ml-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
               ({user.totalRatings || 0} reviews)
             </span>
           </div>
@@ -65,45 +70,45 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
 
       <div className="p-4 space-y-6">
         {/* Activity Stats */}
-        <Card className="bg-white shadow-sm">
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardContent className="p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">Activity Stats</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Activity Stats</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-primary">
                   {user.eventsHosted || 0}
                 </p>
-                <p className="text-xs text-gray-600">Events Hosted</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Events Hosted</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {user.eventsAttended || 0}
                 </p>
-                <p className="text-xs text-gray-600">Events Attended</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Events Attended</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                   {(user.eventsHosted || 0) + (user.eventsAttended || 0)}
                 </p>
-                <p className="text-xs text-gray-600">Total Activities</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Total Activities</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Interests */}
-        <Card className="bg-white shadow-sm">
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardContent className="p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">Interests</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Interests</h3>
             <div className="flex flex-wrap gap-2">
               {user.interests && user.interests.length > 0 ? (
                 user.interests.map((interest: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="bg-primary/10 text-primary">
+                  <Badge key={index} variant="secondary" className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300">
                     {interest}
                   </Badge>
                 ))
               ) : (
-                <p className="text-gray-500 text-sm">No interests added yet</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No interests added yet</p>
               )}
             </div>
           </CardContent>

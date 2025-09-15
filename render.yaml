@@ -19,7 +19,7 @@ services:
       - key: TWITTER_CLIENT_ID
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
-        value: 5L8a9KpmZ6fCBOlzBJw0kDWXYLo5qT4s_gQ4PDf5F2ucPohIXM
+        value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR
       - key: EMAIL_BACKEND
         value: django.core.mail.backends.smtp.EmailBackend
       - key: EMAIL_HOST

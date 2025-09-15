@@ -133,7 +133,7 @@ export default function SwipeCard({
   return (
     <Card 
       ref={cardRef}
-      className={`bg-white rounded-2xl shadow-xl cursor-grab active:cursor-grabbing select-none ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-gray-900/50 cursor-grab active:cursor-grabbing select-none ${className}`}
       style={{
         // Allow the browser to handle vertical scrolling while enabling horizontal swipe gestures
         touchAction: 'pan-y',
@@ -152,7 +152,7 @@ export default function SwipeCard({
     >
       <CardContent className="p-0">
         {/* Activity Image */}
-        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-t-2xl flex items-center justify-center overflow-hidden">
+        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 dark:from-primary/30 dark:to-purple-600/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
             <img 
               src={activity.images[0]} 
@@ -176,22 +176,22 @@ export default function SwipeCard({
         <div className="p-4">
           {/* Title and Category */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-gray-800 truncate flex-1 mr-2">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate flex-1 mr-2">
               {activity.title}
             </h3>
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 flex-shrink-0">
+            <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 flex-shrink-0">
               {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
             </Badge>
           </div>
 
           {/* Location */}
-          <div className="flex items-center text-gray-600 mb-2">
+          <div className="flex items-center text-gray-600 dark:text-gray-300 mb-2">
             <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="text-sm truncate">{activity.location}</span>
           </div>
 
           {/* Date/Time */}
-          <div className="flex items-center text-gray-600 mb-3">
+          <div className="flex items-center text-gray-600 dark:text-gray-300 mb-3">
             <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
               {format(new Date(activity.time), 'MMM d, h:mm a')}
@@ -200,7 +200,7 @@ export default function SwipeCard({
 
           {/* Description */}
           {activity.description && (
-            <p className="text-gray-700 text-sm mb-4 line-clamp-2">
+            <p className="text-gray-700 dark:text-gray-200 text-sm mb-4 line-clamp-2">
               {activity.description}
             </p>
           )}
@@ -208,15 +208,15 @@ export default function SwipeCard({
           {/* Participants */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
-              <Users className="w-4 h-4 mr-2 text-gray-500" />
-              <span className="text-sm text-gray-600">
+              <Users className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">
                 {activity.participant_count || 0}/{activity.capacity} people
               </span>
             </div>
           </div>
 
           {/* Host Info */}
-          <div className="pt-4 border-t border-gray-100 flex items-center">
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center">
             <Avatar className="w-10 h-10 mr-3">
               <AvatarImage src={activity.host?.profileImageUrl} />
               <AvatarFallback className="text-sm">

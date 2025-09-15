@@ -73,6 +73,9 @@ export function SwipeStack({
         description: error.message || "Failed to swipe",
         variant: "destructive",
       });
+      // Reset animation on error
+      setDraggedCard(null);
+      isAnimatingRef.current = false;
     },
   });
 
@@ -149,7 +152,7 @@ export function SwipeStack({
   const handleTouchEnd = () => {
     if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
     
-    const threshold = 100;
+    const threshold = 50;
     
     if (Math.abs(draggedCard.x) > threshold) {
       const direction = draggedCard.x > 0 ? "right" : "left";
@@ -186,7 +189,7 @@ export function SwipeStack({
 
   const handleMouseUp = () => {
     if (!draggedCard || currentIndex >= activities.length || isAnimatingRef.current) return;
-    const threshold = 100;
+    const threshold = 50;
     if (Math.abs(draggedCard.x) > threshold) {
       const direction = draggedCard.x > 0 ? "right" : "left";
       handleSwipe(direction);

@@ -1,24 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/index.html"
-    }
-  ],
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install",
+  "framework": null,
   "env": {
     "VITE_API_BASE_URL": "https://irlobby-backend.onrender.com"
   }

@@ -42,7 +42,7 @@ def twitter_oauth_url(request):
     else:
         redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
-    scope = 'tweet.read users.read email'
+    scope = 'tweet.read users.read'
 
     auth_url = (
         f"https://twitter.com/i/oauth2/authorize?"
@@ -108,7 +108,7 @@ def twitter_oauth_callback(request):
     # Get user info from Twitter (including email)
     user_url = "https://api.twitter.com/2/users/me"
     headers = {'Authorization': f'Bearer {access_token}'}
-    params = {'user.fields': 'name,username,email'}
+    params = {'user.fields': 'name,username'}
     user_response = requests.get(user_url, headers=headers, params=params)
 
     if user_response.status_code != 200:
@@ -122,16 +122,11 @@ def twitter_oauth_callback(request):
         oauth_provider='twitter',
         defaults={
             'username': twitter_user['username'],
-            'email': twitter_user.get('email', f"{twitter_user['username']}@twitter.local"),
+            'email': f"{twitter_user['username']}@twitter.local",
             'first_name': twitter_user.get('name', '').split()[0] if twitter_user.get('name') else '',
             'last_name': ' '.join(twitter_user.get('name', '').split()[1:]) if twitter_user.get('name') and len(twitter_user.get('name', '').split()) > 1 else '',
         }
     )
-
-    # If user already exists but email wasn't set, update it
-    if not created and not user.email and twitter_user.get('email'):
-        user.email = twitter_user['email']
-        user.save()
 
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)

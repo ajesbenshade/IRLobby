@@ -67,6 +67,10 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
+# Twitter OAuth settings
+TWITTER_CLIENT_ID = config('TWITTER_CLIENT_ID', default='')
+TWITTER_CLIENT_SECRET = config('TWITTER_CLIENT_SECRET', default='')
+
 # Social Account Providers
 SOCIALACCOUNT_PROVIDERS = {
     'twitter': {

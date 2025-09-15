@@ -130,11 +130,11 @@ export default function Discovery() {
   if (!activities.length || currentActivityIndex >= activities.length) {
     return (
       <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
-        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <MapPin className="w-12 h-12 text-gray-400" />
+        <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+          <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-500" />
         </div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">No more activities</h2>
-        <p className="text-gray-600 mb-6">Check back later for new events in your area!</p>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">No more activities</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">Check back later for new events in your area!</p>
         <Button 
           onClick={() => window.location.reload()} 
           className="bg-primary text-white"
@@ -146,12 +146,12 @@ export default function Discovery() {
   }
 
   return (
-    <div className="bg-gray-50 pb-20 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
       {/* Header */}
-      <header className="bg-white shadow-sm p-4 flex items-center justify-between">
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Discover Events</h2>
-          <p className="text-sm text-gray-500">Find activities near you</p>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -160,7 +160,7 @@ export default function Discovery() {
             className="w-10 h-10 p-0 relative"
             onClick={() => setShowNotifications(true)}
           >
-            <Bell className="w-5 h-5 text-gray-600" />
+            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             {/* {unreadNotifications > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
@@ -173,7 +173,7 @@ export default function Discovery() {
             className="w-10 h-10 p-0"
             onClick={() => setShowMapView(true)}
           >
-            <Map className="w-5 h-5 text-gray-600" />
+            <Map className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </Button>
           <Button 
             variant="ghost" 

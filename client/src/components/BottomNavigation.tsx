@@ -45,7 +45,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 z-40">
+    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-40">
       <div className="flex justify-around items-center py-2">
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;
@@ -60,7 +60,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
               className={`flex flex-col items-center justify-center p-2 relative min-h-[60px] flex-1 ${
                 isActive 
                   ? 'text-primary' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
               {item.isSpecial ? (

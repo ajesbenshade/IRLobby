@@ -38,6 +38,7 @@ def swipe_activity(request, pk):
         # Create the swipe
         swipe = Swipe.objects.create(user=user, activity=activity, direction=direction)
 
+        matched = False
         # If it's a right swipe, check for matches
         if direction == 'right':
             # Check if the activity host swiped right on any activity by this user
@@ -52,11 +53,15 @@ def swipe_activity(request, pk):
             for user_activity in user_activities:
                 if user_activity.id in host_right_swipes:
                     # Create a match
-                    Match.objects.get_or_create(
+                    match_obj, created = Match.objects.get_or_create(
                         activity=activity,
                         user_a=min(user.id, activity.host.id, key=lambda x: x),
                         user_b=max(user.id, activity.host.id, key=lambda x: x)
                     )
+                    matched = created  # Only consider it a new match if it was just created
                     break
 
-    return Response({'message': f'Swiped {direction}'}, status=status.HTTP_201_CREATED)
+    return Response({
+        'message': f'Swiped {direction}',
+        'matched': matched
+    }, status=status.HTTP_201_CREATED)

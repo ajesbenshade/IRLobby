@@ -136,6 +136,13 @@ def twitter_oauth_callback(request):
         'created': created
     }, status=status.HTTP_200_OK)
 
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"OAuth callback - Setting cookies for user: {user.username}")
+    logger.info(f"OAuth callback - Access token: {str(refresh.access_token)[:20]}...")
+    logger.info(f"OAuth callback - Refresh token: {str(refresh)[:20]}...")
+
     response.set_cookie(
         'access_token',
         str(refresh.access_token),
@@ -154,5 +161,7 @@ def twitter_oauth_callback(request):
         path='/',
         max_age=60 * 60 * 24 * 7  # 7 days
     )
+
+    logger.info(f"OAuth callback - Response cookies: {response.cookies}")
 
     return response

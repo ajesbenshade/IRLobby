@@ -15,9 +15,9 @@ const TwitterCallback = () => {
     const handleCallback = async () => {
       try {
         // Check if we have tokens in URL (new flow)
-        const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
-        const userId = searchParams.get('user_id');
+        let accessToken = searchParams.get('access_token');
+        let refreshToken = searchParams.get('refresh_token');
+        let userId = searchParams.get('user_id');
 
         if (accessToken && refreshToken) {
           // New flow: Backend redirected with tokens in URL
@@ -70,19 +70,43 @@ const TwitterCallback = () => {
           throw new Error(data.error || 'Failed to authenticate with Twitter');
         }
 
-        // Clean up
-        sessionStorage.removeItem('twitter_code_verifier');
+        // Handle backend response - extract tokens from redirect_url or direct response
+        if (data.redirect_url) {
+          // Backend returned redirect URL with tokens
+          const url = new URL(data.redirect_url);
+          accessToken = url.searchParams.get('access_token');
+          refreshToken = url.searchParams.get('refresh_token');
+          userId = url.searchParams.get('user_id');
+        } else if (data.access_token) {
+          // Backend returned tokens directly
+          accessToken = data.access_token;
+          refreshToken = data.refresh_token;
+          userId = data.user?.id;
+        }
 
-        // Trigger a refresh of the authentication state
-        await handleAuthentication();
+        if (accessToken && refreshToken) {
+          console.log('Received tokens from backend, setting cookies...');
 
-        toast({
-          title: 'Success',
-          description: 'Successfully logged in with Twitter!',
-        });
+          // Set cookies on frontend domain
+          document.cookie = `access_token=${accessToken}; path=/; max-age=3600; secure; samesite=Lax`;
+          document.cookie = `refresh_token=${refreshToken}; path=/; max-age=604800; secure; samesite=Lax`;
 
-        // Redirect to home
-        navigate('/', { replace: true });
+          // Clean up
+          sessionStorage.removeItem('twitter_code_verifier');
+
+          // Trigger authentication refresh
+          await handleAuthentication();
+
+          toast({
+            title: 'Success',
+            description: 'Successfully logged in with Twitter!',
+          });
+
+          navigate('/', { replace: true });
+          return;
+        }
+
+        throw new Error('Failed to retrieve tokens from the response');
       } catch (error) {
         console.error('Twitter OAuth callback error:', error);
 

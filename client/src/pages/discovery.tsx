@@ -24,14 +24,11 @@ export default function Discovery() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
-  // Get auth token from localStorage
-  const token = localStorage.getItem('authToken');
-
   // Use the token in the API request
   const { data: activities = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/activities', filters],
     queryFn: async () => {
-      console.log('Fetching activities with token:', !!token);
+      console.log('Fetching activities with cookies');
       
       const response = await apiRequest('GET', '/api/activities/');
       
@@ -47,7 +44,7 @@ export default function Discovery() {
       console.log('Found activities:', data.length);
       return data;
     },
-    enabled: !!token, // Only run the query if we have a token
+    enabled: true, // Always run the query
     retry: 1,
   });
 
@@ -58,9 +55,9 @@ export default function Discovery() {
     }
     
     if (activities && activities.length === 0 && !isLoading) {
-      console.log('No activities found. Auth token present:', !!token);
+      console.log('No activities found');
     }
-  }, [activities, error, isLoading, token]);
+  }, [activities, error, isLoading]);
 
   // Comment out notifications for now since the endpoint doesn't exist
   // const { data: unreadNotifications = 0 } = useQuery({

@@ -8,7 +8,7 @@ import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
 
 interface AuthFormProps {
-  onAuthenticated: (token: string, userId: string) => void;
+  onAuthenticated: (userId: string) => void;
 }
 
 const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
@@ -82,7 +82,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       // Small delay to ensure cookies are set before making authenticated requests
       setTimeout(async () => {
         // Call the onAuthenticated callback (no longer needs token parameter)
-        await onAuthenticated('', data.user.id);
+        await onAuthenticated(data.user.id);
       }, 100);
 
       toast({
@@ -123,16 +123,13 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         throw new Error(errorMessage);
       }
 
-      // Store the tokens in localStorage (Django JWT format)
-      localStorage.setItem('authToken', data.tokens.access);
-      localStorage.setItem('refreshToken', data.tokens.refresh);
-      localStorage.setItem('userId', data.user.id);
-      console.log('Registration successful, token stored:', data.tokens.access);
+      // Tokens are now stored in httpOnly cookies by the backend
+      console.log('Registration successful, tokens stored in cookies');
 
-      // Small delay to ensure token is stored before making authenticated requests
+      // Small delay to ensure cookies are set before making authenticated requests
       setTimeout(async () => {
         // Call the onAuthenticated callback
-        await onAuthenticated(data.tokens.access, data.user.id);
+        await onAuthenticated(data.user.id);
       }, 100);
 
       toast({

@@ -77,44 +77,6 @@ export async function apiRequest(...args: any[]): Promise<Response> {
       console.error('Error stack:', error.stack);
     }
     
-    // If we get a 401 and have a refresh token, try to refresh
-    if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {
-      console.log('Attempting token refresh...');
-      try {
-        const refreshResponse = await fetch(`${baseUrl}/api/auth/token/refresh/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh: localStorage.getItem('refreshToken') })
-        });
-        
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
-          localStorage.setItem('authToken', refreshData.access);
-          
-          // Retry the original request with new token
-          console.log('Token refreshed, retrying request...');
-          const retryHeaders = { ...headers };
-          retryHeaders['Authorization'] = `Bearer ${refreshData.access}`;
-          
-          const retryRes = await fetch(url, {
-            method,
-            headers: retryHeaders,
-            body: data !== undefined ? JSON.stringify(data) : undefined,
-            // credentials: 'include',  // Remove credentials for production CORS
-          });
-          
-          await throwIfResNotOk(retryRes);
-          return retryRes;
-        }
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-      }
-    }
-    
-    // Return a mock response for development/demo purposes
-    if (method === 'GET' && url.includes('/api/auth/twitter/url/')) {
-      return new Response(JSON.stringify({ auth_url: '#' }), { status: 200 });
-    }
     throw error;
   }
 }
@@ -124,10 +86,6 @@ export const getQueryFn =
   (options: { on401: UnauthorizedBehavior }): QueryFunction<any> =>
   async ({ queryKey }) => {
     const unauthorizedBehavior = options.on401;
-    const token = localStorage.getItem('authToken');
-    const headers: Record<string, string> = {};
-
-    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let url = queryKey[0] as string;
     // Prepend base URL for production
@@ -136,12 +94,9 @@ export const getQueryFn =
       url = `${baseUrl}${url}`;
     }
 
-    console.log(`Query request to ${url} with token: ${token ? 'Yes' : 'No'}`);
-
     try {
       const res = await fetch(url, {
-        headers,
-        // credentials: 'include',  // Remove credentials for production CORS
+        credentials: 'include',  // Include cookies with requests
       });
 
       if (unauthorizedBehavior === 'returnNull' && res.status === 401) return null;

@@ -81,7 +81,6 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Django
 *.log
@@ -90,43 +89,3 @@ db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
-
-# Environment variables
-.env
-.env.local
-.env.production.local
-.env.development.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-*.tmp
-
-# Node.js (if any)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Vercel
-.vercel
-
-# Coverage
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-
-# Database
-*.sqlite3
-*.db
-
-# Temporary files
-*.tmp
-*.bak

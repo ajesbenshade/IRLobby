@@ -27,9 +27,7 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
       console.log(`Fetching chat messages for activity: ${chatRoomId}`);
       try {
         const response = await fetch(`/api/activities/${chatRoomId}/chat`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
+          credentials: 'include',  // Use cookies instead of localStorage token
         });
         
         if (!response.ok) {

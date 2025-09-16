@@ -75,10 +75,19 @@ const TwitterCallback = () => {
         if (data.access_token && data.refresh_token) {
           console.log('Received tokens from backend, storing in localStorage...');
 
-          // Store tokens in localStorage for cross-domain compatibility
-          localStorage.setItem('authToken', data.access_token);
-          localStorage.setItem('refreshToken', data.refresh_token);
-          localStorage.setItem('userId', data.user?.id || '');
+          // Store tokens in localStorage (Safari-safe)
+          try {
+            localStorage.setItem('authToken', data.access_token);
+            localStorage.setItem('refreshToken', data.refresh_token);
+            localStorage.setItem('userId', data.user?.id || '');
+            console.log('Tokens stored successfully');
+          } catch (e) {
+            console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
+            // Fallback: could store in sessionStorage or memory
+            sessionStorage.setItem('authToken', data.access_token);
+            sessionStorage.setItem('refreshToken', data.refresh_token);
+            sessionStorage.setItem('userId', data.user?.id || '');
+          }
 
           // Clean up
           sessionStorage.removeItem('twitter_code_verifier');

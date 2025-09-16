@@ -48,7 +48,7 @@ def register(request):
             str(refresh),
             httponly=True,
             secure=not settings.DEBUG,
-            samesite='Lax',
+            samesite='None' if not settings.DEBUG else 'Lax',
             max_age=60 * 60 * 24 * 7  # 7 days
         )
 
@@ -82,7 +82,7 @@ def login(request):
             str(refresh),
             httponly=True,
             secure=not settings.DEBUG,
-            samesite='Lax',
+            samesite='None' if not settings.DEBUG else 'Lax',
             max_age=60 * 60 * 24 * 7  # 7 days
         )
 

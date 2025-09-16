@@ -31,23 +31,44 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const handleTwitterOAuth = async () => {
     try {
       setIsLoading(true);
+      console.log('Starting Twitter OAuth request...');
+      console.log('Environment check:');
+      console.log('- VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+      console.log('- User agent:', navigator.userAgent);
+      console.log('- Is iPhone:', /iPhone|iPad|iPod/.test(navigator.userAgent));
+      console.log('- Is Safari:', /^((?!chrome|android).)*safari/i.test(navigator.userAgent));
+      
       const response = await apiRequest('GET', '/api/auth/twitter/url/');
+      console.log('Twitter OAuth response status:', response.status);
+      console.log('Twitter OAuth response ok:', response.ok);
+      
       const data = await response.json();
+      console.log('Twitter OAuth response data:', data);
+      console.log('Data has auth_url:', !!data.auth_url);
+      console.log('Data has code_verifier:', !!data.code_verifier);
 
       if (response.ok && data.auth_url && data.code_verifier) {
         // Store the code_verifier for use in the callback
         sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
+        console.log('Code verifier stored, redirecting to:', data.auth_url);
 
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
       } else {
-        throw new Error('Failed to get Twitter OAuth URL');
+        console.error('Twitter OAuth validation failed:', { ok: response.ok, hasAuthUrl: !!data.auth_url, hasCodeVerifier: !!data.code_verifier });
+        throw new Error(`OAuth validation failed: ${JSON.stringify({ ok: response.ok, hasAuthUrl: !!data.auth_url, hasCodeVerifier: !!data.code_verifier })}`);
       }
     } catch (error) {
       console.error('Twitter OAuth error:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack'
+      });
+      
       toast({
         title: 'Twitter OAuth Unavailable',
-        description: 'Twitter OAuth is not configured for this environment. Please use email/password login or contact support.',
+        description: `Twitter OAuth failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please check console for details or use email/password login.`,
         variant: 'default',
       });
     } finally {

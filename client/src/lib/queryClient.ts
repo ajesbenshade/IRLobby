@@ -40,10 +40,14 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   }
 
   // Prepend base URL for production
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://irlobby-backend.onrender.com';
   if (baseUrl && !url.startsWith('http')) {
     url = `${baseUrl}${url}`;
   }
+
+  console.log(`[API Request] ${method} ${url}`);
+  console.log(`[API Request] Base URL: ${baseUrl}`);
+  console.log(`[API Request] Full URL: ${url}`);
 
   const headers: Record<string, string> = {};
 
@@ -75,14 +79,21 @@ export async function apiRequest(...args: any[]): Promise<Response> {
 
   // Safari-specific headers to avoid CORS issues
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  if (isSafari) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  if (isSafari || isIOS) {
     headers['Cache-Control'] = 'no-cache';
     headers['Pragma'] = 'no-cache';
+    // Add additional headers for iOS compatibility
+    headers['X-Requested-With'] = 'XMLHttpRequest';
   }
 
   console.log(`Making ${method} request to ${url}`);
   console.log('Request headers:', headers);
   console.log('Request body:', data);
+  console.log('User agent:', navigator.userAgent);
+  console.log('Is Safari:', isSafari);
+  console.log('Is iOS:', isIOS);
 
   try {
     const res = await fetch(url, {
@@ -98,11 +109,13 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     await throwIfResNotOk(res);
     return res;
   } catch (error) {
-    console.error(`API request failed for ${method} ${url}:`, error);
-    if (error instanceof Error) {
-      console.error('Error type:', error.constructor.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+    console.error(`[API Error] ${method} ${url}:`, error);
+    console.error('[API Error] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[API Error] Error message:', error instanceof Error ? error.message : String(error));
+    
+    // Check for common iPhone/Safari issues
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('[API Error] This might be a CORS or network issue on iPhone');
     }
     
     throw error;
@@ -148,9 +161,11 @@ export const getQueryFn =
 
       // Safari-specific headers
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      if (isSafari) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isSafari || isIOS) {
         headers['Cache-Control'] = 'no-cache';
         headers['Pragma'] = 'no-cache';
+        headers['X-Requested-With'] = 'XMLHttpRequest';
       }
 
       const res = await fetch(url, {

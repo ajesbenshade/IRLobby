@@ -41,7 +41,6 @@ def register(request):
             httponly=True,
             secure=not settings.DEBUG,
             samesite='None' if not settings.DEBUG else 'Lax',
-            domain='.onrender.com' if not settings.DEBUG else None,
             path='/',
             max_age=60 * 60  # 1 hour
         )
@@ -51,7 +50,6 @@ def register(request):
             httponly=True,
             secure=not settings.DEBUG,
             samesite='None' if not settings.DEBUG else 'Lax',
-            domain='.onrender.com' if not settings.DEBUG else None,
             path='/',
             max_age=60 * 60 * 24 * 7  # 7 days
         )
@@ -79,7 +77,6 @@ def login(request):
             httponly=True,
             secure=not settings.DEBUG,  # Only secure in production
             samesite='None' if not settings.DEBUG else 'Lax',
-            domain='.onrender.com' if not settings.DEBUG else None,
             path='/',
             max_age=60 * 60  # 1 hour
         )
@@ -89,7 +86,6 @@ def login(request):
             httponly=True,
             secure=not settings.DEBUG,
             samesite='None' if not settings.DEBUG else 'Lax',
-            domain='.onrender.com' if not settings.DEBUG else None,
             path='/',
             max_age=60 * 60 * 24 * 7  # 7 days
         )

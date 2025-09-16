@@ -128,14 +128,29 @@ def twitter_oauth_callback(request):
         }
     )
 
-    # Generate JWT tokens
+    # Generate JWT tokens and set httpOnly cookies
     refresh = RefreshToken.for_user(user)
 
-    return Response({
+    response = Response({
         'user': UserSerializer(user).data,
-        'tokens': {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        },
         'created': created
     }, status=status.HTTP_200_OK)
+
+    response.set_cookie(
+        'access_token',
+        str(refresh.access_token),
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite='Lax',
+        max_age=60 * 60  # 1 hour
+    )
+    response.set_cookie(
+        'refresh_token',
+        str(refresh),
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite='Lax',
+        max_age=60 * 60 * 24 * 7  # 7 days
+    )
+
+    return response

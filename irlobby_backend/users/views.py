@@ -12,6 +12,7 @@ from activities.models import Activity
 from swipes.models import Swipe
 from matches.models import Match
 from reviews.models import Review
+from django.conf import settings
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -27,13 +28,31 @@ def register(request):
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
-        return Response({
+
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
+            'message': 'Registration successful'
         }, status=status.HTTP_201_CREATED)
+
+        # Set httpOnly cookies for secure token storage
+        response.set_cookie(
+            'access_token',
+            str(refresh.access_token),
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite='Lax',
+            max_age=60 * 60  # 1 hour
+        )
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite='Lax',
+            max_age=60 * 60 * 24 * 7  # 7 days
+        )
+
+        return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -43,13 +62,31 @@ def login(request):
     if serializer.is_valid():
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
-        return Response({
+
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
+            'message': 'Login successful'
         }, status=status.HTTP_200_OK)
+
+        # Set httpOnly cookies for secure token storage
+        response.set_cookie(
+            'access_token',
+            str(refresh.access_token),
+            httponly=True,
+            secure=not settings.DEBUG,  # Only secure in production
+            samesite='Lax',
+            max_age=60 * 60  # 1 hour
+        )
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite='Lax',
+            max_age=60 * 60 * 24 * 7  # 7 days
+        )
+
+        return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
@@ -142,6 +179,27 @@ def export_user_data(request):
             'error': 'Failed to export user data',
             'details': str(e)
         }, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def auth_status(request):
+    """Check authentication status and return user data"""
+    return Response({
+        'isAuthenticated': True,
+        'user': UserSerializer(request.user).data
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """Logout user by clearing authentication cookies"""
+    response = Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+
+    # Clear the authentication cookies
+    response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
+
+    return response
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

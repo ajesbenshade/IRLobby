@@ -128,40 +128,22 @@ def twitter_oauth_callback(request):
         }
     )
 
-    # Generate JWT tokens and set httpOnly cookies
+    # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
 
-    response = Response({
-        'user': UserSerializer(user).data,
-        'created': created
-    }, status=status.HTTP_200_OK)
+    # For cross-domain OAuth, redirect with tokens in URL
+    # Frontend will extract tokens and set cookies on its domain
+    redirect_url = f"https://irlobby.vercel.app/auth/twitter/callback?access_token={str(refresh.access_token)}&refresh_token={str(refresh)}&user_id={user.id}"
 
     # Debug logging
     import logging
     logger = logging.getLogger(__name__)
-    logger.info(f"OAuth callback - Setting cookies for user: {user.username}")
+    logger.info(f"OAuth callback - Redirecting user: {user.username} with tokens")
     logger.info(f"OAuth callback - Access token: {str(refresh.access_token)[:20]}...")
-    logger.info(f"OAuth callback - Refresh token: {str(refresh)[:20]}...")
+    logger.info(f"OAuth callback - Redirect URL: {redirect_url[:100]}...")
 
-    response.set_cookie(
-        'access_token',
-        str(refresh.access_token),
-        httponly=True,
-        secure=not settings.DEBUG,
-        samesite='None' if not settings.DEBUG else 'Lax',
-        path='/',
-        max_age=60 * 60  # 1 hour
-    )
-    response.set_cookie(
-        'refresh_token',
-        str(refresh),
-        httponly=True,
-        secure=not settings.DEBUG,
-        samesite='None' if not settings.DEBUG else 'Lax',
-        path='/',
-        max_age=60 * 60 * 24 * 7  # 7 days
-    )
-
-    logger.info(f"OAuth callback - Response cookies: {response.cookies}")
-
-    return response
+    return Response({
+        'redirect_url': redirect_url,
+        'user': UserSerializer(user).data,
+        'created': created
+    }, status=status.HTTP_200_OK)

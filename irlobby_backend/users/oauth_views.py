@@ -141,7 +141,7 @@ def twitter_oauth_callback(request):
         str(refresh.access_token),
         httponly=True,
         secure=not settings.DEBUG,
-        samesite='Lax',
+        samesite='None' if not settings.DEBUG else 'Lax',
         max_age=60 * 60  # 1 hour
     )
     response.set_cookie(
@@ -149,7 +149,7 @@ def twitter_oauth_callback(request):
         str(refresh),
         httponly=True,
         secure=not settings.DEBUG,
-        samesite='Lax',
+        samesite='None' if not settings.DEBUG else 'Lax',
         max_age=60 * 60 * 24 * 7  # 7 days
     )
 

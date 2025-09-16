@@ -44,6 +44,13 @@ def twitter_oauth_url(request):
 
     scope = 'tweet.read users.read'
 
+    # Validate credentials before proceeding
+    client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
+    if not client_secret or client_secret == '':
+        return Response({
+            'error': 'Twitter OAuth not configured - missing client secret'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     auth_url = (
         f"https://twitter.com/i/oauth2/authorize?"
         f"response_type=code&"
@@ -131,19 +138,11 @@ def twitter_oauth_callback(request):
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
 
-    # Return tokens directly in JSON response for frontend to handle
-    response_data = {
-        'access_token': str(refresh.access_token),
-        'refresh_token': str(refresh),
+    return Response({
         'user': UserSerializer(user).data,
+        'tokens': {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        },
         'created': created
-    }
-
-    # Debug logging
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"OAuth callback - Returning tokens for user: {user.username}")
-    logger.info(f"OAuth callback - Access token: {str(refresh.access_token)[:20]}...")
-    logger.info(f"OAuth callback - Response data keys: {list(response_data.keys())}")
-
-    return Response(response_data, status=status.HTTP_200_OK)
+    }, status=status.HTTP_200_OK)

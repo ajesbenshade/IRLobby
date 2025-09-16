@@ -8,7 +8,7 @@ import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
 
 interface AuthFormProps {
-  onAuthenticated: (userId: string) => void;
+  onAuthenticated: (token: string, userId: string) => void;
 }
 
 const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
@@ -31,45 +31,46 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const handleTwitterOAuth = async () => {
     try {
       setIsLoading(true);
-      console.log('Starting Twitter OAuth request...');
-      console.log('Environment check:');
-      console.log('- VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-      console.log('- User agent:', navigator.userAgent);
-      console.log('- Is iPhone:', /iPhone|iPad|iPod/.test(navigator.userAgent));
-      console.log('- Is Safari:', /^((?!chrome|android).)*safari/i.test(navigator.userAgent));
+      console.log('Starting Twitter OAuth...');
       
       const response = await apiRequest('GET', '/api/auth/twitter/url/');
-      console.log('Twitter OAuth response status:', response.status);
-      console.log('Twitter OAuth response ok:', response.ok);
+      console.log('OAuth URL response:', response.status, response);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OAuth URL error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
       
       const data = await response.json();
-      console.log('Twitter OAuth response data:', data);
-      console.log('Data has auth_url:', !!data.auth_url);
-      console.log('Data has code_verifier:', !!data.code_verifier);
+      console.log('OAuth URL data:', data);
 
-      if (response.ok && data.auth_url && data.code_verifier) {
+      if (data.auth_url && data.code_verifier) {
         // Store the code_verifier for use in the callback
         sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
-        console.log('Code verifier stored, redirecting to:', data.auth_url);
-
+        console.log('Redirecting to Twitter OAuth URL...');
+        
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
       } else {
-        console.error('Twitter OAuth validation failed:', { ok: response.ok, hasAuthUrl: !!data.auth_url, hasCodeVerifier: !!data.code_verifier });
-        throw new Error(`OAuth validation failed: ${JSON.stringify({ ok: response.ok, hasAuthUrl: !!data.auth_url, hasCodeVerifier: !!data.code_verifier })}`);
+        console.error('Invalid OAuth response:', data);
+        throw new Error('Invalid OAuth response from server');
       }
     } catch (error) {
       console.error('Twitter OAuth error:', error);
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'No stack'
-      });
+      
+      // Check if it's a configuration error
+      const isConfigError = error instanceof Error && 
+        (error.message.includes('not configured') || 
+         error.message.includes('500') ||
+         error.message.includes('Twitter OAuth'));
       
       toast({
-        title: 'Twitter OAuth Unavailable',
-        description: `Twitter OAuth failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please check console for details or use email/password login.`,
-        variant: 'default',
+        title: isConfigError ? 'Twitter OAuth Not Configured' : 'Twitter OAuth Failed',
+        description: isConfigError 
+          ? 'Twitter login is temporarily unavailable. Please use email/password login.'
+          : 'Unable to connect to Twitter. Please try email/password login instead.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -91,31 +92,22 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Login response status:', response.status);
       const data = await response.json();
       console.log('Login response data:', data);
+      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // Store tokens in localStorage (Safari-safe)
-      if (data.access_token && data.refresh_token) {
-        try {
-          localStorage.setItem('authToken', data.access_token);
-          localStorage.setItem('refreshToken', data.refresh_token);
-          localStorage.setItem('userId', data.user?.id || '');
-          console.log('Tokens stored successfully in localStorage');
-        } catch (e) {
-          console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
-          // Fallback to sessionStorage
-          sessionStorage.setItem('authToken', data.access_token);
-          sessionStorage.setItem('refreshToken', data.refresh_token);
-          sessionStorage.setItem('userId', data.user?.id || '');
-        }
-      }
+      // Store the tokens in localStorage (Django JWT format)
+      localStorage.setItem('authToken', data.tokens.access);
+      localStorage.setItem('refreshToken', data.tokens.refresh);
+      localStorage.setItem('userId', data.user.id);
+      console.log('Login successful, token stored:', data.tokens.access);
 
-      // Small delay to ensure tokens are stored before making authenticated requests
+      // Small delay to ensure token is stored before making authenticated requests
       setTimeout(async () => {
         // Call the onAuthenticated callback
-        await onAuthenticated(data.user.id);
+        await onAuthenticated(data.tokens.access, data.user.id);
       }, 100);
 
       toast({
@@ -156,26 +148,16 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         throw new Error(errorMessage);
       }
 
-      // Store tokens in localStorage (Safari-safe)
-      if (data.access_token && data.refresh_token) {
-        try {
-          localStorage.setItem('authToken', data.access_token);
-          localStorage.setItem('refreshToken', data.refresh_token);
-          localStorage.setItem('userId', data.user?.id || '');
-          console.log('Tokens stored successfully in localStorage');
-        } catch (e) {
-          console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
-          // Fallback to sessionStorage
-          sessionStorage.setItem('authToken', data.access_token);
-          sessionStorage.setItem('refreshToken', data.refresh_token);
-          sessionStorage.setItem('userId', data.user?.id || '');
-        }
-      }
+      // Store the tokens in localStorage (Django JWT format)
+      localStorage.setItem('authToken', data.tokens.access);
+      localStorage.setItem('refreshToken', data.tokens.refresh);
+      localStorage.setItem('userId', data.user.id);
+      console.log('Registration successful, token stored:', data.tokens.access);
 
-      // Small delay to ensure tokens are stored before making authenticated requests
+      // Small delay to ensure token is stored before making authenticated requests
       setTimeout(async () => {
         // Call the onAuthenticated callback
-        await onAuthenticated(data.user.id);
+        await onAuthenticated(data.tokens.access, data.user.id);
       }, 100);
 
       toast({

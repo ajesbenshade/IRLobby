@@ -51,7 +51,12 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     headers['Content-Type'] = 'application/json';
   }
 
-  // Note: Authorization header is no longer needed as tokens are in httpOnly cookies
+  // Add Authorization header with token from localStorage
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   console.log(`Making ${method} request to ${url}`);
   console.log('Request headers:', headers);
   console.log('Request body:', data);
@@ -95,7 +100,14 @@ export const getQueryFn =
     }
 
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(url, {
+        headers,
         credentials: 'include',  // Include cookies with requests
       });
 

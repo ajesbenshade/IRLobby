@@ -15,7 +15,7 @@ services:
       - key: DATABASE_URL
         value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
       - key: CORS_ALLOWED_ORIGINS
-        value: https://irlobby.vercel.app,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081
+        value: https://irlobby.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081
       - key: TWITTER_CLIENT_ID
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
@@ -39,7 +39,7 @@ services:
       - key: DATABASE_URL
         value: postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a/irlobby_database
       - key: CORS_ALLOWED_ORIGINS
-        value: https://irlobby.vercel.app,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081
+        value: https://irlobby.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,exp://localhost:8081
       - key: TWITTER_CLIENT_ID
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET

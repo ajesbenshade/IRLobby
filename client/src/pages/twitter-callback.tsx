@@ -48,7 +48,7 @@ const TwitterCallback = () => {
 
         // Verify authentication by making a direct API call
         try {
-          const authCheckResponse = await apiRequest('GET', '/api/users/auth/status/');
+          const authCheckResponse = await apiRequest('GET', '/api/auth/twitter/verify/');
           const authData = await authCheckResponse.json();
 
           if (authData.isAuthenticated) {

@@ -46,14 +46,26 @@ const TwitterCallback = () => {
         // Trigger a refresh of the authentication state
         await handleAuthentication();
 
-        toast({
-          title: 'Success',
-          description: 'Successfully logged in with Twitter!',
-        });
+        // Verify authentication by making a direct API call
+        try {
+          const authCheckResponse = await apiRequest('GET', '/api/users/auth/status/');
+          const authData = await authCheckResponse.json();
 
-        // Redirect to home
-        navigate('/', { replace: true });
+          if (authData.isAuthenticated) {
+            toast({
+              title: 'Success',
+              description: 'Successfully logged in with Twitter!',
+            });
 
+            // Redirect to home
+            navigate('/', { replace: true });
+          } else {
+            throw new Error('Authentication verification failed');
+          }
+        } catch (authError) {
+          console.error('Auth verification failed:', authError);
+          throw new Error('Failed to verify authentication');
+        }
       } catch (error) {
         console.error('Twitter OAuth callback error:', error);
 

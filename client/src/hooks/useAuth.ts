@@ -17,11 +17,11 @@ export function useAuth() {
 
   // Check authentication status via API call (since tokens are in httpOnly cookies)
   const { data: authData, isLoading } = useQuery({
-    queryKey: ["/api/auth/status"],
+    queryKey: ["/api/users/auth/status"],
     retry: false,
     queryFn: async () => {
       try {
-        const response = await apiRequest('GET', '/api/auth/status/');
+        const response = await apiRequest('GET', '/api/users/auth/status/');
         return response.json();
       } catch (error) {
         console.warn('Authentication check failed:', error);
@@ -36,8 +36,8 @@ export function useAuth() {
   // Handle authentication (login/register) - now just triggers a refetch
   const handleAuthentication = useCallback(async () => {
     // Invalidate and refetch the auth status query
-    await queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/auth/status"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/users/auth/status"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/users/auth/status"] });
   }, [queryClient]);
 
   // Handle logout
@@ -50,7 +50,7 @@ export function useAuth() {
       queryClient.clear();
 
       // Invalidate the auth status query
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users/auth/status"] });
 
       // Small delay to ensure state updates propagate
       await new Promise(resolve => setTimeout(resolve, 100));

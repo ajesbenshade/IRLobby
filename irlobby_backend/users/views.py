@@ -188,9 +188,21 @@ def export_user_data(request):
 @permission_classes([IsAuthenticated])
 def auth_status(request):
     """Check authentication status and return user data"""
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Auth status request - Cookies: {request.COOKIES}")
+    logger.info(f"Auth status request - Headers: {dict(request.headers)}")
+    logger.info(f"Auth status request - User: {request.user}")
+    logger.info(f"Auth status request - Auth: {request.auth}")
+    
     return Response({
         'isAuthenticated': True,
-        'user': UserSerializer(request.user).data
+        'user': UserSerializer(request.user).data,
+        'debug': {
+            'cookies_received': list(request.COOKIES.keys()),
+            'user_id': request.user.id if request.user.is_authenticated else None,
+        }
     })
 
 @api_view(['POST'])

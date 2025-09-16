@@ -70,18 +70,30 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('Login response status:', response.status);
       const data = await response.json();
       console.log('Login response data:', data);
-      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // Tokens are now stored in httpOnly cookies by the backend
-      console.log('Login successful, tokens stored in cookies');
+      // Store tokens in localStorage (Safari-safe)
+      if (data.access_token && data.refresh_token) {
+        try {
+          localStorage.setItem('authToken', data.access_token);
+          localStorage.setItem('refreshToken', data.refresh_token);
+          localStorage.setItem('userId', data.user?.id || '');
+          console.log('Tokens stored successfully in localStorage');
+        } catch (e) {
+          console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
+          // Fallback to sessionStorage
+          sessionStorage.setItem('authToken', data.access_token);
+          sessionStorage.setItem('refreshToken', data.refresh_token);
+          sessionStorage.setItem('userId', data.user?.id || '');
+        }
+      }
 
-      // Small delay to ensure cookies are set before making authenticated requests
+      // Small delay to ensure tokens are stored before making authenticated requests
       setTimeout(async () => {
-        // Call the onAuthenticated callback (no longer needs token parameter)
+        // Call the onAuthenticated callback
         await onAuthenticated(data.user.id);
       }, 100);
 
@@ -123,10 +135,23 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         throw new Error(errorMessage);
       }
 
-      // Tokens are now stored in httpOnly cookies by the backend
-      console.log('Registration successful, tokens stored in cookies');
+      // Store tokens in localStorage (Safari-safe)
+      if (data.access_token && data.refresh_token) {
+        try {
+          localStorage.setItem('authToken', data.access_token);
+          localStorage.setItem('refreshToken', data.refresh_token);
+          localStorage.setItem('userId', data.user?.id || '');
+          console.log('Tokens stored successfully in localStorage');
+        } catch (e) {
+          console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
+          // Fallback to sessionStorage
+          sessionStorage.setItem('authToken', data.access_token);
+          sessionStorage.setItem('refreshToken', data.refresh_token);
+          sessionStorage.setItem('userId', data.user?.id || '');
+        }
+      }
 
-      // Small delay to ensure cookies are set before making authenticated requests
+      // Small delay to ensure tokens are stored before making authenticated requests
       setTimeout(async () => {
         // Call the onAuthenticated callback
         await onAuthenticated(data.user.id);

@@ -243,6 +243,10 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
+    
+    # Cross-domain cookie settings
+    SESSION_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'None'
 
     # Security headers
     SECURE_CONTENT_TYPE_NOSNIFF = True

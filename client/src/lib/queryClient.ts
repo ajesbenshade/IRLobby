@@ -52,9 +52,32 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   }
 
   // Add Authorization header with token from localStorage
-  const token = localStorage.getItem('authToken');
+  let token: string | null = null;
+  try {
+    token = localStorage.getItem('authToken');
+    // Fallback to sessionStorage for Safari private mode
+    if (!token) {
+      token = sessionStorage.getItem('authToken');
+    }
+  } catch (e) {
+    // Safari private browsing mode may throw errors
+    console.warn('localStorage not available, trying sessionStorage:', e);
+    try {
+      token = sessionStorage.getItem('authToken');
+    } catch (e2) {
+      console.warn('sessionStorage also not available:', e2);
+    }
+  }
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Safari-specific headers to avoid CORS issues
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if (isSafari) {
+    headers['Cache-Control'] = 'no-cache';
+    headers['Pragma'] = 'no-cache';
   }
 
   console.log(`Making ${method} request to ${url}`);
@@ -100,10 +123,34 @@ export const getQueryFn =
     }
 
     try {
-      const token = localStorage.getItem('authToken');
+      // Add Authorization header with token from localStorage (Safari-safe)
+      let token: string | null = null;
+      try {
+        token = localStorage.getItem('authToken');
+        // Fallback to sessionStorage for Safari private mode
+        if (!token) {
+          token = sessionStorage.getItem('authToken');
+        }
+      } catch (e) {
+        // Safari private browsing mode may throw errors
+        console.warn('localStorage not available, trying sessionStorage:', e);
+        try {
+          token = sessionStorage.getItem('authToken');
+        } catch (e2) {
+          console.warn('sessionStorage also not available:', e2);
+        }
+      }
+
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Safari-specific headers
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      if (isSafari) {
+        headers['Cache-Control'] = 'no-cache';
+        headers['Pragma'] = 'no-cache';
       }
 
       const res = await fetch(url, {

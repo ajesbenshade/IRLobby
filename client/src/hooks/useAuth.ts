@@ -46,6 +46,16 @@ export function useAuth() {
       // Call logout API to clear cookies
       await apiRequest('POST', '/api/users/logout/');
 
+      // Clear localStorage tokens
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userId');
+
+      // Clear sessionStorage tokens (Safari fallback)
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('userId');
+
       // Clear all queries and force a complete reset
       queryClient.clear();
 

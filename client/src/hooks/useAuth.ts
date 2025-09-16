@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { apiRequest } from '../lib/queryClient';
 
 interface User {
@@ -14,45 +14,46 @@ interface User {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
-  
-  // Fetch user data if token exists
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/users/profile"],
-    enabled: !!token,
+
+  // Check authentication status via API call (since tokens are in httpOnly cookies)
+  const { data: authData, isLoading } = useQuery({
+    queryKey: ["/api/auth/status"],
     retry: false,
     queryFn: async () => {
-      if (!token) return null;
-      
       try {
-        const response = await apiRequest('GET', '/api/users/profile/');
+        const response = await apiRequest('GET', '/api/auth/status/');
         return response.json();
       } catch (error) {
-        console.warn('Backend not available, running in frontend-only mode:', error);
-        return null;
+        console.warn('Authentication check failed:', error);
+        return { isAuthenticated: false, user: null };
       }
     }
   });
 
-  // Handle authentication (login/register)
-  const handleAuthentication = useCallback(async (newToken: string, userId: string) => {
-    localStorage.setItem('authToken', newToken);
-    localStorage.setItem('userId', userId);
-    setToken(newToken);
-    // Invalidate and refetch the user profile query
-    await queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
-    // Force a refetch to ensure the user data is loaded
-    await queryClient.refetchQueries({ queryKey: ["/api/users/profile"] });
+  const user = authData?.user || null;
+  const isAuthenticated = authData?.isAuthenticated || false;
+
+  // Handle authentication (login/register) - now just triggers a refetch
+  const handleAuthentication = useCallback(async () => {
+    // Invalidate and refetch the auth status query
+    await queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/auth/status"] });
   }, [queryClient]);
 
   // Handle logout
   const logout = useCallback(async () => {
     try {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userId');
-      setToken(null);
+      // Call logout API to clear cookies
+      await apiRequest('POST', '/api/users/logout/');
+
+      // Clear all queries and force a complete reset
       queryClient.clear();
+
+      // Invalidate the auth status query
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
+
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -73,7 +74,6 @@ export function useAuth() {
       const data = await response.json();
       
       localStorage.setItem('authToken', data.access);
-      setToken(data.access);
       return data.access;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -84,9 +84,8 @@ export function useAuth() {
 
   return {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isLoading,
-    token,
     handleAuthentication,
     logout,
     refreshToken,

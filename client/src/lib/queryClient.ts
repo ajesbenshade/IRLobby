@@ -45,21 +45,14 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     url = `${baseUrl}${url}`;
   }
 
-  const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {};
 
   if (data !== undefined && data !== null) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-    console.log('Sending Authorization header:', `Bearer ${token}`);
-    console.log('Token length:', token.length);
-    console.log('Token starts with:', token.substring(0, 20));
-  }
-
-  console.log(`Making ${method} request to ${url} with token: ${token ? 'Yes' : 'No'}`);
+  // Note: Authorization header is no longer needed as tokens are in httpOnly cookies
+  console.log(`Making ${method} request to ${url}`);
   console.log('Request headers:', headers);
   console.log('Request body:', data);
 
@@ -68,7 +61,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
       method,
       headers,
       body: data !== undefined ? JSON.stringify(data) : undefined,
-      // credentials: 'include',  // Remove credentials for production CORS
+      credentials: 'include',  // Include cookies with requests
     });
 
     console.log('Response status:', res.status);

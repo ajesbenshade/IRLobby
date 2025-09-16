@@ -31,28 +31,13 @@ def register(request):
 
         response = Response({
             'user': UserSerializer(user).data,
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
             'message': 'Registration successful'
         }, status=status.HTTP_201_CREATED)
 
-        # Set httpOnly cookies for secure token storage
-        response.set_cookie(
-            'access_token',
-            str(refresh.access_token),
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite='None' if not settings.DEBUG else 'Lax',
-            path='/',
-            max_age=60 * 60  # 1 hour
-        )
-        response.set_cookie(
-            'refresh_token',
-            str(refresh),
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite='None' if not settings.DEBUG else 'Lax',
-            path='/',
-            max_age=60 * 60 * 24 * 7  # 7 days
-        )
+        # Removed cookie setting for better iPhone compatibility
+        # Tokens are now returned in JSON response for frontend to handle
 
         return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -67,28 +52,13 @@ def login(request):
 
         response = Response({
             'user': UserSerializer(user).data,
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
             'message': 'Login successful'
         }, status=status.HTTP_200_OK)
 
-        # Set httpOnly cookies for secure token storage
-        response.set_cookie(
-            'access_token',
-            str(refresh.access_token),
-            httponly=True,
-            secure=not settings.DEBUG,  # Only secure in production
-            samesite='None' if not settings.DEBUG else 'Lax',
-            path='/',
-            max_age=60 * 60  # 1 hour
-        )
-        response.set_cookie(
-            'refresh_token',
-            str(refresh),
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite='None' if not settings.DEBUG else 'Lax',
-            path='/',
-            max_age=60 * 60 * 24 * 7  # 7 days
-        )
+        # Removed cookie setting for better iPhone compatibility
+        # Tokens are now returned in JSON response for frontend to handle
 
         return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -188,34 +158,18 @@ def export_user_data(request):
 @permission_classes([IsAuthenticated])
 def auth_status(request):
     """Check authentication status and return user data"""
-    # Debug logging
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Auth status request - Cookies: {request.COOKIES}")
-    logger.info(f"Auth status request - Headers: {dict(request.headers)}")
-    logger.info(f"Auth status request - User: {request.user}")
-    logger.info(f"Auth status request - Auth: {request.auth}")
-    
     return Response({
         'isAuthenticated': True,
-        'user': UserSerializer(request.user).data,
-        'debug': {
-            'cookies_received': list(request.COOKIES.keys()),
-            'user_id': request.user.id if request.user.is_authenticated else None,
-        }
+        'user': UserSerializer(request.user).data
     })
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    """Logout user by clearing authentication cookies"""
-    response = Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
-
-    # Clear the authentication cookies
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
-
-    return response
+    """Logout user - frontend handles token clearing"""
+    # Removed cookie clearing since we now use Authorization headers
+    # Frontend will clear localStorage/sessionStorage tokens
+    return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

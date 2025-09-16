@@ -89,7 +89,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
       method,
       headers,
       body: data !== undefined ? JSON.stringify(data) : undefined,
-      credentials: 'include',  // Include cookies with requests
+      // Removed credentials: 'include' to avoid cookie issues on iPhone
     });
 
     console.log('Response status:', res.status);
@@ -155,7 +155,7 @@ export const getQueryFn =
 
       const res = await fetch(url, {
         headers,
-        credentials: 'include',  // Include cookies with requests
+        // Removed credentials: 'include' to avoid cookie issues on iPhone
       });
 
       if (unauthorizedBehavior === 'returnNull' && res.status === 401) return null;

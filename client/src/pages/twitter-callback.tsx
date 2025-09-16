@@ -21,12 +21,21 @@ const TwitterCallback = () => {
 
         if (accessToken && refreshToken) {
           // New flow: Backend redirected with tokens in URL
-          console.log('Received tokens from URL, setting cookies...');
+          console.log('Received tokens from URL, storing in localStorage...');
 
-          // Set cookies on frontend domain
-          const domain = window.location.hostname;
-          document.cookie = `access_token=${accessToken}; path=/; domain=${domain}; max-age=3600; secure; samesite=None`;
-          document.cookie = `refresh_token=${refreshToken}; path=/; domain=${domain}; max-age=604800; secure; samesite=None`;
+          // Store tokens in localStorage (Safari-safe)
+          try {
+            localStorage.setItem('authToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('userId', userId || '');
+            console.log('Tokens stored successfully');
+          } catch (e) {
+            console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
+            // Fallback: could store in sessionStorage or memory
+            sessionStorage.setItem('authToken', accessToken);
+            sessionStorage.setItem('refreshToken', refreshToken);
+            sessionStorage.setItem('userId', userId || '');
+          }
 
           // Clean up URL
           const newUrl = window.location.pathname;

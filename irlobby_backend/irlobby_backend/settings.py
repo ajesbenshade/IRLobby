@@ -101,6 +101,11 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_COOKIE': 'access_token',  # Cookie name for access token
+    'AUTH_COOKIE_REFRESH': 'refresh_token',  # Cookie name for refresh token
+    'AUTH_COOKIE_SECURE': not DEBUG,  # Only secure in production
+    'AUTH_COOKIE_HTTP_ONLY': True,  # httpOnly cookies
+    'AUTH_COOKIE_SAMESITE': 'None' if not DEBUG else 'Lax',  # Cross-domain cookies
 }
 
 MIDDLEWARE = [

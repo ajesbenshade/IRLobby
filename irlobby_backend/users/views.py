@@ -40,7 +40,7 @@ def register(request):
             str(refresh.access_token),
             httponly=True,
             secure=not settings.DEBUG,
-            samesite='Lax',
+            samesite='None' if not settings.DEBUG else 'Lax',
             max_age=60 * 60  # 1 hour
         )
         response.set_cookie(
@@ -74,7 +74,7 @@ def login(request):
             str(refresh.access_token),
             httponly=True,
             secure=not settings.DEBUG,  # Only secure in production
-            samesite='Lax',
+            samesite='None' if not settings.DEBUG else 'Lax',
             max_age=60 * 60  # 1 hour
         )
         response.set_cookie(

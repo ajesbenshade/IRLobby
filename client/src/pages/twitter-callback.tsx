@@ -24,8 +24,9 @@ const TwitterCallback = () => {
           console.log('Received tokens from URL, setting cookies...');
 
           // Set cookies on frontend domain
-          document.cookie = `access_token=${accessToken}; path=/; max-age=3600; secure; samesite=Lax`;
-          document.cookie = `refresh_token=${refreshToken}; path=/; max-age=604800; secure; samesite=Lax`;
+          const domain = window.location.hostname;
+          document.cookie = `access_token=${accessToken}; path=/; domain=${domain}; max-age=3600; secure; samesite=None`;
+          document.cookie = `refresh_token=${refreshToken}; path=/; domain=${domain}; max-age=604800; secure; samesite=None`;
 
           // Clean up URL
           const newUrl = window.location.pathname;
@@ -70,26 +71,14 @@ const TwitterCallback = () => {
           throw new Error(data.error || 'Failed to authenticate with Twitter');
         }
 
-        // Handle backend response - extract tokens from redirect_url or direct response
-        if (data.redirect_url) {
-          // Backend returned redirect URL with tokens
-          const url = new URL(data.redirect_url);
-          accessToken = url.searchParams.get('access_token');
-          refreshToken = url.searchParams.get('refresh_token');
-          userId = url.searchParams.get('user_id');
-        } else if (data.access_token) {
-          // Backend returned tokens directly
-          accessToken = data.access_token;
-          refreshToken = data.refresh_token;
-          userId = data.user?.id;
-        }
+        // Handle backend response - extract tokens
+        if (data.access_token && data.refresh_token) {
+          console.log('Received tokens from backend, storing in localStorage...');
 
-        if (accessToken && refreshToken) {
-          console.log('Received tokens from backend, setting cookies...');
-
-          // Set cookies on frontend domain
-          document.cookie = `access_token=${accessToken}; path=/; max-age=3600; secure; samesite=Lax`;
-          document.cookie = `refresh_token=${refreshToken}; path=/; max-age=604800; secure; samesite=Lax`;
+          // Store tokens in localStorage for cross-domain compatibility
+          localStorage.setItem('authToken', data.access_token);
+          localStorage.setItem('refreshToken', data.refresh_token);
+          localStorage.setItem('userId', data.user?.id || '');
 
           // Clean up
           sessionStorage.removeItem('twitter_code_verifier');

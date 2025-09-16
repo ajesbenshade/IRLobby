@@ -14,6 +14,36 @@ const TwitterCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Check if we have tokens in URL (new flow)
+        const accessToken = searchParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token');
+        const userId = searchParams.get('user_id');
+
+        if (accessToken && refreshToken) {
+          // New flow: Backend redirected with tokens in URL
+          console.log('Received tokens from URL, setting cookies...');
+
+          // Set cookies on frontend domain
+          document.cookie = `access_token=${accessToken}; path=/; max-age=3600; secure; samesite=Lax`;
+          document.cookie = `refresh_token=${refreshToken}; path=/; max-age=604800; secure; samesite=Lax`;
+
+          // Clean up URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+
+          // Trigger authentication refresh
+          await handleAuthentication();
+
+          toast({
+            title: 'Success',
+            description: 'Successfully logged in with Twitter!',
+          });
+
+          navigate('/', { replace: true });
+          return;
+        }
+
+        // Fallback to old flow with code exchange
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
@@ -32,7 +62,7 @@ const TwitterCallback = () => {
           throw new Error('Code verifier not found. Please try logging in again.');
         }
 
-        // Exchange code for tokens (which are now set as httpOnly cookies)
+        // Exchange code for tokens
         const response = await apiRequest('GET', `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(codeVerifier)}`);
         const data = await response.json();
 

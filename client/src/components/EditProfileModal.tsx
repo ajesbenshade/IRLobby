@@ -17,6 +17,7 @@ import { X, Camera, Upload, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
+  username: z.string().min(1, "Username is required").max(150, "Username must be less than 150 characters"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
@@ -43,6 +44,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
+      username: user?.username || "",
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       bio: user?.bio || "",
@@ -164,6 +166,20 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     />
                   </div>
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your username" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}

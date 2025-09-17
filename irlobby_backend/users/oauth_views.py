@@ -122,6 +122,9 @@ def twitter_oauth_callback(request):
             token_response = requests.post(token_url, data=token_data, auth=auth, timeout=30)
         except requests.RequestException as e:
             logger.error(f"Twitter token exchange failed: {str(e)}")
+            # Check if it's a network/connectivity issue
+            if 'ConnectionError' in str(type(e)) or 'Timeout' in str(type(e)):
+                return Response({'error': 'Unable to connect to Twitter. Please check your internet connection and try again.'}, status=status.HTTP_502_BAD_GATEWAY)
             return Response({'error': 'Failed to connect to Twitter'}, status=status.HTTP_502_BAD_GATEWAY)
 
         if token_response.status_code != 200:
@@ -144,6 +147,9 @@ def twitter_oauth_callback(request):
             user_response = requests.get(user_url, headers=headers, params=params, timeout=30)
         except requests.RequestException as e:
             logger.error(f"Twitter user info request failed: {str(e)}")
+            # Check if it's a network/connectivity issue
+            if 'ConnectionError' in str(type(e)) or 'Timeout' in str(type(e)):
+                return Response({'error': 'Unable to connect to Twitter. Please check your internet connection and try again.'}, status=status.HTTP_502_BAD_GATEWAY)
             return Response({'error': 'Failed to get user information from Twitter'}, status=status.HTTP_502_BAD_GATEWAY)
 
         if user_response.status_code != 200:

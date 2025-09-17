@@ -20,6 +20,20 @@ const TwitterCallback = () => {
         // Handle OAuth errors from Twitter
         if (error) {
           console.warn('Twitter OAuth error:', error, errorDescription);
+          
+          // Check if it's a network or external API error
+          const isExternalError = error === 'access_denied' || 
+            (errorDescription && (
+              errorDescription.includes('ERR_ADDRESS_INVALID') ||
+              errorDescription.includes('ERR_NETWORK_CHANGED') ||
+              errorDescription.includes('ERR_INTERNET_DISCONNECTED') ||
+              errorDescription.includes('Failed to fetch')
+            ));
+          
+          if (isExternalError) {
+            throw new Error('Twitter is temporarily unavailable. Please try email/password login instead.');
+          }
+          
           throw new Error(`Twitter authentication failed: ${errorDescription || error}`);
         }
 

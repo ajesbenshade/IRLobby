@@ -69,7 +69,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const isNetworkError = error instanceof Error &&
         (error.message.includes('Failed to connect') ||
          error.message.includes('502') ||
-         error.message.includes('timeout'));
+         error.message.includes('timeout') ||
+         error.message.includes('ERR_ADDRESS_INVALID') ||
+         error.message.includes('ERR_NETWORK_CHANGED') ||
+         error.message.includes('ERR_INTERNET_DISCONNECTED') ||
+         error.message.includes('Failed to fetch'));
       
       let errorTitle = 'Twitter OAuth Failed';
       let errorDescription = 'Unable to connect to Twitter. Please try email/password login instead.';

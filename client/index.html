@@ -151,15 +151,22 @@
         const message = args.join(' ');
         if (
           message.includes('ads-api.twitter.com') ||
+          message.includes('api.twitter.com/1.1/onboarding/referrer.json') ||
           message.includes('api.twitter.com/1.1/onboarding') ||
           message.includes('twitter.com/i/api') ||
+          message.includes('twitter.com/i/oauth2') ||
+          message.includes('measurement/dcm_local_id') ||
+          message.includes('ERR_ADDRESS_INVALID') ||
+          message.includes('ERR_NETWORK_CHANGED') ||
+          message.includes('ERR_INTERNET_DISCONNECTED') ||
+          message.includes('Failed to fetch') && message.includes('twitter.com') ||
           message.includes('chrome-extension://') ||
           message.includes('moz-extension://') ||
           message.includes('safari-extension://') ||
           message.includes('401') && message.includes('/api/users/auth/status/') ||
           message.includes('401') && message.includes('/api/users/profile/') && message.includes('Invalid token detected')
         ) {
-          // These are expected authentication errors, don't log them
+          // These are expected authentication errors and external API calls, don't log them
           return;
         }
         

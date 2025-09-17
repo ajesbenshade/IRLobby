@@ -144,6 +144,28 @@
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
     <!-- Service Worker Registration -->
     <script>
+      // Filter out expected Twitter API errors that don't affect our app
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        // Filter out Twitter API errors that are expected and don't affect our app
+        const message = args.join(' ');
+        if (
+          message.includes('ads-api.twitter.com') ||
+          message.includes('api.twitter.com/1.1/onboarding') ||
+          message.includes('twitter.com/i/api') ||
+          message.includes('chrome-extension://') ||
+          message.includes('moz-extension://') ||
+          message.includes('safari-extension://')
+        ) {
+          // These are expected third-party errors, don't log them
+          return;
+        }
+        
+        // Log all other errors normally
+        originalConsoleError.apply(console, args);
+      };
+
+      // Service Worker Registration
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')

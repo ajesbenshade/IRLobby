@@ -2,145 +2,114 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 
 const TwitterCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(true);
-  const { handleAuthentication } = useAuth();
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check if we have tokens in URL (new flow)
-        let accessToken = searchParams.get('access_token');
-        let refreshToken = searchParams.get('refresh_token');
-        let userId = searchParams.get('user_id');
-
-        if (accessToken && refreshToken) {
-          // New flow: Backend redirected with tokens in URL
-          console.log('Received tokens from URL, storing in localStorage...');
-
-          // Store tokens in localStorage (Safari-safe)
-          try {
-            localStorage.setItem('authToken', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
-            localStorage.setItem('userId', userId || '');
-            console.log('Tokens stored successfully');
-          } catch (e) {
-            console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
-            // Fallback: could store in sessionStorage or memory
-            sessionStorage.setItem('authToken', accessToken);
-            sessionStorage.setItem('refreshToken', refreshToken);
-            sessionStorage.setItem('userId', userId || '');
-          }
-
-          // Clean up URL
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
-
-          // Trigger authentication refresh
-          await handleAuthentication();
-
-          toast({
-            title: 'Success',
-            description: 'Successfully logged in with Twitter!',
-          });
-
-          navigate('/', { replace: true });
-          return;
-        }
-
-        // Fallback to old flow with code exchange
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
 
+        // Handle OAuth errors from Twitter
         if (error) {
-          throw new Error(`OAuth error: ${error}`);
+          console.warn('Twitter OAuth error:', error, errorDescription);
+          throw new Error(`Twitter authentication failed: ${errorDescription || error}`);
         }
 
         if (!code) {
-          throw new Error('No authorization code received');
+          throw new Error('No authorization code received from Twitter');
         }
 
         // Get the code_verifier from sessionStorage (set during OAuth initiation)
         const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
         if (!codeVerifier) {
-          throw new Error('Code verifier not found. Please try logging in again.');
+          throw new Error('Session expired. Please try logging in again.');
         }
+
+        console.log('Processing Twitter OAuth callback...');
 
         // Exchange code for tokens
         const response = await apiRequest('GET', `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(codeVerifier)}`);
-        const data = await response.json();
-
+        
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to authenticate with Twitter');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Twitter OAuth callback failed:', response.status, errorData);
+          throw new Error(errorData.error || `Authentication failed (${response.status})`);
         }
 
-        // Handle backend response - extract tokens
-        if (data.access_token && data.refresh_token) {
-          console.log('Received tokens from backend, storing in localStorage...');
+        const data = await response.json();
+        console.log('Twitter OAuth successful');
 
-          // Store tokens in localStorage (Safari-safe)
-          try {
-            localStorage.setItem('authToken', data.access_token);
-            localStorage.setItem('refreshToken', data.refresh_token);
-            localStorage.setItem('userId', data.user?.id || '');
-            console.log('Tokens stored successfully');
-          } catch (e) {
-            console.error('Failed to store tokens in localStorage (Safari private mode?):', e);
-            // Fallback: could store in sessionStorage or memory
-            sessionStorage.setItem('authToken', data.access_token);
-            sessionStorage.setItem('refreshToken', data.refresh_token);
-            sessionStorage.setItem('userId', data.user?.id || '');
-          }
-
-          // Clean up
-          sessionStorage.removeItem('twitter_code_verifier');
-
-          // Trigger authentication refresh
-          await handleAuthentication();
-
-          toast({
-            title: 'Success',
-            description: 'Successfully logged in with Twitter!',
-          });
-
-          navigate('/', { replace: true });
-          return;
+        // Validate response data
+        if (!data.tokens || !data.user) {
+          throw new Error('Invalid response from authentication server');
         }
 
-        throw new Error('Failed to retrieve tokens from the response');
+        // Store tokens
+        localStorage.setItem('authToken', data.tokens.access);
+        localStorage.setItem('refreshToken', data.tokens.refresh);
+        localStorage.setItem('userId', data.user.id);
+
+        // Clean up
+        sessionStorage.removeItem('twitter_code_verifier');
+
+        toast({
+          title: 'Success',
+          description: 'Successfully logged in with Twitter!',
+        });
+
+        // Redirect to home
+        navigate('/', { replace: true });
+
       } catch (error) {
         console.error('Twitter OAuth callback error:', error);
 
         // Clean up on error
         sessionStorage.removeItem('twitter_code_verifier');
 
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
         toast({
           title: 'Authentication Failed',
-          description: error instanceof Error ? error.message : 'Failed to authenticate with Twitter',
+          description: `Twitter login failed: ${errorMessage}. Please try email/password login instead.`,
           variant: 'destructive',
         });
 
-        // Redirect back to landing page
-        navigate('/', { replace: true });
+        // Redirect back to landing page after a delay
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 3000);
       } finally {
         setIsProcessing(false);
       }
     };
 
     handleCallback();
-  }, [searchParams, navigate, toast, handleAuthentication]);
+  }, [searchParams, navigate, toast]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold mb-4">Authenticating with Twitter...</h1>
-        {isProcessing && <p>Please wait while we securely log you in.</p>}
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12">
+            <svg className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {isProcessing ? 'Connecting to Twitter...' : 'Processing...'}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {isProcessing ? 'Please wait while we authenticate you.' : 'Redirecting...'}
+          </p>
+        </div>
       </div>
     </div>
   );

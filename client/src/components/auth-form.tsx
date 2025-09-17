@@ -63,13 +63,28 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const isConfigError = error instanceof Error && 
         (error.message.includes('not configured') || 
          error.message.includes('500') ||
+         error.message.includes('503') ||
          error.message.includes('Twitter OAuth'));
       
+      const isNetworkError = error instanceof Error &&
+        (error.message.includes('Failed to connect') ||
+         error.message.includes('502') ||
+         error.message.includes('timeout'));
+      
+      let errorTitle = 'Twitter OAuth Failed';
+      let errorDescription = 'Unable to connect to Twitter. Please try email/password login instead.';
+      
+      if (isConfigError) {
+        errorTitle = 'Twitter OAuth Unavailable';
+        errorDescription = 'Twitter login is temporarily unavailable. Please use email/password login.';
+      } else if (isNetworkError) {
+        errorTitle = 'Connection Error';
+        errorDescription = 'Unable to connect to Twitter. Please check your internet connection and try again.';
+      }
+      
       toast({
-        title: isConfigError ? 'Twitter OAuth Not Configured' : 'Twitter OAuth Failed',
-        description: isConfigError 
-          ? 'Twitter login is temporarily unavailable. Please use email/password login.'
-          : 'Unable to connect to Twitter. Please try email/password login instead.',
+        title: errorTitle,
+        description: errorDescription,
         variant: 'destructive',
       });
     } finally {

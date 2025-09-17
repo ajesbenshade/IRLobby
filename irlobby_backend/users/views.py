@@ -12,7 +12,6 @@ from activities.models import Activity
 from swipes.models import Swipe
 from matches.models import Match
 from reviews.models import Review
-from django.conf import settings
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -28,18 +27,13 @@ def register(request):
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
-
-        response = Response({
+        return Response({
             'user': UserSerializer(user).data,
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-            'message': 'Registration successful'
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
         }, status=status.HTTP_201_CREATED)
-
-        # Removed cookie setting for better iPhone compatibility
-        # Tokens are now returned in JSON response for frontend to handle
-
-        return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -49,18 +43,13 @@ def login(request):
     if serializer.is_valid():
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
-
-        response = Response({
+        return Response({
             'user': UserSerializer(user).data,
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-            'message': 'Login successful'
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
         }, status=status.HTTP_200_OK)
-
-        # Removed cookie setting for better iPhone compatibility
-        # Tokens are now returned in JSON response for frontend to handle
-
-        return response
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
@@ -154,23 +143,6 @@ def export_user_data(request):
             'details': str(e)
         }, status=500)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def auth_status(request):
-    """Check authentication status and return user data"""
-    return Response({
-        'isAuthenticated': True,
-        'user': UserSerializer(request.user).data
-    })
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout(request):
-    """Logout user - frontend handles token clearing"""
-    # Removed cookie clearing since we now use Authorization headers
-    # Frontend will clear localStorage/sessionStorage tokens
-    return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_profile(request):
@@ -189,3 +161,21 @@ def delete_profile(request):
             'error': 'Failed to delete profile',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def auth_status(request):
+    """
+    Check authentication status without requiring authentication.
+    Returns whether the current request has valid authentication.
+    """
+    if request.user and request.user.is_authenticated:
+        return Response({
+            'authenticated': True,
+            'user': UserSerializer(request.user).data
+        })
+    else:
+        return Response({
+            'authenticated': False,
+            'user': None
+        }, status=status.HTTP_401_UNAUTHORIZED)

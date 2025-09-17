@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +22,8 @@ interface SwipeCardProps {
   className?: string;
 }
 
-export default function SwipeCard({ 
+// Memoize the component to prevent unnecessary re-renders
+export default memo(function SwipeCard({ 
   activity, 
   onSwipeLeft, 
   onSwipeRight, 
@@ -36,37 +37,40 @@ export default function SwipeCard({
   // Track whether the pointer/touch actually moved enough to be considered a drag
   const wasDraggedRef = useRef(false);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setIsDragging(true);
     setStartPos({
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
     });
     wasDraggedRef.current = false;
-  };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging) return;
-
+    
     const deltaX = e.touches[0].clientX - startPos.x;
     const deltaY = e.touches[0].clientY - startPos.y;
 
-    // Only handle horizontal swipes
+    // Only handle horizontal swipes and add velocity for smoother experience
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
       e.preventDefault();
-      setDragOffset({ x: deltaX, y: 0 });
+      // Add resistance for more natural feel
+      const resistance = Math.min(Math.abs(deltaX) / 200, 1);
+      setDragOffset({ x: deltaX * resistance, y: 0 });
       // mark that a drag occurred so clicks won't fire
       if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
     }
-  };
+  }, [isDragging, startPos]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (!isDragging) return;
     setIsDragging(false);
 
     const threshold = 100;
+    const velocity = Math.abs(dragOffset.x) / 200; // Simple velocity calculation
     
-    if (Math.abs(dragOffset.x) > threshold) {
+    if (Math.abs(dragOffset.x) > threshold || velocity > 0.5) {
       if (dragOffset.x > 0) {
         onSwipeRight();
       } else {
@@ -74,13 +78,12 @@ export default function SwipeCard({
       }
     }
     
-    // Reset position
-    // small timeout to allow any swipe animation to complete before resetting click blocker
+    // Reset position with animation
     setTimeout(() => {
       wasDraggedRef.current = false;
     }, 50);
     setDragOffset({ x: 0, y: 0 });
-  };
+  }, [isDragging, dragOffset, onSwipeLeft, onSwipeRight]);
 
   // Mouse support for desktop
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -242,4 +245,4 @@ export default function SwipeCard({
       </CardContent>
     </Card>
   );
-}
+});

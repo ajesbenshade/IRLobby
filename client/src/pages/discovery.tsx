@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,20 @@ export default function Discovery() {
   const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startY = useRef(0);
+  const isPulling = useRef(false);
+
+  // Get auth token from localStorage
+  const token = localStorage.getItem('authToken');
 
   // Use the token in the API request
   const { data: activities = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/activities', filters],
     queryFn: async () => {
-      console.log('Fetching activities with cookies');
+      console.log('Fetching activities with token:', !!token);
       
       const response = await apiRequest('GET', '/api/activities/');
       
@@ -44,7 +51,7 @@ export default function Discovery() {
       console.log('Found activities:', data.length);
       return data;
     },
-    enabled: true, // Always run the query
+    enabled: !!token, // Only run the query if we have a token
     retry: 1,
   });
 
@@ -55,9 +62,9 @@ export default function Discovery() {
     }
     
     if (activities && activities.length === 0 && !isLoading) {
-      console.log('No activities found');
+      console.log('No activities found. Auth token present:', !!token);
     }
-  }, [activities, error, isLoading]);
+  }, [activities, error, isLoading, token]);
 
   // Comment out notifications for now since the endpoint doesn't exist
   // const { data: unreadNotifications = 0 } = useQuery({
@@ -109,12 +116,46 @@ export default function Discovery() {
     setCurrentActivityIndex(0);
   };
 
-  const handleRefresh = async () => {
+  // Pull to refresh functionality
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      startY.current = e.touches[0].clientY;
+      isPulling.current = true;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling.current || window.scrollY > 0) return;
+    
+    const currentY = e.touches[0].clientY;
+    const distance = Math.max(0, currentY - startY.current);
+    
+    if (distance > 0) {
+      e.preventDefault();
+      setPullDistance(Math.min(distance * 0.5, 80)); // Dampen the pull with max distance
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isPulling.current) return;
+    
+    if (pullDistance > 50) {
+      // Trigger refresh
+      setIsRefreshing(true);
+      await refetch();
+      setIsRefreshing(false);
+    }
+    
+    setPullDistance(0);
+    isPulling.current = false;
+  }, [pullDistance, refetch]);
+
+  // Handle manual refresh
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-    setCurrentActivityIndex(0);
+    await refetch();
     setIsRefreshing(false);
-  };
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -143,9 +184,37 @@ export default function Discovery() {
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between">
+    <div 
+      ref={containerRef}
+      className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen relative overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to refresh indicator */}
+      {pullDistance > 0 && (
+        <div 
+          className="absolute top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-transform duration-200"
+          style={{ transform: `translateY(${Math.max(-60, pullDistance - 60)}px)` }}
+        >
+          <div className="flex items-center justify-center py-4">
+            <RefreshCw 
+              className={`w-6 h-6 text-primary transition-transform duration-200 ${
+                pullDistance > 50 ? 'rotate-180' : ''
+              } ${isRefreshing ? 'animate-spin' : ''}`}
+            />
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+              {pullDistance > 50 ? 'Release to refresh' : 'Pull to refresh'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Header with refresh indicator */}
+      <header 
+        className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200"
+        style={{ transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)` }}
+      >
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>

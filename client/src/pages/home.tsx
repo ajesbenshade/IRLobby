@@ -1,13 +1,25 @@
 import { useAuth } from "@/hooks/useAuth";
 import BottomNavigation from "@/components/BottomNavigation";
-import Discovery from "./discovery";
-import Matches from "./matches";
-import CreateActivity from "./create-activity";
-import Profile from "./profile";
-import Chat from "./chat";
-import Settings from "./settings";
-import HelpSupport from "./help-support";
-import { useState } from "react";
+import { Suspense, lazy, useState, useCallback } from "react";
+
+// Lazy load components for better performance
+const Discovery = lazy(() => import("./discovery"));
+const Matches = lazy(() => import("./matches"));
+const CreateActivity = lazy(() => import("./create-activity"));
+const Profile = lazy(() => import("./profile"));
+const Chat = lazy(() => import("./chat"));
+const Settings = lazy(() => import("./settings"));
+const HelpSupport = lazy(() => import("./help-support"));
+
+// Loading component
+const ScreenLoader = () => (
+  <div className="flex-1 flex items-center justify-center p-8">
+    <div className="text-center">
+      <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-2"></div>
+      <p className="text-sm text-gray-500">Loading...</p>
+    </div>
+  </div>
+);
 
 export default function Home() {
   const { user } = useAuth();
@@ -15,39 +27,47 @@ export default function Home() {
   const [chatActivityId, setChatActivityId] = useState<number | null>(null);
 
   const renderScreen = () => {
-    switch (currentScreen) {
-      case 'discovery':
-        return <Discovery />;
-      case 'matches':
-        return <Matches onOpenChat={(activityId) => {
-          setChatActivityId(activityId);
-          setCurrentScreen('chat');
-        }} />;
-      case 'create':
-        return <CreateActivity onActivityCreated={() => setCurrentScreen('discovery')} />;
-      case 'activities':
-        return <Matches onOpenChat={(activityId) => {
-          setChatActivityId(activityId);
-          setCurrentScreen('chat');
-        }} showUserActivities />;
-      case 'profile':
-        return <Profile onNavigate={setCurrentScreen} />;
-      case 'settings':
-        return <Settings onBack={() => setCurrentScreen('profile')} />;
-      case 'help-support':
-        return <HelpSupport onBack={() => setCurrentScreen('profile')} />;
-      case 'chat':
-        return chatActivityId ? (
-          <Chat 
-            activityId={chatActivityId} 
-            onBack={() => setCurrentScreen('matches')} 
-          />
-        ) : (
-          <Discovery />
-        );
-      default:
-        return <Discovery />;
-    }
+    const screenComponent = (() => {
+      switch (currentScreen) {
+        case 'discovery':
+          return <Discovery />;
+        case 'matches':
+          return <Matches onOpenChat={(activityId) => {
+            setChatActivityId(activityId);
+            setCurrentScreen('chat');
+          }} />;
+        case 'create':
+          return <CreateActivity onActivityCreated={() => setCurrentScreen('discovery')} />;
+        case 'activities':
+          return <Matches onOpenChat={(activityId) => {
+            setChatActivityId(activityId);
+            setCurrentScreen('chat');
+          }} showUserActivities />;
+        case 'profile':
+          return <Profile onNavigate={setCurrentScreen} />;
+        case 'settings':
+          return <Settings onBack={() => setCurrentScreen('profile')} />;
+        case 'help-support':
+          return <HelpSupport onBack={() => setCurrentScreen('profile')} />;
+        case 'chat':
+          return chatActivityId ? (
+            <Chat 
+              activityId={chatActivityId} 
+              onBack={() => setCurrentScreen('matches')} 
+            />
+          ) : (
+            <Discovery />
+          );
+        default:
+          return <Discovery />;
+      }
+    })();
+
+    return (
+      <Suspense fallback={<ScreenLoader />}>
+        {screenComponent}
+      </Suspense>
+    );
   };
 
   if (!user) {

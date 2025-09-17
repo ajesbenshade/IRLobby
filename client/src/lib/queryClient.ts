@@ -40,67 +40,35 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   }
 
   // Prepend base URL for production
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://irlobby-backend.onrender.com';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
   if (baseUrl && !url.startsWith('http')) {
     url = `${baseUrl}${url}`;
   }
 
-  console.log(`[API Request] ${method} ${url}`);
-  console.log(`[API Request] Base URL: ${baseUrl}`);
-  console.log(`[API Request] Full URL: ${url}`);
-
+  const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {};
 
   if (data !== undefined && data !== null) {
     headers['Content-Type'] = 'application/json';
   }
 
-  // Add Authorization header with token from localStorage
-  let token: string | null = null;
-  try {
-    token = localStorage.getItem('authToken');
-    // Fallback to sessionStorage for Safari private mode
-    if (!token) {
-      token = sessionStorage.getItem('authToken');
-    }
-  } catch (e) {
-    // Safari private browsing mode may throw errors
-    console.warn('localStorage not available, trying sessionStorage:', e);
-    try {
-      token = sessionStorage.getItem('authToken');
-    } catch (e2) {
-      console.warn('sessionStorage also not available:', e2);
-    }
-  }
-
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('Sending Authorization header:', `Bearer ${token}`);
+    console.log('Token length:', token.length);
+    console.log('Token starts with:', token.substring(0, 20));
   }
 
-  // Safari-specific headers to avoid CORS issues
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  
-  if (isSafari || isIOS) {
-    headers['Cache-Control'] = 'no-cache';
-    headers['Pragma'] = 'no-cache';
-    // Add additional headers for iOS compatibility
-    headers['X-Requested-With'] = 'XMLHttpRequest';
-  }
-
-  console.log(`Making ${method} request to ${url}`);
+  console.log(`Making ${method} request to ${url} with token: ${token ? 'Yes' : 'No'}`);
   console.log('Request headers:', headers);
   console.log('Request body:', data);
-  console.log('User agent:', navigator.userAgent);
-  console.log('Is Safari:', isSafari);
-  console.log('Is iOS:', isIOS);
 
   try {
     const res = await fetch(url, {
       method,
       headers,
       body: data !== undefined ? JSON.stringify(data) : undefined,
-      // Removed credentials: 'include' to avoid cookie issues on iPhone
+      // credentials: 'include',  // Remove credentials for production CORS
     });
 
     console.log('Response status:', res.status);
@@ -109,15 +77,51 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     await throwIfResNotOk(res);
     return res;
   } catch (error) {
-    console.error(`[API Error] ${method} ${url}:`, error);
-    console.error('[API Error] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('[API Error] Error message:', error instanceof Error ? error.message : String(error));
-    
-    // Check for common iPhone/Safari issues
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error('[API Error] This might be a CORS or network issue on iPhone');
+    console.error(`API request failed for ${method} ${url}:`, error);
+    if (error instanceof Error) {
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
     }
     
+    // If we get a 401 and have a refresh token, try to refresh
+    if (error instanceof Error && error.message.includes('401') && localStorage.getItem('refreshToken')) {
+      console.log('Attempting token refresh...');
+      try {
+        const refreshResponse = await fetch(`${baseUrl}/api/auth/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: localStorage.getItem('refreshToken') })
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          localStorage.setItem('authToken', refreshData.access);
+          
+          // Retry the original request with new token
+          console.log('Token refreshed, retrying request...');
+          const retryHeaders = { ...headers };
+          retryHeaders['Authorization'] = `Bearer ${refreshData.access}`;
+          
+          const retryRes = await fetch(url, {
+            method,
+            headers: retryHeaders,
+            body: data !== undefined ? JSON.stringify(data) : undefined,
+            // credentials: 'include',  // Remove credentials for production CORS
+          });
+          
+          await throwIfResNotOk(retryRes);
+          return retryRes;
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+      }
+    }
+    
+    // Return a mock response for development/demo purposes
+    if (method === 'GET' && url.includes('/api/auth/twitter/url/')) {
+      return new Response(JSON.stringify({ auth_url: '#' }), { status: 200 });
+    }
     throw error;
   }
 }
@@ -127,6 +131,10 @@ export const getQueryFn =
   (options: { on401: UnauthorizedBehavior }): QueryFunction<any> =>
   async ({ queryKey }) => {
     const unauthorizedBehavior = options.on401;
+    const token = localStorage.getItem('authToken');
+    const headers: Record<string, string> = {};
+
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let url = queryKey[0] as string;
     // Prepend base URL for production
@@ -135,42 +143,12 @@ export const getQueryFn =
       url = `${baseUrl}${url}`;
     }
 
+    console.log(`Query request to ${url} with token: ${token ? 'Yes' : 'No'}`);
+
     try {
-      // Add Authorization header with token from localStorage (Safari-safe)
-      let token: string | null = null;
-      try {
-        token = localStorage.getItem('authToken');
-        // Fallback to sessionStorage for Safari private mode
-        if (!token) {
-          token = sessionStorage.getItem('authToken');
-        }
-      } catch (e) {
-        // Safari private browsing mode may throw errors
-        console.warn('localStorage not available, trying sessionStorage:', e);
-        try {
-          token = sessionStorage.getItem('authToken');
-        } catch (e2) {
-          console.warn('sessionStorage also not available:', e2);
-        }
-      }
-
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      // Safari-specific headers
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isSafari || isIOS) {
-        headers['Cache-Control'] = 'no-cache';
-        headers['Pragma'] = 'no-cache';
-        headers['X-Requested-With'] = 'XMLHttpRequest';
-      }
-
       const res = await fetch(url, {
         headers,
-        // Removed credentials: 'include' to avoid cookie issues on iPhone
+        // credentials: 'include',  // Remove credentials for production CORS
       });
 
       if (unauthorizedBehavior === 'returnNull' && res.status === 401) return null;
@@ -191,11 +169,22 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error instanceof Error && error.message.includes('4')) {
+          return false;
+        }
+        // Retry up to 2 times for network errors
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      networkMode: 'offlineFirst', // Better for mobile
     },
     mutations: {
       retry: false,
+      networkMode: 'offlineFirst',
     },
   },
 });

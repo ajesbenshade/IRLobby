@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
     <title>IRLobby - Your Lobby for IRL Meetups</title>
     <meta name="description" content="IRLobby is the social activity matching app that combines Tinder-style swiping with event hosting. Your lobby for IRL meetups - discover activities, meet new people, and join events in your area." />
     <meta name="keywords" content="IRL meetups, social activities, event hosting, activity matching, real life connections, local events, social app, meetups, networking" />
@@ -25,6 +25,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="IRLobby" />
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -75,6 +83,52 @@
           font-size: 16px;
         }
       }
+      
+      /* iOS Safari specific fixes */
+      @supports (-webkit-touch-callout: none) {
+        /* iOS Safari viewport height fix */
+        .min-h-screen {
+          min-height: -webkit-fill-available;
+        }
+        
+        /* Prevent zoom on input focus */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        textarea,
+        select {
+          font-size: 16px !important;
+        }
+        
+        /* Fix iOS Safari momentum scrolling */
+        * {
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        /* iOS Safari button styling */
+        button {
+          -webkit-appearance: none;
+          appearance: none;
+          border-radius: 0;
+        }
+      }
+      
+      /* Mobile-specific optimizations */
+      @media (max-width: 768px) {
+        /* Reduce motion for better performance on mobile */
+        *, *::before, *::after {
+          animation-duration: 0.2s !important;
+          animation-delay: 0s !important;
+          transition-duration: 0.2s !important;
+        }
+        
+        /* Optimize text rendering on mobile */
+        body {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+        }
+      }
     </style>
   </head>
   <body>
@@ -87,5 +141,19 @@
     <script type="module" src="/src/main.tsx"></script>
     <!-- Replit development banner -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

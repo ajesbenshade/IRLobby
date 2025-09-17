@@ -77,7 +77,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
     // Handle 401 errors quietly for auth endpoints
     if (res.status === 401 && (url.includes('/api/users/profile/') || url.includes('/api/users/auth/status/'))) {
       console.warn('Authentication required for:', url);
-      await throwIfResNotOk(res);
+      // Don't throw error for auth endpoints - return response as-is for proper handling
       return res;
     }
 

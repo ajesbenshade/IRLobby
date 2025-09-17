@@ -47,7 +47,7 @@ export function useAuth() {
           setToken(null);
           return null;
         }
-        
+
         if (!response.ok) {
           throw new Error(`Profile request failed: ${response.status}`);
         }

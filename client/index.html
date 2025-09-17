@@ -155,9 +155,11 @@
           message.includes('twitter.com/i/api') ||
           message.includes('chrome-extension://') ||
           message.includes('moz-extension://') ||
-          message.includes('safari-extension://')
+          message.includes('safari-extension://') ||
+          message.includes('401') && message.includes('/api/users/auth/status/') ||
+          message.includes('401') && message.includes('/api/users/profile/') && message.includes('Invalid token detected')
         ) {
-          // These are expected third-party errors, don't log them
+          // These are expected authentication errors, don't log them
           return;
         }
         

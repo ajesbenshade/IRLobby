@@ -9,7 +9,8 @@ class ActivitySerializer(serializers.ModelSerializer):
         model = Activity
         fields = (
             'id', 'host', 'title', 'description', 'location',
-            'latitude', 'longitude', 'time', 'capacity', 'auto_approve',
+            'latitude', 'longitude', 'time', 'capacity',
+            'is_private', 'requires_approval', 'auto_approve',
             'tags', 'images', 'created_at', 'participant_count'
         )
         read_only_fields = ('id', 'created_at')

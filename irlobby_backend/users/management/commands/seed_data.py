@@ -419,8 +419,11 @@ class Command(BaseCommand):
                     'longitude': activity_data['longitude'],
                     'time': timezone.now() + timedelta(hours=activity_data['hours_from_now']),
                     'capacity': activity_data['capacity'],
-                    # Auto-approve all Youngstown-area demo activities
-                    'auto_approve': 'Youngstown' in activity_data['location'] or 'Niles, OH' in activity_data['location'],
+                    # Privacy/approval defaults for demo
+                    'is_private': False,
+                    'requires_approval': False if ('Youngstown' in activity_data['location'] or 'Niles, OH' in activity_data['location']) else True,
+                    # Keep auto_approve as compatibility fallback mirroring requires_approval=False
+                    'auto_approve': True if ('Youngstown' in activity_data['location'] or 'Niles, OH' in activity_data['location']) else False,
                     'tags': activity_data['tags'],
                     'images': []
                 }

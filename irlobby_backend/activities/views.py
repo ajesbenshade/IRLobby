@@ -57,7 +57,11 @@ def join_activity(request, pk):
     participant, created = ActivityParticipant.objects.get_or_create(
         activity=activity,
         user=user,
-        defaults={'status': 'confirmed' if getattr(activity, 'auto_approve', False) else 'pending'}
+        defaults={
+            'status': 'confirmed'
+            if not getattr(activity, 'requires_approval', False)
+            else ('confirmed' if getattr(activity, 'auto_approve', False) else 'pending')
+        }
     )
 
     if not created:

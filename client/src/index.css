@@ -161,12 +161,6 @@ html {
 
 /* iOS Safari specific fixes */
 @supports (-webkit-touch-callout: none) {
-  /* Ensure full-height layout and move safe area padding to the top on iOS Safari */
-  html,
-  body {
-    height: -webkit-fill-available;
-  }
-
   /* Fix iOS Safari 100vh issue */
   .h-screen {
     height: 100vh;

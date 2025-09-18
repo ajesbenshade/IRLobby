@@ -167,13 +167,6 @@ html {
     height: -webkit-fill-available;
   }
 
-  body {
-    /* Push content below the notch/speaker area */
-    padding-top: env(safe-area-inset-top);
-    /* Remove bottom safe padding so bottom nav sits flush */
-    padding-bottom: 0 !important;
-  }
-
   /* Fix iOS Safari 100vh issue */
   .h-screen {
     height: 100vh;

@@ -8,6 +8,8 @@ export interface Activity {
   longitude: number;
   time: string;
   capacity: number;
+  is_private?: boolean;
+  requires_approval?: boolean;
   tags: string[];
   images: string[];
   created_at: string;

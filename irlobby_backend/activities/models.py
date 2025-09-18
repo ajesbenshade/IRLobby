@@ -10,6 +10,7 @@ class Activity(models.Model):
     longitude = models.FloatField()
     time = models.DateTimeField()
     capacity = models.PositiveIntegerField()
+    auto_approve = models.BooleanField(default=False)
     tags = models.JSONField(default=list)
     images = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)

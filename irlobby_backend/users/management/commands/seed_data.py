@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Seeding database with sample data...')
 
-        # Create sample users
+    # Create sample users
         users_data = [
             {
                 'username': 'alice_smith',
@@ -105,7 +105,26 @@ class Command(BaseCommand):
             }
         ]
 
-        # Create users
+        # Add a couple dozen Youngstown, OH demo users
+        center_lat, center_lon = 41.0998, -80.6495
+        for i in range(1, 25):
+            jitter_lat = center_lat + random.uniform(-0.02, 0.02)
+            jitter_lon = center_lon + random.uniform(-0.02, 0.02)
+            users_data.append({
+                'username': f'youngstown_user_{i}',
+                'email': f'youngstown_user_{i}@example.com',
+                'first_name': 'Youngstown',
+                'last_name': f'User{i}',
+                'bio': 'Local in Youngstown, excited to join community events.',
+                'location': 'Youngstown, OH',
+                'latitude': jitter_lat,
+                'longitude': jitter_lon,
+                'preferences': {'interests': random.sample([
+                    'hiking','coffee','music','sports','art','food','board games','yoga','running','photography'
+                ], 3)}
+            })
+
+    # Create users
         users = []
         for user_data in users_data:
             user, created = User.objects.get_or_create(
@@ -127,7 +146,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'Created user: {user.username}')
             users.append(user)
 
-        # Create sample activities
+    # Create sample activities
         activities_data = [
             {
                 'title': 'Golden Gate Park Hiking',
@@ -352,6 +371,38 @@ class Command(BaseCommand):
             }
         ]
 
+        # Add ~24 Youngstown demo activities
+        youngstown_titles = [
+            'Mill Creek Park Walk',
+            'Downtown Coffee Social',
+            'Boardman Park Frisbee',
+            'Youngstown Pickup Soccer',
+            'Trivia Night Meetup',
+            'Mahoning River Bike Ride',
+            'Local Brewery Hangout',
+            'Butler Art Stroll',
+            'Community Potluck',
+            'Open Mic Night',
+            'Morning Yoga in the Park',
+            'Farmers Market Meetup'
+        ]
+        for i in range(1, 25):
+            title = f"{youngstown_titles[i % len(youngstown_titles)]} #{i}"
+            jitter_lat = center_lat + random.uniform(-0.02, 0.02)
+            jitter_lon = center_lon + random.uniform(-0.02, 0.02)
+            activities_data.append({
+                'title': title,
+                'description': 'Auto-approved demo event for Youngstown testing. Join instantly—no host review needed.',
+                'location': 'Youngstown, OH',
+                'latitude': jitter_lat,
+                'longitude': jitter_lon,
+                'capacity': random.randint(6, 20),
+                'tags': random.sample([
+                    'outdoors','casual','social','fitness','music','art','food','games'
+                ], 3),
+                'hours_from_now': random.randint(12, 240)
+            })
+
         # Create activities
         activities = []
         for i, activity_data in enumerate(activities_data):
@@ -368,6 +419,8 @@ class Command(BaseCommand):
                     'longitude': activity_data['longitude'],
                     'time': timezone.now() + timedelta(hours=activity_data['hours_from_now']),
                     'capacity': activity_data['capacity'],
+                    # Auto-approve all Youngstown-area demo activities
+                    'auto_approve': 'Youngstown' in activity_data['location'] or 'Niles, OH' in activity_data['location'],
                     'tags': activity_data['tags'],
                     'images': []
                 }

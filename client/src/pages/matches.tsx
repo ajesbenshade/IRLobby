@@ -67,7 +67,7 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pt-safe pb-safe">
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">

@@ -6,6 +6,7 @@ import { X, Heart, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Activity } from "@shared/client-types";
+import AdCard from "./AdCard";
 
 interface SwipeStackProps {
   activities: Activity[];
@@ -21,6 +22,9 @@ export function SwipeStack({
   onSwipeComplete 
 }: SwipeStackProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lastAdIndex, setLastAdIndex] = useState<number | null>(null);
+  const ADS_ENABLED = import.meta.env.VITE_ADS_ENABLED === 'true';
+  const AD_FREQUENCY = Number(import.meta.env.VITE_AD_FREQUENCY ?? 5); // show ad every N cards
   const [draggedCard, setDraggedCard] = useState<{
     index: number;
     x: number;
@@ -85,7 +89,16 @@ export function SwipeStack({
       return;
     }
 
-    console.log('Handling swipe:', { direction, activityId: activities[currentIndex].id });
+    // If showing an ad card, just advance without mutation
+    const shouldShowAd = ADS_ENABLED && AD_FREQUENCY > 0 && (currentIndex > 0) && (currentIndex % AD_FREQUENCY === 0) && lastAdIndex !== currentIndex;
+    if (shouldShowAd) {
+      console.log('Skipping backend swipe for ad slot at index', currentIndex);
+      setLastAdIndex(currentIndex);
+      setCurrentIndex(prev => prev + 1);
+      return;
+    }
+
+    console.log('Handling swipe:', { direction, activityId: activities[currentIndex]?.id });
 
     // Animate card off-screen first
     const rect = cardRef.current?.getBoundingClientRect();
@@ -228,11 +241,17 @@ export function SwipeStack({
 
   const visibleCards = activities.slice(currentIndex, currentIndex + 3);
 
+  // Inject an ad card at the front of the visible stack based on frequency
+  const showAdNow = ADS_ENABLED && AD_FREQUENCY > 0 && (currentIndex > 0) && (currentIndex % AD_FREQUENCY === 0) && lastAdIndex !== currentIndex;
+  const visibleWithAds = showAdNow
+    ? [{ id: `ad-${currentIndex}`, title: 'Sponsored', category: 'Sponsored', location: '', maxParticipants: 0, description: '', __isAd: true } as unknown as Activity, ...visibleCards]
+    : visibleCards;
+
   return (
     <div className="relative h-full">
       {/* Card Stack */}
       <div className="relative h-full">
-        {visibleCards.map((activity, index) => {
+        {visibleWithAds.map((activity, index) => {
           const isActive = index === 0;
           const absoluteIndex = currentIndex + index;
 
@@ -262,18 +281,22 @@ export function SwipeStack({
 
           return (
             <div
-              key={activity.id}
-              ref={isActive ? cardRef : undefined}
-              style={style}
-              onTouchStart={isActive ? handleTouchStart : undefined}
-              onTouchMove={isActive ? handleTouchMove : undefined}
-              onTouchEnd={isActive ? handleTouchEnd : undefined}
-              onTouchCancel={isActive ? handleTouchCancel : undefined}
-              onMouseDown={isActive ? handleMouseDown : undefined}
-              onMouseMove={isActive ? handleMouseMove : undefined}
-              onMouseUp={isActive ? handleMouseUp : undefined}
-            >
-              <ActivityCard activity={activityWithLocation} />
+              key={(activity as any).__isAd ? `ad-${absoluteIndex}` : String(activity.id)}
+               ref={isActive ? cardRef : undefined}
+               style={style}
+               onTouchStart={isActive ? handleTouchStart : undefined}
+               onTouchMove={isActive ? handleTouchMove : undefined}
+               onTouchEnd={isActive ? handleTouchEnd : undefined}
+               onTouchCancel={isActive ? handleTouchCancel : undefined}
+               onMouseDown={isActive ? handleMouseDown : undefined}
+               onMouseMove={isActive ? handleMouseMove : undefined}
+               onMouseUp={isActive ? handleMouseUp : undefined}
+             >
+              {(activity as any).__isAd ? (
+                <AdCard onDismiss={() => handleSwipe('left')} />
+              ) : (
+                <ActivityCard activity={activityWithLocation} />
+              )}
             </div>
           );
         })}

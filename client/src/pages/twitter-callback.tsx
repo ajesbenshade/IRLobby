@@ -10,6 +10,12 @@ const TwitterCallback = () => {
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
+    // Ensure we're on the exact callback path; if embedded inside PWA shell, this still works
+    if (!window.location.pathname.endsWith('/auth/twitter/callback')) {
+      // Hard navigate to ensure state/params preserved
+      window.location.replace('/auth/twitter/callback' + window.location.search + window.location.hash);
+      return;
+    }
     const handleCallback = async () => {
       try {
         const code = searchParams.get('code');
@@ -20,20 +26,6 @@ const TwitterCallback = () => {
         // Handle OAuth errors from Twitter
         if (error) {
           console.warn('Twitter OAuth error:', error, errorDescription);
-          
-          // Check if it's a network or external API error
-          const isExternalError = error === 'access_denied' || 
-            (errorDescription && (
-              errorDescription.includes('ERR_ADDRESS_INVALID') ||
-              errorDescription.includes('ERR_NETWORK_CHANGED') ||
-              errorDescription.includes('ERR_INTERNET_DISCONNECTED') ||
-              errorDescription.includes('Failed to fetch')
-            ));
-          
-          if (isExternalError) {
-            throw new Error('Twitter is temporarily unavailable. Please try email/password login instead.');
-          }
-          
           throw new Error(`Twitter authentication failed: ${errorDescription || error}`);
         }
 
@@ -42,7 +34,8 @@ const TwitterCallback = () => {
         }
 
         // Get the code_verifier from sessionStorage (set during OAuth initiation)
-        const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
+        // Prefer sessionStorage, but iOS may require fallback to localStorage if context switched
+        let codeVerifier = sessionStorage.getItem('twitter_code_verifier') || localStorage.getItem('twitter_code_verifier');
         if (!codeVerifier) {
           throw new Error('Session expired. Please try logging in again.');
         }
@@ -72,7 +65,8 @@ const TwitterCallback = () => {
         localStorage.setItem('userId', data.user.id);
 
         // Clean up
-        sessionStorage.removeItem('twitter_code_verifier');
+  sessionStorage.removeItem('twitter_code_verifier');
+  try { localStorage.removeItem('twitter_code_verifier'); } catch {}
 
         toast({
           title: 'Success',
@@ -86,7 +80,8 @@ const TwitterCallback = () => {
         console.error('Twitter OAuth callback error:', error);
 
         // Clean up on error
-        sessionStorage.removeItem('twitter_code_verifier');
+  sessionStorage.removeItem('twitter_code_verifier');
+  try { localStorage.removeItem('twitter_code_verifier'); } catch {}
 
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 

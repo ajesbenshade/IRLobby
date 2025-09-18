@@ -64,7 +64,7 @@ function App() {
         <Toaster />
         <Router>
           <Suspense fallback={<PageLoader />}>
-            <div className="min-h-screen pt-safe">
+            <div className="min-h-screen">
               <AppRoutes />
             </div>
           </Suspense>

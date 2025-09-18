@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>IRLobby - Your Lobby for IRL Meetups</title>
     <meta name="description" content="IRLobby is the social activity matching app that combines Tinder-style swiping with event hosting. Your lobby for IRL meetups - discover activities, meet new people, and join events in your area." />
     <meta name="keywords" content="IRL meetups, social activities, event hosting, activity matching, real life connections, local events, social app, meetups, networking" />
@@ -151,22 +151,15 @@
         const message = args.join(' ');
         if (
           message.includes('ads-api.twitter.com') ||
-          message.includes('api.twitter.com/1.1/onboarding/referrer.json') ||
           message.includes('api.twitter.com/1.1/onboarding') ||
           message.includes('twitter.com/i/api') ||
-          message.includes('twitter.com/i/oauth2') ||
-          message.includes('measurement/dcm_local_id') ||
-          message.includes('ERR_ADDRESS_INVALID') ||
-          message.includes('ERR_NETWORK_CHANGED') ||
-          message.includes('ERR_INTERNET_DISCONNECTED') ||
-          message.includes('Failed to fetch') && message.includes('twitter.com') ||
           message.includes('chrome-extension://') ||
           message.includes('moz-extension://') ||
           message.includes('safari-extension://') ||
           message.includes('401') && message.includes('/api/users/auth/status/') ||
           message.includes('401') && message.includes('/api/users/profile/') && message.includes('Invalid token detected')
         ) {
-          // These are expected authentication errors and external API calls, don't log them
+          // These are expected authentication errors, don't log them
           return;
         }
         

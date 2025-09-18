@@ -46,7 +46,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
 
   return (
     <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20">
-      <div className="flex justify-around items-center">
+      <div className="flex justify-around items-center py-1">
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;
           const Icon = item.icon;
@@ -57,7 +57,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
               variant="ghost"
               size="sm"
               onClick={() => onNavigate(item.id)}
-              className={`flex flex-col items-center justify-center relative min-h-[48px] flex-1 ${
+              className={`flex flex-col items-center justify-center relative min-h-[48px] flex-1 p-1 ${
                 isActive 
                   ? 'text-primary' 
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'

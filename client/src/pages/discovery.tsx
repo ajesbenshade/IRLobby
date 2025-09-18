@@ -212,7 +212,7 @@ export default function Discovery() {
 
       {/* Header with refresh indicator */}
       <header 
-  className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200 pt-safe"
+  className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200"
         style={{ transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)` }}
       >
         <div>

@@ -48,12 +48,10 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       if (data.auth_url && data.code_verifier) {
         // Store the code_verifier for use in the callback
         sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
-        // Also write to localStorage as a fallback for iOS when context switches to/from PWA/Safari
-        try { localStorage.setItem('twitter_code_verifier', data.code_verifier); } catch {}
         console.log('Redirecting to Twitter OAuth URL...');
         
-  // Perform full-page redirect (best compatibility with iOS Safari)
-  window.location.assign(data.auth_url);
+        // Open Twitter OAuth in a popup or redirect
+        window.location.href = data.auth_url;
       } else {
         console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
@@ -71,7 +69,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const isNetworkError = error instanceof Error &&
         (error.message.includes('Failed to connect') ||
          error.message.includes('502') ||
-         error.message.includes('timeout'));
+         error.message.includes('timeout') ||
+         error.message.includes('ERR_ADDRESS_INVALID') ||
+         error.message.includes('ERR_NETWORK_CHANGED') ||
+         error.message.includes('ERR_INTERNET_DISCONNECTED') ||
+         error.message.includes('Failed to fetch'));
       
       let errorTitle = 'Twitter OAuth Failed';
       let errorDescription = 'Unable to connect to Twitter. Please try email/password login instead.';

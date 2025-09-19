@@ -75,7 +75,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative pt-safe">
+    <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative">
       {renderScreen()}
       {currentScreen !== 'chat' && (
         <BottomNavigation 

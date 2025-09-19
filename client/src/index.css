@@ -159,88 +159,7 @@ html {
   }
 }
 
-/* iOS Safari specific fixes */
-@supports (-webkit-touch-callout: none) {
-  /* Fix iOS Safari 100vh issue */
-  .h-screen {
-    height: 100vh;
-    height: -webkit-fill-available;
-  }
-  
-  .min-h-screen {
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-  }
-  
-  /* Better scrolling on iOS */
-  .overflow-auto {
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* Fix iOS Safari input zoom */
-  input[type="text"],
-  input[type="email"], 
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
-  textarea,
-  select {
-    font-size: 16px !important;
-    transform: translateZ(0);
-  }
-  
-  /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-appearance: none;
-    appearance: none;
-    outline: none;
-    border: 2px solid #6366f1;
-    border-radius: 8px;
-  }
-  
-  /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
-  textarea,
-  select {
-    -webkit-text-size-adjust: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    border-radius: 8px;
-  }
-  
-  /* Fix iOS Safari scrolling and momentum */
-  .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-  
-  /* iOS Safari safe area support */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  /* Reserve space for BottomNavigation (approx 56px) plus iOS home indicator */
-  .pb-nav {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom));
-  }
-  
-  /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
-  .modal-overlay {
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-  }
-}
+/* Removed iOS Safari specific fixes and safe area utilities per request */
 
 /* Performance optimizations for mobile */
 @media (max-width: 768px) {
@@ -266,56 +185,7 @@ html {
   }
 }
 
-/* ===== iOS SAFARI SPECIFIC FIXES ===== */
-
-@supports (-webkit-touch-callout: none) {
-  /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-appearance: none;
-    appearance: none;
-    outline: none;
-    border: 2px solid #6366f1;
-    border-radius: 8px;
-  }
-  
-  /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
-  textarea,
-  select {
-    -webkit-text-size-adjust: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    border-radius: 8px;
-  }
-  
-  /* Fix iOS Safari scrolling and momentum */
-  .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-  
-  /* iOS Safari safe area support */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
-  .modal-overlay {
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-  }
-}
+/* Removed duplicate iOS Safari specific fixes */
 
 /* ===== MOBILE PERFORMANCE OPTIMIZATIONS ===== */
 

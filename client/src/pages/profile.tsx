@@ -3,10 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from "lucide-react";
 import FriendsModal from "@/components/FriendsModal";
 import EditProfileModal from "@/components/EditProfileModal";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
   const { user, logout, isLoading } = useAuth();
@@ -36,37 +36,33 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 pb-6 min-h-screen pt-safe">
       {/* Header with Profile Info */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="p-4 text-center">
-          <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Profile</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account</p>
+        </div>
+      </header>
+
+      {/* Profile Avatar and Info */}
+      <div className="p-4 bg-white dark:bg-gray-800">
+        <div className="text-center">
+          <Avatar className="w-20 h-20 mx-auto mb-3 border-4 border-white dark:border-gray-700 shadow-lg">
             <AvatarImage src={user.profileImageUrl || undefined} />
-            <AvatarFallback className="text-xl font-bold bg-primary text-white">
+            <AvatarFallback className="text-lg font-bold bg-primary text-white">
               {initials}
             </AvatarFallback>
           </Avatar>
           
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
             {user.firstName && user.lastName 
               ? `${user.firstName} ${user.lastName}`
-              : user.email?.split('@')[0] || 'User'
-            }
+              : user.email || 'User'}
           </h2>
-          
-          {user.bio && (
-            <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>
-          )}
-          
-          <div className="flex items-center justify-center mt-2">
-            <Star className="w-4 h-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {user.rating?.toFixed(1) || '5.0'}
-            </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-              ({user.totalRatings || 0} reviews)
-            </span>
-          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            {user.bio || 'No bio available'}
+          </p>
         </div>
-      </header>
+      </div>
 
       <div className="p-4 space-y-6">
         {/* Activity Stats */}

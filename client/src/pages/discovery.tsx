@@ -210,11 +210,8 @@ export default function Discovery() {
         </div>
       )}
 
-      {/* Header with refresh indicator */}
-      <header 
-  className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200"
-        style={{ transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)` }}
-      >
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>

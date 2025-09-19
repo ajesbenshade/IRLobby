@@ -4,6 +4,7 @@
   "outputDirectory": "client/dist",
   "installCommand": "cd client && npm install",
   "framework": null,
+  "public": true,
   "rewrites": [
     {
       "source": "/(.*)",

@@ -235,8 +235,8 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   return (
   <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="flex items-center p-4">          <Button
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
+        <div className="flex items-center">          <Button
             variant="ghost"
             size="sm"
             onClick={() => onBack && onBack()}

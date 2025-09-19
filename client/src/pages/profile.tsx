@@ -41,30 +41,31 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
         <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account</p>
       </header>
 
-      {/* Profile Avatar and Info */}
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
-        <CardContent className="p-4">
-          <div className="text-center">
-            <Avatar className="w-20 h-20 mx-auto mb-3 border-4 border-white dark:border-gray-700 shadow-lg">
-              <AvatarImage src={user.profileImageUrl || undefined} />
-              <AvatarFallback className="text-lg font-bold bg-primary text-white">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            
-            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
-              {user.firstName && user.lastName 
-                ? `${user.firstName} ${user.lastName}`
-                : user.email || 'User'}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {user.bio || 'No bio available'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="p-4 space-y-6">
+      {/* Content */}
+      <div className="p-4">
+        <div className="space-y-6">
+        {/* Profile Avatar and Info */}
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <Avatar className="w-20 h-20 mx-auto mb-3 border-4 border-white dark:border-gray-700 shadow-lg">
+                <AvatarImage src={user.profileImageUrl || undefined} />
+                <AvatarFallback className="text-lg font-bold bg-primary text-white">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+                {user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.email || 'User'}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                {user.bio || 'No bio available'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
         {/* Activity Stats */}
         <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardContent className="p-4">
@@ -156,6 +157,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>
+        </div>
         </div>
       </div>
 

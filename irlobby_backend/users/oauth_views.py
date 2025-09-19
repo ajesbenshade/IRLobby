@@ -44,8 +44,8 @@ def twitter_oauth_url(request):
         if getattr(settings, 'DEBUG', False):
             redirect_uri = 'http://localhost:5173/auth/twitter/callback'
         else:
-            # Use the current request's host to determine the correct redirect URI
-            redirect_uri = f'https://{request.get_host()}/auth/twitter/callback'
+            # Always redirect to the frontend application, not the backend
+            redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
         scope = 'tweet.read users.read'
 
@@ -104,8 +104,8 @@ def twitter_oauth_callback(request):
         if getattr(settings, 'DEBUG', False):
             redirect_uri = 'http://localhost:5173/auth/twitter/callback'
         else:
-            # Use the current request's host to determine the correct redirect URI
-            redirect_uri = f'https://{request.get_host()}/auth/twitter/callback'
+            # Always redirect to the frontend application, not the backend
+            redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
         # Exchange code for access token
         token_url = "https://api.twitter.com/2/oauth2/token"

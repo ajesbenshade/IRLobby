@@ -159,7 +159,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-6 min-h-screen">
+  <div className="bg-gray-50 dark:bg-gray-900 pb-nav min-h-screen">
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Create Activity</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">Share your passion with others</p>

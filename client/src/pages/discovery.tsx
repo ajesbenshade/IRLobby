@@ -186,7 +186,7 @@ export default function Discovery() {
   return (
     <div 
       ref={containerRef}
-  className="bg-gray-50 dark:bg-gray-900 pb-nav min-h-screen"
+  className="bg-gray-50 dark:bg-gray-900 pb-16 min-h-screen"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}

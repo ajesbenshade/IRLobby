@@ -36,33 +36,33 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   return (
   <div className="bg-gray-50 dark:bg-gray-900 pb-16 min-h-screen">
       {/* Header with Profile Info */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Profile</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account</p>
-        </div>
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Profile</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account</p>
       </header>
 
       {/* Profile Avatar and Info */}
-      <div className="p-4 bg-white dark:bg-gray-800">
-        <div className="text-center">
-          <Avatar className="w-20 h-20 mx-auto mb-3 border-4 border-white dark:border-gray-700 shadow-lg">
-            <AvatarImage src={user.profileImageUrl || undefined} />
-            <AvatarFallback className="text-lg font-bold bg-primary text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
-            {user.firstName && user.lastName 
-              ? `${user.firstName} ${user.lastName}`
-              : user.email || 'User'}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            {user.bio || 'No bio available'}
-          </p>
-        </div>
-      </div>
+      <Card className="bg-white dark:bg-gray-800 shadow-sm">
+        <CardContent className="p-4">
+          <div className="text-center">
+            <Avatar className="w-20 h-20 mx-auto mb-3 border-4 border-white dark:border-gray-700 shadow-lg">
+              <AvatarImage src={user.profileImageUrl || undefined} />
+              <AvatarFallback className="text-lg font-bold bg-primary text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+              {user.firstName && user.lastName 
+                ? `${user.firstName} ${user.lastName}`
+                : user.email || 'User'}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              {user.bio || 'No bio available'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="p-4 space-y-6">
         {/* Activity Stats */}

@@ -233,9 +233,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-6 pt-safe">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-6 pt-safe">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="flex items-center p-4">          <Button
             variant="ghost"
             size="sm"
@@ -244,7 +244,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-xl font-bold text-gray-800">Settings</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
         </div>
       </header>
 

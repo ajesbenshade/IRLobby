@@ -23,8 +23,8 @@ const insertActivitySchema = z.object({
   location: z.string().min(1, "Location is required"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  dateTime: z.date(),
-  endDateTime: z.date().optional(),
+  dateTime: z.string().min(1, "Date and time is required"),
+  endDateTime: z.string().optional(),
   maxParticipants: z.number().min(1, "At least 1 participant required"),
   isPrivate: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
@@ -40,9 +40,7 @@ const insertActivitySchema = z.object({
   weatherDependent: z.boolean().default(false),
 });
 
-const formSchema = insertActivitySchema.extend({
-  dateTime: z.string().min(1, "Date and time is required"),
-});
+const formSchema = insertActivitySchema;
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -131,6 +129,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       const activityData = {
         ...data,
         dateTime: new Date(data.dateTime).toISOString(),
+        endDateTime: data.endDateTime ? new Date(data.endDateTime).toISOString() : undefined,
         // For now, just store image data as base64 or file references
         // This can be enhanced later with proper file upload
         images: imagePreviews, // Store preview URLs for now
@@ -160,10 +159,10 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   };
 
   return (
-    <div className="bg-gray-50 pb-6 min-h-screen pt-safe">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-6 min-h-screen pt-safe">
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
-        <h2 className="text-xl font-bold text-gray-800">Create Activity</h2>
-        <p className="text-sm text-gray-500">Share your passion with others</p>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Create Activity</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Share your passion with others</p>
       </header>
 
       <div className="p-4">

@@ -233,7 +233,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
   const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-4">
+    <div className="bg-gray-50 min-h-screen pb-6 pt-safe">
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="flex items-center p-4">          <Button

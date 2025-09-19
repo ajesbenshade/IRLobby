@@ -45,15 +45,15 @@ export default function HelpSupport({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-6 pt-safe">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-6 pt-safe">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Help & Support</h1>
-          <p className="text-sm text-gray-500">Get assistance with your IRlobby experience</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Help & Support</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Get assistance with your IRlobby experience</p>
         </div>
       </header>
 

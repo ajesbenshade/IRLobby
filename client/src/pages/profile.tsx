@@ -34,7 +34,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-6 min-h-screen pt-safe">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-6 min-h-screen">
       {/* Header with Profile Info */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
         <div>

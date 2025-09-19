@@ -45,7 +45,7 @@ export default function HelpSupport({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-6">
+  <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-nav">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

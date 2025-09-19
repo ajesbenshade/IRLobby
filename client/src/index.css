@@ -229,6 +229,11 @@ html {
     padding-top: env(safe-area-inset-top);
   }
   
+  /* Reserve space for BottomNavigation (approx 56px) plus iOS home indicator */
+  .pb-nav {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+  
   /* Fix iOS Safari modal and overlay issues */
   [role="dialog"],
   .modal-overlay {

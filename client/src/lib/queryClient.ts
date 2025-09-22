@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { HTTP_METHODS, HttpMethod } from "@/types/api";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,36 +8,74 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(...args: any[]): Promise<Response> {
+interface ApiRequestOptions {
+  method?: string;
+  body?: unknown;
+}
+
+type ApiRequestArgs =
+  | [HttpMethod, string, unknown?]
+  | [string, ApiRequestOptions?];
+
+const isApiRequestOptions = (value: unknown): value is ApiRequestOptions =>
+  typeof value === 'object' && value !== null;
+
+const toHttpMethod = (value: unknown): HttpMethod | null => {
+  if (typeof value === 'string') {
+    const upper = value.toUpperCase() as HttpMethod;
+    if ((HTTP_METHODS as readonly string[]).includes(upper)) {
+      return upper;
+    }
+  }
+  return null;
+};
+
+const buildRequestBody = (payload: unknown): string | undefined => {
+  if (payload === undefined) return undefined;
+  return typeof payload === 'string' ? payload : JSON.stringify(payload);
+};
+
+export function apiRequest(method: HttpMethod, url: string, data?: unknown): Promise<Response>;
+export function apiRequest(url: string, options?: ApiRequestOptions): Promise<Response>;
+export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
   // Accept two call shapes used in the codebase:
   // 1) apiRequest(method, url, data?)
   // 2) apiRequest(url, { method, body })
-  const httpMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
-
-  let method = 'GET';
+  let method: HttpMethod = 'GET';
   let url: string;
-  let data: any = undefined;
+  let data: unknown;
 
-  if (typeof args[0] === 'string' && typeof args[1] === 'string' && httpMethods.has((args[0] as string).toUpperCase())) {
-    // apiRequest(method, url, data)
-    method = (args[0] as string).toUpperCase();
-    url = args[1] as string;
-    data = args[2];
-  } else if (typeof args[0] === 'string') {
-    // apiRequest(url, options)
-    url = args[0] as string;
-    const opts = args[1] || {};
-    method = (opts.method || 'GET').toUpperCase();
-    // support both JSON-stringified body and plain objects
-    if (opts.body !== undefined) {
-      try {
-        data = typeof opts.body === 'string' ? JSON.parse(opts.body) : opts.body;
-      } catch {
-        data = opts.body;
-      }
-    }
-  } else {
+  const [firstArg] = args;
+  if (typeof firstArg !== 'string') {
     throw new Error('Invalid arguments to apiRequest');
+  }
+
+  if (args.length > 1 && typeof args[1] === 'string') {
+    const normalizedMethod = toHttpMethod(firstArg);
+    if (!normalizedMethod) {
+      throw new Error(`Invalid HTTP method: ${String(firstArg)}`);
+    }
+    method = normalizedMethod;
+    url = args[1];
+    data = args[2];
+  } else {
+    url = firstArg;
+    const options = args[1];
+    if (options !== undefined) {
+      if (!isApiRequestOptions(options)) {
+        throw new Error('Invalid apiRequest options');
+      }
+
+      if (options.method !== undefined) {
+        const normalizedMethod = toHttpMethod(options.method);
+        if (!normalizedMethod) {
+          throw new Error(`Invalid HTTP method: ${String(options.method)}`);
+        }
+        method = normalizedMethod;
+      }
+
+      data = options.body;
+    }
   }
 
   // Prepend base URL for production
@@ -48,7 +87,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {};
 
-  if (data !== undefined && data !== null) {
+  if (data !== undefined && data !== null && typeof data !== 'string') {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -64,10 +103,12 @@ export async function apiRequest(...args: any[]): Promise<Response> {
   console.log('Request body:', data);
 
   try {
+    const requestBody = buildRequestBody(data);
+
     const res = await fetch(url, {
       method,
       headers,
-      body: data !== undefined ? JSON.stringify(data) : undefined,
+      body: requestBody,
       // credentials: 'include',  // Remove credentials for production CORS
     });
 
@@ -110,10 +151,12 @@ export async function apiRequest(...args: any[]): Promise<Response> {
           const retryHeaders = { ...headers };
           retryHeaders['Authorization'] = `Bearer ${refreshData.access}`;
           
+          const retryBody = buildRequestBody(data);
+
           const retryRes = await fetch(url, {
             method,
             headers: retryHeaders,
-            body: data !== undefined ? JSON.stringify(data) : undefined,
+            body: retryBody,
             // credentials: 'include',  // Remove credentials for production CORS
           });
           
@@ -135,7 +178,7 @@ export async function apiRequest(...args: any[]): Promise<Response> {
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn =
-  (options: { on401: UnauthorizedBehavior }): QueryFunction<any> =>
+  (options: { on401: UnauthorizedBehavior }): QueryFunction<unknown> =>
   async ({ queryKey }) => {
     const unauthorizedBehavior = options.on401;
     const token = localStorage.getItem('authToken');
@@ -143,7 +186,11 @@ export const getQueryFn =
 
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    let url = queryKey[0] as string;
+    if (typeof queryKey[0] !== 'string') {
+      throw new Error('Query key must start with a string URL');
+    }
+
+    let url = queryKey[0];
     // Prepend base URL for production
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
     if (baseUrl && !url.startsWith('http')) {

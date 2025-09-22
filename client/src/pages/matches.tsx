@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
+import { MatchParticipant, MatchSummary } from "@/types/api";
 
 interface MatchesProps {
   onOpenChat: (activityId: number) => void;
@@ -14,15 +15,15 @@ interface MatchesProps {
 }
 
 export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
-  const { data: matches = [], isLoading } = useQuery<any[]>({
+  const { data: matches = [], isLoading } = useQuery<MatchSummary[]>({
     queryKey: ['/api/matches'],
     retry: 1,
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchSummary | null>(null);
 
-  const openProfileModal = (match: any) => {
+  const openProfileModal = (match: MatchSummary) => {
     setSelectedMatch(match);
     setIsModalOpen(true);
   };
@@ -32,12 +33,12 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
     setSelectedMatch(null);
   };
 
-  const sendFriendRequest = (userId: string) => {
+  const sendFriendRequest = (userId: string | number) => {
     // Call API to send friend request
     console.log(`Sending friend request to user ${userId}`);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: MatchSummary['status']) => {
     switch (status) {
       case 'approved':
         return (
@@ -92,7 +93,7 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
             <p className="text-gray-500 dark:text-gray-400">Start swiping to find activities you love!</p>
           </div>
         ) : (
-          matches.map((match: any) => (
+          matches.map((match) => (
             <Card key={match.id} className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
@@ -153,7 +154,7 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
             <DialogTitle>Group Profiles</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {selectedMatch?.participants?.map((participant: any) => (
+            {selectedMatch?.participants?.map((participant: MatchParticipant) => (
               <div key={participant.id} className="flex items-center space-x-4">
                 <Avatar>
                   <AvatarImage src={participant.profileImageUrl} alt={participant.firstName} />

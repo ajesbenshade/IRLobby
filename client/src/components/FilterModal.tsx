@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, MapPin } from "lucide-react";
 import { format } from "date-fns";
+import { ActivityFilters, createDefaultActivityFilters } from "@/types/api";
 
 interface FilterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyFilters: (filters: any) => void;
-  currentFilters: any;
+  onApplyFilters: (filters: ActivityFilters) => void;
+  currentFilters: ActivityFilters;
 }
 
 const categories = [
@@ -36,17 +37,17 @@ const skillLevels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 const ageRestrictions = ["All Ages", "18+", "21+"];
 
 export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFilters }: FilterModalProps) {
-  const [filters, setFilters] = useState({
-    category: currentFilters.category || "All Categories",
-    maxDistance: currentFilters.maxDistance || [25],
-    priceRange: currentFilters.priceRange || [0, 100],
-    dateFrom: currentFilters.dateFrom || null,
-    dateTo: currentFilters.dateTo || null,
-    skillLevel: currentFilters.skillLevel || "All Levels",
-    ageRestriction: currentFilters.ageRestriction || "All Ages",
-    tags: currentFilters.tags || [],
-    location: currentFilters.location || "",
+  const [filters, setFilters] = useState<ActivityFilters>({
+    ...createDefaultActivityFilters(),
+    ...currentFilters,
   });
+
+  useEffect(() => {
+    setFilters({
+      ...createDefaultActivityFilters(),
+      ...currentFilters,
+    });
+  }, [currentFilters]);
 
   const [newTag, setNewTag] = useState("");
 
@@ -73,17 +74,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
   };
 
   const handleReset = () => {
-    setFilters({
-      category: "All Categories",
-      maxDistance: [25],
-      priceRange: [0, 100],
-      dateFrom: null,
-      dateTo: null,
-      skillLevel: "All Levels",
-      ageRestriction: "All Ages",
-      tags: [],
-      location: "",
-    });
+    setFilters(createDefaultActivityFilters());
   };
 
   return (

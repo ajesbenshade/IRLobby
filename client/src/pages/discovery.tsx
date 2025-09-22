@@ -11,6 +11,7 @@ import NotificationCenter from "@/components/NotificationCenter";
 import MapView from "@/components/MapView";
 import { Filter, MapPin, Bell, RefreshCw, Map } from "lucide-react";
 import type { Activity } from "@/types/activity";
+import { ActivityFilters, SwipePayload, createDefaultActivityFilters } from "@/types/api";
 
 export default function Discovery() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
@@ -20,7 +21,7 @@ export default function Discovery() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<ActivityFilters>(createDefaultActivityFilters());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
@@ -32,7 +33,7 @@ export default function Discovery() {
   const token = localStorage.getItem('authToken');
 
   // Use the token in the API request
-  const { data: activities = [], isLoading, error, refetch } = useQuery({
+  const { data: activities = [], isLoading, error, refetch } = useQuery<Activity[]>({
     queryKey: ['/api/activities', filters],
     queryFn: async () => {
       console.log('Fetching activities with token:', !!token);
@@ -77,11 +78,11 @@ export default function Discovery() {
   //   retry: 1,
   // });
 
-  const swipeMutation = useMutation({
-    mutationFn: async ({ activityId, swipeType }: { activityId: number; swipeType: 'like' | 'pass' }) => {
+  const swipeMutation = useMutation<{ match?: boolean }, Error, SwipePayload>({
+    mutationFn: async ({ activityId, swipeType }: SwipePayload) => {
       const direction = swipeType === 'like' ? 'right' : 'left';
       const response = await apiRequest('POST', `/api/swipes/${activityId}/swipe/`, { direction });
-      return response.json();
+      return response.json() as Promise<{ match?: boolean }>;
     },
     onSuccess: (data) => {
       if (data.match) {
@@ -111,7 +112,7 @@ export default function Discovery() {
   const handleReject = () => handleSwipe('pass');
   const handleJoin = () => handleSwipe('like');
 
-  const handleApplyFilters = (newFilters: any) => {
+  const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
     setCurrentActivityIndex(0);
   };
@@ -261,7 +262,7 @@ export default function Discovery() {
       {/* Swipe Cards Container */}
       <div className="relative p-4 h-full">
         {/* Background cards for stacking effect */}
-        {activities.slice(currentActivityIndex + 1, currentActivityIndex + 3).map((activity: any, index: number) => (
+        {activities.slice(currentActivityIndex + 1, currentActivityIndex + 3).map((activity, index) => (
           <Card 
             key={activity.id}
             className={`absolute inset-x-4 top-4 bg-white rounded-2xl shadow-lg transform ${
@@ -356,7 +357,7 @@ export default function Discovery() {
         <div className="fixed inset-0 z-50 bg-white">
           <MapView
             onActivitySelect={(activity) => {
-              setCurrentActivityIndex(activities.findIndex((a: any) => a.id === activity.id));
+              setCurrentActivityIndex(activities.findIndex((a) => a.id === activity.id));
               setShowMapView(false);
               setShowDetailsModal(true);
             }}

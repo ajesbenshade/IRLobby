@@ -13,25 +13,26 @@ import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AttendedActivity, ReviewPayload } from "@/types/api";
 
 export default function Reviews() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [selectedActivity, setSelectedActivity] = useState<AttendedActivity | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
 
   // Fetch attended activities
-  const { data: attendedActivities = [] } = useQuery<any>({
+  const { data: attendedActivities = [] } = useQuery<AttendedActivity[]>({
     queryKey: [`/api/users/${user?.id}/attended-activities`],
     enabled: !!user?.id,
   });
 
   // Create review mutation
-  const createReviewMutation = useMutation({
-    mutationFn: async (reviewData: any) => {
+  const createReviewMutation = useMutation<Response, Error, ReviewPayload>({
+    mutationFn: async (reviewData: ReviewPayload) => {
       return await apiRequest(`/api/activities/${reviewData.activityId}/reviews`, {
         method: 'POST',
         body: JSON.stringify({
@@ -52,7 +53,7 @@ export default function Reviews() {
       setReviewText("");
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/attended-activities`] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to submit review",
@@ -61,7 +62,7 @@ export default function Reviews() {
     },
   });
 
-  const handleReviewActivity = (activity: any) => {
+  const handleReviewActivity = (activity: AttendedActivity) => {
     setSelectedActivity(activity);
     setShowReviewModal(true);
   };
@@ -120,7 +121,7 @@ export default function Reviews() {
           <TabsContent value="to-review" className="space-y-4 mt-6">
             {attendedActivities.length > 0 ? (
               <div className="grid gap-4">
-                {attendedActivities.map((activity: any) => (
+                {attendedActivities.map((activity) => (
                   <Card key={activity.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">

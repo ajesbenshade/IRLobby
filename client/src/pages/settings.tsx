@@ -26,26 +26,76 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useTheme } from "@/hooks/useTheme";
 
-interface UserSettings {
-  notifications: {
-    pushNotifications: boolean;
-    emailNotifications: boolean;
-    activityReminders: boolean;
-    newMatches: boolean;
-    messages: boolean;
-  };  privacy: {
-    profileVisibility: 'public' | 'friends' | 'private';
-    locationSharing: boolean;
-    showAge: boolean;
-    showEmail: boolean;
-  };
-  preferences: {
-    theme: 'light' | 'dark' | 'system';
-    language: string;
-    distanceUnit: 'miles' | 'kilometers';
-    maxDistance: number;
-  };
+interface NotificationSettings {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  activityReminders: boolean;
+  newMatches: boolean;
+  messages: boolean;
 }
+
+interface PrivacySettings {
+  profileVisibility: 'public' | 'friends' | 'private';
+  locationSharing: boolean;
+  showAge: boolean;
+  showEmail: boolean;
+}
+
+interface PreferenceSettings {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  distanceUnit: 'miles' | 'kilometers';
+  maxDistance: number;
+}
+
+interface UserSettings {
+  notifications: NotificationSettings;
+  privacy: PrivacySettings;
+  preferences: PreferenceSettings;
+}
+
+type SettingsUpdatePayload =
+  | { preferences: PreferenceSettings }
+  | { notifications: NotificationSettings }
+  | { privacy: PrivacySettings };
+
+type PreferencesResponse = PreferenceSettings & {
+  notifications?: NotificationSettings;
+  privacy?: PrivacySettings;
+};
+
+interface UserProfileResponse {
+  preferences?: PreferencesResponse;
+}
+
+const mergeSettings = (
+  previous: UserSettings,
+  override?: PreferencesResponse,
+  fallback?: Partial<UserSettings>,
+): UserSettings => ({
+  notifications: override?.notifications ?? fallback?.notifications ?? previous.notifications,
+  privacy: override?.privacy ?? fallback?.privacy ?? previous.privacy,
+  preferences: {
+    ...previous.preferences,
+    theme: override?.theme ?? fallback?.preferences?.theme ?? previous.preferences.theme,
+    language: override?.language ?? fallback?.preferences?.language ?? previous.preferences.language,
+    distanceUnit: override?.distanceUnit ?? fallback?.preferences?.distanceUnit ?? previous.preferences.distanceUnit,
+    maxDistance: override?.maxDistance ?? fallback?.preferences?.maxDistance ?? previous.preferences.maxDistance,
+  },
+});
+
+const getFallbackFromPayload = (payload: SettingsUpdatePayload): Partial<UserSettings> => {
+  if ('preferences' in payload) {
+    return { preferences: payload.preferences };
+  }
+  if ('notifications' in payload) {
+    return { notifications: payload.notifications };
+  }
+  if ('privacy' in payload) {
+    return { privacy: payload.privacy };
+  }
+  return {};
+};
 
 export default function Settings({ onBack }: { onBack?: () => void }) {
   const { user } = useAuth();
@@ -60,7 +110,8 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       activityReminders: true,
       newMatches: true,
       messages: true,
-    },    privacy: {
+    },
+    privacy: {
       profileVisibility: 'public',
       locationSharing: true,
       showAge: true,
@@ -84,17 +135,12 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       const response = await apiRequest('GET', '/api/users/profile/');
       
       if (response.ok) {
-        const userData = await response.json();
-        const loadedPreferences = userData.preferences || {};
-        setSettings(prev => ({
-          ...prev,
-          preferences: loadedPreferences,
-          notifications: loadedPreferences.notifications || prev.notifications,
-          privacy: loadedPreferences.privacy || prev.privacy,
-        }));
-        
-        // Apply theme from loaded preferences
-        if (loadedPreferences.theme) {
+        const userData = (await response.json()) as UserProfileResponse;
+        const loadedPreferences = userData.preferences;
+
+        setSettings(prev => mergeSettings(prev, loadedPreferences));
+
+        if (loadedPreferences?.theme) {
           setTheme(loadedPreferences.theme);
         }
       }
@@ -102,25 +148,44 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       console.error('Failed to load settings:', error);
     }
   };
-  const updateSettings = async (section: keyof UserSettings, newSettings: any) => {
+  const updateSettings = async <Section extends keyof UserSettings>(
+    section: Section,
+    newSettings: UserSettings[Section],
+  ) => {
     try {
       setLoading(true);
-      
-      // For preferences, update the entire preferences object
-      const payload = section === 'preferences' 
-        ? { preferences: newSettings }
-        : { [section]: newSettings };
-      
+
+      let payload: SettingsUpdatePayload;
+      switch (section) {
+        case 'preferences':
+          payload = { preferences: newSettings as PreferenceSettings };
+          break;
+        case 'notifications':
+          payload = { notifications: newSettings as NotificationSettings };
+          break;
+        case 'privacy':
+          payload = { privacy: newSettings as PrivacySettings };
+          break;
+        default: {
+          const exhaustiveCheck: never = section;
+          throw new Error(`Unsupported settings section: ${exhaustiveCheck}`);
+        }
+      }
+
+      const fallback = getFallbackFromPayload(payload);
+
       const response = await apiRequest('PATCH', '/api/users/profile/', payload);
 
       if (response.ok) {
-        const updatedUser = await response.json();
-        setSettings(prev => ({
-          ...prev,
-          preferences: updatedUser.preferences || {},
-          notifications: updatedUser.preferences?.notifications || prev.notifications,
-          privacy: updatedUser.preferences?.privacy || prev.privacy,
-        }));
+        const updatedUser = (await response.json()) as UserProfileResponse;
+        const loadedPreferences = updatedUser.preferences;
+
+        setSettings(prev => mergeSettings(prev, loadedPreferences, fallback));
+
+        const nextTheme = loadedPreferences?.theme ?? fallback.preferences?.theme;
+        if (nextTheme) {
+          setTheme(nextTheme);
+        }
         toast({
           title: "Settings updated",
           description: "Your settings have been saved successfully.",
@@ -140,23 +205,29 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     }
   };
 
-  const handleNotificationChange = (key: keyof typeof settings.notifications, value: boolean) => {
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
     const newNotifications = { ...settings.notifications, [key]: value };
     updateSettings('notifications', newNotifications);
   };
 
-  const handlePrivacyChange = (key: keyof typeof settings.privacy, value: any) => {
+  const handlePrivacyChange = <Key extends keyof PrivacySettings>(
+    key: Key,
+    value: PrivacySettings[Key],
+  ) => {
     const newPrivacy = { ...settings.privacy, [key]: value };
     updateSettings('privacy', newPrivacy);
   };
 
-  const handlePreferenceChange = (key: keyof typeof settings.preferences, value: any) => {
+  const handlePreferenceChange = <Key extends keyof PreferenceSettings>(
+    key: Key,
+    value: PreferenceSettings[Key],
+  ) => {
     const newPreferences = { ...settings.preferences, [key]: value };
     updateSettings('preferences', newPreferences);
-    
+
     // Apply theme change immediately
     if (key === 'theme') {
-      setTheme(value);
+      setTheme(value as PreferenceSettings['theme']);
     }
   };
   const exportData = async () => {
@@ -210,9 +281,11 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
         
         // Redirect to landing page
         window.location.href = '/';
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error deleting account:', error);
-        const errorMessage = error.message || 'Failed to delete account. Please try again.';
+        const errorMessage = error instanceof Error
+          ? error.message
+          : 'Failed to delete account. Please try again.';
         toast({
           title: "Error",
           description: errorMessage,

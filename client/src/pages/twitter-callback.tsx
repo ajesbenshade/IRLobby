@@ -12,11 +12,18 @@ const TwitterCallback = () => {
     const handleCallback = async () => {
       try {
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
 
-        // Get the code_verifier from sessionStorage (set during OAuth initiation)
+        // Get stored values from sessionStorage
         const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
+        const expectedState = sessionStorage.getItem('twitter_oauth_state');
+
         if (!codeVerifier) {
           throw new Error('Session expired. Please try logging in again.');
+        }
+
+        if (!expectedState || state !== expectedState) {
+          throw new Error('Invalid OAuth state. Please try logging in again.');
         }
 
         console.log('Processing Twitter OAuth callback...');
@@ -28,7 +35,7 @@ const TwitterCallback = () => {
         // Exchange code for tokens
         const response = await apiRequest(
           'GET',
-          `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(codeVerifier)}`,
+          `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&code_verifier=${encodeURIComponent(codeVerifier)}`,
         );
 
         if (!response.ok) {
@@ -52,6 +59,7 @@ const TwitterCallback = () => {
 
         // Clean up
         sessionStorage.removeItem('twitter_code_verifier');
+        sessionStorage.removeItem('twitter_oauth_state');
 
         toast({
           title: 'Success',
@@ -65,6 +73,7 @@ const TwitterCallback = () => {
 
         // Clean up on error
         sessionStorage.removeItem('twitter_code_verifier');
+        sessionStorage.removeItem('twitter_oauth_state');
 
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 

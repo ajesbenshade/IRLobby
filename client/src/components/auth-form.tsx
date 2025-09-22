@@ -32,10 +32,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const handleTwitterOAuth = async () => {
     try {
       setIsLoading(true);
-      console.log('Starting Twitter OAuth...');
 
       const response = await apiRequest('GET', '/api/auth/twitter/url/');
-      console.log('OAuth URL response:', response.status, response);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -44,12 +42,10 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       const data = await response.json();
-      console.log('OAuth URL data:', data);
 
       if (data.auth_url && data.code_verifier) {
         // Store the code_verifier for use in the callback
         sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
-        console.log('Redirecting to Twitter OAuth URL...');
 
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
@@ -103,17 +99,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', formData.email);
-
       const response = await apiRequest('POST', '/api/users/login/', {
         email: formData.email,
         password: formData.password,
       });
 
-      console.log('Login response status:', response.status);
       const data = await response.json();
-      console.log('Login response data:', data);
-      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Login failed');
@@ -123,7 +114,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       localStorage.setItem('authToken', data.tokens.access);
       localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
-      console.log('Login successful, token stored:', data.tokens.access);
 
       // Small delay to ensure token is stored before making authenticated requests
       setTimeout(async () => {
@@ -178,7 +168,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       localStorage.setItem('authToken', data.tokens.access);
       localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
-      console.log('Registration successful, token stored:', data.tokens.access);
 
       // Small delay to ensure token is stored before making authenticated requests
       setTimeout(async () => {

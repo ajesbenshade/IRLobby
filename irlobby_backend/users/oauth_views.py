@@ -75,7 +75,10 @@ def twitter_oauth_url(request):
             'code_challenge_method=S256'
         )
 
-        return Response({'auth_url': auth_url})
+        return Response({
+            'auth_url': auth_url,
+            'code_verifier': code_verifier,
+        })
 
     except Exception as exc:  # pragma: no cover - defensive logging
         logger.exception('Twitter OAuth URL generation failed: %s', exc)
@@ -93,6 +96,10 @@ def twitter_oauth_callback(request):
         code = request.GET.get('code')
         returned_state = request.GET.get('state')
         code_verifier = request.session.pop('twitter_code_verifier', None)
+        if not code_verifier:
+            code_verifier = request.GET.get('code_verifier')
+            if code_verifier:
+                logger.info('Using code_verifier from request parameters as session data was unavailable')
         expected_state = request.session.pop('twitter_oauth_state', None)
         request.session.pop('twitter_oauth_issued_at', None)
 

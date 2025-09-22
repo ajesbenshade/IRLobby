@@ -157,6 +157,7 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
       method,
       headers: requestHeaders,
       body: requestData !== undefined ? JSON.stringify(requestData) : undefined,
+      credentials: 'include',
     });
   };
 

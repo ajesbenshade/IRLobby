@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 export interface WebSocketMessage {
   type: string;
@@ -17,7 +17,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -68,7 +68,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
     }
-  };
+  }, [options]);
 
   const disconnect = () => {
     if (reconnectTimeoutRef.current) {

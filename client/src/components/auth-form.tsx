@@ -1,7 +1,8 @@
 import { useState } from 'react';
+
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
+import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from '../hooks/use-toast';
@@ -32,16 +33,16 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     try {
       setIsLoading(true);
       console.log('Starting Twitter OAuth...');
-      
+
       const response = await apiRequest('GET', '/api/auth/twitter/url/');
       console.log('OAuth URL response:', response.status, response);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('OAuth URL error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log('OAuth URL data:', data);
 
@@ -49,7 +50,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         // Store the code_verifier for use in the callback
         sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
         console.log('Redirecting to Twitter OAuth URL...');
-        
+
         // Open Twitter OAuth in a popup or redirect
         window.location.href = data.auth_url;
       } else {
@@ -58,30 +59,35 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
     } catch (error) {
       console.error('Twitter OAuth error:', error);
-      
+
       // Check if it's a configuration error
-      const isConfigError = error instanceof Error && 
-        (error.message.includes('not configured') || 
-         error.message.includes('500') ||
-         error.message.includes('503') ||
-         error.message.includes('Twitter OAuth'));
-      
-      const isNetworkError = error instanceof Error &&
+      const isConfigError =
+        error instanceof Error &&
+        (error.message.includes('not configured') ||
+          error.message.includes('500') ||
+          error.message.includes('503') ||
+          error.message.includes('Twitter OAuth'));
+
+      const isNetworkError =
+        error instanceof Error &&
         (error.message.includes('Failed to connect') ||
-         error.message.includes('502') ||
-         error.message.includes('timeout'));
-      
+          error.message.includes('502') ||
+          error.message.includes('timeout'));
+
       let errorTitle = 'Twitter OAuth Failed';
-      let errorDescription = 'Unable to connect to Twitter. Please try email/password login instead.';
-      
+      let errorDescription =
+        'Unable to connect to Twitter. Please try email/password login instead.';
+
       if (isConfigError) {
         errorTitle = 'Twitter OAuth Unavailable';
-        errorDescription = 'Twitter login is temporarily unavailable. Please use email/password login.';
+        errorDescription =
+          'Twitter login is temporarily unavailable. Please use email/password login.';
       } else if (isNetworkError) {
         errorTitle = 'Connection Error';
-        errorDescription = 'Unable to connect to Twitter. Please check your internet connection and try again.';
+        errorDescription =
+          'Unable to connect to Twitter. Please check your internet connection and try again.';
       }
-      
+
       toast({
         title: errorTitle,
         description: errorDescription,
@@ -159,7 +165,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
       if (!response.ok) {
         // Handle Django's error format
-        const errorMessage = data.username?.[0] || data.email?.[0] || data.password?.[0] || data.detail || 'Registration failed';
+        const errorMessage =
+          data.username?.[0] ||
+          data.email?.[0] ||
+          data.password?.[0] ||
+          data.detail ||
+          'Registration failed';
         throw new Error(errorMessage);
       }
 
@@ -324,9 +335,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
           <div className="mt-4">

@@ -1,16 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import SwipeCard from "@/components/SwipeCard";
-import ActivityDetailsModal from "@/components/ActivityDetailsModal";
-import MatchSuccessModal from "@/components/MatchSuccessModal";
-import FilterModal from "@/components/FilterModal";
-import NotificationCenter from "@/components/NotificationCenter";
-import MapView from "@/components/MapView";
-import { Filter, MapPin, Bell, RefreshCw, Map } from "lucide-react";
-import type { Activity } from "@/types/activity";
+import ActivityDetailsModal from '@/components/ActivityDetailsModal';
+import FilterModal from '@/components/FilterModal';
+import MapView from '@/components/MapView';
+import MatchSuccessModal from '@/components/MatchSuccessModal';
+import NotificationCenter from '@/components/NotificationCenter';
+import SwipeCard from '@/components/SwipeCard';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { apiRequest } from '@/lib/queryClient';
+import type { Activity, ActivityFilters } from '@/types/activity';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Filter, MapPin, Bell, RefreshCw, Map } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+interface SwipePayload {
+  activityId: number;
+  swipeType: 'like' | 'pass';
+}
+
+interface SwipeMutationResult {
+  match?: boolean;
+}
 
 export default function Discovery() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
@@ -20,7 +29,7 @@ export default function Discovery() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
@@ -32,22 +41,27 @@ export default function Discovery() {
   const token = localStorage.getItem('authToken');
 
   // Use the token in the API request
-  const { data: activities = [], isLoading, error, refetch } = useQuery({
+  const {
+    data: activities = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<Activity[]>({
     queryKey: ['/api/activities', filters],
     queryFn: async () => {
       console.log('Fetching activities with token:', !!token);
-      
+
       const response = await apiRequest('GET', '/api/activities/');
-      
+
       console.log('Activities response status:', response.status);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error fetching activities:', errorText);
         throw new Error('Failed to fetch activities');
       }
-      
-      const data = await response.json();
+
+      const data = (await response.json()) as Activity[];
       console.log('Found activities:', data.length);
       return data;
     },
@@ -60,7 +74,7 @@ export default function Discovery() {
     if (error) {
       console.error('Activity fetch error:', error);
     }
-    
+
     if (activities && activities.length === 0 && !isLoading) {
       console.log('No activities found. Auth token present:', !!token);
     }
@@ -77,14 +91,14 @@ export default function Discovery() {
   //   retry: 1,
   // });
 
-  const swipeMutation = useMutation({
-    mutationFn: async ({ activityId, swipeType }: { activityId: number; swipeType: 'like' | 'pass' }) => {
+  const swipeMutation = useMutation<SwipeMutationResult, Error, SwipePayload>({
+    mutationFn: async ({ activityId, swipeType }) => {
       const direction = swipeType === 'like' ? 'right' : 'left';
       const response = await apiRequest('POST', `/api/swipes/${activityId}/swipe/`, { direction });
-      return response.json();
+      return (await response.json()) as SwipeMutationResult;
     },
     onSuccess: (data) => {
-      if (data.match) {
+      if (data?.match) {
         const activity = activities[currentActivityIndex];
         setMatchedActivity(activity);
         setShowMatchSuccess(true);
@@ -97,7 +111,7 @@ export default function Discovery() {
   const currentActivity = activities[currentActivityIndex];
 
   const nextActivity = useCallback(() => {
-    setCurrentActivityIndex(prev => prev + 1);
+    setCurrentActivityIndex((prev) => prev + 1);
   }, []);
 
   const handleSwipe = (swipeType: 'like' | 'pass') => {
@@ -111,7 +125,7 @@ export default function Discovery() {
   const handleReject = () => handleSwipe('pass');
   const handleJoin = () => handleSwipe('like');
 
-  const handleApplyFilters = (newFilters: any) => {
+  const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
     setCurrentActivityIndex(0);
   };
@@ -126,10 +140,10 @@ export default function Discovery() {
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isPulling.current || window.scrollY > 0) return;
-    
+
     const currentY = e.touches[0].clientY;
     const distance = Math.max(0, currentY - startY.current);
-    
+
     if (distance > 0) {
       e.preventDefault();
       setPullDistance(Math.min(distance * 0.5, 80)); // Dampen the pull with max distance
@@ -138,14 +152,14 @@ export default function Discovery() {
 
   const handleTouchEnd = useCallback(async () => {
     if (!isPulling.current) return;
-    
+
     if (pullDistance > 50) {
       // Trigger refresh
       setIsRefreshing(true);
       await refetch();
       setIsRefreshing(false);
     }
-    
+
     setPullDistance(0);
     isPulling.current = false;
   }, [pullDistance, refetch]);
@@ -171,12 +185,13 @@ export default function Discovery() {
         <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
           <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-500" />
         </div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">No more activities</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">Check back later for new events in your area!</p>
-        <Button 
-          onClick={() => window.location.reload()} 
-          className="bg-primary text-white"
-        >
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+          No more activities
+        </h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          Check back later for new events in your area!
+        </p>
+        <Button onClick={() => window.location.reload()} className="bg-primary text-white">
           Refresh
         </Button>
       </div>
@@ -184,7 +199,7 @@ export default function Discovery() {
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen relative overflow-hidden"
       onTouchStart={handleTouchStart}
@@ -193,12 +208,12 @@ export default function Discovery() {
     >
       {/* Pull to refresh indicator */}
       {pullDistance > 0 && (
-        <div 
+        <div
           className="absolute top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-transform duration-200"
           style={{ transform: `translateY(${Math.max(-60, pullDistance - 60)}px)` }}
         >
           <div className="flex items-center justify-center py-4">
-            <RefreshCw 
+            <RefreshCw
               className={`w-6 h-6 text-primary transition-transform duration-200 ${
                 pullDistance > 50 ? 'rotate-180' : ''
               } ${isRefreshing ? 'animate-spin' : ''}`}
@@ -211,18 +226,20 @@ export default function Discovery() {
       )}
 
       {/* Header with refresh indicator */}
-      <header 
+      <header
         className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200"
-        style={{ transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)` }}
+        style={{
+          transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)`,
+        }}
       >
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-10 h-10 p-0 relative"
             onClick={() => setShowNotifications(true)}
           >
@@ -233,25 +250,25 @@ export default function Discovery() {
               </span>
             )} */}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-10 h-10 p-0"
             onClick={() => setShowMapView(true)}
           >
             <Map className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-10 h-10 p-0"
             onClick={() => setShowFilterModal(true)}
           >
             <Filter className="w-5 h-5 text-gray-600" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-10 h-10 p-0"
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -264,19 +281,21 @@ export default function Discovery() {
       {/* Swipe Cards Container */}
       <div className="relative p-4 h-full">
         {/* Background cards for stacking effect */}
-        {activities.slice(currentActivityIndex + 1, currentActivityIndex + 3).map((activity: any, index: number) => (
-          <Card 
-            key={activity.id}
-            className={`absolute inset-x-4 top-4 bg-white rounded-2xl shadow-lg transform ${
-              index === 0 ? 'scale-97 opacity-80 z-20' : 'scale-95 opacity-60 z-10'
-            }`}
-            style={{ top: `${16 + index * 8}px` }}
-          >
-            <CardContent className="p-0">
-              <div className="w-full h-48 bg-gray-200 rounded-t-2xl"></div>
-            </CardContent>
-          </Card>
-        ))}
+        {activities
+          .slice(currentActivityIndex + 1, currentActivityIndex + 3)
+          .map((activity, index) => (
+            <Card
+              key={activity.id}
+              className={`absolute inset-x-4 top-4 bg-white rounded-2xl shadow-lg transform ${
+                index === 0 ? 'scale-97 opacity-80 z-20' : 'scale-95 opacity-60 z-10'
+              }`}
+              style={{ top: `${16 + index * 8}px` }}
+            >
+              <CardContent className="p-0">
+                <div className="w-full h-48 bg-gray-200 rounded-t-2xl"></div>
+              </CardContent>
+            </Card>
+          ))}
 
         {/* Active card */}
         {currentActivity && (
@@ -300,7 +319,7 @@ export default function Discovery() {
           >
             <span className="text-2xl">✕</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -309,7 +328,7 @@ export default function Discovery() {
           >
             <span className="text-lg">ℹ</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="lg"
@@ -331,7 +350,7 @@ export default function Discovery() {
             onClose={() => setShowDetailsModal(false)}
             onJoin={handleJoin}
           />
-          
+
           <MatchSuccessModal
             activity={matchedActivity}
             isOpen={showMatchSuccess}
@@ -349,17 +368,16 @@ export default function Discovery() {
       />
 
       {/* Notification Center */}
-      <NotificationCenter
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
-      />
+      <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
 
       {/* Map View Modal */}
       {showMapView && (
         <div className="fixed inset-0 z-50 bg-white">
           <MapView
             onActivitySelect={(activity) => {
-              setCurrentActivityIndex(activities.findIndex((a: any) => a.id === activity.id));
+              setCurrentActivityIndex(
+                activities.findIndex((candidate) => candidate.id === activity.id),
+              );
               setShowMapView(false);
               setShowDetailsModal(true);
             }}

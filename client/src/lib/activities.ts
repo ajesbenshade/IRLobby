@@ -55,7 +55,7 @@ export function getActivityCategory(category: string): { color: string; emoji: s
   return categories[category] || categories['Other'];
 }
 
-export function isActivitySuitableForUser(activity: Activity, _userPreferences: any): boolean {
+export function isActivitySuitableForUser(activity: Activity, _userPreferences: unknown): boolean {
   // Basic suitability checks
   if (activity.time && new Date(activity.time) < new Date()) {
     return false; // Past event

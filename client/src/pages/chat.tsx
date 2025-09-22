@@ -309,19 +309,13 @@ export default function Chat({ activityId, onBack }: ChatProps) {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4
-                        className="text-sm font-medium text-gray-900 cursor-pointer hover:underline"
+                      <button
+                        className="text-sm font-medium text-gray-900 cursor-pointer hover:underline bg-transparent border-none p-0 text-left"
                         onClick={() => openUserProfile(participant.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            openUserProfile(participant.id);
-                          }
-                        }}
-                        tabIndex={0}
+                        type="button"
                       >
                         {participant.firstName} {participant.lastName}
-                      </h4>
+                      </button>
                       {participant.isHost && (
                         <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
                           Host

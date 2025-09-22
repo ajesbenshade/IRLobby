@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, memo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Clock, Users, Star } from "lucide-react";
-import { format } from "date-fns";
-import type { Activity } from "@/types/activity";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import type { Activity } from '@/types/activity';
+import { format } from 'date-fns';
+import { MapPin, Clock, Users, Star } from 'lucide-react';
+import { useState, useRef, useCallback, memo } from 'react';
 
 interface SwipeCardProps {
   activity: Activity & {
@@ -23,12 +23,12 @@ interface SwipeCardProps {
 }
 
 // Memoize the component to prevent unnecessary re-renders
-export default memo(function SwipeCard({ 
-  activity, 
-  onSwipeLeft, 
-  onSwipeRight, 
+export default memo(function SwipeCard({
+  activity,
+  onSwipeLeft,
+  onSwipeRight,
   onShowDetails,
-  className = ""
+  className = '',
 }: SwipeCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -46,22 +46,25 @@ export default memo(function SwipeCard({
     wasDraggedRef.current = false;
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging) return;
-    
-    const deltaX = e.touches[0].clientX - startPos.x;
-    const deltaY = e.touches[0].clientY - startPos.y;
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!isDragging) return;
 
-    // Only handle horizontal swipes and add velocity for smoother experience
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      e.preventDefault();
-      // Add resistance for more natural feel
-      const resistance = Math.min(Math.abs(deltaX) / 200, 1);
-      setDragOffset({ x: deltaX * resistance, y: 0 });
-      // mark that a drag occurred so clicks won't fire
-      if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
-    }
-  }, [isDragging, startPos]);
+      const deltaX = e.touches[0].clientX - startPos.x;
+      const deltaY = e.touches[0].clientY - startPos.y;
+
+      // Only handle horizontal swipes and add velocity for smoother experience
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        e.preventDefault();
+        // Add resistance for more natural feel
+        const resistance = Math.min(Math.abs(deltaX) / 200, 1);
+        setDragOffset({ x: deltaX * resistance, y: 0 });
+        // mark that a drag occurred so clicks won't fire
+        if (Math.abs(deltaX) > 5) wasDraggedRef.current = true;
+      }
+    },
+    [isDragging, startPos],
+  );
 
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return;
@@ -69,7 +72,7 @@ export default memo(function SwipeCard({
 
     const threshold = 100;
     const velocity = Math.abs(dragOffset.x) / 200; // Simple velocity calculation
-    
+
     if (Math.abs(dragOffset.x) > threshold || velocity > 0.5) {
       if (dragOffset.x > 0) {
         onSwipeRight();
@@ -77,7 +80,7 @@ export default memo(function SwipeCard({
         onSwipeLeft();
       }
     }
-    
+
     // Reset position with animation
     setTimeout(() => {
       wasDraggedRef.current = false;
@@ -110,9 +113,12 @@ export default memo(function SwipeCard({
     setIsDragging(false);
     const threshold = 100;
     if (Math.abs(dragOffset.x) > threshold) {
-      if (dragOffset.x > 0) onSwipeRight(); else onSwipeLeft();
+      if (dragOffset.x > 0) onSwipeRight();
+      else onSwipeLeft();
     }
-    setTimeout(() => { wasDraggedRef.current = false; }, 50);
+    setTimeout(() => {
+      wasDraggedRef.current = false;
+    }, 50);
     setDragOffset({ x: 0, y: 0 });
   };
 
@@ -125,16 +131,18 @@ export default memo(function SwipeCard({
   const rotation = dragOffset.x * 0.1;
   const opacity = 1 - Math.abs(dragOffset.x) / 300;
 
-  const hostName = activity.host?.firstName && activity.host?.lastName
-    ? `${activity.host.firstName} ${activity.host.lastName}`
-    : 'Anonymous Host';
+  const hostName =
+    activity.host?.firstName && activity.host?.lastName
+      ? `${activity.host.firstName} ${activity.host.lastName}`
+      : 'Anonymous Host';
 
-  const hostInitials = activity.host?.firstName && activity.host?.lastName
-    ? `${activity.host.firstName.charAt(0)}${activity.host.lastName.charAt(0)}`
-    : 'H';
+  const hostInitials =
+    activity.host?.firstName && activity.host?.lastName
+      ? `${activity.host.firstName.charAt(0)}${activity.host.lastName.charAt(0)}`
+      : 'H';
 
   return (
-    <Card 
+    <Card
       ref={cardRef}
       className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-gray-900/50 cursor-grab active:cursor-grabbing select-none ${className}`}
       style={{
@@ -151,23 +159,23 @@ export default memo(function SwipeCard({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onClick={() => { if (!wasDraggedRef.current) onShowDetails(); }}
+      onClick={() => {
+        if (!wasDraggedRef.current) onShowDetails();
+      }}
     >
       <CardContent className="p-0">
         {/* Activity Image */}
         <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 dark:from-primary/30 dark:to-purple-600/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
-            <img 
-              src={activity.images[0]} 
+            <img
+              src={activity.images[0]}
               alt={activity.title}
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                <span className="text-white text-xl font-bold">
-                  {activity.title.charAt(0)}
-                </span>
+                <span className="text-white text-xl font-bold">{activity.title.charAt(0)}</span>
               </div>
               <p className="text-white/80 font-medium">
                 {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
@@ -182,7 +190,10 @@ export default memo(function SwipeCard({
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate flex-1 mr-2">
               {activity.title}
             </h3>
-            <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 flex-shrink-0">
+            <Badge
+              variant="secondary"
+              className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 flex-shrink-0"
+            >
               {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
             </Badge>
           </div>
@@ -196,9 +207,7 @@ export default memo(function SwipeCard({
           {/* Date/Time */}
           <div className="flex items-center text-gray-600 dark:text-gray-300 mb-3">
             <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span className="text-sm">
-              {format(new Date(activity.time), 'MMM d, h:mm a')}
-            </span>
+            <span className="text-sm">{format(new Date(activity.time), 'MMM d, h:mm a')}</span>
           </div>
 
           {/* Description */}
@@ -222,9 +231,7 @@ export default memo(function SwipeCard({
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center">
             <Avatar className="w-10 h-10 mr-3">
               <AvatarImage src={activity.host?.profileImageUrl} />
-              <AvatarFallback className="text-sm">
-                {hostInitials}
-              </AvatarFallback>
+              <AvatarFallback className="text-sm">{hostInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-800">{hostName}</p>

@@ -1,10 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Clock, Users, Star } from "lucide-react";
-import { format } from "date-fns";
-import type { Activity } from "@/types/activity";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { Activity } from '@/types/activity';
+import { format } from 'date-fns';
+import { MapPin, Clock, Users, Star } from 'lucide-react';
 
 interface ActivityDetailsModalProps {
   activity: Activity & {
@@ -21,19 +21,21 @@ interface ActivityDetailsModalProps {
   onJoin: () => void;
 }
 
-export default function ActivityDetailsModal({ 
-  activity, 
-  isOpen, 
-  onClose, 
-  onJoin 
+export default function ActivityDetailsModal({
+  activity,
+  isOpen,
+  onClose,
+  onJoin,
 }: ActivityDetailsModalProps) {
-  const hostName = activity.host?.firstName && activity.host?.lastName
-    ? `${activity.host.firstName} ${activity.host.lastName}`
-    : 'Anonymous Host';
+  const hostName =
+    activity.host?.firstName && activity.host?.lastName
+      ? `${activity.host.firstName} ${activity.host.lastName}`
+      : 'Anonymous Host';
 
-  const hostInitials = activity.host?.firstName && activity.host?.lastName
-    ? `${activity.host.firstName.charAt(0)}${activity.host.lastName.charAt(0)}`
-    : 'H';
+  const hostInitials =
+    activity.host?.firstName && activity.host?.lastName
+      ? `${activity.host.firstName.charAt(0)}${activity.host.lastName.charAt(0)}`
+      : 'H';
 
   const handleJoin = () => {
     onJoin();
@@ -50,8 +52,8 @@ export default function ActivityDetailsModal({
         {/* Activity Image */}
         <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl mb-4 overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
-            <img 
-              src={activity.images[0]} 
+            <img
+              src={activity.images[0]}
               alt={activity.title}
               className="w-full h-full object-cover"
             />
@@ -59,9 +61,7 @@ export default function ActivityDetailsModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-white text-xl font-bold">
-                    {activity.title.charAt(0)}
-                  </span>
+                  <span className="text-white text-xl font-bold">{activity.title.charAt(0)}</span>
                 </div>
                 <p className="text-white/80 font-medium">
                   {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
@@ -73,9 +73,7 @@ export default function ActivityDetailsModal({
 
         {/* Title and Category */}
         <div className="flex items-start justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex-1 mr-2">
-            {activity.title}
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-800 flex-1 mr-2">{activity.title}</h2>
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
             {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
           </Badge>
@@ -87,12 +85,12 @@ export default function ActivityDetailsModal({
             <MapPin className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>{activity.location}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600">
             <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>{format(new Date(activity.time), 'EEEE, MMM d, yyyy • h:mm a')}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600">
             <Users className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
@@ -105,9 +103,7 @@ export default function ActivityDetailsModal({
         {activity.description && (
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-2">What to expect</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              {activity.description}
-            </p>
+            <p className="text-gray-600 text-sm leading-relaxed">{activity.description}</p>
           </div>
         )}
 

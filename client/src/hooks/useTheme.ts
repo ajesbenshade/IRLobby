@@ -47,12 +47,12 @@ export function useTheme() {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-  }, [theme]);
+  }, [theme, applyTheme]);
 
   // Apply theme on mount
   useEffect(() => {
     applyTheme(theme);
-  }, []);
+  }, [theme, applyTheme]);
 
   return {
     theme,

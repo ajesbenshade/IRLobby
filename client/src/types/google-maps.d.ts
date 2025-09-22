@@ -35,7 +35,7 @@ declare namespace google {
       position?: LatLngLiteral;
       map?: Map;
       title?: string;
-      icon?: string | Icon | Symbol;
+      icon?: string | Icon | symbol;
     }
 
     interface InfoWindowOptions {
@@ -55,7 +55,7 @@ declare namespace google {
     interface MapTypeStyle {
       featureType?: string;
       elementType?: string;
-      stylers?: Array<{ [key: string]: any }>;
+      stylers?: Array<{ [key: string]: unknown }>;
     }
   }
 }

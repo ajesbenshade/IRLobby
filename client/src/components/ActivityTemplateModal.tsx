@@ -1,35 +1,52 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Search, Clock, Users, Star } from "lucide-react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useQuery } from '@tanstack/react-query';
+import { Search, Clock, Users, Star } from 'lucide-react';
+import { useState } from 'react';
+
+interface ActivityTemplate {
+  id: number | string;
+  name: string;
+  category: string;
+  title: string;
+  description: string;
+  defaultDuration?: number;
+  defaultMaxParticipants?: number;
+  useCount: number;
+  tags?: string[];
+}
 
 interface ActivityTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (template: any) => void;
+  onSelectTemplate: (template: ActivityTemplate | null) => void;
 }
 
-export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplate }: ActivityTemplateModalProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function ActivityTemplateModal({
+  isOpen,
+  onClose,
+  onSelectTemplate,
+}: ActivityTemplateModalProps) {
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: templates = [], isLoading } = useQuery<any>({
+  const { data: templates = [], isLoading } = useQuery<ActivityTemplate[]>({
     queryKey: ['/api/activity-templates'],
     retry: 1,
     enabled: isOpen,
   });
 
-  const filteredTemplates = templates.filter((template: any) =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTemplates = templates.filter(
+    (template: ActivityTemplate) =>
+      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.title.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const handleSelectTemplate = (template: any) => {
+  const handleSelectTemplate = (template: ActivityTemplate) => {
     onSelectTemplate(template);
     onClose();
   };
@@ -66,7 +83,7 @@ export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplat
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredTemplates.map((template: any) => (
+                {filteredTemplates.map((template: ActivityTemplate) => (
                   <Card
                     key={template.id}
                     className="cursor-pointer hover:shadow-md transition-shadow"
@@ -81,16 +98,17 @@ export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplat
                           {template.category}
                         </Badge>
                       </div>
-                      
+
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {template.description}
                       </p>
-                      
+
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         {template.defaultDuration && (
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {Math.floor(template.defaultDuration / 60)}h {template.defaultDuration % 60}m
+                            {Math.floor(template.defaultDuration / 60)}h{' '}
+                            {template.defaultDuration % 60}m
                           </div>
                         )}
                         {template.defaultMaxParticipants && (
@@ -104,7 +122,7 @@ export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplat
                           Used {template.useCount} times
                         </div>
                       </div>
-                      
+
                       {template.tags && template.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {template.tags.slice(0, 3).map((tag: string, index: number) => (
@@ -131,11 +149,7 @@ export default function ActivityTemplateModal({ isOpen, onClose, onSelectTemplat
             <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button 
-              variant="ghost" 
-              className="flex-1"
-              onClick={() => onSelectTemplate(null)}
-            >
+            <Button variant="ghost" className="flex-1" onClick={() => onSelectTemplate(null)}>
               Start from scratch
             </Button>
           </div>

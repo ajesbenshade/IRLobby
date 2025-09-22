@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Users } from "lucide-react";
-import { format } from "date-fns";
-import type { ChatMessage } from "@shared/client-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import UserProfileModal from "@/components/UserProfileModal";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import UserProfileModal from '@/components/UserProfileModal';
+import { useAuth } from '@/hooks/useAuth';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { apiRequest } from '@/lib/queryClient';
+import { ChatMessage, Participant } from '@/types/activity';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { ArrowLeft, Send, Users } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ChatProps {
   activityId: number;
@@ -19,7 +19,7 @@ interface ChatProps {
 
 export default function Chat({ activityId, onBack }: ChatProps) {
   const { user } = useAuth();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
@@ -37,7 +37,11 @@ export default function Chat({ activityId, onBack }: ChatProps) {
   };
 
   // Fetch messages with proper error handling
-  const { data: messages = [], isLoading, error } = useQuery({
+  const {
+    data: messages = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['/api/activities', activityId, 'chat'],
     queryFn: async () => {
       console.log(`Fetching chat messages for activity: ${activityId}`);
@@ -60,7 +64,7 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     }
   }, [error]);
 
-  const { data: activity, isLoading: isActivityLoading } = useQuery({
+  const { data: activity } = useQuery({
     queryKey: ['/api/activities', activityId],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/activities/${activityId}`);
@@ -89,8 +93,8 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     try {
       // Call API to send friend request
       console.log(`Sending friend request to user ${userId}`);
-      const response = await apiRequest('POST', '/api/friends/request', { 
-        receiverId: userId 
+      const response = await apiRequest('POST', '/api/friends/request', {
+        receiverId: userId,
       });
       return response.json();
     } catch (error) {
@@ -108,21 +112,21 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     },
     onSuccess: (data) => {
       console.log('Message sent successfully:', data);
-      setMessage("");
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/activities', activityId, 'chat'] 
+      setMessage('');
+      queryClient.invalidateQueries({
+        queryKey: ['/api/activities', activityId, 'chat'],
       });
     },
     onError: (error) => {
       console.error('Failed to send message:', error);
-    }
+    },
   });
 
   const { sendMessage: sendWebSocketMessage } = useWebSocket({
     onMessage: (wsMessage) => {
       if (wsMessage.type === 'new_message') {
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/activities', activityId, 'chat'] 
+        queryClient.invalidateQueries({
+          queryKey: ['/api/activities', activityId, 'chat'],
         });
       }
     },
@@ -174,13 +178,11 @@ export default function Chat({ activityId, onBack }: ChatProps) {
           <h2 className="font-semibold text-gray-800 truncate">
             {activity?.title || 'Activity Chat'}
           </h2>
-          <p className="text-sm text-gray-500">
-            {activity?.currentParticipants || 0} participants
-          </p>
+          <p className="text-sm text-gray-500">{activity?.currentParticipants || 0} participants</p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           className="flex items-center gap-1"
           onClick={() => setIsParticipantsModalOpen(true)}
         >
@@ -196,47 +198,49 @@ export default function Chat({ activityId, onBack }: ChatProps) {
             <p className="text-gray-500">No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((msg: any) => {
+          messages.map((msg: ChatMessage) => {
             const isOwnMessage = msg.senderId === user?.id;
-            const senderInitials = msg.sender?.firstName && msg.sender?.lastName
-              ? `${msg.sender.firstName.charAt(0)}${msg.sender.lastName.charAt(0)}`
-              : msg.sender?.email?.charAt(0) || 'U';
+            const senderInitials =
+              msg.sender?.firstName && msg.sender?.lastName
+                ? `${msg.sender.firstName.charAt(0)}${msg.sender.lastName.charAt(0)}`
+                : msg.sender?.email?.charAt(0) || 'U';
 
             return (
               <div
                 key={msg.id}
                 className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex items-end space-x-2 max-w-xs ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <div
+                  className={`flex items-end space-x-2 max-w-xs ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}
+                >
                   {!isOwnMessage && (
-                    <Avatar 
-                      className="w-8 h-8 cursor-pointer" 
+                    <Avatar
+                      className="w-8 h-8 cursor-pointer"
                       onClick={() => openUserProfile(msg.senderId)}
                     >
                       <AvatarImage src={msg.sender?.profileImageUrl} />
-                      <AvatarFallback className="text-xs">
-                        {senderInitials}
-                      </AvatarFallback>
+                      <AvatarFallback className="text-xs">{senderInitials}</AvatarFallback>
                     </Avatar>
                   )}
-                  
-                  <div className={`rounded-2xl px-4 py-2 ${
-                    isOwnMessage 
-                      ? 'bg-primary text-white' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
+
+                  <div
+                    className={`rounded-2xl px-4 py-2 ${
+                      isOwnMessage ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {!isOwnMessage && (
-                      <p 
-                        className="text-xs opacity-70 mb-1 cursor-pointer hover:underline" 
+                      <button
+                        className="text-xs opacity-70 mb-1 cursor-pointer hover:underline bg-transparent border-none p-0 text-left"
                         onClick={() => openUserProfile(msg.senderId)}
+                        type="button"
                       >
                         {msg.sender?.firstName || msg.sender?.email?.split('@')[0] || 'User'}
-                      </p>
+                      </button>
                     )}
                     <p className="text-sm">{msg.message}</p>
-                    <p className={`text-xs mt-1 ${
-                      isOwnMessage ? 'text-white/70' : 'text-gray-500'
-                    }`}>
+                    <p
+                      className={`text-xs mt-1 ${isOwnMessage ? 'text-white/70' : 'text-gray-500'}`}
+                    >
                       {format(new Date(msg.createdAt), 'h:mm a')}
                     </p>
                   </div>
@@ -284,11 +288,19 @@ export default function Chat({ activityId, onBack }: ChatProps) {
             ) : participants.length === 0 ? (
               <p className="text-center text-gray-500">No participants found</p>
             ) : (
-              participants.map((participant: any) => (
+              participants.map((participant: Participant) => (
                 <div key={participant.id} className="flex items-center space-x-4">
-                  <Avatar 
-                    className="cursor-pointer" 
+                  <Avatar
+                    className="cursor-pointer"
                     onClick={() => openUserProfile(participant.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openUserProfile(participant.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
                   >
                     <AvatarImage src={participant.profileImageUrl} alt={participant.firstName} />
                     <AvatarFallback>
@@ -297,14 +309,23 @@ export default function Chat({ activityId, onBack }: ChatProps) {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 
+                      <h4
                         className="text-sm font-medium text-gray-900 cursor-pointer hover:underline"
                         onClick={() => openUserProfile(participant.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openUserProfile(participant.id);
+                          }
+                        }}
+                        tabIndex={0}
                       >
                         {participant.firstName} {participant.lastName}
                       </h4>
                       {participant.isHost && (
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">Host</span>
+                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                          Host
+                        </span>
                       )}
                     </div>
                     <p className="text-sm text-gray-500">{participant.email}</p>
@@ -327,7 +348,9 @@ export default function Chat({ activityId, onBack }: ChatProps) {
           isOpen={isUserProfileModalOpen}
           onClose={closeUserProfile}
           userId={selectedUserId}
-          onSendFriendRequest={user?.id !== selectedUserId ? () => sendFriendRequest(selectedUserId) : undefined}
+          onSendFriendRequest={
+            user?.id !== selectedUserId ? () => sendFriendRequest(selectedUserId) : undefined
+          }
         />
       )}
     </div>

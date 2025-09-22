@@ -1,14 +1,31 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Clock, User, Calendar, MapPin } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { apiRequest } from '@/lib/queryClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
+import { CheckCircle, XCircle, Clock, User, Calendar, MapPin } from 'lucide-react';
+import { useState } from 'react';
+
+interface Application {
+  id: number;
+  user: {
+    profileImageUrl?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
+  appliedAt: string;
+  activity: {
+    title: string;
+    dateTime: string;
+    location: string;
+  };
+  message?: string;
+}
 
 interface HostDashboardProps {
   isOpen: boolean;
@@ -16,20 +33,24 @@ interface HostDashboardProps {
 }
 
 export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [hostMessage, setHostMessage] = useState("");
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [hostMessage, setHostMessage] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: applications = [], isLoading } = useQuery<any>({
+  const { data: applications = [], isLoading } = useQuery<Application[]>({
     queryKey: ['/api/host/applications'],
     retry: 1,
     enabled: isOpen,
   });
 
   const reviewMutation = useMutation({
-    mutationFn: async ({ applicationId, status, hostMessage }: { 
-      applicationId: number; 
-      status: 'approved' | 'rejected'; 
+    mutationFn: async ({
+      applicationId,
+      status,
+      hostMessage,
+    }: {
+      applicationId: number;
+      status: 'approved' | 'rejected';
       hostMessage?: string;
     }) => {
       const response = await apiRequest('PATCH', `/api/applications/${applicationId}`, {
@@ -41,11 +62,11 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/host/applications'] });
       setSelectedApplication(null);
-      setHostMessage("");
+      setHostMessage('');
     },
   });
 
-  const handleReview = (application: any, status: 'approved' | 'rejected') => {
+  const handleReview = (application: Application, status: 'approved' | 'rejected') => {
     if (status === 'approved') {
       setSelectedApplication(application);
     } else {
@@ -85,11 +106,13 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
           <div className="text-center py-8">
             <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No pending applications</p>
-            <p className="text-sm text-gray-400">Applications for your private events will appear here</p>
+            <p className="text-sm text-gray-400">
+              Applications for your private events will appear here
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {applications.map((application: any) => (
+            {applications.map((application: Application) => (
               <Card key={application.id} className="border-l-4 border-l-blue-500">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -97,7 +120,8 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={application.user?.profileImageUrl} />
                         <AvatarFallback>
-                          {application.user?.firstName?.[0]}{application.user?.lastName?.[0]}
+                          {application.user?.firstName?.[0]}
+                          {application.user?.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -122,7 +146,10 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {format(new Date(application.activity?.dateTime), "MMM dd, yyyy 'at' h:mm a")}
+                          {format(
+                            new Date(application.activity?.dateTime),
+                            "MMM dd, yyyy 'at' h:mm a",
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
@@ -137,7 +164,7 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
                     <div>
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Applicant Message</h4>
                       <p className="text-sm bg-blue-50 p-3 rounded-lg border-l-4 border-l-blue-200">
-                        "{application.message}"
+                        &ldquo;{application.message}&rdquo;
                       </p>
                     </div>
                   )}
@@ -175,18 +202,25 @@ export default function HostDashboard({ isOpen, onClose }: HostDashboardProps) {
               <DialogHeader>
                 <DialogTitle>Approve Application</DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  You're about to approve <strong>{selectedApplication.user?.firstName} {selectedApplication.user?.lastName}</strong> 
+                  You&apos;re about to approve{' '}
+                  <strong>
+                    {selectedApplication.user?.firstName} {selectedApplication.user?.lastName}
+                  </strong>
                   for your event <strong>{selectedApplication.activity?.title}</strong>.
                 </p>
-                
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  <label
+                    htmlFor="host-message"
+                    className="text-sm font-medium text-gray-700 mb-2 block"
+                  >
                     Welcome message (optional)
                   </label>
                   <Textarea
+                    id="host-message"
                     placeholder="Welcome! Looking forward to having you at the event..."
                     value={hostMessage}
                     onChange={(e) => setHostMessage(e.target.value)}

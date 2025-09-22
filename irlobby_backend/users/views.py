@@ -1,17 +1,23 @@
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.http import JsonResponse
 from django.db import transaction
 from django.utils import timezone
+import logging
+
+from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .models import User
 from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
 from activities.models import Activity
 from swipes.models import Swipe
 from matches.models import Match
 from reviews.models import Review
+
+logger = logging.getLogger(__name__)
+
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -20,13 +26,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def register(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
+        logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
         return Response({
             'user': UserSerializer(user).data,
             'tokens': {
@@ -34,15 +43,20 @@ def register(request):
                 'access': str(refresh.access_token),
             }
         }, status=status.HTTP_201_CREATED)
+
+    logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def login(request):
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
+        logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
         return Response({
             'user': UserSerializer(user).data,
             'tokens': {
@@ -50,16 +64,18 @@ def login(request):
                 'access': str(refresh.access_token),
             }
         }, status=status.HTTP_200_OK)
+
+    logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_user_data(request):
     """Export all user data as JSON"""
     user = request.user
-    
+
     try:
-        # Collect all user data
         user_data = {
             'export_date': timezone.now().isoformat(),
             'user_profile': UserSerializer(user).data,
@@ -134,48 +150,48 @@ def export_user_data(request):
                 for review in user.received_reviews.all()
             ],
         }
-        
+
         return JsonResponse(user_data, safe=False)
-        
-    except Exception as e:
+
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("Failed to export user data for user_id=%s", user.id)
         return JsonResponse({
             'error': 'Failed to export user data',
-            'details': str(e)
+            'details': str(exc)
         }, status=500)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_profile(request):
     """Delete user profile and all associated data"""
     user = request.user
-    
+
     try:
         with transaction.atomic():
-            # Delete the user - cascade deletes should handle related data
             user.delete()
-        
+
         return Response({"message": "Profile deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-        
-    except Exception as e:
+
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("Failed to delete profile for user_id=%s", user.id)
         return Response({
             'error': 'Failed to delete profile',
-            'details': str(e)
+            'details': str(exc)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def auth_status(request):
-    """
-    Check authentication status without requiring authentication.
-    Returns whether the current request has valid authentication.
-    """
+    """Return whether the current request is authenticated."""
     if request.user and request.user.is_authenticated:
         return Response({
             'authenticated': True,
             'user': UserSerializer(request.user).data
         })
-    else:
-        return Response({
-            'authenticated': False,
-            'user': None
-        }, status=status.HTTP_401_UNAUTHORIZED)
+    return Response({
+        'authenticated': False,
+        'user': None
+    }, status=status.HTTP_401_UNAUTHORIZED)

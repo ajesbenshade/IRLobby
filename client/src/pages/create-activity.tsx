@@ -1,37 +1,48 @@
-import { useState, useEffect, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import ActivityTemplateModal from "@/components/ActivityTemplateModal";
-import HostDashboard from "@/components/HostDashboard";
-import { Camera, MapPin, Settings, Users, Locate } from "lucide-react";
-import { z } from "zod";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Camera, MapPin } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const insertActivitySchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-  location: z.string().min(1, "Location is required"),
+  category: z.string().min(1, 'Category is required'),
+  location: z.string().min(1, 'Location is required'),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  dateTime: z.string().min(1, "Date and time is required"),
-  endDateTime: z.string().optional(),
-  maxParticipants: z.number().min(1, "At least 1 participant required"),
+  dateTime: z.date(),
+  endDateTime: z.date().optional(),
+  maxParticipants: z.number().min(1, 'At least 1 participant required'),
   isPrivate: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).default([]),
   price: z.number().default(0),
-  currency: z.string().default("USD"),
+  currency: z.string().default('USD'),
   requiresApproval: z.boolean().default(false),
   ageRestriction: z.string().optional(),
   skillLevel: z.string().optional(),
@@ -40,7 +51,9 @@ const insertActivitySchema = z.object({
   weatherDependent: z.boolean().default(false),
 });
 
-const formSchema = insertActivitySchema;
+const formSchema = insertActivitySchema.extend({
+  dateTime: z.string().min(1, 'Date and time is required'),
+});
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -49,23 +62,21 @@ interface CreateActivityProps {
 }
 
 const categories = [
-  "Sports & Fitness",
-  "Food & Drinks", 
-  "Outdoor Adventures",
-  "Arts & Culture",
-  "Nightlife",
-  "Learning",
-  "Technology",
-  "Music",
-  "Social",
-  "Gaming"
+  'Sports & Fitness',
+  'Food & Drinks',
+  'Outdoor Adventures',
+  'Arts & Culture',
+  'Nightlife',
+  'Learning',
+  'Technology',
+  'Music',
+  'Social',
+  'Gaming',
 ];
 
 const participantOptions = Array.from({ length: 50 }, (_, i) => i + 1);
 
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showHostDashboard, setShowHostDashboard] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const { toast } = useToast();
@@ -85,24 +96,24 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
 
     if (totalFiles > 5) {
       toast({
-        title: "Too many photos",
-        description: "You can only upload up to 5 photos per activity.",
-        variant: "destructive",
+        title: 'Too many photos',
+        description: 'You can only upload up to 5 photos per activity.',
+        variant: 'destructive',
       });
       return;
     }
 
     // Add new files to existing ones
-    setSelectedImages(prev => [...prev, ...newFiles]);
+    setSelectedImages((prev) => [...prev, ...newFiles]);
 
     // Create previews for new files
-    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-    setImagePreviews(prev => [...prev, ...newPreviews]);
+    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => {
       // Revoke the object URL to prevent memory leaks
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
@@ -112,11 +123,11 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      category: "",
-      location: "",
-      dateTime: "",
+      title: '',
+      description: '',
+      category: '',
+      location: '',
+      dateTime: '',
       maxParticipants: 6,
       isPrivate: false,
       tags: [],
@@ -129,7 +140,6 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       const activityData = {
         ...data,
         dateTime: new Date(data.dateTime).toISOString(),
-        endDateTime: data.endDateTime ? new Date(data.endDateTime).toISOString() : undefined,
         // For now, just store image data as base64 or file references
         // This can be enhanced later with proper file upload
         images: imagePreviews, // Store preview URLs for now
@@ -139,17 +149,17 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
     },
     onSuccess: () => {
       toast({
-        title: "Activity created!",
-        description: "Your activity has been posted successfully.",
+        title: 'Activity created!',
+        description: 'Your activity has been posted successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/activities/discover'] });
       onActivityCreated();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error creating activity",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
+        title: 'Error creating activity',
+        description: error.message || 'Something went wrong. Please try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -159,10 +169,10 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   };
 
   return (
-  <div className="bg-gray-50 dark:bg-gray-900 pb-16 min-h-screen">
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Create Activity</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Share your passion with others</p>
+    <div className="bg-gray-50 pb-20 min-h-screen">
+      <header className="bg-white shadow-sm p-4">
+        <h2 className="text-xl font-bold text-gray-800">Create Activity</h2>
+        <p className="text-sm text-gray-500">Share your passion with others</p>
       </header>
 
       <div className="p-4">
@@ -199,11 +209,20 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                     <div
                       className="w-full h-32 bg-gray-200 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={handlePhotoClick}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handlePhotoClick();
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label="Add photos to activity"
                     >
                       <div className="text-center">
                         <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                         <p className="text-sm text-gray-500">
-                          {imagePreviews.length === 0 ? "Tap to add photos" : "Add more photos"}
+                          {imagePreviews.length === 0 ? 'Tap to add photos' : 'Add more photos'}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           {imagePreviews.length}/5 photos
@@ -233,10 +252,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                 <FormItem>
                   <FormLabel>Activity Title</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="e.g., Weekend Hiking Adventure" 
-                      {...field} 
-                    />
+                    <Input placeholder="e.g., Weekend Hiking Adventure" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -277,9 +293,9 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                 <FormItem>
                   <FormLabel>Date & Time</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="datetime-local" 
-                      {...field} 
+                    <Input
+                      type="datetime-local"
+                      {...field}
                       min={new Date().toISOString().slice(0, 16)}
                     />
                   </FormControl>
@@ -297,11 +313,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                   <FormLabel>Location</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input 
-                        placeholder="Enter location or address" 
-                        {...field} 
-                        className="pr-10"
-                      />
+                      <Input placeholder="Enter location or address" {...field} className="pr-10" />
                       <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                   </FormControl>
@@ -317,8 +329,8 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Max Participants</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
                     defaultValue={field.value.toString()}
                   >
                     <FormControl>
@@ -347,11 +359,11 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Tell people what to expect, what to bring, and why they should join!"
                       rows={4}
                       {...field}
-                      value={field.value || ""}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage />
@@ -377,10 +389,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                         </div>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -398,10 +407,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                         </div>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value || false}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Switch checked={field.value || false} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -410,12 +416,12 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
             </Card>
 
             {/* Submit Button */}
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-primary text-white py-4 text-lg"
               disabled={createActivityMutation.isPending}
             >
-              {createActivityMutation.isPending ? "Creating..." : "Create Activity"}
+              {createActivityMutation.isPending ? 'Creating...' : 'Create Activity'}
             </Button>
           </form>
         </Form>

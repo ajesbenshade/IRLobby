@@ -1,5 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
+
+import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
 
 interface User {
@@ -9,124 +11,163 @@ interface User {
   lastName?: string;
   profileImageUrl?: string;
   bio?: string;
-  [key: string]: any;
+  interests?: string[];
+  photoAlbum?: string[];
 }
 
 export function useAuth() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
-  
-  // Fetch user data if token exists
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["/api/users/profile"],
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const setAuthErrorMessage = useCallback((message: string | null) => {
+    setAuthError((prev) => (prev === message ? prev : message));
+  }, []);
+
+  const clearStoredCredentials = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+  }, []);
+
+  useEffect(() => {
+    if (authError) {
+      toast({
+        title: 'Authentication issue',
+        description: authError,
+        variant: 'destructive',
+      });
+    }
+  }, [authError]);
+
+  const {
+    data: user,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery<User | null, Error>({
+    queryKey: ['/api/users/profile'],
     enabled: !!token,
-    retry: (failureCount, error) => {
-      // Don't retry on 401 (unauthorized) - token is invalid
-      if (error instanceof Error && error.message.includes('401')) {
+    retry: (failureCount, queryError) => {
+      if (queryError instanceof Error && /401|403/.test(queryError.message)) {
         return false;
       }
-      // Retry once for other errors
       return failureCount < 1;
     },
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: false, // Don't refetch when reconnecting
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
-      if (!token) return null;
-      
+      if (!token) {
+        setAuthErrorMessage(null);
+        return null;
+      }
+
       try {
         const response = await apiRequest('GET', '/api/users/profile/');
-        
+
         if (response.status === 401) {
-          // Token is invalid, clear it
           console.warn('Invalid token detected, clearing authentication');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('userId');
+          clearStoredCredentials();
           setToken(null);
+          queryClient.setQueryData(['/api/users/profile'], null);
+          setAuthErrorMessage('Your session has expired. Please sign in again.');
           return null;
         }
 
         if (!response.ok) {
           throw new Error(`Profile request failed: ${response.status}`);
         }
-        
-        return response.json();
-      } catch (error) {
-        // Only log non-401 errors as warnings
-        if (!(error instanceof Error && error.message.includes('401'))) {
-          console.warn('Profile fetch failed:', error);
+
+        const profile = await response.json();
+        setAuthErrorMessage(null);
+        return profile;
+      } catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.message.includes('401')) {
+          setAuthErrorMessage('Your session has expired. Please sign in again.');
+          clearStoredCredentials();
+          setToken(null);
+          queryClient.setQueryData(['/api/users/profile'], null);
+          return null;
         }
-        return null;
+
+        console.warn('Profile fetch failed:', fetchError);
+        setAuthErrorMessage('We could not load your profile. Please try again.');
+        throw fetchError;
       }
-    }
+    },
   });
 
-  // Handle authentication (login/register)
-  const handleAuthentication = useCallback(async (newToken: string, userId: string) => {
-    localStorage.setItem('authToken', newToken);
-    localStorage.setItem('userId', userId);
-    setToken(newToken);
-    // Invalidate and refetch the user profile query
-    await queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
-    // Force a refetch to ensure the user data is loaded
-    await queryClient.refetchQueries({ queryKey: ["/api/users/profile"] });
-  }, [queryClient]);
+  const retryProfile = useCallback(async () => {
+    const result = await refetch({ throwOnError: false });
+    if (!result.error) {
+      setAuthErrorMessage(null);
+    }
+    return result;
+  }, [refetch, setAuthErrorMessage]);
 
-  // Handle logout
+  const handleAuthentication = useCallback(
+    async (newToken: string, userId: string) => {
+      localStorage.setItem('authToken', newToken);
+      localStorage.setItem('userId', userId);
+      setToken(newToken);
+      setAuthErrorMessage(null);
+      await queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/users/profile'] });
+    },
+    [queryClient, setAuthErrorMessage],
+  );
+
   const logout = useCallback(async () => {
     try {
-      // Clear tokens first
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userId');
+      clearStoredCredentials();
       setToken(null);
-      
-      // Clear all queries and force a complete reset
-      queryClient.clear();
-      
-      // Invalidate the user profile query specifically
-      await queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
-      
-      // Small delay to ensure state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 100));
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }, [queryClient]);
+      setAuthErrorMessage(null);
 
-  // Handle token refresh
+      await queryClient.cancelQueries({ type: 'all' });
+      queryClient.removeQueries();
+    } catch (logoutError) {
+      console.error('Logout error:', logoutError);
+    }
+  }, [clearStoredCredentials, queryClient, setAuthErrorMessage]);
+
   const refreshToken = useCallback(async () => {
     const refresh = localStorage.getItem('refreshToken');
     if (!refresh) {
-      logout();
+      await logout();
       return null;
     }
 
     try {
       const response = await apiRequest('POST', '/api/users/token/refresh/', {
-        refresh: refresh
+        refresh: refresh,
       });
       const data = await response.json();
-      
+
       localStorage.setItem('authToken', data.access);
       setToken(data.access);
+      setAuthErrorMessage(null);
       return data.access;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      logout();
+    } catch (refreshError) {
+      console.error('Token refresh failed:', refreshError);
+      setAuthErrorMessage('Your session has expired. Please sign in again.');
+      await logout();
       return null;
     }
-  }, [logout]);
+  }, [logout, setAuthErrorMessage]);
 
   return {
     user,
     isAuthenticated: !!user,
-    isLoading,
+    isLoading: isLoading || isFetching,
     token,
     handleAuthentication,
     logout,
     refreshToken,
+    authError,
+    retryProfile,
+    profileError: error,
   };
 }

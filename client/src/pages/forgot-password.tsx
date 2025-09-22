@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
-import { Link } from 'react-router-dom';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -55,7 +56,7 @@ const ForgotPasswordPage = () => {
         <CardHeader>
           <CardTitle className="text-2xl text-center">Forgot Password</CardTitle>
           <CardDescription className="text-center">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -77,7 +78,9 @@ const ForgotPasswordPage = () => {
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </Button>
           </form>
-          {message && <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">{message}</p>}
+          {message && (
+            <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">{message}</p>
+          )}
           <div className="mt-4 text-center text-sm">
             <Link to="/" className="font-medium text-primary hover:underline">
               Back to Login

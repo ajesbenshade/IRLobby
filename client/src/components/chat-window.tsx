@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { apiRequest } from "@/lib/queryClient";
-import { format } from "date-fns";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/useAuth';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { apiRequest } from '@/lib/queryClient';
+import { Message } from '@/types/activity';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { ArrowLeft, Send } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ChatWindowProps {
   chatRoomId: string; // This is actually the activityId
@@ -15,26 +16,32 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Correct query key to match server route
-  const { data: messages = [], isLoading, error } = useQuery({
+  const {
+    data: messages = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: [`/api/activities/${chatRoomId}/chat`],
     queryFn: async () => {
       console.log(`Fetching chat messages for activity: ${chatRoomId}`);
       try {
         const response = await fetch(`/api/activities/${chatRoomId}/chat`, {
-          credentials: 'include',  // Use cookies instead of localStorage token
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to fetch chat messages: ${errorText}`);
         }
-        
+
         const data = await response.json();
         console.log(`Fetched ${data.length} chat messages`);
         return data;
@@ -42,7 +49,7 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
         console.error('Error fetching chat messages:', err);
         throw err;
       }
-    }
+    },
   });
 
   // Log any errors
@@ -60,7 +67,7 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
         sendWebSocketMessage({
           type: 'join_activity',
           activityId: parseInt(chatRoomId),
-          userId: user.id
+          userId: user.id,
         });
       }
     },
@@ -71,46 +78,42 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
         // Add new message to the cache
         queryClient.setQueryData(
           [`/api/activities/${chatRoomId}/chat`],
-          (oldMessages: any[] = []) => {
+          (oldMessages: Message[] = []) => {
             // Check if message already exists to avoid duplicates
-            const exists = oldMessages.some(m => m.id === newMessage.data.id);
+            const exists = oldMessages.some((m) => m.id === newMessage.data.id);
             if (exists) return oldMessages;
             return [...oldMessages, newMessage.data];
-          }
+          },
         );
       }
-    }
+    },
   });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
       console.log(`Sending message to activity ${chatRoomId}: ${messageText}`);
-      
+
       // Send via WebSocket for real-time updates
       sendWebSocketMessage({
         type: 'send_message',
         activityId: parseInt(chatRoomId),
-        message: messageText
+        message: messageText,
       });
-      
+
       // Also send via HTTP to ensure it's saved to database
-      return await apiRequest(
-        'POST', 
-        `/api/activities/${chatRoomId}/chat`, 
-        {
-          message: messageText,
-          messageType: "text",
-        }
-      );
+      return await apiRequest('POST', `/api/activities/${chatRoomId}/chat`, {
+        message: messageText,
+        messageType: 'text',
+      });
     },
     onSuccess: () => {
       console.log('Message sent successfully');
-      setMessage("");
+      setMessage('');
       scrollToBottom();
     },
     onError: (error) => {
       console.error('Failed to send message:', error);
-    }
+    },
   });
 
   const handleSendMessage = () => {
@@ -119,14 +122,14 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -151,7 +154,9 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-gray-800">Activity Chat</h2>
           <div className="flex items-center text-sm text-gray-500">
-            <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <div
+              className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}
+            />
             {isConnected ? 'Connected' : 'Connecting...'}
           </div>
         </div>
@@ -164,21 +169,19 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
             <p className="text-gray-500">No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((msg: any) => {
+          messages.map((msg: Message) => {
             const isOwn = msg.userId === user?.id;
             const userName = msg.user?.firstName || msg.user?.email?.split('@')[0] || 'User';
-            
+
             return (
               <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-xs ${isOwn ? 'order-last' : 'order-first'}`}>
-                  {!isOwn && (
-                    <p className="text-xs text-gray-500 mb-1 px-3">{userName}</p>
-                  )}
+                  {!isOwn && <p className="text-xs text-gray-500 mb-1 px-3">{userName}</p>}
                   <Card className={`${isOwn ? 'bg-primary text-white' : 'bg-white'}`}>
                     <CardContent className="p-3">
                       <p className="text-sm">{msg.message}</p>
                       <p className={`text-xs mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
-                        {format(new Date(msg.createdAt), "h:mm a")}
+                        {format(new Date(msg.createdAt), 'h:mm a')}
                       </p>
                     </CardContent>
                   </Card>
@@ -201,7 +204,7 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
             className="flex-1"
             disabled={sendMessageMutation.isPending}
           />
-          <Button 
+          <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || sendMessageMutation.isPending}
             size="icon"

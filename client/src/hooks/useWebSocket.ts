@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export interface WebSocketMessage {
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UseWebSocketOptions {
@@ -23,12 +23,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
 
     // Determine correct WebSocket URL based on current environment
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/ws`;
-    
+
     console.log('Connecting to WebSocket at:', wsUrl);
-    
+
     try {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -53,7 +53,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         setIsConnected(false);
         console.log('WebSocket disconnected with code:', event.code, event.reason);
         options.onClose?.();
-        
+
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
           console.log('Attempting to reconnect WebSocket...');
@@ -74,7 +74,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
-    
+
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -96,7 +96,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return () => {
       disconnect();
     };
-  }, []);
+  }, [connect]);
 
   return {
     isConnected,

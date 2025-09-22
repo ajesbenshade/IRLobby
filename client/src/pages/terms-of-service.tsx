@@ -1,7 +1,8 @@
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 
 export default function TermsOfService() {
   const navigate = useNavigate();
@@ -20,25 +21,27 @@ export default function TermsOfService() {
 
         <Card className="bg-white/95 backdrop-blur">
           <CardHeader>
-            <CardTitle className="text-3xl text-center text-primary">
-              Terms of Service
-            </CardTitle>
-            <p className="text-center text-muted-foreground">
-              Last updated: September 8, 2025
-            </p>
+            <CardTitle className="text-3xl text-center text-primary">Terms of Service</CardTitle>
+            <p className="text-center text-muted-foreground">Last updated: September 8, 2025</p>
           </CardHeader>
           <CardContent className="prose prose-gray max-w-none">
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">1. Acceptance of Terms</h2>
               <p className="text-gray-700 leading-relaxed">
-                By accessing and using IRLobby ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                By accessing and using IRLobby (&ldquo;the Service&rdquo;), you accept and agree to
+                be bound by the terms and provision of this agreement. If you do not agree to abide
+                by the above, please do not use this service.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">2. Description of Service</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                2. Description of Service
+              </h2>
               <p className="text-gray-700 leading-relaxed">
-                IRLobby is a platform that connects people for real-life activities and meetups. Our service allows users to discover, create, and participate in various activities in their local area.
+                IRLobby is a platform that connects people for real-life activities and meetups. Our
+                service allows users to discover, create, and participate in various activities in
+                their local area.
               </p>
             </section>
 
@@ -58,7 +61,8 @@ export default function TermsOfService() {
 
               <h3 className="text-xl font-medium mb-2">3.2 Account Termination</h3>
               <p className="text-gray-700 leading-relaxed">
-                We reserve the right to terminate or suspend your account at our discretion, with or without cause, and with or without notice.
+                We reserve the right to terminate or suspend your account at our discretion, with or
+                without cause, and with or without notice.
               </p>
             </section>
 
@@ -79,11 +83,15 @@ export default function TermsOfService() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">5. Content and Activities</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                5. Content and Activities
+              </h2>
 
               <h3 className="text-xl font-medium mb-2">5.1 User-Generated Content</h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                You retain ownership of content you create and post on our platform. By posting content, you grant us a non-exclusive, royalty-free license to use, display, and distribute your content in connection with our service.
+                You retain ownership of content you create and post on our platform. By posting
+                content, you grant us a non-exclusive, royalty-free license to use, display, and
+                distribute your content in connection with our service.
               </p>
 
               <h3 className="text-xl font-medium mb-2">5.2 Activity Organization</h3>
@@ -101,14 +109,16 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">6. Privacy</h2>
               <p className="text-gray-700 leading-relaxed">
-                Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the service, to understand our practices.
+                Your privacy is important to us. Please review our Privacy Policy, which also
+                governs your use of the service, to understand our practices.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">7. Disclaimers</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                The service is provided "as is" without warranties of any kind. We disclaim all warranties, express or implied, including but not limited to:
+                The service is provided &ldquo;as is&rdquo; without warranties of any kind. We
+                disclaim all warranties, express or implied, including but not limited to:
               </p>
               <ul className="list-disc pl-6 text-gray-700">
                 <li>Merchantability and fitness for a particular purpose</li>
@@ -119,30 +129,41 @@ export default function TermsOfService() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">8. Limitation of Liability</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                8. Limitation of Liability
+              </h2>
               <p className="text-gray-700 leading-relaxed">
-                In no event shall IRLobby be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the service.
+                In no event shall IRLobby be liable for any indirect, incidental, special,
+                consequential, or punitive damages arising out of or related to your use of the
+                service.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">9. Indemnification</h2>
               <p className="text-gray-700 leading-relaxed">
-                You agree to indemnify and hold harmless IRLobby and its affiliates from any claims, damages, losses, or expenses arising from your use of the service or violation of these terms.
+                You agree to indemnify and hold harmless IRLobby and its affiliates from any claims,
+                damages, losses, or expenses arising from your use of the service or violation of
+                these terms.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">10. Modifications to Terms</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                10. Modifications to Terms
+              </h2>
               <p className="text-gray-700 leading-relaxed">
-                We reserve the right to modify these terms at any time. We will notify users of material changes, and continued use of the service constitutes acceptance of the modified terms.
+                We reserve the right to modify these terms at any time. We will notify users of
+                material changes, and continued use of the service constitutes acceptance of the
+                modified terms.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">11. Governing Law</h2>
               <p className="text-gray-700 leading-relaxed">
-                These terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law provisions.
+                These terms shall be governed by and construed in accordance with applicable laws,
+                without regard to conflict of law provisions.
               </p>
             </section>
 
@@ -153,7 +174,8 @@ export default function TermsOfService() {
               </p>
               <div className="bg-gray-50 p-4 rounded-lg mt-4">
                 <p className="text-gray-700">
-                  <strong>Email:</strong> legal@irlobby.com<br />
+                  <strong>Email:</strong> legal@irlobby.com
+                  <br />
                   <strong>Address:</strong> IRLobby Legal Team
                 </p>
               </div>

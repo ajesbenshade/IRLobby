@@ -8,10 +8,43 @@ export interface Activity {
   longitude: number;
   time: string;
   capacity: number;
-  is_private?: boolean;
-  requires_approval?: boolean;
   tags: string[];
   images: string[];
   created_at: string;
   participant_count: number;
+}
+
+export interface Message {
+  id: number;
+  userId: string;
+  user: {
+    id: number;
+    firstName: string;
+    email: string;
+  };
+  message: string;
+  createdAt: string;
+}
+
+export interface Participant {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  profileImageUrl?: string;
+  isHost?: boolean;
+}
+
+export interface ChatMessage {
+  id: number;
+  senderId: string;
+  sender: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    profileImageUrl?: string;
+  };
+  message: string;
+  createdAt: string;
 }

@@ -9,7 +9,28 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const DEFAULT_API_BASE_URL = 'https://irlobby-backend.onrender.com';
+
+function determineApiBaseUrl() {
+  const envValue = import.meta.env.VITE_API_BASE_URL;
+
+  if (typeof envValue === 'string') {
+    const trimmedValue = envValue.trim();
+    if (trimmedValue) {
+      return trimmedValue;
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    console.warn(
+      'VITE_API_BASE_URL is not defined. Falling back to the default production API base URL.',
+    );
+  }
+
+  return DEFAULT_API_BASE_URL;
+}
+
+const API_BASE_URL = determineApiBaseUrl();
 console.log('API_BASE_URL:', API_BASE_URL);
 const AUTH_401_BYPASS_PATHS = ['/api/users/profile/', '/api/users/auth/status/'] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([

@@ -48,3 +48,14 @@ export interface ChatMessage {
   message: string;
   createdAt: string;
 }
+export interface ActivityFilters {
+  category: string;
+  maxDistance: number[];
+  priceRange: number[];
+  dateFrom: Date | null;
+  dateTo: Date | null;
+  skillLevel: string;
+  ageRestriction: string;
+  tags: string[];
+  location: string;
+}

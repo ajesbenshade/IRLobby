@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Settings, HelpCircle, Star, LogOut, Users } from "lucide-react";
-import FriendsModal from "@/components/FriendsModal";
-import EditProfileModal from "@/components/EditProfileModal";
+import EditProfileModal from '@/components/EditProfileModal';
+import FriendsModal from '@/components/FriendsModal';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -31,7 +31,10 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     );
   }
 
-  const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
+  const initials =
+    `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() ||
+    user.email?.charAt(0).toUpperCase() ||
+    'U';
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
@@ -44,18 +47,15 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
               {initials}
             </AvatarFallback>
           </Avatar>
-          
+
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-            {user.firstName && user.lastName 
+            {user.firstName && user.lastName
               ? `${user.firstName} ${user.lastName}`
-              : user.email?.split('@')[0] || 'User'
-            }
+              : user.email?.split('@')[0] || 'User'}
           </h2>
-          
-          {user.bio && (
-            <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>
-          )}
-          
+
+          {user.bio && <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>}
+
           <div className="flex items-center justify-center mt-2">
             <Star className="w-4 h-4 text-yellow-500 mr-1" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -75,9 +75,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Activity Stats</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-primary">
-                  {user.eventsHosted || 0}
-                </p>
+                <p className="text-2xl font-bold text-primary">{user.eventsHosted || 0}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Events Hosted</p>
               </div>
               <div>
@@ -103,7 +101,11 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             <div className="flex flex-wrap gap-2">
               {user.interests && user.interests.length > 0 ? (
                 user.interests.map((interest: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300">
+                  <Badge
+                    key={index}
+                    variant="secondary"
+                    className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300"
+                  >
                     {interest}
                   </Badge>
                 ))
@@ -116,8 +118,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start"
             onClick={() => setShowEditModal(true)}
           >
@@ -125,8 +127,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             Edit Profile
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start"
             onClick={() => setShowFriendsModal(true)}
           >
@@ -134,8 +136,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             Friends
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start"
             onClick={() => onNavigate && onNavigate('settings')}
           >
@@ -143,8 +145,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             Settings
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start"
             onClick={() => onNavigate && onNavigate('help-support')}
           >
@@ -152,8 +154,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             Help & Support
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
             onClick={handleLogout}
           >
@@ -164,13 +166,10 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
       </div>
 
       {/* Modals */}
-      <FriendsModal 
-        isOpen={showFriendsModal} 
-        onClose={() => setShowFriendsModal(false)} 
-      />
-      
-      <EditProfileModal 
-        isOpen={showEditModal} 
+      <FriendsModal isOpen={showFriendsModal} onClose={() => setShowFriendsModal(false)} />
+
+      <EditProfileModal
+        isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         user={user}
       />

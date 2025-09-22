@@ -1,57 +1,77 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  ArrowLeft, 
-  Bell, 
-  Lock, 
-  User, 
-  MapPin, 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import { apiRequest } from '@/lib/queryClient';
+import {
+  ArrowLeft,
+  Bell,
   Eye,
   Trash2,
   Download,
   Shield,
   Globe,
   Moon,
-  Sun
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { useTheme } from "@/hooks/useTheme";
+  Sun,
+  User,
+} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface NotificationSettings {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  activityReminders: boolean;
+  newMatches: boolean;
+  messages: boolean;
+}
+
+interface PrivacySettings {
+  profileVisibility: 'public' | 'friends' | 'private';
+  locationSharing: boolean;
+  showAge: boolean;
+  showEmail: boolean;
+}
+
+interface PreferenceSettings {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  distanceUnit: 'miles' | 'kilometers';
+  maxDistance: number;
+}
 
 interface UserSettings {
-  notifications: {
-    pushNotifications: boolean;
-    emailNotifications: boolean;
-    activityReminders: boolean;
-    newMatches: boolean;
-    messages: boolean;
-  };  privacy: {
-    profileVisibility: 'public' | 'friends' | 'private';
-    locationSharing: boolean;
-    showAge: boolean;
-    showEmail: boolean;
-  };
-  preferences: {
-    theme: 'light' | 'dark' | 'system';
-    language: string;
-    distanceUnit: 'miles' | 'kilometers';
-    maxDistance: number;
-  };
+  notifications: NotificationSettings;
+  privacy: PrivacySettings;
+  preferences: PreferenceSettings;
+}
+
+type UserPreferencesResponse = Partial<PreferenceSettings> & {
+  notifications?: NotificationSettings;
+  privacy?: PrivacySettings;
+};
+
+interface UserProfileResponse {
+  preferences?: UserPreferencesResponse;
 }
 
 export default function Settings({ onBack }: { onBack?: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { setTheme } = useTheme();
-  
+
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
     notifications: {
@@ -60,7 +80,8 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       activityReminders: true,
       newMatches: true,
       messages: true,
-    },    privacy: {
+    },
+    privacy: {
       profileVisibility: 'public',
       locationSharing: true,
       showAge: true,
@@ -74,91 +95,124 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     },
   });
 
-  useEffect(() => {
-    // Load user settings from API
-    loadUserSettings();
-  }, []);
-
-  const loadUserSettings = async () => {
+  const loadUserSettings = useCallback(async () => {
     try {
       const response = await apiRequest('GET', '/api/users/profile/');
-      
-      if (response.ok) {
-        const userData = await response.json();
-        const loadedPreferences = userData.preferences || {};
-        setSettings(prev => ({
-          ...prev,
-          preferences: loadedPreferences,
-          notifications: loadedPreferences.notifications || prev.notifications,
-          privacy: loadedPreferences.privacy || prev.privacy,
-        }));
-        
-        // Apply theme from loaded preferences
-        if (loadedPreferences.theme) {
-          setTheme(loadedPreferences.theme);
-        }
+      if (!response.ok) {
+        throw new Error('Failed to load settings');
+      }
+
+      const userData = (await response.json()) as UserProfileResponse;
+      const preferences = userData.preferences ?? {};
+      const { notifications, privacy, ...preferenceOverrides } = preferences;
+
+      setSettings((prev) => ({
+        notifications: notifications ?? prev.notifications,
+        privacy: privacy ?? prev.privacy,
+        preferences: {
+          ...prev.preferences,
+          ...preferenceOverrides,
+        },
+      }));
+
+      if (preferenceOverrides.theme) {
+        setTheme(preferenceOverrides.theme);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
-  };
-  const updateSettings = async (section: keyof UserSettings, newSettings: any) => {
-    try {
-      setLoading(true);
-      
-      // For preferences, update the entire preferences object
-      const payload = section === 'preferences' 
-        ? { preferences: newSettings }
-        : { [section]: newSettings };
-      
-      const response = await apiRequest('PATCH', '/api/users/profile/', payload);
+  }, [setTheme]);
 
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setSettings(prev => ({
-          ...prev,
-          preferences: updatedUser.preferences || {},
-          notifications: updatedUser.preferences?.notifications || prev.notifications,
-          privacy: updatedUser.preferences?.privacy || prev.privacy,
+  useEffect(() => {
+    // Load user settings from API
+    loadUserSettings();
+  }, [loadUserSettings]);
+
+  const updateSettings = useCallback(
+    async <Section extends keyof UserSettings>(
+      section: Section,
+      newSettings: UserSettings[Section],
+    ) => {
+      try {
+        setLoading(true);
+
+        const payload: Partial<UserSettings> =
+          section === 'preferences'
+            ? { preferences: newSettings as PreferenceSettings }
+            : ({ [section]: newSettings } as Partial<UserSettings>);
+
+        const response = await apiRequest('PATCH', '/api/users/profile/', payload);
+
+        if (!response.ok) {
+          throw new Error('Failed to update settings');
+        }
+
+        const updatedUser = (await response.json()) as UserProfileResponse;
+        const preferences = updatedUser.preferences ?? {};
+        const { notifications, privacy, ...preferenceOverrides } = preferences;
+
+        setSettings((prev) => ({
+          notifications:
+            notifications ??
+            (section === 'notifications'
+              ? (newSettings as NotificationSettings)
+              : prev.notifications),
+          privacy:
+            privacy ?? (section === 'privacy' ? (newSettings as PrivacySettings) : prev.privacy),
+          preferences: {
+            ...prev.preferences,
+            ...(section === 'preferences'
+              ? (newSettings as PreferenceSettings)
+              : preferenceOverrides),
+          },
         }));
-        toast({
-          title: "Settings updated",
-          description: "Your settings have been saved successfully.",
-        });
-      } else {
-        throw new Error('Failed to update settings');
-      }
-    } catch (error) {
-      console.error('Failed to update settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleNotificationChange = (key: keyof typeof settings.notifications, value: boolean) => {
-    const newNotifications = { ...settings.notifications, [key]: value };
+        toast({
+          title: 'Settings updated',
+          description: 'Your settings have been saved successfully.',
+        });
+      } catch (error) {
+        console.error('Failed to update settings:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to update settings. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast],
+  );
+
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
+    const newNotifications: NotificationSettings = { ...settings.notifications, [key]: value };
     updateSettings('notifications', newNotifications);
   };
 
-  const handlePrivacyChange = (key: keyof typeof settings.privacy, value: any) => {
-    const newPrivacy = { ...settings.privacy, [key]: value };
+  const handlePrivacyChange = <Key extends keyof PrivacySettings>(
+    key: Key,
+    value: PrivacySettings[Key],
+  ) => {
+    const newPrivacy: PrivacySettings = { ...settings.privacy, [key]: value };
     updateSettings('privacy', newPrivacy);
   };
 
-  const handlePreferenceChange = (key: keyof typeof settings.preferences, value: any) => {
-    const newPreferences = { ...settings.preferences, [key]: value };
+  const handlePreferenceChange = <Key extends keyof PreferenceSettings>(
+    key: Key,
+    value: PreferenceSettings[Key],
+  ) => {
+    const newPreferences: PreferenceSettings = {
+      ...settings.preferences,
+      [key]: value,
+    } as PreferenceSettings;
     updateSettings('preferences', newPreferences);
-    
-    // Apply theme change immediately
+
     if (key === 'theme') {
-      setTheme(value);
+      setTheme(value as PreferenceSettings['theme']);
     }
   };
+
   const exportData = async () => {
     try {
       const response = await apiRequest('GET', '/api/users/profile/export/');
@@ -175,48 +229,55 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         toast({
-          title: "Data exported",
-          description: "Your data has been downloaded successfully.",
+          title: 'Data exported',
+          description: 'Your data has been downloaded successfully.',
         });
       } else {
         throw new Error('Failed to export data');
       }
     } catch (error) {
       console.error('Failed to export data:', error);
+      const message =
+        error instanceof Error ? error.message : 'Failed to export data. Please try again.';
       toast({
-        title: "Error",
-        description: "Failed to export data. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
       });
     }
   };
 
   const deleteAccount = async () => {
-    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.')) {
+    if (
+      window.confirm(
+        'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+      )
+    ) {
       try {
-        const response = await apiRequest('DELETE', '/api/users/profile/delete/');
-        
+        await apiRequest('DELETE', '/api/users/profile/delete/');
+
         // Clear all user data from local storage
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('userId');
-        
+
         toast({
-          title: "Account deleted",
-          description: "Your account has been permanently deleted.",
+          title: 'Account deleted',
+          description: 'Your account has been permanently deleted.',
         });
-        
+
         // Redirect to landing page
         window.location.href = '/';
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error deleting account:', error);
-        const errorMessage = error.message || 'Failed to delete account. Please try again.';
+        const message =
+          error instanceof Error ? error.message : 'Failed to delete account. Please try again.';
         toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
         });
       }
     }
@@ -230,18 +291,18 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     );
   }
 
-  const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
+  const initials =
+    `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() ||
+    user.email?.charAt(0).toUpperCase() ||
+    'U';
 
   return (
-  <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
-        <div className="flex items-center">          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onBack && onBack()}
-            className="mr-4"
-          >
+        <div className="flex items-center">
+          {' '}
+          <Button variant="ghost" size="sm" onClick={() => onBack && onBack()} className="mr-4">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
@@ -267,10 +328,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               </Avatar>
               <div>
                 <h3 className="font-semibold">
-                  {user.firstName && user.lastName 
+                  {user.firstName && user.lastName
                     ? `${user.firstName} ${user.lastName}`
-                    : user.email?.split('@')[0] || 'User'
-                  }
+                    : user.email?.split('@')[0] || 'User'}
                 </h3>
                 <p className="text-sm text-gray-600">{user.email}</p>
               </div>
@@ -292,7 +352,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               <Switch
                 id="push-notifications"
                 checked={settings.notifications.pushNotifications}
-                onCheckedChange={(checked) => handleNotificationChange('pushNotifications', checked)}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange('pushNotifications', checked)
+                }
                 disabled={loading}
               />
             </div>
@@ -301,7 +363,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               <Switch
                 id="email-notifications"
                 checked={settings.notifications.emailNotifications}
-                onCheckedChange={(checked) => handleNotificationChange('emailNotifications', checked)}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange('emailNotifications', checked)
+                }
                 disabled={loading}
               />
             </div>
@@ -310,7 +374,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               <Switch
                 id="activity-reminders"
                 checked={settings.notifications.activityReminders}
-                onCheckedChange={(checked) => handleNotificationChange('activityReminders', checked)}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange('activityReminders', checked)
+                }
                 disabled={loading}
               />
             </div>
@@ -366,7 +432,8 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
             <div className="flex items-center justify-between">
               <Label htmlFor="show-location">Show Location</Label>
               <Switch
-                id="show-location"                checked={settings.privacy.locationSharing}
+                id="show-location"
+                checked={settings.privacy.locationSharing}
                 onCheckedChange={(checked) => handlePrivacyChange('locationSharing', checked)}
                 disabled={loading}
               />
@@ -407,7 +474,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               </Label>
               <Select
                 value={settings.preferences.theme}
-                onValueChange={(value) => handlePreferenceChange('theme', value)}
+                onValueChange={(value) =>
+                  handlePreferenceChange('theme', value as PreferenceSettings['theme'])
+                }
                 disabled={loading}
               >
                 <SelectTrigger className="mt-1">
@@ -436,7 +505,12 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               </Label>
               <Select
                 value={settings.preferences.distanceUnit}
-                onValueChange={(value) => handlePreferenceChange('distanceUnit', value)}
+                onValueChange={(value) =>
+                  handlePreferenceChange(
+                    'distanceUnit',
+                    value as PreferenceSettings['distanceUnit'],
+                  )
+                }
                 disabled={loading}
               >
                 <SelectTrigger className="mt-1">
@@ -456,7 +530,9 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
                 id="max-distance"
                 type="number"
                 value={settings.preferences.maxDistance}
-                onChange={(e) => handlePreferenceChange('maxDistance', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handlePreferenceChange('maxDistance', Number.parseInt(e.target.value, 10) || 0)
+                }
                 disabled={loading}
                 min="1"
                 max="100"
@@ -475,27 +551,20 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={exportData}
-            >
+            <Button variant="outline" className="w-full justify-start" onClick={exportData}>
               <Download className="w-4 h-4 mr-2" />
               Export My Data
             </Button>
-            
+
             <Separator />
-            
-            <Button
-              variant="destructive"
-              className="w-full justify-start"
-              onClick={deleteAccount}
-            >
+
+            <Button variant="destructive" className="w-full justify-start" onClick={deleteAccount}>
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Account
             </Button>
             <p className="text-xs text-gray-500">
-              This action cannot be undone. All your activities, swipes, matches, and reviews will be permanently deleted.
+              This action cannot be undone. All your activities, swipes, matches, and reviews will
+              be permanently deleted.
             </p>
           </CardContent>
         </Card>

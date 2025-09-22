@@ -8,29 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { Activity, ActivityFilters } from '@/types/activity';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { MapPin, Navigation, Calendar, Users, List } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-
-import type { Activity } from '../../../shared/client-types';
-
-interface ActivityFilters {
-  category: string;
-  maxDistance: number[];
-  priceRange: number[];
-  dateFrom: Date | undefined;
-  dateTo: Date | undefined;
-  skillLevel: string;
-  ageRestriction: string;
-  tags: string[];
-  location: string;
-}
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface MapViewProps {
   onActivitySelect: (activity: Activity) => void;
   onToggleView: () => void;
-  filters: ActivityFilters;
+  filters: Partial<ActivityFilters>;
 }
 
 interface UserLocation {
@@ -61,76 +48,37 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         latitude: userLocation.latitude.toString(),
         longitude: userLocation.longitude.toString(),
         radius: searchRadius,
-        ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
       });
 
+      for (const [key, value] of Object.entries(filters)) {
+        if (value === undefined || value === null) {
+          continue;
+        }
+        if (Array.isArray(value)) {
+          params.set(key, value.join(','));
+          continue;
+        }
+        if (value instanceof Date) {
+          params.set(key, value.toISOString());
+          continue;
+        }
+        params.set(key, String(value));
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params.toString()}`,
       );
-      if (!response.ok) throw new Error('Failed to fetch activities');
-      return response.json();
+      if (!response.ok) {
+        throw new Error('Failed to fetch activities');
+      }
+
+      return (await response.json()) as Activity[];
     },
     enabled: !!userLocation,
     retry: 1,
   });
 
-  useEffect(() => {
-    requestLocation();
-    loadGoogleMaps();
-  }, []);
-
-  useEffect(() => {
-    if (mapInstanceRef.current && activities.length > 0) {
-      updateMapMarkers();
-    }
-  }, [activities]);
-
-  const loadGoogleMaps = () => {
-    if (window.google) {
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDptAUAkTz9QEq1fOODRWHFrLD7-we5Crw&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = initializeMap;
-    document.head.appendChild(script);
-  };
-
-  const initializeMap = () => {
-    if (!mapRef.current || !userLocation) return;
-
-    const google = window.google;
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: userLocation.latitude, lng: userLocation.longitude },
-      zoom: 12,
-      styles: [
-        {
-          featureType: 'poi',
-          elementType: 'labels',
-          stylers: [{ visibility: 'off' }],
-        },
-      ],
-    });
-
-    mapInstanceRef.current = map;
-
-    // Add user location marker
-    new google.maps.Marker({
-      position: { lat: userLocation.latitude, lng: userLocation.longitude },
-      map: map,
-      title: 'Your Location',
-      icon: {
-        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
-        scaledSize: new google.maps.Size(24, 24),
-      },
-    });
-
-    updateMapMarkers();
-  };
-
-  const updateMapMarkers = () => {
+  const updateMapMarkers = useCallback(() => {
     if (!mapInstanceRef.current) return;
 
     const google = window.google;
@@ -172,7 +120,63 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         markersRef.current.push(marker);
       }
     });
-  };
+  }, [activities]);
+
+  const initializeMap = useCallback(() => {
+    if (!mapRef.current || !userLocation) return;
+
+    const google = window.google;
+    const map = new google.maps.Map(mapRef.current, {
+      center: { lat: userLocation.latitude, lng: userLocation.longitude },
+      zoom: 12,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }],
+        },
+      ],
+    });
+
+    mapInstanceRef.current = map;
+
+    // Add user location marker
+    new google.maps.Marker({
+      position: { lat: userLocation.latitude, lng: userLocation.longitude },
+      map: map,
+      title: 'Your Location',
+      icon: {
+        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
+        scaledSize: new google.maps.Size(24, 24),
+      },
+    });
+
+    updateMapMarkers();
+  }, [userLocation, updateMapMarkers]);
+
+  const loadGoogleMaps = useCallback(() => {
+    if (window.google) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDptAUAkTz9QEq1fOODRWHFrLD7-we5Crw&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeMap;
+    document.head.appendChild(script);
+  }, [initializeMap]);
+
+  useEffect(() => {
+    requestLocation();
+    loadGoogleMaps();
+  }, [loadGoogleMaps]);
+
+  useEffect(() => {
+    if (mapInstanceRef.current && activities.length > 0) {
+      updateMapMarkers();
+    }
+  }, [activities, updateMapMarkers]);
 
   const requestLocation = () => {
     if (!navigator.geolocation) {

@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users, Calendar, MapPin } from "lucide-react";
-import AuthForm from "@/components/auth-form"; // Import the AuthForm component
-import { useAuth } from "@/hooks/useAuth"; // Import the useAuth hook
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import AuthForm from '@/components/auth-form'; // Import the AuthForm component
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth'; // Import the useAuth hook
+import { Users, Calendar, MapPin } from 'lucide-react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Landing() {
   const { isAuthenticated, handleAuthentication } = useAuth();
@@ -45,7 +45,9 @@ export default function Landing() {
               <Users className="w-8 h-8 text-secondary dark:text-secondary-400" />
               <div>
                 <h3 className="font-semibold">Meet New People</h3>
-                <p className="text-sm text-purple-100 dark:text-gray-300">Connect with like-minded individuals</p>
+                <p className="text-sm text-purple-100 dark:text-gray-300">
+                  Connect with like-minded individuals
+                </p>
               </div>
             </div>
           </CardContent>
@@ -57,7 +59,9 @@ export default function Landing() {
               <Calendar className="w-8 h-8 text-secondary dark:text-secondary-400" />
               <div>
                 <h3 className="font-semibold">Join Activities</h3>
-                <p className="text-sm text-purple-100 dark:text-gray-300">From sports to social events</p>
+                <p className="text-sm text-purple-100 dark:text-gray-300">
+                  From sports to social events
+                </p>
               </div>
             </div>
           </CardContent>
@@ -69,7 +73,9 @@ export default function Landing() {
               <MapPin className="w-8 h-8 text-secondary dark:text-secondary-400" />
               <div>
                 <h3 className="font-semibold">Local Events</h3>
-                <p className="text-sm text-purple-100 dark:text-gray-300">Discover activities near you</p>
+                <p className="text-sm text-purple-100 dark:text-gray-300">
+                  Discover activities near you
+                </p>
               </div>
             </div>
           </CardContent>
@@ -77,13 +83,13 @@ export default function Landing() {
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        <Button 
+        <Button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="w-full bg-white dark:bg-gray-700 text-primary dark:text-primary-300 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-lg hover:bg-gray-50 dark:hover:bg-gray-600"
         >
           Get Started
         </Button>
-        
+
         <p className="text-center text-purple-100 dark:text-gray-400 text-sm">
           Join thousands of people discovering amazing activities
         </p>

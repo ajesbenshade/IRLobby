@@ -170,7 +170,7 @@ export default function UserProfileModal({
                   <div key={index} className="aspect-square">
                     <img
                       src={photo}
-                      alt={`Photo ${index + 1}`}
+                      alt={`${index + 1}`}
                       className="w-full h-full object-cover rounded-lg border"
                     />
                   </div>

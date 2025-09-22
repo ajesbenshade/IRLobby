@@ -12,11 +12,14 @@ const TwitterCallback = () => {
     const handleCallback = async () => {
       try {
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
 
         // Get the code_verifier from sessionStorage (set during OAuth initiation)
         const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
         if (!codeVerifier) {
-          throw new Error('Session expired. Please try logging in again.');
+          console.warn(
+            'Twitter OAuth callback received without a stored code_verifier. Falling back to server session.',
+          );
         }
 
         console.log('Processing Twitter OAuth callback...');
@@ -26,9 +29,17 @@ const TwitterCallback = () => {
         }
 
         // Exchange code for tokens
+        const params = new URLSearchParams({ code });
+        if (state) {
+          params.set('state', state);
+        }
+        if (codeVerifier) {
+          params.set('code_verifier', codeVerifier);
+        }
+
         const response = await apiRequest(
           'GET',
-          `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(codeVerifier)}`,
+          `/api/auth/twitter/callback/?${params.toString()}`,
         );
 
         if (!response.ok) {

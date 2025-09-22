@@ -46,17 +46,20 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const data = await response.json();
       console.log('OAuth URL data:', data);
 
-      if (data.auth_url && data.code_verifier) {
-        // Store the code_verifier for use in the callback
-        sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
-        console.log('Redirecting to Twitter OAuth URL...');
-
-        // Open Twitter OAuth in a popup or redirect
-        window.location.href = data.auth_url;
-      } else {
+      if (!data.auth_url) {
         console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
+
+      if (data.code_verifier) {
+        // Store the code_verifier for use in the callback when provided
+        sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
+      }
+
+      console.log('Redirecting to Twitter OAuth URL...');
+
+      // Open Twitter OAuth in a popup or redirect
+      window.location.href = data.auth_url;
     } catch (error) {
       console.error('Twitter OAuth error:', error);
 

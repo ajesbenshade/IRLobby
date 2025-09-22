@@ -3,12 +3,16 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.http import JsonResponse
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 import logging
 
 from .throttles import AuthAnonThrottle, AuthUserThrottle
+from .utils import set_refresh_cookie, clear_refresh_cookie
 from .models import User
 from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
 from activities.models import Activity
@@ -36,13 +40,16 @@ def register(request):
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
         logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
-        return Response({
+        response_payload = {
             'user': UserSerializer(user).data,
             'tokens': {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             }
-        }, status=status.HTTP_201_CREATED)
+        }
+        response = Response(response_payload, status=status.HTTP_201_CREATED)
+        set_refresh_cookie(response, str(refresh))
+        return response
 
     logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -57,16 +64,81 @@ def login(request):
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
         logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
-        return Response({
+        response_payload = {
             'user': UserSerializer(user).data,
             'tokens': {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             }
-        }, status=status.HTTP_200_OK)
+        }
+        response = Response(response_payload, status=status.HTTP_200_OK)
+        set_refresh_cookie(response, str(refresh))
+        return response
 
     logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+def logout_view(request):
+    """Invalidate the refresh token and clear the cookie."""
+    refresh_token_value = request.COOKIES.get(settings.REFRESH_TOKEN_COOKIE_NAME) or request.data.get('refresh')
+    response = Response(status=status.HTTP_204_NO_CONTENT)
+
+    if refresh_token_value:
+        try:
+            token = RefreshToken(refresh_token_value)
+            token.blacklist()
+        except TokenError as exc:
+            logger.debug('Refresh token blacklist skipped: %s', exc)
+        except Exception as exc:  # pragma: no cover - unexpected edge case
+            logger.warning('Unexpected error while blacklisting refresh token: %s', exc)
+
+    clear_refresh_cookie(response)
+    user_identifier = request.user.id if request.user.is_authenticated else None
+    logger.info('Logout processed user_id=%s authenticated=%s', user_identifier, request.user.is_authenticated)
+    return response
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+    """Refresh access tokens while managing secure refresh cookies."""
+
+    def post(self, request, *args, **kwargs):
+        request_data = self._with_cookie_refresh(request)
+        serializer = self.get_serializer(data=request_data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except InvalidToken as exc:
+            logger.warning('Token refresh rejected: %s', exc)
+            response = Response({
+                'error': 'Invalid or expired refresh token',
+                'error_code': 'invalid_refresh'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            clear_refresh_cookie(response)
+            return response
+
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+        refresh_token = serializer.validated_data.get('refresh')
+        if isinstance(refresh_token, str):
+            set_refresh_cookie(response, refresh_token)
+        else:
+            cookie_token = request_data.get('refresh')
+            if isinstance(cookie_token, str):
+                set_refresh_cookie(response, cookie_token)
+        return response
+
+    def _with_cookie_refresh(self, request):
+        if hasattr(request.data, 'copy'):
+            data = request.data.copy()
+        else:
+            data = dict(request.data)
+        if not data.get('refresh'):
+            cookie_token = request.COOKIES.get(settings.REFRESH_TOKEN_COOKIE_NAME)
+            if cookie_token:
+                data['refresh'] = cookie_token
+        return data
 
 
 @api_view(['GET'])

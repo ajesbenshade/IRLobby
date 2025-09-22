@@ -20,8 +20,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
-    TokenRefreshView,
 )
+from users.views import CookieTokenRefreshView, logout_view
 
 def home(request):
     return render(request, 'index.html')
@@ -37,7 +37,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health'),
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/logout/', logout_view, name='token_logout'),
     path('api/auth/twitter/', include('users.oauth_urls')),
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),

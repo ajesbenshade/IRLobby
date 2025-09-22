@@ -10,7 +10,6 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-console.log('API_BASE_URL:', API_BASE_URL);
 const AUTH_401_BYPASS_PATHS = ['/api/users/profile/', '/api/users/auth/status/'] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',

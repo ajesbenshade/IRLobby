@@ -1,6 +1,6 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Bell } from 'lucide-react';
 
 interface NotificationCenterProps {
   isOpen: boolean;
@@ -22,7 +22,9 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
           <div className="text-center py-8">
             <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Notifications coming soon!</p>
-            <p className="text-sm text-gray-400">We'll notify you about matches and activity updates.</p>
+            <p className="text-sm text-gray-400">
+              We&apos;ll notify you about matches and activity updates.
+            </p>
           </div>
         </ScrollArea>
       </DialogContent>

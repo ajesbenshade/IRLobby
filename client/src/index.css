@@ -60,25 +60,53 @@
 
 /* Custom animations */
 @keyframes swipeRight {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(100px) rotate(15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100px) rotate(15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes swipeLeft {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(-100px) rotate(-15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100px) rotate(-15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes bounceIn {
-  0% { transform: scale(0.3); opacity: 0; }
-  50% { transform: scale(1.05); }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-swipe-right {
@@ -136,9 +164,9 @@ html {
   body {
     font-display: swap;
   }
-  
+
   /* Better touch targets */
-  button, 
+  button,
   .cursor-pointer,
   input,
   select,
@@ -146,12 +174,12 @@ html {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* Prevent horizontal scroll */
   body {
     overflow-x: hidden;
   }
-  
+
   /* Optimize images for mobile */
   img {
     max-width: 100%;
@@ -167,18 +195,20 @@ html {
   .shadow-lg {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
-  
+
   .backdrop-blur {
     backdrop-filter: none;
     background-color: rgba(255, 255, 255, 0.8);
   }
-  
+
   .dark .backdrop-blur {
     background-color: rgba(0, 0, 0, 0.8);
   }
-  
+
   /* Optimize animations for mobile performance */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.2s !important;
     animation-delay: 0s !important;
     transition-duration: 0.2s !important;
@@ -196,16 +226,16 @@ html {
     backdrop-filter: none !important;
     background-color: rgba(255, 255, 255, 0.95);
   }
-  
+
   .dark .backdrop-blur {
     background-color: rgba(0, 0, 0, 0.95);
   }
-  
+
   /* Optimize shadows for mobile */
   .shadow-lg {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
-  
+
   /* Reduce animation complexity */
   .animate-fade-in {
     animation: none;
@@ -222,7 +252,7 @@ html {
   input,
   select,
   textarea,
-  [role="button"] {
+  [role='button'] {
     min-width: 44px;
     min-height: 44px;
   }

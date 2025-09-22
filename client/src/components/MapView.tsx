@@ -1,16 +1,36 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Navigation, Calendar, Users, Filter, List } from "lucide-react";
-import { format } from "date-fns";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { MapPin, Navigation, Calendar, Users, List } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+
+import type { Activity } from '../../../shared/client-types';
+
+interface ActivityFilters {
+  category: string;
+  maxDistance: number[];
+  priceRange: number[];
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+  skillLevel: string;
+  ageRestriction: string;
+  tags: string[];
+  location: string;
+}
 
 interface MapViewProps {
-  onActivitySelect: (activity: any) => void;
+  onActivitySelect: (activity: Activity) => void;
   onToggleView: () => void;
-  filters: any;
+  filters: ActivityFilters;
 }
 
 interface UserLocation {
@@ -21,27 +41,32 @@ interface UserLocation {
 export default function MapView({ onActivitySelect, onToggleView, filters }: MapViewProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<any>(null);
-  const [searchRadius, setSearchRadius] = useState("25");
+  const [searchRadius, setSearchRadius] = useState('25');
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities', userLocation?.latitude, userLocation?.longitude, searchRadius, filters],
+    queryKey: [
+      '/api/activities',
+      userLocation?.latitude,
+      userLocation?.longitude,
+      searchRadius,
+      filters,
+    ],
     queryFn: async () => {
       if (!userLocation) return [];
-      
+
       const params = new URLSearchParams({
         latitude: userLocation.latitude.toString(),
         longitude: userLocation.longitude.toString(),
         radius: searchRadius,
-        ...Object.fromEntries(
-          Object.entries(filters).map(([key, value]) => [key, String(value)])
-        )
+        ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
       });
-      
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params}`);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params}`,
+      );
       if (!response.ok) throw new Error('Failed to fetch activities');
       return response.json();
     },
@@ -61,7 +86,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   }, [activities]);
 
   const loadGoogleMaps = () => {
-    if ((window as any).google) {
+    if (window.google) {
       return;
     }
 
@@ -76,17 +101,17 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const initializeMap = () => {
     if (!mapRef.current || !userLocation) return;
 
-    const google = (window as any).google;
+    const google = window.google;
     const map = new google.maps.Map(mapRef.current, {
       center: { lat: userLocation.latitude, lng: userLocation.longitude },
       zoom: 12,
       styles: [
         {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }]
-        }
-      ]
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }],
+        },
+      ],
     });
 
     mapInstanceRef.current = map;
@@ -95,11 +120,11 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
     new google.maps.Marker({
       position: { lat: userLocation.latitude, lng: userLocation.longitude },
       map: map,
-      title: "Your Location",
+      title: 'Your Location',
       icon: {
         url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
         scaledSize: new google.maps.Size(24, 24),
-      }
+      },
     });
 
     updateMapMarkers();
@@ -108,14 +133,14 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   const updateMapMarkers = () => {
     if (!mapInstanceRef.current) return;
 
-    const google = (window as any).google;
-    
+    const google = window.google;
+
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
     // Add activity markers
-    activities.forEach((activity: any) => {
+    activities.forEach((activity: Activity) => {
       if (activity.latitude && activity.longitude) {
         const marker = new google.maps.Marker({
           position: { lat: activity.latitude, lng: activity.longitude },
@@ -124,7 +149,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
           icon: {
             url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23E11D48'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E",
             scaledSize: new google.maps.Size(32, 32),
-          }
+          },
         });
 
         const infoWindow = new google.maps.InfoWindow({
@@ -132,17 +157,16 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
             <div style="padding: 8px; max-width: 250px;">
               <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
               <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
-              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${format(new Date(activity.time), 'MMM d, yyyy • h:mm a')}</p>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.time ? format(new Date(activity.time), 'MMM d, yyyy • h:mm a') : 'Time TBD'}</p>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}</span>
               </div>
             </div>
-          `
+          `,
         });
 
         marker.addListener('click', () => {
           infoWindow.open(mapInstanceRef.current, marker);
-          setSelectedActivity(activity);
         });
 
         markersRef.current.push(marker);
@@ -152,7 +176,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by this browser");
+      setLocationError('Geolocation is not supported by this browser');
       return;
     }
 
@@ -167,16 +191,18 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
       (error) => {
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setLocationError("Location access denied. Please enable location permissions to find nearby activities.");
+            setLocationError(
+              'Location access denied. Please enable location permissions to find nearby activities.',
+            );
             break;
           case error.POSITION_UNAVAILABLE:
-            setLocationError("Location information is unavailable.");
+            setLocationError('Location information is unavailable.');
             break;
           case error.TIMEOUT:
-            setLocationError("Location request timed out.");
+            setLocationError('Location request timed out.');
             break;
           default:
-            setLocationError("An unknown error occurred while retrieving location.");
+            setLocationError('An unknown error occurred while retrieving location.');
             break;
         }
       },
@@ -184,36 +210,38 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 300000, // 5 minutes
-      }
+      },
     );
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 3959; // Earth's radius in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
-      "Sports & Fitness": "bg-red-100 text-red-700",
-      "Food & Drinks": "bg-orange-100 text-orange-700",
-      "Outdoor Adventures": "bg-green-100 text-green-700",
-      "Arts & Culture": "bg-purple-100 text-purple-700",
-      "Nightlife": "bg-pink-100 text-pink-700",
-      "Learning": "bg-blue-100 text-blue-700",
-      "Technology": "bg-gray-100 text-gray-700",
-      "Music": "bg-indigo-100 text-indigo-700",
-      "Social": "bg-yellow-100 text-yellow-700",
-      "Gaming": "bg-cyan-100 text-cyan-700",
+      'Sports & Fitness': 'bg-red-100 text-red-700',
+      'Food & Drinks': 'bg-orange-100 text-orange-700',
+      'Outdoor Adventures': 'bg-green-100 text-green-700',
+      'Arts & Culture': 'bg-purple-100 text-purple-700',
+      Nightlife: 'bg-pink-100 text-pink-700',
+      Learning: 'bg-blue-100 text-blue-700',
+      Technology: 'bg-gray-100 text-gray-700',
+      Music: 'bg-indigo-100 text-indigo-700',
+      Social: 'bg-yellow-100 text-yellow-700',
+      Gaming: 'bg-cyan-100 text-cyan-700',
     };
-    return colors[category] || "bg-gray-100 text-gray-700";
+    return colors[category] || 'bg-gray-100 text-gray-700';
   };
 
   if (locationError) {
@@ -261,7 +289,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
             List View
           </Button>
         </div>
-        
+
         {/* Radius Selector */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Search Radius:</span>
@@ -283,12 +311,8 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
 
       {/* Interactive Google Map */}
       <div className="relative h-96">
-        <div 
-          ref={mapRef} 
-          className="w-full h-full"
-          style={{ minHeight: '400px' }}
-        />
-        
+        <div ref={mapRef} className="w-full h-full" style={{ minHeight: '400px' }} />
+
         {/* Your Location Indicator */}
         {userLocation && (
           <div className="absolute top-4 left-4 bg-white shadow-md rounded-lg px-3 py-2 flex items-center gap-2 z-10">
@@ -309,54 +333,57 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
             </CardContent>
           </Card>
         ) : (
-          activities.map((activity: any) => {
-            const distance = userLocation && activity.latitude && activity.longitude
-              ? calculateDistance(
-                  userLocation.latitude,
-                  userLocation.longitude,
-                  activity.latitude,
-                  activity.longitude
-                )
-              : null;
+          activities.map((activity: Activity) => {
+            const distance =
+              userLocation && activity.latitude && activity.longitude
+                ? calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    activity.latitude,
+                    activity.longitude,
+                  )
+                : null;
 
             return (
-              <Card 
+              <Card
                 key={activity.id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => onActivitySelect(activity)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-lg truncate flex-1 pr-2">
-                      {activity.title}
-                    </h3>
-                    <Badge 
-                      variant="secondary" 
+                    <h3 className="font-semibold text-lg truncate flex-1 pr-2">{activity.title}</h3>
+                    <Badge
+                      variant="secondary"
                       className={`text-xs ${getCategoryColor(activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity')}`}
                     >
                       {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
                     </Badge>
                   </div>
-                  
+
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-gray-400" />
                       <span className="truncate">{activity.location}</span>
                       {distance && (
-                        <span className="text-blue-600 font-medium">
-                          {distance.toFixed(1)} mi
-                        </span>
+                        <span className="text-blue-600 font-medium">{distance.toFixed(1)} mi</span>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{format(new Date(activity.time), "MMM dd, h:mm a")}</span>
+                        <span>
+                          {activity.time
+                            ? format(new Date(activity.time), 'MMM dd, yyyy • h:mm a')
+                            : 'Time TBD'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4 text-gray-400" />
-                        <span>{activity.participant_count || 0}/{activity.capacity}</span>
+                        <span>
+                          {activity.participant_count || 0}/{activity.capacity}
+                        </span>
                       </div>
                     </div>
                   </div>

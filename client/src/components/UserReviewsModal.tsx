@@ -1,16 +1,29 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, Calendar, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { Star, Calendar, MapPin } from 'lucide-react';
+
+interface Review {
+  id: string;
+  reviewer: {
+    profileImageUrl?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  createdAt: string;
+  rating: number;
+  activity: {
+    title: string;
+    location: string;
+    dateTime: string;
+  };
+  comment?: string;
+  reviewType: 'host' | 'participant';
+  wouldRecommend?: boolean;
+}
 
 interface UserReviewsModalProps {
   isOpen: boolean;
@@ -19,11 +32,11 @@ interface UserReviewsModalProps {
   userName: string;
 }
 
-export default function UserReviewsModal({ 
-  isOpen, 
-  onClose, 
-  userId, 
-  userName 
+export default function UserReviewsModal({
+  isOpen,
+  onClose,
+  userId,
+  userName,
 }: UserReviewsModalProps) {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['/api/users', userId, 'reviews'],
@@ -34,11 +47,7 @@ export default function UserReviewsModal({
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${
-          i < rating
-            ? 'fill-yellow-400 text-yellow-400'
-            : 'text-gray-200'
-        }`}
+        className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
       />
     ));
   };
@@ -59,7 +68,7 @@ export default function UserReviewsModal({
           </div>
         ) : Array.isArray(reviews) && reviews.length > 0 ? (
           <div className="space-y-4">
-            {reviews.map((review: any) => (
+            {reviews.map((review: Review) => (
               <Card key={review.id}>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
@@ -80,9 +89,7 @@ export default function UserReviewsModal({
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {renderStars(review.rating)}
-                    </div>
+                    <div className="flex items-center gap-1">{renderStars(review.rating)}</div>
                   </div>
 
                   {review.activity && (
@@ -102,7 +109,7 @@ export default function UserReviewsModal({
 
                   {review.comment && (
                     <p className="text-sm text-muted-foreground mb-2">
-                      "{review.comment}"
+                      &ldquo;{review.comment}&rdquo;
                     </p>
                   )}
 

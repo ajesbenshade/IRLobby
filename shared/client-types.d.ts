@@ -6,6 +6,8 @@ export interface Activity {
   images?: string[];
   tags?: string[];
   location?: string;
+  latitude?: number;
+  longitude?: number;
   time?: string;
   dateTime?: string;
   participant_count?: number;
@@ -13,6 +15,7 @@ export interface Activity {
   currentParticipants?: number;
   maxParticipants?: number;
   category: string;
+  isPrivate?: boolean;
   host?: any;
   participants?: any[];
 }

@@ -10,10 +10,6 @@ class Activity(models.Model):
     longitude = models.FloatField()
     time = models.DateTimeField()
     capacity = models.PositiveIntegerField()
-    # Privacy and approval controls
-    is_private = models.BooleanField(default=False)
-    requires_approval = models.BooleanField(default=False)
-    auto_approve = models.BooleanField(default=False)
     tags = models.JSONField(default=list)
     images = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)

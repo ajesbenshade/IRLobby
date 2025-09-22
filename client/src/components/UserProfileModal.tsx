@@ -1,12 +1,29 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Star, MapPin, Calendar, Users, Award } from "lucide-react";
-import UserReviewsModal from "./UserReviewsModal";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { Star, MapPin, Calendar, Users, Award } from 'lucide-react';
+import { useState } from 'react';
+
+import UserReviewsModal from './UserReviewsModal';
+
+interface UserProfile {
+  profileImageUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  location?: string;
+  rating?: number;
+  totalRatings?: number;
+  eventsHosted?: number;
+  eventsAttended?: number;
+  bio?: string;
+  interests?: string[];
+  photoAlbum?: string[];
+  isVerified?: boolean;
+}
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -16,17 +33,17 @@ interface UserProfileModalProps {
   showActions?: boolean;
 }
 
-export default function UserProfileModal({ 
-  isOpen, 
-  onClose, 
-  userId, 
+export default function UserProfileModal({
+  isOpen,
+  onClose,
+  userId,
   onSendFriendRequest,
-  showActions = true 
+  showActions = true,
 }: UserProfileModalProps) {
   const [showReviews, setShowReviews] = useState(false);
-  
+
   // Fetch user profile data
-  const { data: user, isLoading } = useQuery<any>({
+  const { data: user, isLoading } = useQuery<UserProfile>({
     queryKey: [`/api/users/${userId}`],
     enabled: isOpen && !!userId,
   });
@@ -68,7 +85,8 @@ export default function UserProfileModal({
             <Avatar className="h-20 w-20">
               <AvatarImage src={user.profileImageUrl} />
               <AvatarFallback className="text-lg">
-                {user.firstName?.[0]}{user.lastName?.[0]}
+                {user.firstName?.[0]}
+                {user.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -87,7 +105,7 @@ export default function UserProfileModal({
 
           {/* Rating & Stats */}
           <div className="grid grid-cols-3 gap-4">
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => setShowReviews(true)}
             >
@@ -150,8 +168,8 @@ export default function UserProfileModal({
               <div className="grid grid-cols-3 gap-2">
                 {user.photoAlbum.slice(0, 6).map((photo: string, index: number) => (
                   <div key={index} className="aspect-square">
-                    <img 
-                      src={photo} 
+                    <img
+                      src={photo}
                       alt={`Photo ${index + 1}`}
                       className="w-full h-full object-cover rounded-lg border"
                     />

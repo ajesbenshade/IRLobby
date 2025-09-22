@@ -1,16 +1,47 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, UserPlus, Check, X, Users } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import UserProfileModal from "./UserProfileModal";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Search, UserPlus, Check, X, Users } from 'lucide-react';
+import { useState } from 'react';
+
+import UserProfileModal from './UserProfileModal';
+
+interface Friend {
+  id: number;
+  friendId: string;
+  profileImageUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+interface FriendRequest {
+  id: number;
+  requesterId: string;
+  profileImageUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+interface UserSearchResult {
+  id: string;
+  profileImageUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  rating?: number;
+  isFriend?: boolean;
+  hasPendingRequest?: boolean;
+  isRequestSentByMe?: boolean;
+}
 
 interface FriendsModalProps {
   isOpen: boolean;
@@ -18,7 +49,7 @@ interface FriendsModalProps {
 }
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const { toast } = useToast();
@@ -26,37 +57,37 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
   // Fetch current friends
   const { data: friends = [] } = useQuery({
-    queryKey: ["/api/friends"],
+    queryKey: ['/api/friends'],
     enabled: isOpen,
   });
 
   // Fetch friend requests
   const { data: friendRequests = [] } = useQuery({
-    queryKey: ["/api/friends/requests"],
+    queryKey: ['/api/friends/requests'],
     enabled: isOpen,
   });
 
   // Search users
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
-    queryKey: ["/api/users/search", searchQuery],
+    queryKey: ['/api/users/search', searchQuery],
     enabled: searchQuery.length >= 2,
   });
 
   // Send friend request mutation
   const sendFriendRequestMutation = useMutation({
     mutationFn: async (receiverId: string) => {
-      return await apiRequest("/api/friends/request", {
-        method: "POST",
+      return await apiRequest('/api/friends/request', {
+        method: 'POST',
         body: JSON.stringify({ receiverId }),
       });
     },
     onSuccess: () => {
-      toast({ title: "Friend request sent!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/users/search"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/friends/requests"] });
+      toast({ title: 'Friend request sent!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/friends/requests'] });
     },
     onError: () => {
-      toast({ title: "Failed to send friend request", variant: "destructive" });
+      toast({ title: 'Failed to send friend request', variant: 'destructive' });
     },
   });
 
@@ -64,16 +95,16 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   const acceptFriendRequestMutation = useMutation({
     mutationFn: async (friendshipId: number) => {
       return await apiRequest(`/api/friends/accept/${friendshipId}`, {
-        method: "POST",
+        method: 'POST',
       });
     },
     onSuccess: () => {
-      toast({ title: "Friend request accepted!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/friends"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/friends/requests"] });
+      toast({ title: 'Friend request accepted!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/friends'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/friends/requests'] });
     },
     onError: () => {
-      toast({ title: "Failed to accept friend request", variant: "destructive" });
+      toast({ title: 'Failed to accept friend request', variant: 'destructive' });
     },
   });
 
@@ -81,15 +112,15 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   const rejectFriendRequestMutation = useMutation({
     mutationFn: async (friendshipId: number) => {
       return await apiRequest(`/api/friends/reject/${friendshipId}`, {
-        method: "POST",
+        method: 'POST',
       });
     },
     onSuccess: () => {
-      toast({ title: "Friend request rejected" });
-      queryClient.invalidateQueries({ queryKey: ["/api/friends/requests"] });
+      toast({ title: 'Friend request rejected' });
+      queryClient.invalidateQueries({ queryKey: ['/api/friends/requests'] });
     },
     onError: () => {
-      toast({ title: "Failed to reject friend request", variant: "destructive" });
+      toast({ title: 'Failed to reject friend request', variant: 'destructive' });
     },
   });
 
@@ -106,7 +137,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   };
 
   const handleViewProfile = (userId: string) => {
-    console.log("Viewing profile for user:", userId);
+    console.log('Viewing profile for user:', userId);
     setSelectedUserId(userId);
     setShowUserProfile(true);
   };
@@ -150,31 +181,38 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
             </div>
             {Array.isArray(friends) && friends.length > 0 ? (
               <div className="space-y-2">
-                {friends.map((friend: any) => (
+                {friends.map((friend: Friend) => (
                   <Card key={friend.id} className="p-3">
                     <div className="flex items-center justify-between">
-                      <div 
+                      <div
                         className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
                         onClick={() => handleViewProfile(friend.friendId)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleViewProfile(friend.friendId);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
                       >
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={friend.profileImageUrl} />
                           <AvatarFallback>
-                            {friend.firstName?.[0]}{friend.lastName?.[0]}
+                            {friend.firstName?.[0]}
+                            {friend.lastName?.[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium hover:text-primary">
                             {friend.firstName} {friend.lastName}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {friend.email}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{friend.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleViewProfile(friend.friendId)}
                         >
@@ -191,7 +229,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                 <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No friends yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Use the "Add Friends" tab to find people to connect with
+                  Use the &ldquo;Add Friends&rdquo; tab to find people to connect with
                 </p>
               </div>
             )}
@@ -200,31 +238,38 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
           <TabsContent value="requests" className="space-y-3 mt-4">
             {Array.isArray(friendRequests) && friendRequests.length > 0 ? (
               <div className="space-y-2">
-                {friendRequests.map((request: any) => (
+                {friendRequests.map((request: FriendRequest) => (
                   <Card key={request.id} className="p-3">
                     <div className="flex items-center justify-between">
-                      <div 
+                      <div
                         className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
                         onClick={() => handleViewProfile(request.requesterId)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleViewProfile(request.requesterId);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
                       >
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={request.profileImageUrl} />
                           <AvatarFallback>
-                            {request.firstName?.[0]}{request.lastName?.[0]}
+                            {request.firstName?.[0]}
+                            {request.lastName?.[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium hover:text-primary">
                             {request.firstName} {request.lastName}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {request.email}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{request.email}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleViewProfile(request.requesterId)}
                         >
@@ -275,26 +320,33 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                     <p className="text-muted-foreground">Searching...</p>
                   </div>
                 ) : Array.isArray(searchResults) && searchResults.length > 0 ? (
-                  searchResults.map((user: any) => (
+                  searchResults.map((user: UserSearchResult) => (
                     <Card key={user.id} className="p-3">
                       <div className="flex items-center justify-between">
-                        <div 
+                        <div
                           className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
                           onClick={() => handleViewProfile(user.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleViewProfile(user.id);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
                         >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={user.profileImageUrl} />
                             <AvatarFallback>
-                              {user.firstName?.[0]}{user.lastName?.[0]}
+                              {user.firstName?.[0]}
+                              {user.lastName?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium hover:text-primary">
                               {user.firstName} {user.lastName}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              {user.email}
-                            </p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
                             {user.rating && (
                               <div className="flex items-center gap-1">
                                 <span className="text-sm">⭐ {user.rating.toFixed(1)}</span>
@@ -307,7 +359,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                             <Badge variant="secondary">Friends</Badge>
                           ) : user.hasPendingRequest ? (
                             <Badge variant="outline">
-                              {user.isRequestSentByMe ? "Request Sent" : "Pending"}
+                              {user.isRequestSentByMe ? 'Request Sent' : 'Pending'}
                             </Badge>
                           ) : (
                             <Button
@@ -340,25 +392,42 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                     Type at least 2 characters to start searching
                   </p>
                 </div>
-                
+
                 {/* Test users for profile viewing */}
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Or try viewing these sample profiles:</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Or try viewing these sample profiles:
+                  </p>
                   <div className="grid gap-2">
                     {[
-                      { id: 'user_friend_1', name: 'Sarah Johnson', email: 'sarah.adventures@email.com' },
+                      {
+                        id: 'user_friend_1',
+                        name: 'Sarah Johnson',
+                        email: 'sarah.adventures@email.com',
+                      },
                       { id: 'user_friend_2', name: 'Mike Chen', email: 'mike.techie@email.com' },
-                      { id: 'user_friend_3', name: 'Emma Davis', email: 'emma.wellness@email.com' }
+                      { id: 'user_friend_3', name: 'Emma Davis', email: 'emma.wellness@email.com' },
                     ].map((user) => (
                       <Card key={user.id} className="p-3">
                         <div className="flex items-center justify-between">
-                          <div 
+                          <div
                             className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors flex-1"
                             onClick={() => handleViewProfile(user.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleViewProfile(user.id);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
                           >
                             <Avatar className="h-8 w-8">
                               <AvatarFallback>
-                                {user.name.split(' ').map(n => n[0]).join('')}
+                                {user.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')}
                               </AvatarFallback>
                             </Avatar>
                             <div>
@@ -366,8 +435,8 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                               <p className="text-xs text-muted-foreground">{user.email}</p>
                             </div>
                           </div>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleViewProfile(user.id)}
                           >

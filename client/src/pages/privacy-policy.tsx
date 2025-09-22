@@ -1,7 +1,8 @@
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
@@ -20,23 +21,24 @@ export default function PrivacyPolicy() {
 
         <Card className="bg-white/95 backdrop-blur">
           <CardHeader>
-            <CardTitle className="text-3xl text-center text-primary">
-              Privacy Policy
-            </CardTitle>
-            <p className="text-center text-muted-foreground">
-              Last updated: September 8, 2025
-            </p>
+            <CardTitle className="text-3xl text-center text-primary">Privacy Policy</CardTitle>
+            <p className="text-center text-muted-foreground">Last updated: September 8, 2025</p>
           </CardHeader>
           <CardContent className="prose prose-gray max-w-none">
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">1. Introduction</h2>
               <p className="text-gray-700 leading-relaxed">
-                Welcome to IRLobby ("we," "our," or "us"). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our IRLobby application and services.
+                Welcome to IRLobby (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We
+                are committed to protecting your privacy and ensuring the security of your personal
+                information. This Privacy Policy explains how we collect, use, disclose, and
+                safeguard your information when you use our IRLobby application and services.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">2. Information We Collect</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                2. Information We Collect
+              </h2>
 
               <h3 className="text-xl font-medium mb-2">2.1 Personal Information</h3>
               <p className="text-gray-700 leading-relaxed mb-4">
@@ -62,10 +64,10 @@ export default function PrivacyPolicy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">3. How We Use Your Information</h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                We use your information to:
-              </p>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                3. How We Use Your Information
+              </h2>
+              <p className="text-gray-700 leading-relaxed mb-4">We use your information to:</p>
               <ul className="list-disc pl-6 text-gray-700">
                 <li>Provide and maintain our services</li>
                 <li>Create and manage your account</li>
@@ -80,7 +82,8 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">4. Information Sharing</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                We do not sell, trade, or rent your personal information to third parties. We may share your information only in the following circumstances:
+                We do not sell, trade, or rent your personal information to third parties. We may
+                share your information only in the following circumstances:
               </p>
               <ul className="list-disc pl-6 text-gray-700">
                 <li>With other users as necessary for activity coordination</li>
@@ -93,15 +96,15 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">5. Data Security</h2>
               <p className="text-gray-700 leading-relaxed">
-                We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.
+                We implement appropriate technical and organizational measures to protect your
+                personal information against unauthorized access, alteration, disclosure, or
+                destruction. However, no method of transmission over the internet is 100% secure.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">6. Your Rights</h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                You have the right to:
-              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">You have the right to:</p>
               <ul className="list-disc pl-6 text-gray-700">
                 <li>Access and update your personal information</li>
                 <li>Request deletion of your account and data</li>
@@ -114,32 +117,44 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">7. Cookies and Tracking</h2>
               <p className="text-gray-700 leading-relaxed">
-                We use cookies and similar technologies to enhance your experience, analyze usage patterns, and provide personalized content. You can control cookie settings through your browser preferences.
+                We use cookies and similar technologies to enhance your experience, analyze usage
+                patterns, and provide personalized content. You can control cookie settings through
+                your browser preferences.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">8. Children's Privacy</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                8. Children&apos;s Privacy
+              </h2>
               <p className="text-gray-700 leading-relaxed">
-                Our services are not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will delete it immediately.
+                Our services are not intended for children under 13 years of age. We do not
+                knowingly collect personal information from children under 13. If we become aware
+                that we have collected such information, we will delete it immediately.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">9. Changes to This Policy</h2>
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                9. Changes to This Policy
+              </h2>
               <p className="text-gray-700 leading-relaxed">
-                We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date.
+                We may update this Privacy Policy from time to time. We will notify you of any
+                material changes by posting the new policy on this page and updating the &ldquo;Last
+                updated&rdquo; date.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">10. Contact Us</h2>
               <p className="text-gray-700 leading-relaxed">
-                If you have any questions about this Privacy Policy or our data practices, please contact us at:
+                If you have any questions about this Privacy Policy or our data practices, please
+                contact us at:
               </p>
               <div className="bg-gray-50 p-4 rounded-lg mt-4">
                 <p className="text-gray-700">
-                  <strong>Email:</strong> privacy@irlobby.com<br />
+                  <strong>Email:</strong> privacy@irlobby.com
+                  <br />
                   <strong>Address:</strong> IRLobby Privacy Team
                 </p>
               </div>

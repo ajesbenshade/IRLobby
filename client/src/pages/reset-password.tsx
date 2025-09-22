@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 
@@ -19,7 +20,11 @@ const ResetPasswordPage = () => {
   useEffect(() => {
     if (!token) {
       setError('Invalid or missing reset token.');
-      toast({ title: 'Error', description: 'Invalid or missing reset token.', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Invalid or missing reset token.',
+        variant: 'destructive',
+      });
     }
   }, [token]);
 
@@ -31,9 +36,9 @@ const ResetPasswordPage = () => {
       return;
     }
     if (!token) {
-        setError('Missing reset token.');
-        toast({ title: 'Error', description: 'Missing reset token.', variant: 'destructive' });
-        return;
+      setError('Missing reset token.');
+      toast({ title: 'Error', description: 'Missing reset token.', variant: 'destructive' });
+      return;
     }
 
     setIsLoading(true);
@@ -55,7 +60,9 @@ const ResetPasswordPage = () => {
         throw new Error(data.message || 'Failed to reset password');
       }
 
-      setMessage('Password has been reset successfully. You can now log in with your new password.');
+      setMessage(
+        'Password has been reset successfully. You can now log in with your new password.',
+      );
       toast({
         title: 'Success',
         description: 'Password reset successfully!',
@@ -80,13 +87,15 @@ const ResetPasswordPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
-          <CardDescription className="text-center">
-            Enter your new password below.
-          </CardDescription>
+          <CardDescription className="text-center">Enter your new password below.</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && <p className="mb-4 text-sm text-center text-red-600 dark:text-red-400">{error}</p>}
-          {message && !error && <p className="mb-4 text-sm text-center text-green-600 dark:text-green-400">{message}</p>}
+          {error && (
+            <p className="mb-4 text-sm text-center text-red-600 dark:text-red-400">{error}</p>
+          )}
+          {message && !error && (
+            <p className="mb-4 text-sm text-center text-green-600 dark:text-green-400">{message}</p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
@@ -119,10 +128,10 @@ const ResetPasswordPage = () => {
             </Button>
           </form>
           {message && (
-             <div className="mt-4 text-center text-sm">
-                <Link to="/" className="font-medium text-primary hover:underline">
+            <div className="mt-4 text-center text-sm">
+              <Link to="/" className="font-medium text-primary hover:underline">
                 Back to Login
-                </Link>
+              </Link>
             </div>
           )}
         </CardContent>

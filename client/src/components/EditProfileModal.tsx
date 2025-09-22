@@ -1,26 +1,43 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Camera, Upload, Plus, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { X, Camera, Upload, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+interface User {
+  id: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  bio?: string;
+  interests?: string[];
+  photoAlbum?: string[];
+}
 
 const profileSchema = z.object({
-  username: z.string().min(1, "Username is required").max(150, "Username must be less than 150 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
   interests: z.array(z.string()).optional(),
   profileImageUrl: z.string().optional(),
   photoAlbum: z.array(z.string()).optional(),
@@ -31,33 +48,32 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any;
+  user: User | null;
 }
 
 export default function EditProfileModal({ isOpen, onClose, user }: EditProfileModalProps) {
-  const [newInterest, setNewInterest] = useState("");
+  const [newInterest, setNewInterest] = useState('');
   const [photoAlbum, setPhotoAlbum] = useState<string[]>(user?.photoAlbum || []);
-  const [profileImageUrl, setProfileImageUrl] = useState(user?.profileImageUrl || "");
+  const [profileImageUrl, setProfileImageUrl] = useState(user?.profileImageUrl || '');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      username: user?.username || "",
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      bio: user?.bio || "",
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      bio: user?.bio || '',
       interests: user?.interests || [],
-      profileImageUrl: user?.profileImageUrl || "",
+      profileImageUrl: user?.profileImageUrl || '',
       photoAlbum: user?.photoAlbum || [],
     },
   });
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return await apiRequest("/api/users/profile/", {
-        method: "PATCH",
+      return await apiRequest('/api/users/profile/', {
+        method: 'PATCH',
         body: JSON.stringify({
           ...data,
           profileImageUrl,
@@ -66,26 +82,29 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
       });
     },
     onSuccess: () => {
-      toast({ title: "Profile updated successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/users/profile/"] });
+      toast({ title: 'Profile updated successfully!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/profile/'] });
       onClose();
     },
     onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
+      toast({ title: 'Failed to update profile', variant: 'destructive' });
     },
   });
 
-  const interests = form.watch("interests") || [];
+  const interests = form.watch('interests') || [];
 
   const addInterest = () => {
     if (newInterest.trim() && !interests.includes(newInterest.trim())) {
-      form.setValue("interests", [...interests, newInterest.trim()]);
-      setNewInterest("");
+      form.setValue('interests', [...interests, newInterest.trim()]);
+      setNewInterest('');
     }
   };
 
   const removeInterest = (interestToRemove: string) => {
-    form.setValue("interests", interests.filter(interest => interest !== interestToRemove));
+    form.setValue(
+      'interests',
+      interests.filter((interest) => interest !== interestToRemove),
+    );
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, isProfilePic = false) => {
@@ -93,17 +112,17 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
     if (file) {
       // Create a local URL for the image
       const imageUrl = URL.createObjectURL(file);
-      
+
       if (isProfilePic) {
         setProfileImageUrl(imageUrl);
-        form.setValue("profileImageUrl", imageUrl);
+        form.setValue('profileImageUrl', imageUrl);
       } else {
         if (photoAlbum.length < 12) {
           const newAlbum = [...photoAlbum, imageUrl];
           setPhotoAlbum(newAlbum);
-          form.setValue("photoAlbum", newAlbum);
+          form.setValue('photoAlbum', newAlbum);
         } else {
-          toast({ title: "Maximum 12 photos allowed", variant: "destructive" });
+          toast({ title: 'Maximum 12 photos allowed', variant: 'destructive' });
         }
       }
     }
@@ -112,7 +131,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
   const removePhotoFromAlbum = (index: number) => {
     const newAlbum = photoAlbum.filter((_, i) => i !== index);
     setPhotoAlbum(newAlbum);
-    form.setValue("photoAlbum", newAlbum);
+    form.setValue('photoAlbum', newAlbum);
   };
 
   const onSubmit = (data: ProfileFormData) => {
@@ -145,18 +164,17 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={profileImageUrl} />
                     <AvatarFallback>
-                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                      {user?.firstName?.[0]}
+                      {user?.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <label htmlFor="profile-picture" className="cursor-pointer">
-                      <Button type="button" variant="outline" size="sm" className="w-full" asChild>
-                        <span>
-                          <Camera className="h-4 w-4 mr-2" />
-                          Change Profile Picture
-                        </span>
-                      </Button>
-                    </label>
+                    <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                      <label htmlFor="profile-picture" className="cursor-pointer">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Change Profile Picture
+                      </label>
+                    </Button>
                     <input
                       id="profile-picture"
                       type="file"
@@ -166,20 +184,6 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     />
                   </div>
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your username" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -216,11 +220,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <FormItem>
                       <FormLabel>Bio</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Tell people about yourself..."
-                          rows={3}
-                          {...field}
-                        />
+                        <Textarea placeholder="Tell people about yourself..." rows={3} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -232,36 +232,27 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <FormLabel>Photo Album ({photoAlbum.length}/12)</FormLabel>
-                    <label htmlFor="album-photo" className="cursor-pointer">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        disabled={photoAlbum.length >= 12}
-                        asChild
-                      >
-                        <span>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Photo
-                        </span>
-                      </Button>
-                    </label>
-                    <input
-                      id="album-photo"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, false)}
-                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={photoAlbum.length >= 12}
+                      asChild
+                    >
+                      <label htmlFor="album-photo" className="cursor-pointer">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Photo
+                      </label>
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     {photoAlbum.map((photo, index) => (
                       <Card key={index} className="relative group">
                         <CardContent className="p-0">
-                          <img 
-                            src={photo} 
-                            alt={`Album photo ${index + 1}`}
+                          <img
+                            src={photo}
+                            alt={`Album ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
                           />
                           <Button
@@ -276,10 +267,13 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                         </CardContent>
                       </Card>
                     ))}
-                    
+
                     {/* Empty slots */}
                     {Array.from({ length: 12 - photoAlbum.length }).map((_, index) => (
-                      <Card key={`empty-${index}`} className="border-2 border-dashed border-gray-300">
+                      <Card
+                        key={`empty-${index}`}
+                        className="border-2 border-dashed border-gray-300"
+                      >
                         <CardContent className="p-0 h-24 flex items-center justify-center">
                           <Upload className="h-6 w-6 text-gray-400" />
                         </CardContent>
@@ -327,12 +321,8 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={updateProfileMutation.isPending}
-                className="flex-1"
-              >
-                {updateProfileMutation.isPending ? "Updating..." : "Save Changes"}
+              <Button type="submit" disabled={updateProfileMutation.isPending} className="flex-1">
+                {updateProfileMutation.isPending ? 'Updating...' : 'Save Changes'}
               </Button>
             </div>
           </form>

@@ -92,7 +92,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
-        'user': '1000/hour'
+        'user': '1000/hour',
+        'auth_anon': '5/minute',
+        'auth_user': '60/hour'
     }
 }
 
@@ -261,3 +263,4 @@ if not DEBUG:
     CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'")
     CSP_IMG_SRC = ("'self'", "data:", "https:")
     CSP_CONNECT_SRC = ("'self'",)
+

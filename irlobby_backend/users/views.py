@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 import logging
 
 from .throttles import AuthAnonThrottle, AuthUserThrottle
@@ -34,6 +35,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+@csrf_exempt
 def register(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
@@ -59,6 +61,7 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+@csrf_exempt
 def login(request):
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():

@@ -18,7 +18,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/request-password-reset', {
+      const response = await fetch('/api/auth/request-password-reset/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,3 +119,4 @@ const ForgotPasswordPage = () => {
 };
 
 export default ForgotPasswordPage;
+

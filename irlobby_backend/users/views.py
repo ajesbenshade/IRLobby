@@ -34,54 +34,62 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+# @throttle_classes([AuthAnonThrottle, AuthUserThrottle])  # Temporarily disabled to debug 500 error
 @csrf_exempt
 def register(request):
-    serializer = UserRegistrationSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
-        response_payload = {
-            'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+    try:
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
+            response_payload = {
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
             }
-        }
-        response = Response(response_payload, status=status.HTTP_201_CREATED)
-        # Temporarily disable cookie setting to debug 500 error
-        # set_refresh_cookie(response, str(refresh))
-        return response
+            response = Response(response_payload, status=status.HTTP_201_CREATED)
+            # Temporarily disable cookie setting to debug 500 error
+            # set_refresh_cookie(response, str(refresh))
+            return response
 
-    logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error("Registration error: %s", str(e))
+        return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+# @throttle_classes([AuthAnonThrottle, AuthUserThrottle])  # Temporarily disabled to debug 500 error
 @csrf_exempt
 def login(request):
-    serializer = UserLoginSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.validated_data['user']
-        refresh = RefreshToken.for_user(user)
-        logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
-        response_payload = {
-            'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+    try:
+        serializer = UserLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            refresh = RefreshToken.for_user(user)
+            logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
+            response_payload = {
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
             }
-        }
-        response = Response(response_payload, status=status.HTTP_200_OK)
-        # Temporarily disable cookie setting to debug 500 error
-        # set_refresh_cookie(response, str(refresh))
-        return response
+            response = Response(response_payload, status=status.HTTP_200_OK)
+            # Temporarily disable cookie setting to debug 500 error
+            # set_refresh_cookie(response, str(refresh))
+            return response
 
-    logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error("Login error: %s", str(e))
+        return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])

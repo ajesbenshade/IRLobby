@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.dateparse import parse_datetime
+from django.core.cache import cache
 import requests
 import secrets
 import hashlib
@@ -22,18 +23,9 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-TWITTER_CODE_SESSION_KEY = 'twitter_code_verifier'
-TWITTER_STATE_SESSION_KEY = 'twitter_oauth_state'
-TWITTER_ISSUED_AT_SESSION_KEY = 'twitter_oauth_issued_at'
+TWITTER_CACHE_PREFIX = 'twitter_oauth:'
 TWITTER_OAUTH_SESSION_TTL = timedelta(minutes=5)
 
-
-
-def clear_twitter_oauth_session(session):
-    session.pop(TWITTER_CODE_SESSION_KEY, None)
-    session.pop(TWITTER_STATE_SESSION_KEY, None)
-    session.pop(TWITTER_ISSUED_AT_SESSION_KEY, None)
-    session.modified = True
 
 
 def generate_code_verifier() -> str:
@@ -73,10 +65,16 @@ def twitter_oauth_url(request):
         code_verifier = generate_code_verifier()
         code_challenge = generate_code_challenge(code_verifier)
         state_token = secrets.token_urlsafe(32)
-        request.session[TWITTER_CODE_SESSION_KEY] = code_verifier
-        request.session[TWITTER_STATE_SESSION_KEY] = state_token
-        request.session[TWITTER_ISSUED_AT_SESSION_KEY] = timezone.now().isoformat()
-        request.session.modified = True
+        cache_key = f"{TWITTER_CACHE_PREFIX}{state_token}"
+        cache.set(
+            cache_key,
+            {
+                'code_verifier': code_verifier,
+                'state': state_token,
+                'issued_at': timezone.now().isoformat(),
+            },
+            timeout=int(TWITTER_OAUTH_SESSION_TTL.total_seconds()),
+        )
 
         redirect_uri = build_redirect_uri()
         scope = 'tweet.read users.read'
@@ -112,7 +110,6 @@ def twitter_oauth_callback(request):
     try:
         if not request.is_secure() and not getattr(settings, 'DEBUG', False):
             logger.warning('Twitter OAuth callback received over insecure transport')
-            clear_twitter_oauth_session(request.session)
             return Response({
                 'error': 'OAuth callback must use HTTPS',
                 'error_code': 'insecure_transport'
@@ -120,14 +117,18 @@ def twitter_oauth_callback(request):
 
         code = request.GET.get('code')
         returned_state = request.GET.get('state')
-        code_verifier = request.session.get(TWITTER_CODE_SESSION_KEY)
-        expected_state = request.session.get(TWITTER_STATE_SESSION_KEY)
-        issued_at_raw = request.session.get(TWITTER_ISSUED_AT_SESSION_KEY)
+        cache_key = f"{TWITTER_CACHE_PREFIX}{returned_state}" if returned_state else None
+        cache_payload = cache.get(cache_key) if cache_key else None
+
+        code_verifier = cache_payload.get('code_verifier') if cache_payload else None
+        expected_state = cache_payload.get('state') if cache_payload else None
+        issued_at_raw = cache_payload.get('issued_at') if cache_payload else None
         issued_at = parse_datetime(issued_at_raw) if issued_at_raw else None
 
         if not code:
             logger.debug('Twitter OAuth callback missing code parameter')
-            clear_twitter_oauth_session(request.session)
+            if cache_key:
+                cache.delete(cache_key)
             return Response({
                 'error': 'Authorization code required',
                 'error_code': 'missing_code'
@@ -135,7 +136,8 @@ def twitter_oauth_callback(request):
 
         if not code_verifier:
             logger.warning('Twitter OAuth callback missing code_verifier for state=%s', returned_state)
-            clear_twitter_oauth_session(request.session)
+            if cache_key:
+                cache.delete(cache_key)
             return Response({
                 'error': 'Code verifier missing or expired. Please restart the login process.',
                 'error_code': 'verifier_missing'
@@ -143,7 +145,8 @@ def twitter_oauth_callback(request):
 
         if not expected_state or expected_state != returned_state:
             logger.warning('Twitter OAuth callback state mismatch expected=%s received=%s', expected_state, returned_state)
-            clear_twitter_oauth_session(request.session)
+            if cache_key:
+                cache.delete(cache_key)
             return Response({
                 'error': 'Invalid OAuth state. Please retry the login process.',
                 'error_code': 'state_mismatch'
@@ -151,14 +154,16 @@ def twitter_oauth_callback(request):
 
         if not issued_at or timezone.now() - issued_at > TWITTER_OAUTH_SESSION_TTL:
             logger.warning('Twitter OAuth callback session expired issued_at=%s', issued_at_raw)
-            clear_twitter_oauth_session(request.session)
+            if cache_key:
+                cache.delete(cache_key)
             return Response({
                 'error': 'OAuth session expired. Please restart the login process.',
                 'error_code': 'session_expired'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Remove sensitive session data now that it has been validated
-        clear_twitter_oauth_session(request.session)
+        # Remove sensitive data now that it has been validated
+        if cache_key:
+            cache.delete(cache_key)
 
         client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
         client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)

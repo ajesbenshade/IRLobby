@@ -27,6 +27,7 @@ export function useAuth() {
   const clearStoredCredentials = useCallback(() => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
+
     localStorage.removeItem('userId');
   }, []);
 
@@ -122,6 +123,12 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try {
+      try {
+        await apiRequest('POST', '/api/auth/logout/', {});
+      } catch (logoutRequestError) {
+        console.warn('Logout endpoint failed:', logoutRequestError);
+      }
+
       clearStoredCredentials();
       setToken(null);
       setAuthErrorMessage(null);
@@ -134,17 +141,13 @@ export function useAuth() {
   }, [clearStoredCredentials, queryClient, setAuthErrorMessage]);
 
   const refreshToken = useCallback(async () => {
-    const refresh = localStorage.getItem('refreshToken');
-    if (!refresh) {
-      await logout();
-      return null;
-    }
-
     try {
-      const response = await apiRequest('POST', '/api/users/token/refresh/', {
-        refresh: refresh,
-      });
+      const response = await apiRequest('POST', '/api/auth/token/refresh/', {});
       const data = await response.json();
+
+      if (typeof data.access !== 'string') {
+        throw new Error('Token refresh response missing access token');
+      }
 
       localStorage.setItem('authToken', data.access);
       setToken(data.access);

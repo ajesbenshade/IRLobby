@@ -260,7 +260,6 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
 
         // Clear all user data from local storage
         localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
         localStorage.removeItem('userId');
 
         toast({
@@ -572,3 +571,4 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     </div>
   );
 }
+

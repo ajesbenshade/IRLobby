@@ -357,6 +357,7 @@ def password_reset_confirm(request):
 
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def request_password_reset(request):
     # Handle OPTIONS request for CORS preflight
     if request.method == 'OPTIONS':

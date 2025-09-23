@@ -26,16 +26,30 @@ const ForgotPasswordPage = () => {
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: { message?: string; detail?: string } | null = null;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to request password reset');
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.warn('Forgot password response was not valid JSON:', parseError);
+          data = { message: responseText };
+        }
       }
 
-      setMessage('If an account with that email exists, a password reset link has been sent.');
+      if (!response.ok) {
+        const errorMessage = data?.message || data?.detail || 'Failed to request password reset';
+        throw new Error(errorMessage);
+      }
+
+      const successMessage =
+        data?.message || data?.detail || 'If an account with that email exists, a password reset link has been sent.';
+
+      setMessage(successMessage);
       toast({
         title: 'Success',
-        description: 'Password reset link sent (if email exists).',
+        description: successMessage,
       });
     } catch (error) {
       console.error('Forgot password error:', error);

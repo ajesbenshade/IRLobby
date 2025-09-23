@@ -101,6 +101,14 @@ SIMPLE_JWT = {
 
 REFRESH_TOKEN_COOKIE_NAME = 'refresh_token'
 
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://irlobby.vercel.app",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',

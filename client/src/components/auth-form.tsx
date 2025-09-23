@@ -125,7 +125,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && data.tokens.refresh) {
+      if (
+        typeof window !== 'undefined' &&
+        window.location.protocol !== 'https:' &&
+        data.tokens.refresh
+      ) {
         localStorage.setItem('refreshToken', data.tokens.refresh);
       }
 
@@ -183,7 +187,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && data.tokens.refresh) {
+      if (
+        typeof window !== 'undefined' &&
+        window.location.protocol !== 'https:' &&
+        data.tokens.refresh
+      ) {
         localStorage.setItem('refreshToken', data.tokens.refresh);
       }
 
@@ -384,4 +392,3 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 };
 
 export default AuthForm;
-

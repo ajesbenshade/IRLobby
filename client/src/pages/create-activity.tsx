@@ -432,4 +432,3 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
     </div>
   );
 }
-

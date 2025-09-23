@@ -13,6 +13,10 @@ interface User {
   bio?: string;
   interests?: string[];
   photoAlbum?: string[];
+  rating?: number;
+  totalRatings?: number;
+  eventsHosted?: number;
+  eventsAttended?: number;
 }
 
 export function useAuth() {

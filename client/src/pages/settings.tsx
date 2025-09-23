@@ -415,7 +415,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
               </Label>
               <Select
                 value={settings.privacy.profileVisibility}
-                onValueChange={(value) => handlePrivacyChange('profileVisibility', value)}
+                onValueChange={(value) => handlePrivacyChange('profileVisibility', value as 'public' | 'friends' | 'private')}
                 disabled={loading}
               >
                 <SelectTrigger className="mt-1">

@@ -311,9 +311,9 @@ export default function Discovery() {
 
         {/* Action buttons - Fixed position to avoid cutoff */}
         <div
-        className="fixed left-1/2 -translate-x-1/2 flex items-center space-x-6 z-50"
-        style={{ bottom: "calc(var(--bottom-nav-offset) + 0.75rem)" }}
-      >
+          className="fixed left-1/2 -translate-x-1/2 flex items-center space-x-6 z-50"
+          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)' }}
+        >
           <Button
             variant="outline"
             size="lg"
@@ -393,4 +393,3 @@ export default function Discovery() {
     </div>
   );
 }
-

@@ -14,6 +14,74 @@ import { format } from 'date-fns';
 import { MapPin, Navigation, Calendar, Users, List } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// Google Maps type declarations
+declare global {
+  namespace google {
+    namespace maps {
+      class Map {
+        constructor(mapDiv: HTMLElement, opts?: MapOptions);
+        setCenter(latlng: LatLng | LatLngLiteral): void;
+        setZoom(zoom: number): void;
+      }
+
+      class Marker {
+        constructor(opts?: MarkerOptions);
+        setMap(map: Map | null): void;
+        setPosition(position: LatLng | LatLngLiteral): void;
+        addListener(eventName: string, handler: () => void): void;
+      }
+
+      class InfoWindow {
+        constructor(opts?: InfoWindowOptions);
+        open(map?: Map, anchor?: Marker): void;
+        close(): void;
+        setContent(content: string | HTMLElement): void;
+      }
+
+      class LatLng {
+        constructor(lat: number, lng: number);
+        lat(): number;
+        lng(): number;
+      }
+
+      interface LatLngLiteral {
+        lat: number;
+        lng: number;
+      }
+
+      interface MapOptions {
+        center?: LatLng | LatLngLiteral;
+        zoom?: number;
+        styles?: any[];
+      }
+
+      interface MarkerOptions {
+        position?: LatLng | LatLngLiteral;
+        map?: Map | null;
+        title?: string;
+        icon?: string | Icon;
+      }
+
+      interface InfoWindowOptions {
+        content?: string | HTMLElement;
+      }
+
+      interface Icon {
+        url: string;
+        scaledSize?: Size;
+      }
+
+      class Size {
+        constructor(width: number, height: number);
+      }
+    }
+  }
+
+  interface Window {
+    google: typeof google;
+  }
+}
+
 interface MapViewProps {
   onActivitySelect: (activity: Activity) => void;
   onToggleView: () => void;
@@ -114,7 +182,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         });
 
         marker.addListener('click', () => {
-          infoWindow.open(mapInstanceRef.current, marker);
+          if (mapInstanceRef.current) {
+            infoWindow.open(mapInstanceRef.current, marker);
+          }
         });
 
         markersRef.current.push(marker);

@@ -15,6 +15,12 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
+interface ChatWebSocketMessage {
+  type: 'chat_message';
+  activityId: number;
+  data: Message;
+}
+
 export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,7 +77,7 @@ export function ChatWindow({ chatRoomId, onClose }: ChatWindowProps) {
         });
       }
     },
-    onMessage: (newMessage) => {
+    onMessage: (newMessage: ChatWebSocketMessage | any) => {
       console.log('WebSocket message received:', newMessage);
       if (newMessage.type === 'chat_message' && newMessage.activityId === parseInt(chatRoomId)) {
         console.log('New chat message received, updating cache');

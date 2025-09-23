@@ -7,5 +7,7 @@ urlpatterns = [
     path('profile/export/', views.export_user_data, name='export-user-data'),
     path('auth/status/', views.auth_status, name='auth-status'),
     path('register/', views.register, name='user-register'),
+    path('register', views.register, name='user-register-no-slash'),
     path('login/', views.login, name='user-login'),
+    path('login', views.login, name='user-login-no-slash'),
 ]

@@ -63,7 +63,6 @@ function shouldPersistRefreshTokenLocally(): boolean {
   return window.location.protocol !== 'https:';
 }
 
-
 const isApiRequestOptions = (value: unknown): value is ApiRequestOptions =>
   typeof value === 'object' && value !== null;
 
@@ -224,7 +223,9 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
     }
 
     if (requestData !== undefined) {
-      const hasContentTypeHeader = Object.keys(requestHeaders).some((key) => key.toLowerCase() === 'content-type');
+      const hasContentTypeHeader = Object.keys(requestHeaders).some(
+        (key) => key.toLowerCase() === 'content-type',
+      );
       if (!hasContentTypeHeader) {
         requestHeaders['Content-Type'] = 'application/json';
       }

@@ -52,7 +52,11 @@ const TwitterCallback = () => {
         }
 
         // Store tokens
-        if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && data.tokens.refresh) {
+        if (
+          typeof window !== 'undefined' &&
+          window.location.protocol !== 'https:' &&
+          data.tokens.refresh
+        ) {
           localStorage.setItem('refreshToken', data.tokens.refresh);
         }
 
@@ -125,4 +129,3 @@ const TwitterCallback = () => {
 };
 
 export default TwitterCallback;
-

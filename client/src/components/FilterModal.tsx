@@ -209,7 +209,7 @@ function FilterModal({ isOpen, onClose, onApplyFilters, currentFilters }: Filter
                     selected={filters.dateTo ?? undefined}
                     onSelect={(date) => setFilters((prev) => ({ ...prev, dateTo: date ?? null }))}
                     disabled={(date) =>
-                      date < new Date() || (filters.dateFrom && date < filters.dateFrom)
+                      date < new Date() || (filters.dateFrom ? date < filters.dateFrom : false)
                     }
                   />
                 </PopoverContent>

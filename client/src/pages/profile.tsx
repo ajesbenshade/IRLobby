@@ -179,4 +179,3 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     </div>
   );
 }
-

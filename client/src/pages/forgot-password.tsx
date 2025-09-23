@@ -18,13 +18,16 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/request-password-reset/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/auth/request-password-reset/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
         },
-        body: JSON.stringify({ email }),
-      });
+      );
 
       const responseText = await response.text();
       let data: { message?: string; detail?: string } | null = null;
@@ -44,7 +47,9 @@ const ForgotPasswordPage = () => {
       }
 
       const successMessage =
-        data?.message || data?.detail || 'If an account with that email exists, a password reset link has been sent.';
+        data?.message ||
+        data?.detail ||
+        'If an account with that email exists, a password reset link has been sent.';
 
       setMessage(successMessage);
       toast({
@@ -54,7 +59,8 @@ const ForgotPasswordPage = () => {
     } catch (error) {
       console.error('Forgot password error:', error);
 
-      const fallbackMessage = 'If an account with that email exists, a password reset link has been sent.';
+      const fallbackMessage =
+        'If an account with that email exists, a password reset link has been sent.';
       let errorMessage = fallbackMessage;
 
       if (error instanceof Error) {
@@ -119,4 +125,3 @@ const ForgotPasswordPage = () => {
 };
 
 export default ForgotPasswordPage;
-

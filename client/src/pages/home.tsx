@@ -1,6 +1,6 @@
 import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Suspense, lazy, useState, useCallback } from 'react';
+import { Suspense, lazy, useState } from 'react';
 
 // Lazy load components for better performance
 const Discovery = lazy(() => import('./discovery'));
@@ -57,7 +57,7 @@ export default function Home() {
         case 'settings':
           return <Settings onBack={() => setCurrentScreen('profile')} />;
         case 'help-support':
-          return <HelpSupport onBack={() => setCurrentScreen('profile')} />;
+          return <HelpSupport />;
         case 'chat':
           return chatActivityId ? (
             <Chat activityId={chatActivityId} onBack={() => setCurrentScreen('matches')} />
@@ -77,7 +77,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative">
+    <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden">
       {renderScreen()}
       {currentScreen !== 'chat' && (
         <BottomNavigation currentScreen={currentScreen} onNavigate={setCurrentScreen} />

@@ -12,6 +12,7 @@ export interface Activity {
   images: string[];
   created_at: string;
   participant_count: number;
+  isPrivate?: boolean;
 }
 
 export interface Message {

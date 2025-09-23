@@ -32,11 +32,15 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
-@api_view(['POST'])
+@api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 @csrf_exempt
 def register(request):
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return Response(status=status.HTTP_200_OK)
+    
     try:
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -62,11 +66,15 @@ def register(request):
         return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 @csrf_exempt
 def login(request):
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return Response(status=status.HTTP_200_OK)
+    
     try:
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():

@@ -201,7 +201,7 @@ export default function Discovery() {
   return (
     <div
       ref={containerRef}
-      className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen relative overflow-hidden"
+      className="bg-gray-50 dark:bg-gray-900 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] min-h-screen relative overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -309,7 +309,10 @@ export default function Discovery() {
         )}
 
         {/* Action buttons - Fixed position to avoid cutoff */}
-        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 flex items-center space-x-6 z-50">
+        <div
+        className="fixed left-1/2 -translate-x-1/2 flex items-center space-x-6 z-50"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)" }}
+      >
           <Button
             variant="outline"
             size="lg"
@@ -389,3 +392,5 @@ export default function Discovery() {
     </div>
   );
 }
+
+

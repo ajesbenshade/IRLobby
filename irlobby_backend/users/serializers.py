@@ -37,9 +37,13 @@ class UserLoginSerializer(serializers.Serializer):
         # Try to authenticate directly with email as username
         # Since we're using a custom User model, we need to handle email-based auth
         try:
-            user_obj = User.objects.get(email=email)
+            # Get the first user with this email (temporary fix for duplicate emails)
+            # TODO: Add unique constraint on email field and clean up duplicates
+            user_obj = User.objects.filter(email=email).first()
+            if not user_obj:
+                raise serializers.ValidationError('Invalid credentials')
             user = authenticate(username=user_obj.username, password=password)
-        except User.DoesNotExist:
+        except Exception:
             raise serializers.ValidationError('Invalid credentials')
 
         if not user:

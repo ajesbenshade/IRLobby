@@ -37,7 +37,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     'U';
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] min-h-screen">
       {/* Header with Profile Info */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="p-4 text-center">
@@ -176,3 +176,4 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     </div>
   );
 }
+

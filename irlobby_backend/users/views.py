@@ -11,6 +11,9 @@ from django.db import transaction
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import logging
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+from datetime import timedelta
 
 from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import set_refresh_cookie, clear_refresh_cookie
@@ -288,3 +291,92 @@ def auth_status(request):
         'authenticated': False,
         'user': None
     }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+def password_reset_request(request):
+    """Handle password reset requests."""
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        logger.warning("Password reset requested for non-existent user: email=%s", email)
+        return Response({'detail': 'Password reset link has been sent if the email is associated with an account.'}, status=status.HTTP_200_OK)
+
+    token = get_random_string(length=32)
+    user.password_reset_token = token
+    user.token_created_at = timezone.now()
+    user.save()
+
+    reset_link = f"{request.scheme}://{request.get_host()}/api/auth/password-reset-confirm/?token={token}"
+    send_mail(
+        'Password Reset Request',
+        f'Please use the following link to reset your password: {reset_link}',
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+
+    logger.info("Password reset link sent to email=%s", email)
+    return Response({'detail': 'Password reset link sent.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
+def password_reset_confirm(request):
+    """Handle password reset confirmations."""
+    token = request.data.get('token')
+    new_password = request.data.get('new_password')
+
+    if not token or not new_password:
+        return Response({'error': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(password_reset_token=token)
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    token_age = timezone.now() - user.token_created_at
+    if token_age > timedelta(hours=2):
+        return Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.password_reset_token = ''
+    user.token_created_at = None
+    user.save()
+
+    logger.info("Password reset successful for user_id=%s", user.id)
+    return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', 'OPTIONS'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return Response(status=status.HTTP_200_OK)
+    
+    email = request.data.get('email')
+    if not email:
+        return Response({'message': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if user exists (don't reveal if email exists or not for security)
+    try:
+        user = User.objects.get(email=email)
+        # In a real implementation, you'd generate a reset token and send email
+        # For now, just return success message
+        logger.info("Password reset requested for email: %s", email)
+    except User.DoesNotExist:
+        # Don't reveal that email doesn't exist for security reasons
+        pass
+    
+    # Always return success to prevent email enumeration
+    return Response({
+        'message': 'If an account with that email exists, a password reset link has been sent.'
+    }, status=status.HTTP_200_OK)

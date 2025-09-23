@@ -13,5 +13,11 @@ class User(AbstractUser):
     oauth_provider = models.CharField(max_length=50, blank=True, null=True)
     oauth_id = models.CharField(max_length=100, blank=True, null=True)
 
+    class Meta:
+        # Add unique constraint on email to prevent duplicates
+        constraints = [
+            models.UniqueConstraint(fields=['email'], name='unique_user_email')
+        ]
+
     def __str__(self):
         return self.username

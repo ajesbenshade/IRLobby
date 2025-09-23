@@ -18,7 +18,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/request-password-reset/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/request-password-reset/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

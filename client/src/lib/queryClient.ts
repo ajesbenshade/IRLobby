@@ -21,7 +21,48 @@ const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'OPTIONS',
 ]);
 
+const TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
+
 let refreshPromise: Promise<string | null> | null = null;
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) {
+      return null;
+    }
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch (error) {
+    console.warn('Failed to decode JWT payload', error);
+    return null;
+  }
+}
+
+function getTokenExpiryMs(token: string): number | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    return null;
+  }
+
+  const exp = payload.exp;
+  if (typeof exp !== 'number') {
+    return null;
+  }
+
+  return exp * 1000;
+}
+
+function shouldPersistRefreshTokenLocally(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.location.protocol !== 'https:';
+}
+
 
 const isApiRequestOptions = (value: unknown): value is ApiRequestOptions =>
   typeof value === 'object' && value !== null;
@@ -50,10 +91,7 @@ async function throwIfResNotOk(res: Response) {
 }
 
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) {
-    return null;
-  }
+  const storedRefreshToken = localStorage.getItem('refreshToken');
 
   if (refreshPromise) {
     return refreshPromise;
@@ -61,10 +99,12 @@ async function refreshAccessToken() {
 
   refreshPromise = (async () => {
     try {
+      const payload = storedRefreshToken ? { refresh: storedRefreshToken } : {};
       const res = await fetch(resolveUrl('/api/auth/token/refresh/'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshToken }),
+        body: JSON.stringify(payload),
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -73,7 +113,18 @@ async function refreshAccessToken() {
       }
 
       const data = await res.json();
+      if (typeof data.access !== 'string') {
+        throw new Error('Token refresh response missing access token');
+      }
+
       localStorage.setItem('authToken', data.access);
+      if (shouldPersistRefreshTokenLocally()) {
+        if (typeof data.refresh === 'string') {
+          localStorage.setItem('refreshToken', data.refresh);
+        }
+      } else if (storedRefreshToken) {
+        localStorage.removeItem('refreshToken');
+      }
       return data.access as string;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -142,7 +193,28 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
   }
 
   const resolvedUrl = resolveUrl(url);
-  const token = localStorage.getItem('authToken');
+  let token = localStorage.getItem('authToken');
+
+  const ensureFreshToken = async () => {
+    if (!token) {
+      return;
+    }
+
+    const expiryMs = getTokenExpiryMs(token);
+    if (!expiryMs) {
+      return;
+    }
+
+    const timeUntilExpiry = expiryMs - Date.now();
+    if (timeUntilExpiry <= TOKEN_REFRESH_BUFFER_MS) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        token = refreshedToken;
+      } else {
+        token = null;
+      }
+    }
+  };
 
   const executeRequest = async (overrideToken?: string) => {
     const requestHeaders: Record<string, string> = { ...headers };
@@ -151,15 +223,26 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
       requestHeaders['Authorization'] = `Bearer ${authToken}`;
     }
 
-    return fetch(resolvedUrl, {
+    if (requestData !== undefined) {
+      const hasContentTypeHeader = Object.keys(requestHeaders).some((key) => key.toLowerCase() === 'content-type');
+      if (!hasContentTypeHeader) {
+        requestHeaders['Content-Type'] = 'application/json';
+      }
+    }
+
+    const fetchOptions: RequestInit = {
       ...additionalFetchOptions,
       method,
       headers: requestHeaders,
       body: requestData !== undefined ? JSON.stringify(requestData) : undefined,
-    });
+      credentials: additionalFetchOptions.credentials ?? 'include',
+    };
+
+    return fetch(resolvedUrl, fetchOptions);
   };
 
   try {
+    await ensureFreshToken();
     let response = await executeRequest();
 
     if (response.status === 401) {
@@ -169,7 +252,10 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
 
       const newToken = await refreshAccessToken();
       if (newToken) {
+        token = newToken;
         response = await executeRequest(newToken);
+      } else {
+        token = null;
       }
     }
 
@@ -195,9 +281,21 @@ export const getQueryFn =
   (options: { on401: UnauthorizedBehavior }): QueryFunction<unknown> =>
   async ({ queryKey }) => {
     const unauthorizedBehavior = options.on401;
-    const token = localStorage.getItem('authToken');
-    const headers: Record<string, string> = {};
+    let token = localStorage.getItem('authToken');
 
+    if (token) {
+      const expiryMs = getTokenExpiryMs(token);
+      if (expiryMs && expiryMs - Date.now() <= TOKEN_REFRESH_BUFFER_MS) {
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          token = refreshedToken;
+        } else {
+          token = null;
+        }
+      }
+    }
+
+    const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const url = queryKey[0] as string;
@@ -206,6 +304,7 @@ export const getQueryFn =
     try {
       const res = await fetch(resolvedUrl, {
         headers,
+        credentials: 'include',
       });
 
       if (unauthorizedBehavior === 'returnNull' && res.status === 401) return null;

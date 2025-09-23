@@ -46,18 +46,20 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const data = await response.json();
       console.log('OAuth URL data:', data);
 
-      if (data.auth_url && data.code_verifier && data.state) {
-        // Store the code_verifier and state for use in the callback
-        sessionStorage.setItem('twitter_code_verifier', data.code_verifier);
-        sessionStorage.setItem('twitter_oauth_state', data.state);
-        console.log('Redirecting to Twitter OAuth URL...');
+      const authUrl = data.auth_url;
+      const stateToken = data.state ?? null;
 
-        // Open Twitter OAuth in a popup or redirect
-        window.location.href = data.auth_url;
-      } else {
+      if (!authUrl) {
         console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
+
+      if (stateToken) {
+        sessionStorage.setItem('twitter_oauth_state', stateToken);
+      }
+
+      console.log('Redirecting to Twitter OAuth URL...');
+      window.location.href = authUrl;
     } catch (error) {
       console.error('Twitter OAuth error:', error);
 
@@ -121,8 +123,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && data.tokens.refresh) {
+        localStorage.setItem('refreshToken', data.tokens.refresh);
+      }
+
       localStorage.setItem('authToken', data.tokens.access);
-      localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
       console.log('Login successful, token stored:', data.tokens.access);
 
@@ -176,8 +181,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && data.tokens.refresh) {
+        localStorage.setItem('refreshToken', data.tokens.refresh);
+      }
+
       localStorage.setItem('authToken', data.tokens.access);
-      localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('userId', data.user.id);
       console.log('Registration successful, token stored:', data.tokens.access);
 
@@ -374,3 +382,4 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 };
 
 export default AuthForm;
+

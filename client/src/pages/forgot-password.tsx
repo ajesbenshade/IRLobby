@@ -53,10 +53,22 @@ const ForgotPasswordPage = () => {
       });
     } catch (error) {
       console.error('Forgot password error:', error);
-      setMessage(error instanceof Error ? error.message : 'An unexpected error occurred.');
+
+      const fallbackMessage = 'If an account with that email exists, a password reset link has been sent.';
+      let errorMessage = fallbackMessage;
+
+      if (error instanceof Error) {
+        if (error.message.includes("Failed to execute 'json' on 'Response'")) {
+          console.warn('Password reset request failed due to empty or invalid JSON response.');
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setMessage(errorMessage);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to request password reset',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

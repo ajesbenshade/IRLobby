@@ -34,7 +34,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-# @throttle_classes([AuthAnonThrottle, AuthUserThrottle])  # Temporarily disabled to debug 500 error
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 @csrf_exempt
 def register(request):
     try:
@@ -64,7 +64,7 @@ def register(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-# @throttle_classes([AuthAnonThrottle, AuthUserThrottle])  # Temporarily disabled to debug 500 error
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 @csrf_exempt
 def login(request):
     try:

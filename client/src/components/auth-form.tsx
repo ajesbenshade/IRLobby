@@ -47,19 +47,17 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       console.log('OAuth URL data:', data);
 
       const authUrl = data.auth_url;
-      const codeVerifier = data.code_verifier;
       const stateToken = data.state ?? null;
 
-      if (!authUrl || !codeVerifier) {
+      if (!authUrl) {
         console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
 
-      // Store the code_verifier for use in the callback
-      sessionStorage.setItem('twitter_code_verifier', codeVerifier);
-
       if (stateToken) {
         sessionStorage.setItem('twitter_oauth_state', stateToken);
+      } else {
+        sessionStorage.removeItem('twitter_oauth_state');
       }
 
       console.log('Redirecting to Twitter OAuth URL...');

@@ -11,6 +11,7 @@ import secrets
 import hashlib
 import base64
 import logging
+from urllib.parse import urlencode, quote
 from .serializers import UserSerializer
 
 logger = logging.getLogger(__name__)
@@ -57,20 +58,18 @@ def twitter_oauth_url(request):
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         # Generate secure random state for CSRF protection
-        import secrets
         state = secrets.token_urlsafe(32)
 
-        # Build the authorization URL with proper encoding
-        auth_url = (
-            f"https://twitter.com/i/oauth2/authorize?"
-            f"response_type=code&"
-            f"client_id={client_id}&"
-            f"redirect_uri={redirect_uri}&"
-            f"scope={scope}&"
-            f"state={state}&"
-            f"code_challenge={code_challenge}&"
-            f"code_challenge_method=S256"
-        )
+        params = {
+            'response_type': 'code',
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'scope': scope,
+            'state': state,
+            'code_challenge': code_challenge,
+            'code_challenge_method': 'S256',
+        }
+        auth_url = f"https://twitter.com/i/oauth2/authorize?{urlencode(params, quote_via=quote)}"
 
         # Store code_verifier in cache using state as key (expires in 10 minutes)
         cache.set(f'twitter_oauth_{state}', code_verifier, timeout=600)
@@ -137,10 +136,12 @@ def twitter_oauth_callback(request):
         try:
             token_response = requests.post(token_url, data=token_data, auth=auth, timeout=30)
             logger.info(f"Token exchange request to: {token_url}")
-            logger.info(f"Request data: {token_data}")
+            logger.info(f"Using redirect_uri: {redirect_uri}")
+            logger.info(f"Client ID: {client_id[:10]}...")
+            logger.info(f"Has client secret: {'YES' if client_secret else 'NO'}")
         except requests.RequestException as e:
-            logger.error(f"Twitter token exchange failed: {str(e)}")
-            logger.error(f"Request details - URL: {token_url}, Data: {token_data}")
+            logger.error(f"Twitter token exchange network error: {str(e)}")
+            logger.error(f"Request details - URL: {token_url}, Data keys: {list(token_data.keys())}")
             return Response({'error': 'Failed to connect to Twitter'}, status=status.HTTP_502_BAD_GATEWAY)
 
         if token_response.status_code != 200:
@@ -200,3 +201,4 @@ def twitter_oauth_callback(request):
         return Response({
             'error': 'Authentication failed. Please try again.'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

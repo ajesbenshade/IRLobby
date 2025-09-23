@@ -23,6 +23,8 @@
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
@@ -46,6 +48,8 @@
   --destructive-foreground: 0 0% 98%;
   --ring: 240 4.9% 83.9%;
   --radius: 0.5rem;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 @layer base {
@@ -116,6 +120,15 @@
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+
+.pb-bottom-nav {
+  padding-bottom: var(--bottom-nav-offset);
+}
+
+.bottom-nav-offset {
+  bottom: var(--bottom-nav-offset);
 }
 
 /* Hide scrollbar but keep functionality */
@@ -359,3 +372,4 @@ html {
     border-width: 2px;
   }
 }
+

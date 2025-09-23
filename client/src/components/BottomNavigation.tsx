@@ -41,7 +41,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
   return (
     <nav
     className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20"
-    style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
+    style={{ paddingBottom: "calc(var(--safe-area-bottom) + 0.5rem)" }}
   >
       <div className="flex justify-around items-center py-1">
         {navItems.map((item) => {

@@ -169,7 +169,10 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   };
 
   return (
-    <div className="bg-gray-50 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] min-h-screen">
+    <div
+      className="bg-gray-50 min-h-screen"
+      style={{ paddingBottom: 'calc(var(--bottom-nav-offset) + 2rem)' }}
+    >
       <header className="bg-white shadow-sm p-4">
         <h2 className="text-xl font-bold text-gray-800">Create Activity</h2>
         <p className="text-sm text-gray-500">Share your passion with others</p>

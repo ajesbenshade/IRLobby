@@ -48,7 +48,8 @@ def register(request):
             }
         }
         response = Response(response_payload, status=status.HTTP_201_CREATED)
-        set_refresh_cookie(response, str(refresh))
+        # Temporarily disable cookie setting to debug 500 error
+        # set_refresh_cookie(response, str(refresh))
         return response
 
     logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
@@ -72,7 +73,8 @@ def login(request):
             }
         }
         response = Response(response_payload, status=status.HTTP_200_OK)
-        set_refresh_cookie(response, str(refresh))
+        # Temporarily disable cookie setting to debug 500 error
+        # set_refresh_cookie(response, str(refresh))
         return response
 
     logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -93,10 +94,16 @@ interface UserLocation {
   longitude: number;
 }
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_SCRIPT_ID = 'google-maps-script';
+
 export default function MapView({ onActivitySelect, onToggleView, filters }: MapViewProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [searchRadius, setSearchRadius] = useState('25');
+  const [isMapsApiReady, setIsMapsApiReady] = useState(
+    () => typeof window !== 'undefined' && !!(window.google && window.google.maps),
+  );
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -133,9 +140,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         params.set(key, String(value));
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/activities/?${params.toString()}`,
-      );
+      const response = await apiRequest('GET', `/api/activities/?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch activities');
       }
@@ -147,15 +152,14 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   });
 
   const updateMapMarkers = useCallback(() => {
-    if (!mapInstanceRef.current) return;
+    if (typeof window === 'undefined' || !window.google?.maps || !mapInstanceRef.current) {
+      return;
+    }
 
     const google = window.google;
-
-    // Clear existing markers
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
-    // Add activity markers
     activities.forEach((activity: Activity) => {
       if (activity.latitude && activity.longitude) {
         const marker = new google.maps.Marker({
@@ -173,9 +177,18 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
             <div style="padding: 8px; max-width: 250px;">
               <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
               <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
-              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.time ? format(new Date(activity.time), 'MMM d, yyyy • h:mm a') : 'Time TBD'}</p>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${
+                activity.time
+                  ? `${format(new Date(activity.time), 'MMM d, yyyy')} &bull; ${format(
+                      new Date(activity.time),
+                      'h:mm a',
+                    )}`
+                  : 'Time TBD'
+              }</p>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}</span>
+                <span style="background: #EF4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${
+                  activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'
+                }</span>
               </div>
             </div>
           `,
@@ -193,62 +206,85 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   }, [activities]);
 
   const initializeMap = useCallback(() => {
-    if (!mapRef.current || !userLocation) return;
+    if (
+      typeof window === 'undefined' ||
+      !mapRef.current ||
+      !userLocation ||
+      !window.google?.maps
+    ) {
+      return;
+    }
 
     const google = window.google;
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: userLocation.latitude, lng: userLocation.longitude },
-      zoom: 12,
-      styles: [
-        {
-          featureType: 'poi',
-          elementType: 'labels',
-          stylers: [{ visibility: 'off' }],
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+        center: { lat: userLocation.latitude, lng: userLocation.longitude },
+        zoom: 12,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }],
+          },
+        ],
+      });
+
+      new google.maps.Marker({
+        position: { lat: userLocation.latitude, lng: userLocation.longitude },
+        map: mapInstanceRef.current,
+        title: 'Your Location',
+        icon: {
+          url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
+          scaledSize: new google.maps.Size(24, 24),
         },
-      ],
-    });
-
-    mapInstanceRef.current = map;
-
-    // Add user location marker
-    new google.maps.Marker({
-      position: { lat: userLocation.latitude, lng: userLocation.longitude },
-      map: map,
-      title: 'Your Location',
-      icon: {
-        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%234285F4'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='3' fill='white'/%3E%3C/svg%3E",
-        scaledSize: new google.maps.Size(24, 24),
-      },
-    });
+      });
+    } else {
+      mapInstanceRef.current.setCenter({
+        lat: userLocation.latitude,
+        lng: userLocation.longitude,
+      });
+      mapInstanceRef.current.setZoom(12);
+    }
 
     updateMapMarkers();
-  }, [userLocation, updateMapMarkers]);
+  }, [updateMapMarkers, userLocation]);
 
   const loadGoogleMaps = useCallback(() => {
-    if (window.google) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.google?.maps) {
+      setIsMapsApiReady(true);
+      return;
+    }
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.warn('Google Maps API key missing. Set VITE_GOOGLE_MAPS_API_KEY to enable map view.');
+      setLocationError((prev) => prev ?? 'Map view is unavailable because the API key is missing.');
+      return;
+    }
+
+    if (document.getElementById(GOOGLE_MAPS_SCRIPT_ID)) {
       return;
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDptAUAkTz9QEq1fOODRWHFrLD7-we5Crw&libraries=places`;
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
     script.async = true;
     script.defer = true;
-    script.onload = initializeMap;
+    script.onload = () => {
+      setIsMapsApiReady(true);
+    };
+    script.onerror = () => {
+      setLocationError('Unable to load the map service. Please try again later.');
+    };
     document.head.appendChild(script);
-  }, [initializeMap]);
+  }, []);
 
-  useEffect(() => {
-    requestLocation();
-    loadGoogleMaps();
-  }, [loadGoogleMaps]);
-
-  useEffect(() => {
-    if (mapInstanceRef.current && activities.length > 0) {
-      updateMapMarkers();
-    }
-  }, [activities, updateMapMarkers]);
-
-  const requestLocation = () => {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by this browser');
       return;
@@ -283,13 +319,30 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 300000, // 5 minutes
+        maximumAge: 300000,
       },
     );
-  };
+  }, []);
+
+  useEffect(() => {
+    requestLocation();
+    loadGoogleMaps();
+  }, [loadGoogleMaps, requestLocation]);
+
+  useEffect(() => {
+    if (isMapsApiReady) {
+      initializeMap();
+    }
+  }, [initializeMap, isMapsApiReady]);
+
+  useEffect(() => {
+    if (isMapsApiReady && mapInstanceRef.current) {
+      updateMapMarkers();
+    }
+  }, [activities, isMapsApiReady, updateMapMarkers]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 3959; // Earth's radius in miles
+    const R = 3959;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -429,7 +482,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
                     <h3 className="font-semibold text-lg truncate flex-1 pr-2">{activity.title}</h3>
                     <Badge
                       variant="secondary"
-                      className={`text-xs ${getCategoryColor(activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity')}`}
+                      className={`text-xs ${getCategoryColor(
+                        activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity',
+                      )}`}
                     >
                       {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
                     </Badge>
@@ -448,9 +503,15 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span>
-                          {activity.time
-                            ? format(new Date(activity.time), 'MMM dd, yyyy • h:mm a')
-                            : 'Time TBD'}
+                          {activity.time ? (
+                            <>
+                              {format(new Date(activity.time), 'MMM dd, yyyy')}
+                              <span aria-hidden="true" className="mx-1">&bull;</span>
+                              {format(new Date(activity.time), 'h:mm a')}
+                            </>
+                          ) : (
+                            'Time TBD'
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">

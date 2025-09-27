@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, MapPin } from 'lucide-react';
+import { Camera, MapPin, X } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -144,15 +144,20 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
         // This can be enhanced later with proper file upload
         images: imagePreviews, // Store preview URLs for now
       };
-      const response = await apiRequest('POST', '/api/activities', activityData);
+      const response = await apiRequest('POST', '/api/activities/', activityData);
+      if (!response.ok) {
+        const message = (await response.text()) || 'Failed to create activity';
+        throw new Error(message);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Activity created!',
         description: 'Your activity has been posted successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/activities/discover'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/activities'] });
       onActivityCreated();
     },
     onError: (error: Error) => {
@@ -200,7 +205,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                             onClick={() => removeImage(index)}
                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
                           >
-                            ×
+                            <X className="h-3 w-3" />
                           </button>
                         </div>
                       ))}

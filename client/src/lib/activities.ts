@@ -40,16 +40,16 @@ export function formatActivityTime(datetime: string): string {
 
 export function getActivityCategory(category: string): { color: string; emoji: string } {
   const categories: Record<string, { color: string; emoji: string }> = {
-    'Sports & Fitness': { color: 'bg-red-500', emoji: '🏃‍♂️' },
-    'Food & Drinks': { color: 'bg-orange-500', emoji: '🍽️' },
-    'Outdoor Adventures': { color: 'bg-green-500', emoji: '🌲' },
-    'Arts & Culture': { color: 'bg-purple-500', emoji: '🎨' },
-    Nightlife: { color: 'bg-pink-500', emoji: '🌙' },
-    Learning: { color: 'bg-blue-500', emoji: '📚' },
-    Social: { color: 'bg-yellow-500', emoji: '👥' },
-    Gaming: { color: 'bg-indigo-500', emoji: '🎮' },
-    Music: { color: 'bg-violet-500', emoji: '🎵' },
-    Other: { color: 'bg-gray-500', emoji: '📅' },
+    'Sports & Fitness': { color: 'bg-red-500', emoji: '\u{1F3C3}\u200d\u{2642}\uFE0F' },
+    'Food & Drinks': { color: 'bg-orange-500', emoji: '\u{1F37D}\uFE0F' },
+    'Outdoor Adventures': { color: 'bg-green-500', emoji: '\u{1F332}' },
+    'Arts & Culture': { color: 'bg-purple-500', emoji: '\u{1F3A8}' },
+    Nightlife: { color: 'bg-pink-500', emoji: '\u{1F319}' },
+    Learning: { color: 'bg-blue-500', emoji: '\u{1F4DA}' },
+    Social: { color: 'bg-yellow-500', emoji: '\u{1F465}' },
+    Gaming: { color: 'bg-indigo-500', emoji: '\u{1F3AE}' },
+    Music: { color: 'bg-violet-500', emoji: '\u{1F3B5}' },
+    Other: { color: 'bg-gray-500', emoji: '\u{1F4C5}' },
   };
 
   return categories[category] || categories['Other'];

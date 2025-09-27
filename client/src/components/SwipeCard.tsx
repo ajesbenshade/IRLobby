@@ -236,7 +236,7 @@ export default memo(function SwipeCard({
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-800">{hostName}</p>
               <p className="text-xs text-gray-500">
-                Host • {activity.host?.eventsHosted || 0} events
+                Host <span aria-hidden="true" className="mx-1">&bull;</span>{activity.host?.eventsHosted || 0} events
               </p>
             </div>
             {activity.host?.rating && (

@@ -381,7 +381,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
           <a href="/privacy-policy" className="hover:underline">
             Privacy Policy
           </a>
-          <span>•</span>
+          <span aria-hidden="true">&bull;</span>
           <a href="/terms-of-service" className="hover:underline">
             Terms of Service
           </a>

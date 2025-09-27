@@ -3,9 +3,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from matches.models import Match
 from .models import Activity, ActivityParticipant
-from .serializers import ActivitySerializer, ActivityParticipantSerializer
+from .permissions import IsHostOrReadOnly
+from .serializers import ActivitySerializer
 
 class ActivityListCreateView(generics.ListCreateAPIView):
     serializer_class = ActivitySerializer
@@ -38,7 +39,7 @@ class ActivityListCreateView(generics.ListCreateAPIView):
 class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHostOrReadOnly]
 
 class HostedActivitiesView(generics.ListAPIView):
     serializer_class = ActivitySerializer
@@ -91,16 +92,18 @@ def activity_chat(request, pk):
 
     if request.method == 'GET':
         # Get or create conversation for this activity
-        from matches.models import Match
-        participants = ActivityParticipant.objects.filter(activity=activity, status='confirmed')
+        participants = ActivityParticipant.objects.filter(
+            activity=activity,
+            status='confirmed'
+        ).select_related('user').order_by('joined_at', 'id')
         if participants.count() >= 2:
             user_a = participants.first().user
             user_b = participants.last().user
 
-            match, created = Match.objects.get_or_create(
+            match, created = Match.get_or_create_normalized(
                 activity=activity,
-                user_a=user_a,
-                user_b=user_b
+                user_one=user_a,
+                user_two=user_b,
             )
 
             from chat.models import Conversation
@@ -119,16 +122,18 @@ def activity_chat(request, pk):
             return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Get or create conversation for this activity
-        from matches.models import Match
-        participants = ActivityParticipant.objects.filter(activity=activity, status='confirmed')
+        participants = ActivityParticipant.objects.filter(
+            activity=activity,
+            status='confirmed'
+        ).select_related('user').order_by('joined_at', 'id')
         if participants.count() >= 2:
             user_a = participants.first().user
             user_b = participants.last().user
 
-            match, created = Match.objects.get_or_create(
+            match, created = Match.get_or_create_normalized(
                 activity=activity,
-                user_a=user_a,
-                user_b=user_b
+                user_one=user_a,
+                user_two=user_b,
             )
 
             from chat.models import Conversation, Message

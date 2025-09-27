@@ -157,17 +157,17 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
             participants = ActivityParticipant.objects.filter(
                 activity=activity,
                 status='confirmed'
-            )
+            ).select_related('user').order_by('joined_at', 'id')
 
             if participants.count() >= 2:
-                # Create or get match for this activity
+                # Create or get match for this activity with deterministic ordering
                 user_a = participants.first().user
                 user_b = participants.last().user
 
-                match, created = Match.objects.get_or_create(
+                match, created = Match.get_or_create_normalized(
                     activity=activity,
-                    user_a=user_a,
-                    user_b=user_b
+                    user_one=user_a,
+                    user_two=user_b
                 )
 
                 # Create or get conversation

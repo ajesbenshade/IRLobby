@@ -7,9 +7,10 @@ import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiRequest } from '@/lib/queryClient';
+import { buildActivitySearchParams } from '@/lib/activityFilters';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map } from 'lucide-react';
+import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface SwipePayload {
@@ -48,12 +49,12 @@ export default function Discovery() {
     refetch,
   } = useQuery<Activity[]>({
     queryKey: ['/api/activities', filters],
-    queryFn: async () => {
-      console.log('Fetching activities with token:', !!token);
+    queryFn: async ({ queryKey }) => {
+      const [, activeFilters] = queryKey as [string, Partial<ActivityFilters>];
+      const params = buildActivitySearchParams(activeFilters ?? {});
+      const endpoint = params ? `/api/activities/?${params}` : '/api/activities/';
 
-      const response = await apiRequest('GET', '/api/activities/');
-
-      console.log('Activities response status:', response.status);
+      const response = await apiRequest('GET', endpoint);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -61,9 +62,7 @@ export default function Discovery() {
         throw new Error('Failed to fetch activities');
       }
 
-      const data = (await response.json()) as Activity[];
-      console.log('Found activities:', data.length);
-      return data;
+      return (await response.json()) as Activity[];
     },
     enabled: !!token, // Only run the query if we have a token
     retry: 1,
@@ -321,7 +320,7 @@ export default function Discovery() {
             disabled={swipeMutation.isPending}
             className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-lg bg-white"
           >
-            <span className="text-2xl">✕</span>
+            <X className="h-6 w-6" />
           </Button>
 
           <Button
@@ -330,7 +329,7 @@ export default function Discovery() {
             onClick={() => setShowDetailsModal(true)}
             className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-50 shadow-lg bg-white"
           >
-            <span className="text-lg">ℹ</span>
+            <Info className="h-4 w-4" />
           </Button>
 
           <Button
@@ -340,7 +339,7 @@ export default function Discovery() {
             disabled={swipeMutation.isPending}
             className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 shadow-lg bg-white"
           >
-            <span className="text-2xl">♥</span>
+            <Heart className="h-6 w-6" />
           </Button>
         </div>
       </div>

@@ -101,7 +101,7 @@ export default function UserReviewsModal({
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         <MapPin className="h-3 w-3" />
                         <span>{review.activity.location}</span>
-                        <span>•</span>
+                        <span aria-hidden="true">&bull;</span>
                         <span>{format(new Date(review.activity.dateTime), 'MMM d, yyyy')}</span>
                       </div>
                     </div>

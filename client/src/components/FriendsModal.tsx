@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, UserPlus, Check, X, Users } from 'lucide-react';
+import { Search, UserPlus, Check, X, Users, Star } from 'lucide-react';
 import { useState } from 'react';
 
 import UserProfileModal from './UserProfileModal';
@@ -349,7 +349,8 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                             {user.rating && (
                               <div className="flex items-center gap-1">
-                                <span className="text-sm">⭐ {user.rating.toFixed(1)}</span>
+                                <Star className="h-3 w-3 text-yellow-500" />
+                                <span className="text-sm">{user.rating.toFixed(1)}</span>
                               </div>
                             )}
                           </div>

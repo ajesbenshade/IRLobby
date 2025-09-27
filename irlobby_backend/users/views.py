@@ -15,6 +15,8 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from datetime import timedelta
 
+from urllib.parse import urljoin
+
 from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import set_refresh_cookie, clear_refresh_cookie
 from .models import User
@@ -359,25 +361,59 @@ def password_reset_confirm(request):
 @permission_classes([AllowAny])
 @csrf_exempt
 def request_password_reset(request):
-    # Handle OPTIONS request for CORS preflight
+    """Handle password reset requests by generating a token and emailing the user."""
     if request.method == 'OPTIONS':
         return Response(status=status.HTTP_200_OK)
-    
+
     email = request.data.get('email')
     if not email:
         return Response({'message': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Check if user exists (don't reveal if email exists or not for security)
+
+    normalized_email = email.strip().lower()
+    user = None
+
     try:
-        user = User.objects.get(email=email)
-        # In a real implementation, you'd generate a reset token and send email
-        # For now, just return success message
-        logger.info("Password reset requested for email: %s", email)
-    except User.DoesNotExist:
-        # Don't reveal that email doesn't exist for security reasons
-        pass
-    
-    # Always return success to prevent email enumeration
-    return Response({
-        'message': 'If an account with that email exists, a password reset link has been sent.'
-    }, status=status.HTTP_200_OK)
+        user = User.objects.filter(email__iexact=normalized_email).first()
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception('Unexpected error while looking up user for password reset: %s', exc)
+
+    if user:
+        try:
+            token = get_random_string(length=32)
+            user.password_reset_token = token
+            user.token_created_at = timezone.now()
+            user.save(update_fields=['password_reset_token', 'token_created_at'])
+
+            base_url = getattr(settings, 'FRONTEND_BASE_URL', None) or request.build_absolute_uri('/')
+            if not base_url.endswith('/'):
+                base_url = f"{base_url}/"
+            reset_link = urljoin(base_url, f"reset-password/{token}")
+
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+            if from_email:
+                email_subject = 'Password Reset Request'
+                email_body = (
+                    'You recently requested to reset your IRLobby password.\n\n'
+                    f'Use the link below to set a new password: {reset_link}\n\n'
+                    'If you did not request a password reset, you can safely ignore this message.'
+                )
+                try:
+                    send_mail(
+                        email_subject,
+                        email_body,
+                        from_email,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.exception('Failed to send password reset email to user_id=%s: %s', user.id, exc)
+            else:
+                logger.warning('DEFAULT_FROM_EMAIL is not configured; skipping password reset email send.')
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.exception('Failed to process password reset for user_id=%s: %s', user.id if user else None, exc)
+
+    return Response(
+        {'message': 'If an account with that email exists, a password reset link has been sent.'},
+        status=status.HTTP_200_OK,
+    )
+

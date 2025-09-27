@@ -9,7 +9,6 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 import logging
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
@@ -40,7 +39,6 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
-@csrf_exempt
 def register(request):
     # Handle OPTIONS request for CORS preflight
     if request.method == 'OPTIONS':
@@ -74,7 +72,6 @@ def register(request):
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
-@csrf_exempt
 def login(request):
     # Handle OPTIONS request for CORS preflight
     if request.method == 'OPTIONS':
@@ -343,15 +340,31 @@ def password_reset_confirm(request):
         user = User.objects.get(password_reset_token=token)
     except User.DoesNotExist:
         return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+    except User.MultipleObjectsReturned:
+        logger.warning('Multiple users share password reset token=%s; clearing collisions.', token)
+        User.objects.filter(password_reset_token=token).update(
+            password_reset_token=None,
+            token_created_at=None,
+        )
+        return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user.token_created_at:
+        logger.warning('Password reset token missing timestamp for user_id=%s', user.id)
+        user.password_reset_token = None
+        user.save(update_fields=['password_reset_token'])
+        return Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
     token_age = timezone.now() - user.token_created_at
     if token_age > timedelta(hours=2):
+        user.password_reset_token = None
+        user.token_created_at = None
+        user.save(update_fields=['password_reset_token', 'token_created_at'])
         return Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
     user.set_password(new_password)
-    user.password_reset_token = ''
+    user.password_reset_token = None
     user.token_created_at = None
-    user.save()
+    user.save(update_fields=['password', 'password_reset_token', 'token_created_at'])
 
     logger.info("Password reset successful for user_id=%s", user.id)
     return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
@@ -359,7 +372,7 @@ def password_reset_confirm(request):
 
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
-@csrf_exempt
+@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def request_password_reset(request):
     """Handle password reset requests by generating a token and emailing the user."""
     if request.method == 'OPTIONS':

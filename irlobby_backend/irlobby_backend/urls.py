@@ -21,7 +21,7 @@ from django.shortcuts import render
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
-from users.views import CookieTokenRefreshView, logout_view, request_password_reset
+from users.views import CookieTokenRefreshView, logout_view, request_password_reset, password_reset_confirm
 
 def home(request):
     return render(request, 'index.html')
@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/auth/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/logout/', logout_view, name='token_logout'),
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
+    path('api/auth/password-reset-confirm/', password_reset_confirm, name='password-reset-confirm'),
     path('api/auth/twitter/', include('users.oauth_urls')),
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),

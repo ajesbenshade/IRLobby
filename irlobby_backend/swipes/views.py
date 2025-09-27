@@ -52,11 +52,11 @@ def swipe_activity(request, pk):
 
             for user_activity in user_activities:
                 if user_activity.id in host_right_swipes:
-                    # Create a match
-                    match_obj, created = Match.objects.get_or_create(
+                    # Create a match with deterministic user ordering
+                    match_obj, created = Match.get_or_create_normalized(
                         activity=activity,
-                        user_a=min(user.id, activity.host.id, key=lambda x: x),
-                        user_b=max(user.id, activity.host.id, key=lambda x: x)
+                        user_one=user,
+                        user_two=activity.host,
                     )
                     matched = created  # Only consider it a new match if it was just created
                     break

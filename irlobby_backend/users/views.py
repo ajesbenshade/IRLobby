@@ -366,36 +366,59 @@ def password_reset_request(request):
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def password_reset_confirm(request):
     """Handle password reset confirmations."""
+    if request.method == 'OPTIONS':
+        response = Response(status=status.HTTP_200_OK)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+
     token = request.data.get('token')
     new_password = request.data.get('new_password')
 
     if not token or not new_password:
-        return Response({'error': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     try:
         user = User.objects.get(password_reset_token=token)
     except User.DoesNotExist:
-        return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
     except User.MultipleObjectsReturned:
         logger.warning('Multiple users share password reset token=%s; clearing collisions.', token)
         User.objects.filter(password_reset_token=token).update(
             password_reset_token=None,
             token_created_at=None,
         )
-        return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     if not user.token_created_at:
         logger.warning('Password reset token missing timestamp for user_id=%s', user.id)
         user.password_reset_token = None
         user.save(update_fields=['password_reset_token'])
-        return Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     token_age = timezone.now() - user.token_created_at
     if token_age > timedelta(hours=2):
         user.password_reset_token = None
         user.token_created_at = None
         user.save(update_fields=['password_reset_token', 'token_created_at'])
-        return Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     user.set_password(new_password)
     user.password_reset_token = None
@@ -403,7 +426,10 @@ def password_reset_confirm(request):
     user.save(update_fields=['password', 'password_reset_token', 'token_created_at'])
 
     logger.info("Password reset successful for user_id=%s", user.id)
-    return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+    response = Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+    response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+    response['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 
 @api_view(['POST', 'OPTIONS'])

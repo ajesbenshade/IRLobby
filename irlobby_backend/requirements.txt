@@ -37,3 +37,4 @@ typing-extensions==4.15.0
 tzdata==2025.2
 whitenoise==6.9.0
 zope.interface==7.2
+sendgrid==6.12.5

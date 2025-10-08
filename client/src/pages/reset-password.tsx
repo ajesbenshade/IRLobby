@@ -57,15 +57,17 @@ const ResetPasswordPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to reset password');
+        // Check for error messages in different fields
+        const errorMessage = data.error || data.message || data.detail || 'Failed to reset password';
+        throw new Error(errorMessage);
       }
 
-      setMessage(
-        'Password has been reset successfully. You can now log in with your new password.',
-      );
+      // Handle success response
+      const successMessage = data.detail || data.message || 'Password has been reset successfully.';
+      setMessage(successMessage);
       toast({
         title: 'Success',
-        description: 'Password reset successfully!',
+        description: successMessage,
       });
       setTimeout(() => navigate('/'), 3000); // Redirect to login after 3 seconds
     } catch (err) {

@@ -253,3 +253,20 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='ajesbenshade@gmail.co
 
 # Frontend base URL for password reset links
 FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:5173/')
+
+# Email logging for debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.core.mail': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}

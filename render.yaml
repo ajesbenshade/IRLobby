@@ -20,6 +20,8 @@ services:
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
         value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR
+      - key: FRONTEND_BASE_URL
+        value: https://irlobby.vercel.app
 
   - type: worker
     name: irlobby-channels
@@ -44,3 +46,5 @@ services:
         value: RXZvYVQ5ZVhySnRJUmlmRnNuYzM6MTpjaQ
       - key: TWITTER_CLIENT_SECRET
         value: WwXb8YvVx52DIpsSOyA8MAX9vfhR46uClyKok3zFMhMxYZgpsR
+      - key: FRONTEND_BASE_URL
+        value: https://irlobby.vercel.app

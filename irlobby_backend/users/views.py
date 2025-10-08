@@ -348,7 +348,7 @@ def password_reset_request(request):
     user.token_created_at = timezone.now()
     user.save()
 
-    reset_link = f"{request.scheme}://{request.get_host()}/api/auth/password-reset-confirm/?token={token}"
+    reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{token}"
     send_mail(
         'Password Reset Request',
         f'Please use the following link to reset your password: {reset_link}',

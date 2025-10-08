@@ -361,7 +361,7 @@ def password_reset_request(request):
     return Response({'detail': 'Password reset link sent.'}, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def password_reset_confirm(request):
@@ -369,12 +369,70 @@ def password_reset_confirm(request):
     if request.method == 'OPTIONS':
         response = Response(status=status.HTTP_200_OK)
         response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response['Access-Control-Allow-Credentials'] = 'true'
         return response
 
-    token = request.data.get('token') or request.data.get('resetToken')
+    def _invalid_response(message, status_code=status.HTTP_400_BAD_REQUEST):
+        error_response = Response({'error': message}, status=status_code)
+        error_response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        error_response['Access-Control-Allow-Credentials'] = 'true'
+        return error_response
+
+    token = None
+    if request.method == 'GET':
+        token = (
+            request.query_params.get('token')
+            or request.GET.get('token')  # pragma: no cover - fallback for non-DRF requests
+        )
+    else:
+        token = request.data.get('token') or request.data.get('resetToken')
+
+    if request.method == 'GET':
+        if not token:
+            return _invalid_response('Token is required.')
+
+        try:
+            user = User.objects.get(password_reset_token=token)
+        except User.DoesNotExist:
+            return _invalid_response('Invalid or expired token.')
+        except User.MultipleObjectsReturned:
+            logger.warning('Multiple users share password reset token=%s; clearing collisions.', token)
+            User.objects.filter(password_reset_token=token).update(
+                password_reset_token=None,
+                token_created_at=None,
+            )
+            return _invalid_response('Invalid or expired token.')
+
+        if not user.token_created_at:
+            logger.warning('Password reset token missing timestamp for user_id=%s', user.id)
+            user.password_reset_token = None
+            user.save(update_fields=['password_reset_token'])
+            return _invalid_response('Token has expired.')
+
+        token_age = timezone.now() - user.token_created_at
+        if token_age > timedelta(hours=2):
+            user.password_reset_token = None
+            user.token_created_at = None
+            user.save(update_fields=['password_reset_token', 'token_created_at'])
+            return _invalid_response('Token has expired.')
+
+        frontend_base = getattr(settings, 'FRONTEND_BASE_URL', '').rstrip('/')
+        if frontend_base:
+            reset_path = f"reset-password/{token}"
+            redirect_url = urljoin(f"{frontend_base}/", reset_path)
+            response = Response(status=status.HTTP_302_FOUND)
+            response['Location'] = redirect_url
+            response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+            response['Access-Control-Allow-Credentials'] = 'true'
+            return response
+
+        success_response = Response({'detail': 'Token is valid.', 'token': token}, status=status.HTTP_200_OK)
+        success_response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        success_response['Access-Control-Allow-Credentials'] = 'true'
+        return success_response
+
     new_password = (
         request.data.get('new_password')
         or request.data.get('newPassword')
@@ -382,54 +440,36 @@ def password_reset_confirm(request):
     )
 
     if not token or not new_password:
-        response = Response({'error': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Token and new password are required.')
 
     try:
         user = User.objects.get(password_reset_token=token)
     except User.DoesNotExist:
-        response = Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Invalid or expired token.')
     except User.MultipleObjectsReturned:
         logger.warning('Multiple users share password reset token=%s; clearing collisions.', token)
         User.objects.filter(password_reset_token=token).update(
             password_reset_token=None,
             token_created_at=None,
         )
-        response = Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Invalid or expired token.')
 
     if not user.token_created_at:
         logger.warning('Password reset token missing timestamp for user_id=%s', user.id)
         user.password_reset_token = None
         user.save(update_fields=['password_reset_token'])
-        response = Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Token has expired.')
 
     token_age = timezone.now() - user.token_created_at
     if token_age > timedelta(hours=2):
         user.password_reset_token = None
         user.token_created_at = None
         user.save(update_fields=['password_reset_token', 'token_created_at'])
-        response = Response({'error': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Token has expired.')
 
     # Validate password strength
     if len(new_password) < 8:
-        response = Response({'error': 'Password must be at least 8 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
+        return _invalid_response('Password must be at least 8 characters long.')
 
     try:
         user.set_password(new_password)

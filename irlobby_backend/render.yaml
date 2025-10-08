@@ -31,6 +31,8 @@ services:
         value: eznqseirfeepmntw
       - key: DEFAULT_FROM_EMAIL
         value: ajesbenshade@gmail.com
+      - key: FRONTEND_BASE_URL
+        value: https://irlobby.vercel.app
 
   - type: worker
     name: irlobby-channels
@@ -64,3 +66,5 @@ services:
         value: eznqseirfeepmntw
       - key: DEFAULT_FROM_EMAIL
         value: ajesbenshade@gmail.com
+      - key: FRONTEND_BASE_URL
+        value: https://irlobby.vercel.app

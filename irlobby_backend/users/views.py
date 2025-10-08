@@ -374,8 +374,12 @@ def password_reset_confirm(request):
         response['Access-Control-Allow-Credentials'] = 'true'
         return response
 
-    token = request.data.get('token')
-    new_password = request.data.get('new_password')
+    token = request.data.get('token') or request.data.get('resetToken')
+    new_password = (
+        request.data.get('new_password')
+        or request.data.get('newPassword')
+        or request.data.get('password')
+    )
 
     if not token or not new_password:
         response = Response({'error': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -420,16 +424,30 @@ def password_reset_confirm(request):
         response['Access-Control-Allow-Credentials'] = 'true'
         return response
 
-    user.set_password(new_password)
-    user.password_reset_token = None
-    user.token_created_at = None
-    user.save(update_fields=['password', 'password_reset_token', 'token_created_at'])
+    # Validate password strength
+    if len(new_password) < 8:
+        response = Response({'error': 'Password must be at least 8 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
-    logger.info("Password reset successful for user_id=%s", user.id)
-    response = Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
-    response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
-    response['Access-Control-Allow-Credentials'] = 'true'
-    return response
+    try:
+        user.set_password(new_password)
+        user.password_reset_token = None
+        user.token_created_at = None
+        user.save(update_fields=['password', 'password_reset_token', 'token_created_at'])
+
+        logger.info("Password reset successful for user_id=%s", user.id)
+        response = Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+    except Exception as e:
+        logger.error("Password reset failed for user_id=%s: %s", user.id, str(e))
+        response = Response({'error': 'Failed to reset password. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
 
 @api_view(['POST', 'OPTIONS'])

@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/auth/logout/', logout_view, name='token_logout'),
     path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
     path('api/auth/password-reset-confirm/', password_reset_confirm, name='password-reset-confirm'),
+    path('api/auth/reset-password/', password_reset_confirm, name='reset-password'),
     path('api/auth/twitter/', include('users.oauth_urls')),
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),

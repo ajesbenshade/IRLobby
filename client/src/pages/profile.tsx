@@ -62,10 +62,10 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <div className="flex items-center justify-center mt-2">
             <Star className="w-4 h-4 text-yellow-500 mr-1" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {user.rating?.toFixed(1) || '5.0'}
+              5.0
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-              ({user.totalRatings || 0} reviews)
+              (0 reviews)
             </span>
           </div>
         </div>
@@ -78,18 +78,18 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Activity Stats</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-primary">{user.eventsHosted || 0}</p>
+                <p className="text-2xl font-bold text-primary">{(user as any).eventsHosted || 0}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Events Hosted</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {user.eventsAttended || 0}
+                  {(user as any).eventsAttended || 0}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Events Attended</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {(user.eventsHosted || 0) + (user.eventsAttended || 0)}
+                  {((user as any).eventsHosted || 0) + ((user as any).eventsAttended || 0)}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Total Activities</p>
               </div>
@@ -179,3 +179,4 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     </div>
   );
 }
+

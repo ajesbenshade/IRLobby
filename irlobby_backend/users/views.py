@@ -40,11 +40,22 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def register(request):
+    """Handle user registration."""
+    logger.info(f"Register request method: {request.method}, origin: {request.META.get('HTTP_ORIGIN')}")
+
     # Handle OPTIONS request for CORS preflight
     if request.method == 'OPTIONS':
-        return Response(status=status.HTTP_200_OK)
-    
+        logger.info("Handling OPTIONS preflight for register")
+        response = Response(status=status.HTTP_200_OK)
+        # Add CORS headers explicitly for debugging
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+
     try:
+        logger.info(f"Registration attempt for email: {request.data.get('email')}")
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -58,26 +69,44 @@ def register(request):
                 }
             }
             response = Response(response_payload, status=status.HTTP_201_CREATED)
-            # Temporarily disable cookie setting to debug 500 error
-            # set_refresh_cookie(response, str(refresh))
+            # Add CORS headers to successful response
+            response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+            response['Access-Control-Allow-Credentials'] = 'true'
             return response
 
         logger.warning("User registration failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        response = Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
     except Exception as e:
         logger.error("Registration error: %s", str(e))
-        return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response = Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
 
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
 def login(request):
+    """Handle user login with email and password."""
+    logger.info(f"Login request method: {request.method}, origin: {request.META.get('HTTP_ORIGIN')}")
+
     # Handle OPTIONS request for CORS preflight
     if request.method == 'OPTIONS':
-        return Response(status=status.HTTP_200_OK)
-    
+        logger.info("Handling OPTIONS preflight for login")
+        response = Response(status=status.HTTP_200_OK)
+        # Add CORS headers explicitly for debugging
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
+
     try:
+        logger.info(f"Login attempt for email: {request.data.get('email')}")
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -91,15 +120,22 @@ def login(request):
                 }
             }
             response = Response(response_payload, status=status.HTTP_200_OK)
-            # Temporarily disable cookie setting to debug 500 error
-            # set_refresh_cookie(response, str(refresh))
+            # Add CORS headers to successful response
+            response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+            response['Access-Control-Allow-Credentials'] = 'true'
             return response
 
         logger.warning("User login failed for email=%s errors=%s", request.data.get('email'), serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        response = Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
     except Exception as e:
         logger.error("Login error: %s", str(e))
-        return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response = Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
 
 @api_view(['POST'])

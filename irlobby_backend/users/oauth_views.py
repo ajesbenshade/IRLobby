@@ -32,11 +32,16 @@ def generate_code_challenge(code_verifier):
 def twitter_oauth_url(request):
     """Get Twitter OAuth authorization URL"""
     try:
+        logger.info(f"Twitter OAuth URL request from origin: {request.META.get('HTTP_ORIGIN')}")
+
         client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
         if not client_id or client_id == '':
+            logger.error("TWITTER_CLIENT_ID not configured")
             return Response({
                 'error': 'Twitter OAuth not configured. Please contact support.'
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        logger.info(f"Using Twitter Client ID: {client_id[:10]}...")
 
         # Generate PKCE values
         code_verifier = generate_code_verifier()
@@ -48,35 +53,29 @@ def twitter_oauth_url(request):
         else:
             redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
-        scope = 'tweet.read users.read'
+        logger.info(f"Using redirect URI: {redirect_uri}")
 
-        # Validate credentials before proceeding
-        client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
-        if not client_secret or client_secret == '':
-            return Response({
-                'error': 'Twitter OAuth configuration incomplete'
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        # Generate secure random state for CSRF protection
+        # Store code_verifier in cache with state as key
         state = secrets.token_urlsafe(32)
+        cache.set(f'twitter_oauth_{state}', code_verifier, timeout=600)  # 10 minutes
 
-        params = {
-            'response_type': 'code',
-            'client_id': client_id,
-            'redirect_uri': redirect_uri,
-            'scope': scope,
-            'state': state,
-            'code_challenge': code_challenge,
-            'code_challenge_method': 'S256',
-        }
-        auth_url = f"https://twitter.com/i/oauth2/authorize?{urlencode(params, quote_via=quote)}"
+        # Twitter OAuth 2.0 authorization URL with correct scopes
+        auth_url = (
+            "https://twitter.com/i/oauth2/authorize?"
+            f"response_type=code&"
+            f"client_id={client_id}&"
+            f"redirect_uri={quote(redirect_uri)}&"
+            f"scope=users.read%20tweet.read&"
+            f"state={state}&"
+            f"code_challenge={code_challenge}&"
+            f"code_challenge_method=S256"
+        )
 
-        # Store code_verifier in cache using state as key (expires in 10 minutes)
-        cache.set(f'twitter_oauth_{state}', code_verifier, timeout=600)
+        logger.info(f"Generated Twitter OAuth URL for state: {state[:10]}...")
 
         return Response({
             'auth_url': auth_url,
-            'state': state  # Return state for frontend validation
+            'state': state
         })
 
     except Exception as e:
@@ -90,22 +89,29 @@ def twitter_oauth_url(request):
 def twitter_oauth_callback(request):
     """Handle Twitter OAuth callback"""
     try:
+        logger.info(f"Twitter OAuth callback received from origin: {request.META.get('HTTP_ORIGIN')}")
         code = request.GET.get('code')
         state = request.GET.get('state')
 
+        logger.info(f"Twitter callback - code present: {bool(code)}, state present: {bool(state)}")
+
         if not code:
+            logger.warning("Twitter callback missing authorization code")
             return Response({'error': 'Authorization code required'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not state:
+            logger.warning("Twitter callback missing state parameter")
             return Response({'error': 'State parameter required'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Retrieve code_verifier from cache using state as key
         code_verifier = cache.get(f'twitter_oauth_{state}')
         if not code_verifier:
+            logger.warning(f"Twitter callback - invalid or expired state: {state[:10]}...")
             return Response({'error': 'Session expired or invalid state'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Clean up the cached code_verifier
         cache.delete(f'twitter_oauth_{state}')
+        logger.info("Twitter callback - retrieved and cleared code_verifier from cache")
 
         client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
         client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
@@ -114,13 +120,17 @@ def twitter_oauth_callback(request):
             logger.error("Twitter OAuth credentials not configured")
             return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
+        logger.info(f"Twitter callback - using client_id: {client_id[:10]}...")
+
         # Use explicit redirect URI based on environment (must match the one used in authorization URL)
         if getattr(settings, 'DEBUG', False):
             redirect_uri = 'http://localhost:5173/auth/twitter/callback'
         else:
             redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
-        # Exchange code for access token
+        logger.info(f"Twitter callback - using redirect_uri: {redirect_uri}")
+
+        # Exchange code for access token using Twitter's OAuth 2.0 token endpoint
         token_url = "https://api.twitter.com/2/oauth2/token"
 
         token_data = {
@@ -131,22 +141,30 @@ def twitter_oauth_callback(request):
             'code_verifier': code_verifier
         }
 
-        auth = (client_id, client_secret)
-        
-        try:
-            token_response = requests.post(token_url, data=token_data, auth=auth, timeout=30)
-            logger.info(f"Token exchange request to: {token_url}")
-            logger.info(f"Using redirect_uri: {redirect_uri}")
-            logger.info(f"Client ID: {client_id[:10]}...")
-            logger.info(f"Has client secret: {'YES' if client_secret else 'NO'}")
-        except requests.RequestException as e:
-            logger.error(f"Twitter token exchange network error: {str(e)}")
-            logger.error(f"Request details - URL: {token_url}, Data keys: {list(token_data.keys())}")
-            return Response({'error': 'Failed to connect to Twitter'}, status=status.HTTP_502_BAD_GATEWAY)
+        # Twitter OAuth 2.0 PKCE requires form-encoded data, not Basic Auth
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        }
 
-        if token_response.status_code != 200:
-            logger.error(f"Twitter token exchange failed: {token_response.status_code} - {token_response.text}")
-            return Response({'error': 'Failed to authenticate with Twitter'}, status=status.HTTP_400_BAD_REQUEST)
+        logger.info(f"Twitter callback - token exchange data: client_id={client_id[:10]}..., redirect_uri={redirect_uri}")
+
+        try:
+            token_response = requests.post(token_url, data=token_data, headers=headers, timeout=30)
+            logger.info(f"Twitter callback - token response status: {token_response.status_code}")
+            logger.info(f"Twitter callback - token response headers: {dict(token_response.headers)}")
+
+            if token_response.status_code != 200:
+                logger.error(f"Twitter callback - token exchange failed: {token_response.status_code}")
+                logger.error(f"Twitter callback - token response body: {token_response.text}")
+                return Response({
+                    'error': f'Twitter authentication failed: {token_response.status_code}',
+                    'details': token_response.text[:200]  # Include first 200 chars for debugging
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            logger.error(f"Twitter callback - network error during token exchange: {str(e)}")
+            return Response({'error': 'Failed to connect to Twitter'}, status=status.HTTP_502_BAD_GATEWAY)
 
         token_data = token_response.json()
         access_token = token_data.get('access_token')
@@ -200,5 +218,32 @@ def twitter_oauth_callback(request):
         logger.error(f"Twitter OAuth callback failed: {str(e)}")
         return Response({
             'error': 'Authentication failed. Please try again.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def twitter_oauth_status(request):
+    """Check Twitter OAuth configuration status"""
+    try:
+        client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
+        client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
+
+        status_info = {
+            'configured': bool(client_id and client_secret),
+            'client_id_set': bool(client_id),
+            'client_secret_set': bool(client_secret),
+            'debug_mode': getattr(settings, 'DEBUG', False),
+            'redirect_uri': 'http://localhost:5173/auth/twitter/callback' if getattr(settings, 'DEBUG', False) else 'https://irlobby.vercel.app/auth/twitter/callback'
+        }
+
+        logger.info(f"Twitter OAuth status check: {status_info}")
+
+        return Response(status_info)
+
+    except Exception as e:
+        logger.error(f"Twitter OAuth status check failed: {str(e)}")
+        return Response({
+            'error': 'Failed to check Twitter OAuth status',
+            'configured': False
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

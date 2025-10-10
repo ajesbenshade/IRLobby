@@ -77,7 +77,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden">
+    <div className="w-full bg-white min-h-screen relative overflow-hidden md:max-w-md md:mx-auto md:shadow-xl">
       {renderScreen()}
       {currentScreen !== 'chat' && (
         <BottomNavigation currentScreen={currentScreen} onNavigate={setCurrentScreen} />

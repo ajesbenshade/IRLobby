@@ -279,7 +279,7 @@ export default function Discovery() {
       </header>
 
       {/* Swipe Cards Container */}
-      <div className="relative p-4 h-full">
+      <div className="relative p-4 md:p-6 lg:p-8 h-full">
         {/* Background cards for stacking effect */}
         {activities
           .slice(currentActivityIndex + 1, currentActivityIndex + 3)
@@ -310,8 +310,8 @@ export default function Discovery() {
 
         {/* Action buttons - Fixed position to avoid cutoff */}
         <div
-          className="fixed left-1/2 -translate-x-1/2 flex items-center space-x-6 z-50"
-          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)' }}
+          className="fixed flex items-center space-x-6 z-50"
+          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)', right: '1rem' }}
         >
           <Button
             variant="outline"

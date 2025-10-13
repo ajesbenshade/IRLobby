@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
     googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
     },
   },
   ios: {
@@ -66,5 +66,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-location',
     'expo-secure-store',
+    'expo-web-browser',
   ],
 });

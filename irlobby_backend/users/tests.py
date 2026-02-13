@@ -91,3 +91,68 @@ class PasswordResetConfirmTests(APITestCase):
         other_user.refresh_from_db()
         self.assertIsNone(self.user.password_reset_token)
         self.assertIsNone(other_user.password_reset_token)
+
+
+class OnboardingAndInviteTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='onboard-user',
+            email='onboard@example.com',
+            password='password123',
+        )
+        self.other = User.objects.create_user(
+            username='invitee-user',
+            email='invitee@example.com',
+            password='password123',
+        )
+
+    def test_onboarding_patch_updates_profile_preferences(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(
+            reverse('user-onboarding'),
+            {
+                'bio': 'Love hiking and board games',
+                'city': 'Seattle',
+                'interests': ['hiking', 'board games'],
+                'ageRange': '25-34',
+                'activityPreferences': {'outdoor': True, 'group_size': 'small'},
+                'onboardingCompleted': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.bio, 'Love hiking and board games')
+        self.assertEqual(self.user.location, 'Seattle')
+        self.assertEqual(self.user.preferences.get('interests'), ['hiking', 'board games'])
+        self.assertEqual(self.user.preferences.get('age_range'), '25-34')
+        self.assertTrue(self.user.preferences.get('onboarding_completed'))
+
+    def test_invite_create_and_accept_flow(self):
+        self.client.force_authenticate(self.user)
+        create_response = self.client.post(
+            reverse('invite-list-create'),
+            {
+                'contact_name': 'Sam',
+                'contact_value': '+15555550123',
+                'channel': 'sms',
+            },
+            format='json',
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        token = create_response.data['token']
+
+        resolve_response = self.client.get(reverse('invite-resolve', args=[token]))
+        self.assertEqual(resolve_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(resolve_response.data['is_valid'])
+
+        self.client.force_authenticate(self.other)
+        accept_response = self.client.post(
+            reverse('invite-accept'),
+            {'token': token},
+            format='json',
+        )
+        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_response.data['status'], 'accepted')

@@ -21,8 +21,10 @@ export interface Activity {
   images?: string[];
   created_at?: string;
   participant_count?: number;
+  is_approved?: boolean;
   category?: string;
   isPrivate?: boolean;
+  requiresApproval?: boolean;
   autoApprove?: boolean;
 }
 
@@ -59,6 +61,7 @@ export interface ActivityFormData {
   tags?: string[];
   category?: string;
   isPrivate?: boolean;
+  requiresApproval?: boolean;
   autoApprove?: boolean;
   images?: string[];
 }

@@ -7,8 +7,8 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Activity
-        fields = ('id', 'host', 'title', 'description', 'location', 'latitude', 'longitude', 'time', 'capacity', 'tags', 'images', 'created_at', 'participant_count')
-        read_only_fields = ('id', 'created_at')
+        fields = ('id', 'host', 'is_approved', 'title', 'description', 'location', 'latitude', 'longitude', 'time', 'capacity', 'tags', 'images', 'created_at', 'participant_count')
+        read_only_fields = ('id', 'is_approved', 'created_at')
 
     def get_participant_count(self, obj):
         return obj.participants.filter(status='confirmed').count()

@@ -1,5 +1,6 @@
 export type RootStackParamList = {
   Auth: undefined;
+  Onboarding: undefined;
   Main: undefined;
   Modal?: { screen: string; params?: Record<string, unknown> };
 };

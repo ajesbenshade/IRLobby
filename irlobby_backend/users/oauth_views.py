@@ -39,6 +39,70 @@ def generate_code_challenge(code_verifier):
     return base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
 
 
+def exchange_twitter_token(code, redirect_uri, code_verifier, client_id, client_secret):
+    token_url = "https://api.twitter.com/2/oauth2/token"
+    base_headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+    }
+
+    token_data = {
+        'code': code,
+        'grant_type': 'authorization_code',
+        'redirect_uri': redirect_uri,
+        'code_verifier': code_verifier,
+    }
+
+    def _confidential_exchange():
+        credential_bytes = f"{client_id}:{client_secret}".encode('utf-8')
+        basic_token = base64.b64encode(credential_bytes).decode('utf-8')
+        headers = {
+            **base_headers,
+            'Authorization': f'Basic {basic_token}',
+        }
+        # Keep client_id in body for maximum compatibility across Twitter app setups.
+        return requests.post(
+            token_url,
+            data={
+                **token_data,
+                'client_id': client_id,
+            },
+            headers=headers,
+            timeout=30,
+        )
+
+    def _public_exchange():
+        return requests.post(
+            token_url,
+            data={
+                **token_data,
+                'client_id': client_id,
+            },
+            headers=base_headers,
+            timeout=30,
+        )
+
+    # First attempt follows configured mode; if Twitter rejects with unauthorized_client,
+    # retry with the alternate auth style to handle app-mode mismatches gracefully.
+    first_response = _confidential_exchange() if client_secret else _public_exchange()
+    if first_response.status_code == 200:
+        return first_response
+
+    response_text = first_response.text or ''
+    should_retry = (
+        first_response.status_code in (400, 401)
+        and 'unauthorized_client' in response_text.lower()
+    )
+    if not should_retry:
+        return first_response
+
+    logger.warning(
+        'Twitter token exchange unauthorized_client; retrying with alternate client auth mode.'
+    )
+
+    return _public_exchange() if client_secret else _confidential_exchange()
+
+
 def resolve_frontend_origin(request):
     """Resolve frontend origin for OAuth redirects."""
     request_origin = (request.META.get('HTTP_ORIGIN') or '').rstrip('/')
@@ -156,7 +220,7 @@ def twitter_oauth_callback(request):
 
         client_id, client_secret = get_twitter_credentials()
 
-        if not client_id or not client_secret:
+        if not client_id:
             logger.error("Twitter OAuth credentials not configured")
             return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -164,27 +228,16 @@ def twitter_oauth_callback(request):
 
         logger.info(f"Twitter callback - using redirect_uri: {redirect_uri}")
 
-        # Exchange code for access token using Twitter's OAuth 2.0 token endpoint
-        token_url = "https://api.twitter.com/2/oauth2/token"
-
-        token_data = {
-            'code': code,
-            'grant_type': 'authorization_code',
-            'client_id': client_id,
-            'redirect_uri': redirect_uri,
-            'code_verifier': code_verifier
-        }
-
-        # Twitter OAuth 2.0 PKCE requires form-encoded data, not Basic Auth
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json'
-        }
-
         logger.info(f"Twitter callback - token exchange data: client_id={client_id[:10]}..., redirect_uri={redirect_uri}")
 
         try:
-            token_response = requests.post(token_url, data=token_data, headers=headers, timeout=30)
+            token_response = exchange_twitter_token(
+                code=code,
+                redirect_uri=redirect_uri,
+                code_verifier=code_verifier,
+                client_id=client_id,
+                client_secret=client_secret,
+            )
             logger.info(f"Twitter callback - token response status: {token_response.status_code}")
             logger.info(f"Twitter callback - token response headers: {dict(token_response.headers)}")
 

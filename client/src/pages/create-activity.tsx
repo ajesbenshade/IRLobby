@@ -27,6 +27,8 @@ import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+const MAX_EVENT_CAPACITY = 10;
+
 const insertActivitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
@@ -36,7 +38,10 @@ const insertActivitySchema = z.object({
   longitude: z.number().optional(),
   dateTime: z.date(),
   endDateTime: z.date().optional(),
-  maxParticipants: z.number().min(1, 'At least 1 participant required'),
+  maxParticipants: z
+    .number()
+    .min(1, 'At least 1 participant required')
+    .max(MAX_EVENT_CAPACITY, `Maximum ${MAX_EVENT_CAPACITY} participants allowed`),
   visibility: z
     .array(z.enum(['friends', 'friendsOfFriends', 'everyone']))
     .default(['everyone']),
@@ -76,7 +81,7 @@ const categories = [
   'Gaming',
 ];
 
-const participantOptions = Array.from({ length: 50 }, (_, i) => i + 1);
+const participantOptions = Array.from({ length: MAX_EVENT_CAPACITY }, (_, i) => i + 1);
 
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -176,6 +181,13 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
   });
 
   const onSubmit = (data: FormData) => {
+    if (data.maxParticipants > MAX_EVENT_CAPACITY) {
+      form.setError('maxParticipants', {
+        type: 'manual',
+        message: `Maximum ${MAX_EVENT_CAPACITY} participants allowed`,
+      });
+      return;
+    }
     createActivityMutation.mutate(data);
   };
 

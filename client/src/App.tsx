@@ -4,13 +4,14 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { queryClient } from './lib/queryClient';
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));
 const Home = lazy(() => import('@/pages/home'));
+const Onboarding = lazy(() => import('@/pages/onboarding'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const ForgotPasswordPage = lazy(() => import('@/pages/forgot-password'));
 const ResetPasswordPage = lazy(() => import('@/pages/reset-password'));
@@ -29,7 +30,7 @@ const PageLoader = () => (
 );
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <PageLoader />;
@@ -37,7 +38,28 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated ? <Home /> : <Landing />} />
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            user?.onboardingCompleted === false ? <Navigate to="/onboarding" replace /> : <Home />
+          ) : (
+            <Landing />
+          )
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/" replace />
+          ) : user?.onboardingCompleted === false ? (
+            <Onboarding />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
       <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />

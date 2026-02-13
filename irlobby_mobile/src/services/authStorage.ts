@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { AuthTokens } from '@types/auth';
+import type { AuthTokens } from '../types/auth';
 
 const STORAGE_KEY = '@irlobby/auth/tokens';
 

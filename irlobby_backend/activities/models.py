@@ -1,15 +1,17 @@
 from django.db import models
+from django.core.validators import MaxValueValidator
 from users.models import User
 
 class Activity(models.Model):
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_activities')
+    is_approved = models.BooleanField(default=False)
     title = models.CharField(max_length=255)
     description = models.TextField()
     location = models.CharField(max_length=255)
     latitude = models.FloatField()
     longitude = models.FloatField()
     time = models.DateTimeField()
-    capacity = models.PositiveIntegerField()
+    capacity = models.PositiveIntegerField(validators=[MaxValueValidator(10)])
     tags = models.JSONField(default=list)
     images = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)

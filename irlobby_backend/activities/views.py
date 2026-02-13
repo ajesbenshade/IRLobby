@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from matches.models import Match
 from .models import Activity, ActivityParticipant
 from .permissions import IsHostOrReadOnly
@@ -13,7 +14,13 @@ class ActivityListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Activity.objects.all()
+        queryset = Activity.objects.filter(
+            Q(is_approved=True) | Q(host=self.request.user)
+        ).distinct()
+
+        if self.request.user.is_staff:
+            queryset = Activity.objects.all()
+
         # Filter by location if provided
         latitude = self.request.query_params.get('latitude')
         longitude = self.request.query_params.get('longitude')
@@ -37,9 +44,18 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         serializer.save(host=self.request.user)
 
 class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
     permission_classes = [IsAuthenticated, IsHostOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Activity.objects.filter(
+            Q(is_approved=True) | Q(host=self.request.user)
+        ).distinct()
+
+        if self.request.user.is_staff:
+            return Activity.objects.all()
+
+        return queryset
 
 class HostedActivitiesView(generics.ListAPIView):
     serializer_class = ActivitySerializer
@@ -54,15 +70,22 @@ def join_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
 
-    # Check if user is already a participant
-    participant, created = ActivityParticipant.objects.get_or_create(
+    existing_participant = ActivityParticipant.objects.filter(activity=activity, user=user).first()
+    if existing_participant:
+        return Response({'message': 'Already requested to join'}, status=status.HTTP_400_BAD_REQUEST)
+
+    confirmed_count = ActivityParticipant.objects.filter(
+        activity=activity,
+        status='confirmed'
+    ).count()
+    if confirmed_count >= activity.capacity:
+        return Response({'message': 'Activity is full'}, status=status.HTTP_400_BAD_REQUEST)
+
+    ActivityParticipant.objects.create(
         activity=activity,
         user=user,
-        defaults={'status': 'pending'}
+        status='pending'
     )
-
-    if not created:
-        return Response({'message': 'Already requested to join'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({'message': 'Join request sent'}, status=status.HTTP_201_CREATED)
 

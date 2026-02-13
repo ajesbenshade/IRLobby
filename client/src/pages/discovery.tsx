@@ -79,17 +79,6 @@ export default function Discovery() {
     }
   }, [activities, error, isLoading, token]);
 
-  // Comment out notifications for now since the endpoint doesn't exist
-  // const { data: unreadNotifications = 0 } = useQuery({
-  //   queryKey: ['/api/notifications/unread-count'],
-  //   queryFn: async () => {
-  //     const response = await apiRequest('GET', '/api/notifications/unread-count');
-  //     return response.json();
-  //   },
-  //   enabled: !!token,
-  //   retry: 1,
-  // });
-
   const swipeMutation = useMutation<SwipeMutationResult, Error, SwipePayload>({
     mutationFn: async ({ activityId, swipeType }) => {
       const direction = swipeType === 'like' ? 'right' : 'left';

@@ -47,7 +47,7 @@ def register(request):
     if request.method == 'OPTIONS':
         logger.info("Handling OPTIONS preflight for register")
         response = Response(status=status.HTTP_200_OK)
-        # Add CORS headers explicitly for debugging
+        # Add CORS headers for preflight responses
         response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
         response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
@@ -98,7 +98,7 @@ def login(request):
     if request.method == 'OPTIONS':
         logger.info("Handling OPTIONS preflight for login")
         response = Response(status=status.HTTP_200_OK)
-        # Add CORS headers explicitly for debugging
+        # Add CORS headers for preflight responses
         response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
         response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'

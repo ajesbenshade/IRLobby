@@ -193,7 +193,7 @@ def twitter_oauth_callback(request):
                 logger.error(f"Twitter callback - token response body: {token_response.text}")
                 return Response({
                     'error': f'Twitter authentication failed: {token_response.status_code}',
-                    'details': token_response.text[:200]  # Include first 200 chars for debugging
+                    'details': token_response.text[:200]
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         except requests.RequestException as e:

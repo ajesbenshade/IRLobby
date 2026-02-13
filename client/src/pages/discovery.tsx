@@ -310,8 +310,8 @@ export default function Discovery() {
 
         {/* Action buttons - Fixed position to avoid cutoff */}
         <div
-          className="fixed flex items-center space-x-6 z-50"
-          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)', right: '1rem' }}
+          className="fixed inset-x-0 flex items-center justify-center gap-6 z-50 px-4"
+          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)' }}
         >
           <Button
             variant="outline"

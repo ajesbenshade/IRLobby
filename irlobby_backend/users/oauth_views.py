@@ -6,17 +6,28 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
+from decouple import config as env_config
 import requests
 import secrets
 import hashlib
 import base64
 import logging
-from urllib.parse import urlencode, quote
+from urllib.parse import quote
 from .serializers import UserSerializer
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+def get_twitter_credentials():
+    client_id = getattr(settings, 'TWITTER_CLIENT_ID', None) or env_config(
+        'TWITTER_CLIENT_ID', default=''
+    )
+    client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None) or env_config(
+        'TWITTER_CLIENT_SECRET', default=''
+    )
+    return client_id, client_secret
 
 def generate_code_verifier():
     """Generate a random code verifier for PKCE"""
@@ -27,6 +38,19 @@ def generate_code_challenge(code_verifier):
     code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
     return base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
 
+
+def resolve_frontend_origin(request):
+    """Resolve frontend origin for OAuth redirects."""
+    request_origin = (request.META.get('HTTP_ORIGIN') or '').rstrip('/')
+    if getattr(settings, 'DEBUG', False):
+        if request_origin.startswith('http://localhost:') or request_origin.startswith(
+            'http://127.0.0.1:'
+        ):
+            return request_origin
+
+    frontend_base_url = getattr(settings, 'FRONTEND_BASE_URL', None) or 'http://localhost:5173'
+    return frontend_base_url.rstrip('/')
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def twitter_oauth_url(request):
@@ -34,7 +58,7 @@ def twitter_oauth_url(request):
     try:
         logger.info(f"Twitter OAuth URL request from origin: {request.META.get('HTTP_ORIGIN')}")
 
-        client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
+        client_id, _ = get_twitter_credentials()
         if not client_id or client_id == '':
             logger.error("TWITTER_CLIENT_ID not configured")
             return Response({
@@ -47,17 +71,21 @@ def twitter_oauth_url(request):
         code_verifier = generate_code_verifier()
         code_challenge = generate_code_challenge(code_verifier)
 
-        # Use explicit redirect URI based on environment
-        if getattr(settings, 'DEBUG', False):
-            redirect_uri = 'http://localhost:5173/auth/twitter/callback'
-        else:
-            redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
+        frontend_origin = resolve_frontend_origin(request)
+        redirect_uri = f'{frontend_origin}/auth/twitter/callback'
 
         logger.info(f"Using redirect URI: {redirect_uri}")
 
-        # Store code_verifier in cache with state as key
+        # Store OAuth session details in cache with state as key
         state = secrets.token_urlsafe(32)
-        cache.set(f'twitter_oauth_{state}', code_verifier, timeout=600)  # 10 minutes
+        cache.set(
+            f'twitter_oauth_{state}',
+            {
+                'code_verifier': code_verifier,
+                'redirect_uri': redirect_uri,
+            },
+            timeout=600,
+        )  # 10 minutes
 
         # Twitter OAuth 2.0 authorization URL with correct scopes
         auth_url = (
@@ -103,30 +131,36 @@ def twitter_oauth_callback(request):
             logger.warning("Twitter callback missing state parameter")
             return Response({'error': 'State parameter required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieve code_verifier from cache using state as key
-        code_verifier = cache.get(f'twitter_oauth_{state}')
-        if not code_verifier:
+        # Retrieve OAuth session details from cache using state as key
+        oauth_session = cache.get(f'twitter_oauth_{state}')
+        if not oauth_session:
             logger.warning(f"Twitter callback - invalid or expired state: {state[:10]}...")
             return Response({'error': 'Session expired or invalid state'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if isinstance(oauth_session, dict):
+            code_verifier = oauth_session.get('code_verifier')
+            redirect_uri = oauth_session.get('redirect_uri')
+        else:
+            # Backward compatibility for previously cached values
+            code_verifier = oauth_session
+            frontend_origin = resolve_frontend_origin(request)
+            redirect_uri = f'{frontend_origin}/auth/twitter/callback'
+
+        if not code_verifier:
+            logger.warning("Twitter callback - missing code_verifier in cached state")
+            return Response({'error': 'Session invalid. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Clean up the cached code_verifier
         cache.delete(f'twitter_oauth_{state}')
         logger.info("Twitter callback - retrieved and cleared code_verifier from cache")
 
-        client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
-        client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
+        client_id, client_secret = get_twitter_credentials()
 
         if not client_id or not client_secret:
             logger.error("Twitter OAuth credentials not configured")
             return Response({'error': 'Twitter OAuth not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         logger.info(f"Twitter callback - using client_id: {client_id[:10]}...")
-
-        # Use explicit redirect URI based on environment (must match the one used in authorization URL)
-        if getattr(settings, 'DEBUG', False):
-            redirect_uri = 'http://localhost:5173/auth/twitter/callback'
-        else:
-            redirect_uri = 'https://irlobby.vercel.app/auth/twitter/callback'
 
         logger.info(f"Twitter callback - using redirect_uri: {redirect_uri}")
 
@@ -225,15 +259,14 @@ def twitter_oauth_callback(request):
 def twitter_oauth_status(request):
     """Check Twitter OAuth configuration status"""
     try:
-        client_id = getattr(settings, 'TWITTER_CLIENT_ID', None)
-        client_secret = getattr(settings, 'TWITTER_CLIENT_SECRET', None)
+        client_id, client_secret = get_twitter_credentials()
 
         status_info = {
             'configured': bool(client_id and client_secret),
             'client_id_set': bool(client_id),
             'client_secret_set': bool(client_secret),
             'debug_mode': getattr(settings, 'DEBUG', False),
-            'redirect_uri': 'http://localhost:5173/auth/twitter/callback' if getattr(settings, 'DEBUG', False) else 'https://irlobby.vercel.app/auth/twitter/callback'
+            'redirect_uri': f"{resolve_frontend_origin(request)}/auth/twitter/callback",
         }
 
         logger.info(f"Twitter OAuth status check: {status_info}")

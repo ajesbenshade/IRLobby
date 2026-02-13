@@ -152,6 +152,7 @@ export default function HelpSupport() {
                 </label>
                 <Input
                   id="name"
+                  autoComplete="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
@@ -166,6 +167,7 @@ export default function HelpSupport() {
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email address"

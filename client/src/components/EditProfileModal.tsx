@@ -192,7 +192,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <FormItem>
                       <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your first name" {...field} />
+                        <Input placeholder="Enter your first name" autoComplete="given-name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -206,7 +206,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <FormItem>
                       <FormLabel>Last Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your last name" {...field} />
+                        <Input placeholder="Enter your last name" autoComplete="family-name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

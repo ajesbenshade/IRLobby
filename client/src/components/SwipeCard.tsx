@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Activity } from '@/types/activity';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { MapPin, Clock, Users, Star } from 'lucide-react';
 import { useState, useRef, useCallback, memo } from 'react';
 
@@ -140,6 +140,22 @@ export default memo(function SwipeCard({
     activity.host?.firstName && activity.host?.lastName
       ? `${activity.host.firstName.charAt(0)}${activity.host.lastName.charAt(0)}`
       : 'H';
+  const safeTitle = activity.title || 'Untitled Activity';
+  const safeTags = Array.isArray(activity.tags)
+    ? activity.tags
+    : typeof activity.tags === 'string' && activity.tags.trim().length > 0
+      ? [activity.tags]
+      : [];
+
+  const rawActivityTime =
+    activity.time ||
+    (activity as Activity & { dateTime?: string; date_time?: string }).dateTime ||
+    (activity as Activity & { dateTime?: string; date_time?: string }).date_time;
+  const parsedActivityDate = rawActivityTime ? new Date(rawActivityTime) : null;
+  const formattedActivityTime =
+    parsedActivityDate && isValid(parsedActivityDate)
+      ? format(parsedActivityDate, 'MMM d, h:mm a')
+      : 'Time TBD';
 
   return (
     <Card
@@ -169,16 +185,16 @@ export default memo(function SwipeCard({
           {activity.images && activity.images.length > 0 ? (
             <img
               src={activity.images[0]}
-              alt={activity.title}
+              alt={safeTitle}
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                <span className="text-white text-xl font-bold">{activity.title.charAt(0)}</span>
+                <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
               </div>
               <p className="text-white/80 font-medium">
-                {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+                {safeTags.length > 0 ? safeTags[0] : 'Activity'}
               </p>
             </div>
           )}
@@ -188,13 +204,13 @@ export default memo(function SwipeCard({
           {/* Title and Category */}
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate flex-1 mr-2">
-              {activity.title}
+              {safeTitle}
             </h3>
             <Badge
               variant="secondary"
               className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 flex-shrink-0"
             >
-              {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+              {safeTags.length > 0 ? safeTags[0] : 'Activity'}
             </Badge>
           </div>
 
@@ -207,7 +223,7 @@ export default memo(function SwipeCard({
           {/* Date/Time */}
           <div className="flex items-center text-gray-600 dark:text-gray-300 mb-3">
             <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span className="text-sm">{format(new Date(activity.time), 'MMM d, h:mm a')}</span>
+            <span className="text-sm">{formattedActivityTime}</span>
           </div>
 
           {/* Description */}

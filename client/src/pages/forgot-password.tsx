@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
+import { apiRequest } from '../lib/queryClient';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -18,16 +19,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/auth/request-password-reset/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        },
-      );
+      const response = await apiRequest('POST', '/api/auth/request-password-reset/', { email });
 
       const responseText = await response.text();
       let data: { message?: string; detail?: string } | null = null;
@@ -99,6 +91,7 @@ const ForgotPasswordPage = () => {
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="your@email.com"
                 required
                 value={email}

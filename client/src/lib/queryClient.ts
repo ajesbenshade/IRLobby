@@ -9,7 +9,7 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL || '';
 const AUTH_401_BYPASS_PATHS = ['/api/users/profile/', '/api/users/auth/status/'] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',
@@ -270,9 +270,6 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
       console.error('Error stack:', error.stack);
     }
 
-    if (method === 'GET' && resolvedUrl.includes('/api/auth/twitter/url/')) {
-      return new Response(JSON.stringify({ auth_url: '#' }), { status: 200 });
-    }
     throw error;
   }
 }

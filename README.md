@@ -75,18 +75,17 @@
 
 ## 🚀 Production Deployment
 
-### Frontend (Vercel)
-The React frontend is configured for Vercel deployment:
+### Frontend
+Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, GitHub Pages, or Render Static Site).
 
-1. **Deploy to Vercel**
+1. **Build frontend**
    ```bash
    cd client
-   npm install -g vercel
-   vercel login
-   vercel --prod
+   npm install
+   npm run build
    ```
 
-2. **Environment Variables** (set in Vercel dashboard):
+2. **Environment Variables** (set in your frontend host):
    ```
    VITE_API_BASE_URL=https://your-backend-url.onrender.com
    ```
@@ -105,7 +104,7 @@ The Django backend is configured for Render with PostgreSQL:
    DEBUG=False
    SECRET_KEY=your-secret-key-here
    ALLOWED_HOSTS=your-render-app-name.onrender.com
-   CORS_ALLOWED_ORIGINS=https://your-vercel-frontend-url.vercel.app
+   CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
    ```
 
 3. **Services Created**:
@@ -115,7 +114,7 @@ The Django backend is configured for Render with PostgreSQL:
 
 ### Deployment Architecture
 ```
-Frontend (Vercel)
+Frontend (Static Host)
     ↓ API calls
 Backend (Render - Django + DRF)
     ↓ Database queries
@@ -152,7 +151,7 @@ ALLOWED_HOSTS=your-backend-domain.onrender.com
 DATABASE_URL=postgresql://...
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
+CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
 
 # Frontend Configuration
 VITE_API_BASE_URL=https://your-backend-domain.onrender.com

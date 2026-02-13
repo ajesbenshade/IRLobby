@@ -43,12 +43,6 @@ function AppRoutes() {
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/terms-of-service" element={<TermsOfService />} />
-      {isAuthenticated && (
-        <>
-          {/* Add other authenticated routes here, e.g. profile, settings */}
-          {/* <Route path="/profile" element={<ProfilePage />} /> */}
-        </>
-      )}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

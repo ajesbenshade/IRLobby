@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Activity } from '@/types/activity';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { MapPin, Clock, Users, Star } from 'lucide-react';
 
 interface ActivityDetailsModalProps {
@@ -27,6 +27,19 @@ export default function ActivityDetailsModal({
   onClose,
   onJoin,
 }: ActivityDetailsModalProps) {
+  const safeTitle = activity.title || 'Untitled Activity';
+  const safeTags = Array.isArray(activity.tags)
+    ? activity.tags
+    : typeof activity.tags === 'string' && activity.tags.trim().length > 0
+      ? [activity.tags]
+      : [];
+  const rawActivityTime =
+    activity.time ||
+    (activity as Activity & { dateTime?: string; date_time?: string }).dateTime ||
+    (activity as Activity & { dateTime?: string; date_time?: string }).date_time;
+  const parsedActivityDate = rawActivityTime ? new Date(rawActivityTime) : null;
+  const hasValidDate = Boolean(parsedActivityDate && isValid(parsedActivityDate));
+
   const hostName =
     activity.host?.firstName && activity.host?.lastName
       ? `${activity.host.firstName} ${activity.host.lastName}`
@@ -54,17 +67,17 @@ export default function ActivityDetailsModal({
           {activity.images && activity.images.length > 0 ? (
             <img
               src={activity.images[0]}
-              alt={activity.title}
+              alt={safeTitle}
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-white text-xl font-bold">{activity.title.charAt(0)}</span>
+                  <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
                 </div>
                 <p className="text-white/80 font-medium">
-                  {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+                  {safeTags.length > 0 ? safeTags[0] : 'Activity'}
                 </p>
               </div>
             </div>
@@ -73,9 +86,9 @@ export default function ActivityDetailsModal({
 
         {/* Title and Category */}
         <div className="flex items-start justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex-1 mr-2">{activity.title}</h2>
+          <h2 className="text-2xl font-bold text-gray-800 flex-1 mr-2">{safeTitle}</h2>
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            {activity.tags && activity.tags.length > 0 ? activity.tags[0] : 'Activity'}
+            {safeTags.length > 0 ? safeTags[0] : 'Activity'}
           </Badge>
         </div>
 
@@ -89,16 +102,22 @@ export default function ActivityDetailsModal({
           <div className="flex items-center text-gray-600">
             <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
-              {format(new Date(activity.time), 'EEEE, MMM d, yyyy')}
-              <span aria-hidden="true" className="mx-1">&bull;</span>
-              {format(new Date(activity.time), 'h:mm a')}
+              {hasValidDate && parsedActivityDate
+                ? format(parsedActivityDate, 'EEEE, MMM d, yyyy')
+                : 'Date TBD'}
+              {hasValidDate && parsedActivityDate && (
+                <>
+                  <span aria-hidden="true" className="mx-1">&bull;</span>
+                  {format(parsedActivityDate, 'h:mm a')}
+                </>
+              )}
             </span>
           </div>
 
           <div className="flex items-center text-gray-600">
             <Users className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
-              {activity.participant_count || 0} of {activity.capacity} spots filled
+              {activity.participant_count || 0} of {activity.capacity || 0} spots filled
             </span>
           </div>
         </div>
@@ -112,11 +131,11 @@ export default function ActivityDetailsModal({
         )}
 
         {/* Tags */}
-        {activity.tags && activity.tags.length > 0 && (
+        {safeTags.length > 0 && (
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3">Tags</h3>
             <div className="flex flex-wrap gap-2">
-              {activity.tags.map((tag, index) => (
+              {safeTags.map((tag, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
                   {tag}
                 </Badge>

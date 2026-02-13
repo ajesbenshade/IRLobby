@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
@@ -15,6 +15,7 @@ interface AuthFormProps {
 const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const [activeTab, setActiveTab] = useState('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTwitterAvailable, setIsTwitterAvailable] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -29,7 +30,42 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkTwitterOAuthStatus = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/auth/twitter/status/');
+        const data = (await response.json()) as { configured?: boolean };
+        if (isMounted) {
+          setIsTwitterAvailable(Boolean(data.configured));
+        }
+      } catch (error) {
+        console.warn('Twitter OAuth status check failed:', error);
+        if (isMounted) {
+          setIsTwitterAvailable(false);
+        }
+      }
+    };
+
+    void checkTwitterOAuthStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleTwitterOAuth = async () => {
+    if (!isTwitterAvailable) {
+      toast({
+        title: 'Twitter OAuth Unavailable',
+        description:
+          'Twitter login is not configured in this environment. Please use email/password login.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       console.log('Starting Twitter OAuth...');
@@ -49,7 +85,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const authUrl = data.auth_url;
       const stateToken = data.state ?? null;
 
-      if (!authUrl) {
+      if (!authUrl || authUrl === '#' || authUrl.startsWith('#')) {
         console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
@@ -243,6 +279,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="your@email.com"
                   required
                   value={formData.email}
@@ -255,6 +292,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -278,6 +316,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="registerUsername"
                   name="username"
                   type="text"
+                  autoComplete="username"
                   placeholder="username"
                   required
                   value={formData.username}
@@ -290,6 +329,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="firstName"
                   name="firstName"
                   type="text"
+                  autoComplete="given-name"
                   required
                   value={formData.firstName}
                   onChange={handleChange}
@@ -301,6 +341,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="lastName"
                   name="lastName"
                   type="text"
+                  autoComplete="family-name"
                   required
                   value={formData.lastName}
                   onChange={handleChange}
@@ -312,6 +353,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="registerEmail"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="your@email.com"
                   required
                   value={formData.email}
@@ -324,6 +366,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="registerPassword"
                   name="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -335,6 +378,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   id="passwordConfirm"
                   name="passwordConfirm"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={formData.passwordConfirm}
                   onChange={handleChange}
@@ -362,7 +406,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
               variant="outline"
               className="w-full"
               onClick={handleTwitterOAuth}
-              disabled={isLoading}
+              disabled={isLoading || !isTwitterAvailable}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -370,7 +414,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                   fill="currentColor"
                 />
               </svg>
-              {isLoading ? 'Connecting...' : 'Continue with X (Twitter)'}
+              {isLoading
+                ? 'Connecting...'
+                : isTwitterAvailable
+                  ? 'Continue with X (Twitter)'
+                  : 'X (Twitter) Login Unavailable'}
             </Button>
           </div>
         </div>

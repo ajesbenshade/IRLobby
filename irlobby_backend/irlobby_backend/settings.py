@@ -160,7 +160,7 @@ DATABASES = {
 # CORS settings
 # CORS settings - read allowed origins from environment to support dynamic deploy domains
 # Render/Prod sets CORS_ALLOWED_ORIGINS as a comma-separated env var (see render.yaml)
-raw_cors_origins = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://irlobby.vercel.app,https://irlobby-1o5wz870g-aaron-esbenshades-projects.vercel.app')
+raw_cors_origins = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://127.0.0.1:3000,https://irlobby.vercel.app,https://irlobby-1o5wz870g-aaron-esbenshades-projects.vercel.app')
 CORS_ALLOWED_ORIGINS = [s.strip() for s in raw_cors_origins.split(',') if s.strip()]
 
 CORS_ALLOW_CREDENTIALS = True

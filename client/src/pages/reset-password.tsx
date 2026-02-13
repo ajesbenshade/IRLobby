@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
+import { apiRequest } from '../lib/queryClient';
 
 const ResetPasswordPage = () => {
   const { token } = useParams<{ token: string }>();
@@ -46,12 +47,9 @@ const ResetPasswordPage = () => {
     setError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/reset-password/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token, newPassword: password }),
+      const response = await apiRequest('POST', '/api/auth/reset-password/', {
+        token,
+        newPassword: password,
       });
 
       const data = await response.json();
@@ -105,6 +103,7 @@ const ResetPasswordPage = () => {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="Enter new password"
                 required
                 value={password}
@@ -118,6 +117,7 @@ const ResetPasswordPage = () => {
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 placeholder="Confirm new password"
                 required
                 value={confirmPassword}

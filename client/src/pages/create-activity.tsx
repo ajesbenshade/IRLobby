@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -37,7 +36,9 @@ const insertActivitySchema = z.object({
   dateTime: z.date(),
   endDateTime: z.date().optional(),
   maxParticipants: z.number().min(1, 'At least 1 participant required'),
-  isPrivate: z.boolean().default(false),
+  visibility: z
+    .array(z.enum(['friends', 'friendsOfFriends', 'everyone']))
+    .default(['everyone']),
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).default([]),
@@ -129,7 +130,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       location: '',
       dateTime: '',
       maxParticipants: 6,
-      isPrivate: false,
+      visibility: ['everyone'],
       tags: [],
       price: 0,
     },
@@ -137,8 +138,12 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
 
   const createActivityMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const visibility = data.visibility ?? [];
+      const normalizedVisibility = visibility.length ? visibility : ['everyone'];
       const activityData = {
         ...data,
+        visibility: normalizedVisibility,
+        isPrivate: !normalizedVisibility.includes('everyone'),
         dateTime: new Date(data.dateTime).toISOString(),
         // For now, just store image data as base64 or file references
         // This can be enhanced later with proper file upload
@@ -379,25 +384,66 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
               )}
             />
 
-            {/* Event Privacy Settings */}
+            {/* Event Visibility Settings */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Event Privacy</CardTitle>
+                <CardTitle className="text-lg">Event Visibility</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="isPrivate"
+                  name="visibility"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <FormItem className="rounded-lg border p-3 space-y-3">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Private Event</FormLabel>
-                        <div className="text-sm text-gray-500">
-                          Only approved participants can join
-                        </div>
+                        <FormLabel className="text-base">Who can see this event?</FormLabel>
+                        <div className="text-sm text-gray-500">Select one or more audiences</div>
                       </div>
                       <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-3 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={(field.value || []).includes('friends')}
+                              onChange={(event) => {
+                                const current = field.value || [];
+                                const next = event.target.checked
+                                  ? [...current, 'friends']
+                                  : current.filter((item) => item !== 'friends');
+                                field.onChange(next);
+                              }}
+                            />
+                            Friends
+                          </label>
+                          <label className="flex items-center gap-3 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={(field.value || []).includes('friendsOfFriends')}
+                              onChange={(event) => {
+                                const current = field.value || [];
+                                const next = event.target.checked
+                                  ? [...current, 'friendsOfFriends']
+                                  : current.filter((item) => item !== 'friendsOfFriends');
+                                field.onChange(next);
+                              }}
+                            />
+                            Friends of friends
+                          </label>
+                          <label className="flex items-center gap-3 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={(field.value || []).includes('everyone')}
+                              onChange={(event) => {
+                                const current = field.value || [];
+                                const next = event.target.checked
+                                  ? [...current, 'everyone']
+                                  : current.filter((item) => item !== 'everyone');
+                                field.onChange(next);
+                              }}
+                            />
+                            Everyone
+                          </label>
+                        </div>
                       </FormControl>
                     </FormItem>
                   )}

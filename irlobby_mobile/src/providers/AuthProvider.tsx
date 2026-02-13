@@ -10,7 +10,7 @@ import {
 } from '@services/authService';
 import { authStorage } from '@services/authStorage';
 
-import type { AuthUser, LoginPayload, RegisterPayload } from '@types/auth';
+import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
 
 interface AuthContextValue {
   user: AuthUser | null;

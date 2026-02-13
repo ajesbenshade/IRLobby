@@ -7,7 +7,7 @@ import type {
   AuthUser,
   LoginPayload,
   RegisterPayload,
-} from '@types/auth';
+} from '../types/auth';
 
 const normalizeTokens = (tokens: Partial<AuthTokens> | null | undefined): AuthTokens => {
   const accessToken =
@@ -46,6 +46,20 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
     ((user as Record<string, unknown>).bio ??
       (user as Record<string, unknown>).about ??
       null) as string | null,
+  city:
+    ((user as Record<string, unknown>).city ??
+      (user as Record<string, unknown>).location ??
+      null) as string | null,
+  interests: Array.isArray((user as Record<string, unknown>).interests)
+    ? ((user as Record<string, unknown>).interests as unknown[]).filter(
+        (interest): interest is string => typeof interest === 'string',
+      )
+    : [],
+  onboardingCompleted:
+    Boolean(
+      (user as Record<string, unknown>).onboardingCompleted ??
+        (user as Record<string, unknown>).onboarding_completed,
+    ),
   isHost:
     Boolean(
       (user as Record<string, unknown>).isHost ??
@@ -103,4 +117,37 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 export async function resetPassword(token: string, password: string): Promise<void> {
   await api.post('/api/auth/reset-password/', { token, new_password: password });
+}
+
+export interface OnboardingPayload {
+  bio?: string;
+  city?: string;
+  age_range?: string;
+  interests?: string[];
+  activity_preferences?: Record<string, unknown>;
+  avatar_url?: string;
+  photo_album?: string[];
+  onboarding_completed?: boolean;
+}
+
+export interface InvitePayload {
+  contact_name?: string;
+  contact_value: string;
+  channel: 'sms' | 'email';
+}
+
+export interface InviteResponse {
+  token: string;
+  status: 'pending' | 'accepted';
+  channel: 'sms' | 'email';
+  contact_value: string;
+}
+
+export async function updateOnboarding(payload: OnboardingPayload): Promise<void> {
+  await api.patch('/api/users/onboarding/', payload);
+}
+
+export async function createInvite(payload: InvitePayload): Promise<InviteResponse> {
+  const response = await api.post<InviteResponse>('/api/users/invites/', payload);
+  return response.data;
 }

@@ -3,7 +3,7 @@ import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type Ax
 import { config } from '@constants/config';
 import { authStorage, getAccessToken, getRefreshToken } from './authStorage';
 
-import type { AuthTokens } from '@types/auth';
+import type { AuthTokens } from '../types/auth';
 
 const API_TIMEOUT = 15000;
 

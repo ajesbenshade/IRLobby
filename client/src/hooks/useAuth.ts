@@ -13,11 +13,40 @@ interface User {
   bio?: string;
   interests?: string[];
   photoAlbum?: string[];
+  onboardingCompleted?: boolean;
   rating?: number;
   totalRatings?: number;
   eventsHosted?: number;
   eventsAttended?: number;
 }
+
+const normalizeUser = (profile: Record<string, unknown>): User => ({
+  id: String(profile.id ?? ''),
+  email: typeof profile.email === 'string' ? profile.email : undefined,
+  firstName:
+    (typeof profile.firstName === 'string' ? profile.firstName : undefined) ??
+    (typeof profile.first_name === 'string' ? profile.first_name : undefined),
+  lastName:
+    (typeof profile.lastName === 'string' ? profile.lastName : undefined) ??
+    (typeof profile.last_name === 'string' ? profile.last_name : undefined),
+  profileImageUrl:
+    (typeof profile.profileImageUrl === 'string' ? profile.profileImageUrl : undefined) ??
+    (typeof profile.avatarUrl === 'string' ? profile.avatarUrl : undefined) ??
+    (typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined),
+  bio: typeof profile.bio === 'string' ? profile.bio : undefined,
+  interests: Array.isArray(profile.interests)
+    ? profile.interests.filter((item): item is string => typeof item === 'string')
+    : undefined,
+  photoAlbum: Array.isArray(profile.photoAlbum)
+    ? profile.photoAlbum.filter((item): item is string => typeof item === 'string')
+    : undefined,
+  onboardingCompleted:
+    typeof profile.onboardingCompleted === 'boolean'
+      ? profile.onboardingCompleted
+      : typeof profile.onboarding_completed === 'boolean'
+        ? profile.onboarding_completed
+        : undefined,
+});
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -86,7 +115,7 @@ export function useAuth() {
           throw new Error(`Profile request failed: ${response.status}`);
         }
 
-        const profile = await response.json();
+        const profile = normalizeUser((await response.json()) as Record<string, unknown>);
         setAuthErrorMessage(null);
         return profile;
       } catch (fetchError) {

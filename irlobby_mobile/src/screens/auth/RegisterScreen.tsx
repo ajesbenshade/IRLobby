@@ -37,7 +37,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
       email.trim().length > 0 &&
       username.trim().length >= 3 &&
       passwordsMatch,
-    [email, firstName, lastName, passwordsMatch],
+    [email, firstName, lastName, passwordsMatch, username],
   );
 
   const { mutateAsync, isPending, error } = useMutation({
@@ -94,6 +94,14 @@ export const RegisterScreen = ({ navigation }: Props) => {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
+            style={styles.input}
+          />
+          <TextInput
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoComplete="username"
             style={styles.input}
           />
           <TextInput
@@ -185,11 +193,3 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 });
-          <TextInput
-            label="Username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoComplete="username"
-            style={styles.input}
-          />

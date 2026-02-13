@@ -18,8 +18,15 @@ from urllib.parse import urljoin
 
 from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import set_refresh_cookie, clear_refresh_cookie
-from .models import User
-from .serializers import UserSerializer, UserRegistrationSerializer, UserLoginSerializer
+from .models import User, Invite
+from .serializers import (
+    UserSerializer,
+    UserRegistrationSerializer,
+    UserLoginSerializer,
+    UserOnboardingSerializer,
+    InviteCreateSerializer,
+    InviteSerializer,
+)
 from activities.models import Activity
 from swipes.models import Swipe
 from matches.models import Match
@@ -34,6 +41,74 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_onboarding(request):
+    user = request.user
+
+    if request.method == 'GET':
+        serializer = UserOnboardingSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    serializer = UserOnboardingSerializer(instance=user, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class InviteListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Invite.objects.filter(inviter=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return InviteCreateSerializer
+        return InviteSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite = Invite.objects.create(inviter=request.user, **serializer.validated_data)
+        response_serializer = InviteSerializer(invite)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def resolve_invite(request, token):
+    invite = Invite.objects.filter(token=token).select_related('inviter').first()
+    if not invite:
+        return Response({'detail': 'Invite not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    data = InviteSerializer(invite).data
+    data['is_valid'] = invite.status == 'pending'
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_invite(request):
+    token = request.data.get('token')
+    if not token:
+        return Response({'detail': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    invite = Invite.objects.filter(token=token).first()
+    if not invite:
+        return Response({'detail': 'Invite not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if invite.status == 'accepted':
+        return Response({'detail': 'Invite already accepted'}, status=status.HTTP_400_BAD_REQUEST)
+
+    invite.status = 'accepted'
+    invite.invitee = request.user
+    invite.accepted_at = timezone.now()
+    invite.save(update_fields=['status', 'invitee', 'accepted_at'])
+
+    return Response(InviteSerializer(invite).data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST', 'OPTIONS'])

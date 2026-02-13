@@ -4,6 +4,7 @@ import { useColorScheme, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
 import { useAuth } from '@hooks/useAuth';
+import { OnboardingScreen } from '@screens/main/OnboardingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import type { RootStackParamList } from './types';
@@ -12,7 +13,7 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 export const AppNavigator = () => {
   const scheme = useColorScheme();
-  const { isAuthenticated, isInitializing } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
 
   if (isInitializing) {
     return (
@@ -32,7 +33,11 @@ export const AppNavigator = () => {
     <NavigationContainer theme={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <RootStack.Screen name="Main" component={MainNavigator} />
+          user?.onboardingCompleted === false ? (
+            <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
+          ) : (
+            <RootStack.Screen name="Main" component={MainNavigator} />
+          )
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />
         )}

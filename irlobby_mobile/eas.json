@@ -12,7 +12,11 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://liyf.app",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://liyf.app"
+      }
     }
   },
   "submit": {

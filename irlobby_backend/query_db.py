@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 """
 IRLobby Database Query Script
-Run database queries against the Render PostgreSQL database
+Run database queries against the database configured by DATABASE_URL.
 """
 
 import os
 import django
-from django.conf import settings
 
 # Set up Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'irlobby_backend.settings')
 django.setup()
-
-# Set the database URL (you can also set this as an environment variable)
-os.environ['DATABASE_URL'] = 'postgresql://irlobby_database_user:31RjDu8kjXIlo3Tya44e7faECt5h9qCG@dpg-d2v6oaer433s73etgfkg-a.oregon-postgres.render.com/irlobby_database'
 
 from users.models import User
 from activities.models import Activity, ActivityParticipant
@@ -63,6 +59,9 @@ def show_popular_tags():
         print(f"{tag}: {count} activities")
 
 if __name__ == "__main__":
+    if not os.environ.get('DATABASE_URL'):
+        raise RuntimeError('DATABASE_URL is required to run query_db.py')
+
     show_database_summary()
     show_recent_activities()
     show_user_activity()

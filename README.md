@@ -76,7 +76,7 @@
 ## 🚀 Production Deployment
 
 ### Frontend
-Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, GitHub Pages, or Render Static Site).
+Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, or GitHub Pages).
 
 1. **Build frontend**
    ```bash
@@ -87,30 +87,20 @@ Deploy the React frontend to your preferred static host (for example Netlify, Cl
 
 2. **Environment Variables** (set in your frontend host):
    ```
-   VITE_API_BASE_URL=https://your-backend-url.onrender.com
+   VITE_API_BASE_URL=https://liyf.app
    ```
 
-### Backend (Render)
-The Django backend is configured for Render with PostgreSQL:
+### Backend (Oracle VM + Neon)
+The production backend is deployed on Oracle VM with Docker Compose and uses Neon Postgres.
 
-1. **Connect Repository to Render**
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click "New" → "Blueprint"
-   - Connect your GitHub repository
-   - Render will detect `render.yaml` automatically
+1. **Prepare VM + app services**
+   - Use the runbook in `irlobby_backend/deploy/oracle/README.md`
+   - Configure `.env.production` on the VM
+   - Deploy with `bash deploy/oracle/deploy.sh`
 
-2. **Environment Variables** (Render will prompt for these):
-   ```bash
-   DEBUG=False
-   SECRET_KEY=your-secret-key-here
-   ALLOWED_HOSTS=your-render-app-name.onrender.com
-   CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
-   ```
-
-3. **Services Created**:
-   - **Web Service**: Django application with Gunicorn
-   - **Worker Service**: Daphne for WebSocket connections
-   - **PostgreSQL Database**: Production database
+2. **Database**
+   - Neon pooled connection string in `DATABASE_URL`
+   - Optional migration helper: `bash deploy/oracle/migrate-to-neon.sh`
 
 ### Deployment Architecture
 ```
@@ -118,9 +108,9 @@ Frontend (Static Host)
     ↓ API calls
 Backend (Render - Django + DRF)
     ↓ Database queries
-PostgreSQL (Render)
+PostgreSQL (Neon)
     ↓ Real-time communication
-WebSocket Worker (Render - Daphne)
+WebSocket Worker (Daphne)
 ```
 
 ## Environment Variables
@@ -145,16 +135,16 @@ Set these in your deployment platform:
 # Django Configuration
 DEBUG=False
 SECRET_KEY=your-production-secret-key
-ALLOWED_HOSTS=your-backend-domain.onrender.com
+ALLOWED_HOSTS=liyf.app,www.liyf.app
 
-# Database Configuration (auto-set by Render)
-DATABASE_URL=postgresql://...
+# Database Configuration
+DATABASE_URL=postgresql://<role>:<password>@<neon-pooler-host>/neondb?sslmode=require&channel_binding=require
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
 
 # Frontend Configuration
-VITE_API_BASE_URL=https://your-backend-domain.onrender.com
+VITE_API_BASE_URL=https://liyf.app
 ```
 
 ## Project Structure

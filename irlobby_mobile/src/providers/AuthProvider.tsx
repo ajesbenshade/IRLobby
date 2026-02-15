@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   fetchProfile,
   login,
+  loginWithTwitter,
   logout as logoutService,
   register,
   requestPasswordReset as requestPasswordResetService,
@@ -17,6 +18,7 @@ interface AuthContextValue {
   isInitializing: boolean;
   isAuthenticated: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
+  signInWithTwitter: () => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<AuthUser | null>;
@@ -70,6 +72,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
+  const signInWithTwitter = useCallback(async () => {
+    const { user: nextUser } = await loginWithTwitter();
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const { user: nextUser } = await register(payload);
     setUser(nextUser);
@@ -106,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isInitializing,
       isAuthenticated: !!user,
       signIn,
+      signInWithTwitter,
       signUp,
       signOut,
       refreshProfile,
@@ -118,6 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       requestPasswordReset,
       resetPassword,
       signIn,
+      signInWithTwitter,
       signOut,
       signUp,
       user,

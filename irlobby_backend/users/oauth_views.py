@@ -12,7 +12,9 @@ import secrets
 import hashlib
 import base64
 import logging
-from urllib.parse import quote
+import json
+from urllib.parse import quote, urlencode
+from django.shortcuts import redirect
 from .serializers import UserSerializer
 
 logger = logging.getLogger(__name__)
@@ -115,6 +117,10 @@ def resolve_frontend_origin(request):
     frontend_base_url = getattr(settings, 'FRONTEND_BASE_URL', None) or 'http://localhost:5173'
     return frontend_base_url.rstrip('/')
 
+
+def is_valid_mobile_redirect_uri(uri):
+    return isinstance(uri, str) and uri.startswith('irlobby://')
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def twitter_oauth_url(request):
@@ -135,8 +141,18 @@ def twitter_oauth_url(request):
         code_verifier = generate_code_verifier()
         code_challenge = generate_code_challenge(code_verifier)
 
-        frontend_origin = resolve_frontend_origin(request)
-        redirect_uri = f'{frontend_origin}/auth/twitter/callback'
+        mobile_redirect_uri = request.GET.get('mobile_redirect_uri')
+        if mobile_redirect_uri:
+            if not is_valid_mobile_redirect_uri(mobile_redirect_uri):
+                return Response(
+                    {'error': 'Invalid mobile redirect URI.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            redirect_uri = request.build_absolute_uri('/api/auth/twitter/callback/')
+        else:
+            frontend_origin = resolve_frontend_origin(request)
+            redirect_uri = f'{frontend_origin}/auth/twitter/callback'
 
         logger.info(f"Using redirect URI: {redirect_uri}")
 
@@ -147,6 +163,7 @@ def twitter_oauth_url(request):
             {
                 'code_verifier': code_verifier,
                 'redirect_uri': redirect_uri,
+                'mobile_redirect_uri': mobile_redirect_uri,
             },
             timeout=600,
         )  # 10 minutes
@@ -204,9 +221,11 @@ def twitter_oauth_callback(request):
         if isinstance(oauth_session, dict):
             code_verifier = oauth_session.get('code_verifier')
             redirect_uri = oauth_session.get('redirect_uri')
+            mobile_redirect_uri = oauth_session.get('mobile_redirect_uri')
         else:
             # Backward compatibility for previously cached values
             code_verifier = oauth_session
+            mobile_redirect_uri = None
             frontend_origin = resolve_frontend_origin(request)
             redirect_uri = f'{frontend_origin}/auth/twitter/callback'
 
@@ -292,11 +311,26 @@ def twitter_oauth_callback(request):
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
 
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+        serialized_user = UserSerializer(user).data
+
+        if mobile_redirect_uri:
+            callback_query = urlencode(
+                {
+                    'access': access_token,
+                    'refresh': refresh_token,
+                    'user': json.dumps(serialized_user, separators=(',', ':')),
+                    'created': 'true' if created else 'false',
+                }
+            )
+            return redirect(f'{mobile_redirect_uri}?{callback_query}')
+
         return Response({
-            'user': UserSerializer(user).data,
+            'user': serialized_user,
             'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+                'refresh': refresh_token,
+                'access': access_token,
             },
             'created': created
         }, status=status.HTTP_200_OK)

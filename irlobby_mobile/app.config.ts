@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/icon.png',
   scheme: 'irlobby',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'light',
   updates: {
     url: process.env.EAS_UPDATE_URL,
   },

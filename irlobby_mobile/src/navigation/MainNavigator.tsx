@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { ChatScreen } from '@screens/main/ChatScreen';
+import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
 import { DiscoverScreen } from '@screens/main/DiscoverScreen';
 import { HomeScreen } from '@screens/main/HomeScreen';
 import { MatchesScreen } from '@screens/main/MatchesScreen';
@@ -22,6 +23,7 @@ export const MainNavigator = () => (
           {
             Home: 'home-variant',
             Discover: 'compass-outline',
+            Create: 'plus-circle-outline',
             Matches: 'heart-outline',
             Chat: 'message-text-outline',
             Profile: 'account-circle-outline',
@@ -33,6 +35,7 @@ export const MainNavigator = () => (
   >
     <Tab.Screen name="Home" component={HomeScreen} />
     <Tab.Screen name="Discover" component={DiscoverScreen} />
+    <Tab.Screen name="Create" component={CreateActivityScreen} />
     <Tab.Screen name="Matches" component={MatchesScreen} />
     <Tab.Screen name="Chat" component={ChatScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />

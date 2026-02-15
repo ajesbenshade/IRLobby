@@ -1,6 +1,6 @@
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
 import { useAuth } from '@hooks/useAuth';
@@ -12,7 +12,6 @@ import type { RootStackParamList } from './types';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 export const AppNavigator = () => {
-  const scheme = useColorScheme();
   const { isAuthenticated, isInitializing, user } = useAuth();
 
   if (isInitializing) {
@@ -30,7 +29,7 @@ export const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer theme={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavigationContainer theme={DefaultTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           user?.onboardingCompleted === false ? (

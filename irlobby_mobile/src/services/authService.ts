@@ -1,3 +1,8 @@
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+
+import { config } from '@constants/config';
+
 import { api } from './apiClient';
 import { authStorage } from './authStorage';
 
@@ -94,6 +99,79 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   const normalizedTokens = normalizeTokens(response.data.tokens);
   await authStorage.setTokens(normalizedTokens);
   return { user: normalizeUser(response.data.user), tokens: normalizedTokens };
+}
+
+interface TwitterOAuthUrlResponse {
+  auth_url: string;
+  state?: string;
+}
+
+interface TwitterOAuthStatusResponse {
+  configured?: boolean;
+}
+
+const parseCallbackUser = (value: unknown) => {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error('Twitter sign-in response is missing user details.');
+  }
+
+  try {
+    return JSON.parse(value) as AuthUser;
+  } catch (error) {
+    throw new Error('Twitter sign-in response was not valid.');
+  }
+};
+
+export async function loginWithTwitter(): Promise<AuthResponse> {
+  const returnUrl = config.twitterRedirectUri?.trim() || Linking.createURL('auth/twitter');
+
+  const statusResponse = await api.get<TwitterOAuthStatusResponse>('/api/auth/twitter/status/');
+  if (!statusResponse.data?.configured) {
+    throw new Error('X/Twitter login is not configured on the backend yet.');
+  }
+
+  const oauthUrlResponse = await api.get<TwitterOAuthUrlResponse>('/api/auth/twitter/url/', {
+    params: {
+      mobile_redirect_uri: returnUrl,
+    },
+  });
+
+  const authUrl = oauthUrlResponse.data?.auth_url;
+  if (!authUrl) {
+    throw new Error('Unable to start X/Twitter login. Please try again.');
+  }
+
+  const authResult = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
+  if (authResult.type !== 'success' || !authResult.url) {
+    throw new Error('X/Twitter sign-in was cancelled.');
+  }
+
+  const parsedResult = Linking.parse(authResult.url);
+  const callbackParams = parsedResult.queryParams ?? {};
+
+  if (typeof callbackParams.error === 'string' && callbackParams.error.length > 0) {
+    throw new Error(callbackParams.error);
+  }
+
+  const accessTokenValue = callbackParams.access;
+  const refreshTokenValue = callbackParams.refresh;
+  const userValue = callbackParams.user;
+
+  if (typeof accessTokenValue !== 'string' || !accessTokenValue) {
+    throw new Error('X/Twitter sign-in did not return an access token.');
+  }
+
+  const normalizedTokens = normalizeTokens({
+    access: accessTokenValue,
+    refresh: typeof refreshTokenValue === 'string' ? refreshTokenValue : undefined,
+  });
+
+  await authStorage.setTokens(normalizedTokens);
+
+  return {
+    user: normalizeUser(parseCallbackUser(userValue)),
+    tokens: normalizedTokens,
+  };
 }
 
 export async function logout(): Promise<void> {

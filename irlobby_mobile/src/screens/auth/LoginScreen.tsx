@@ -6,11 +6,13 @@ import {
   Button,
   HelperText,
   Surface,
+  Divider,
   Text,
   TextInput,
   useTheme,
 } from 'react-native-paper';
 
+import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import { getErrorMessage } from '@utils/error';
 
@@ -20,7 +22,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export const LoginScreen = ({ navigation }: Props) => {
   const theme = useTheme();
-  const { signIn } = useAuth();
+  const { signIn, signInWithTwitter } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -30,13 +32,32 @@ export const LoginScreen = ({ navigation }: Props) => {
     mutationFn: () => signIn({ email: email.trim().toLowerCase(), password }),
   });
 
+  const {
+    mutateAsync: signInWithTwitterAsync,
+    isPending: isTwitterPending,
+    error: twitterError,
+  } = useMutation({
+    mutationFn: () => signInWithTwitter(),
+  });
+
+  const isBusy = isPending || isTwitterPending;
+  const authError = error ?? twitterError;
+
   const handleSubmit = useCallback(async () => {
-    if (!isFormValid || isPending) {
+    if (!isFormValid || isBusy) {
       return;
     }
 
     await mutateAsync();
-  }, [isFormValid, isPending, mutateAsync]);
+  }, [isFormValid, isBusy, mutateAsync]);
+
+  const handleTwitterSignIn = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
+    await signInWithTwitterAsync();
+  }, [isBusy, signInWithTwitterAsync]);
 
   return (
     <KeyboardAvoidingView
@@ -47,7 +68,7 @@ export const LoginScreen = ({ navigation }: Props) => {
         <Text variant="headlineMedium" style={styles.title}>
           Welcome back
         </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
+        <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }] }>
           Sign in to discover nearby IRL activities.
         </Text>
 
@@ -69,26 +90,44 @@ export const LoginScreen = ({ navigation }: Props) => {
             onChangeText={setPassword}
             style={styles.input}
           />
-          {error && (
+          {authError && (
             <HelperText type="error" visible>
-              {getErrorMessage(error, 'Unable to sign in. Please try again.')}
+              {getErrorMessage(authError, 'Unable to sign in. Please try again.')}
+            </HelperText>
+          )}
+
+          {config.isUsingFallbackApiBaseUrl && (
+            <HelperText type="info" visible>
+              Using default backend URL: {config.apiBaseUrl}
             </HelperText>
           )}
 
           <Button
             mode="contained"
             onPress={handleSubmit}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isBusy}
             loading={isPending}
             style={styles.submitButton}
           >
             Sign in
           </Button>
 
+          <View style={styles.oauthSection}>
+            <Divider />
+            <Button
+              mode="outlined"
+              onPress={handleTwitterSignIn}
+              disabled={isBusy}
+              loading={isTwitterPending}
+            >
+              Continue with X
+            </Button>
+          </View>
+
           <Button
             mode="text"
             onPress={() => navigation.navigate('ForgotPassword')}
-            disabled={isPending}
+            disabled={isBusy}
             style={styles.linkButton}
           >
             Forgot password?
@@ -97,7 +136,7 @@ export const LoginScreen = ({ navigation }: Props) => {
 
         <View style={styles.footer}>
           <Text variant="bodyMedium">New to IRLobby?</Text>
-          <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isPending}>
+          <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy}>
             Create an account
           </Button>
         </View>
@@ -126,7 +165,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: 'center',
-    color: '#64748b',
   },
   form: {
     gap: 12,
@@ -140,6 +178,10 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     alignSelf: 'flex-start',
+  },
+  oauthSection: {
+    marginTop: 4,
+    gap: 12,
   },
   footer: {
     flexDirection: 'row',

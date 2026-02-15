@@ -89,19 +89,6 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     enabled: !!activityId,
   });
 
-  const sendFriendRequest = async (userId: string) => {
-    try {
-      // Call API to send friend request
-      console.log(`Sending friend request to user ${userId}`);
-      const response = await apiRequest('POST', '/api/friends/request', {
-        receiverId: userId,
-      });
-      return response.json();
-    } catch (error) {
-      console.error('Failed to send friend request:', error);
-    }
-  };
-
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
       console.log(`Sending message to activity ${activityId}: ${messageText}`);
@@ -324,11 +311,7 @@ export default function Chat({ activityId, onBack }: ChatProps) {
                     </div>
                     <p className="text-sm text-gray-500">{participant.email}</p>
                   </div>
-                  {user?.id !== participant.id && (
-                    <Button onClick={() => sendFriendRequest(participant.id)} size="sm">
-                      Add Friend
-                    </Button>
-                  )}
+                  {user?.id !== participant.id && <span className="text-xs text-gray-400">Peer</span>}
                 </div>
               ))
             )}
@@ -342,9 +325,6 @@ export default function Chat({ activityId, onBack }: ChatProps) {
           isOpen={isUserProfileModalOpen}
           onClose={closeUserProfile}
           userId={selectedUserId}
-          onSendFriendRequest={
-            user?.id !== selectedUserId ? () => sendFriendRequest(selectedUserId) : undefined
-          }
         />
       )}
     </div>

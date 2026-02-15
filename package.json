@@ -1,0 +1,11 @@
+{
+  "name": "irlobby-workspace",
+  "private": true,
+  "scripts": {
+    "check:api-contract": "node scripts/check-api-contract.mjs",
+    "check:web:lint": "npm --prefix client run lint",
+    "check:web": "npm --prefix client run test && npm --prefix client run build",
+    "check:mobile": "npm --prefix irlobby_mobile run typecheck && npm --prefix irlobby_mobile run bundle:ios",
+    "check:release": "npm run check:api-contract && npm run check:web && npm run check:mobile"
+  }
+}

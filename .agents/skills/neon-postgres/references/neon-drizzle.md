@@ -15,13 +15,13 @@ Drizzle ORM works with multiple Postgres drivers. See `connection-methods.md` fo
 | Cloudflare Workers      | No          | No                  | `@neondatabase/serverless` |
 | Netlify Functions       | No          | No                  | `@neondatabase/serverless` |
 | Deno Deploy             | No          | No                  | `@neondatabase/serverless` |
-| Railway / Render        | Yes         | Built-in            | `pg` (node-postgres)       |
+| Railway / VPS           | Yes         | Built-in            | `pg` (node-postgres)       |
 
 ## Connection Setup
 
 ### 1. TCP with node-postgres (Long-Running Servers)
 
-Best for Railway, Render, traditional VPS.
+Best for Railway and traditional VPS.
 
 ```bash
 npm install drizzle-orm pg

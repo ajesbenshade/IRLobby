@@ -39,7 +39,7 @@ This is the only option for client-side apps since browsers cannot make direct T
 
 ---
 
-### 3. Long-Running Server? (Railway, Render, traditional VPS)
+### 3. Long-Running Server? (Railway, traditional VPS)
 
 **Yes** → Use **TCP with connection pooling** via `node-postgres`, `postgres.js`, or `bun:pg`
 
@@ -98,7 +98,7 @@ Fall back to the decision in step 5 based on transaction requirements.
 | Cloudflare Workers      | No          | No                  | `@neondatabase/serverless` |
 | Netlify Functions       | No          | No                  | `@neondatabase/serverless` |
 | Deno Deploy             | No          | No                  | `@neondatabase/serverless` |
-| Railway / Render        | Yes         | Built-in            | `pg` (node-postgres)       |
+| Railway / VPS           | Yes         | Built-in            | `pg` (node-postgres)       |
 | Client-side (browser)   | No          | N/A                 | `@neondatabase/neon-js`    |
 
 ---

@@ -1,292 +1,268 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_ROUTES } from '@shared/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Star, Calendar, MapPin, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { Star } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
-interface AttendedActivity {
+interface MatchItem {
   id: number;
-  title: string;
-  description: string;
-  location: string;
-  latitude?: number;
-  longitude?: number;
-  time: string;
-  capacity: number;
-  tags: string[];
-  images: string[];
+  activity_id?: number | null;
+  activity: string;
+  user_a_id?: number;
+  user_a: string;
+  user_b_id?: number;
+  user_b: string;
   created_at: string;
-  participant_count: number;
-  host?: {
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    profileImageUrl?: string;
-  };
-  dateTime?: string;
-  category?: string;
+}
+
+interface ReviewItem {
+  id: number;
+  reviewerId: number;
+  reviewer: string;
+  revieweePk: number;
+  reviewee: string;
+  activityPk: number;
+  activity: string;
+  rating: number;
+  comment: string;
+  created_at: string;
 }
 
 interface ReviewPayload {
+  revieweeId: number;
   activityId: number;
   rating: number;
-  review: string;
+  comment: string;
+}
+
+interface ReviewOpportunity {
+  matchId: number;
+  activityId: number;
+  activity: string;
+  revieweeId: number;
+  revieweeName: string;
 }
 
 export default function Reviews() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedActivity, setSelectedActivity] = useState<AttendedActivity | null>(null);
-  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<ReviewOpportunity | null>(null);
   const [rating, setRating] = useState(0);
-  const [reviewText, setReviewText] = useState('');
+  const [comment, setComment] = useState('');
 
-  // Fetch attended activities
-  const { data: attendedActivities = [] } = useQuery<AttendedActivity[]>({
-    queryKey: [`/api/users/${user?.id}/attended-activities`],
-    enabled: !!user?.id,
+  const { data: matches = [] } = useQuery<MatchItem[]>({
+    queryKey: [API_ROUTES.MATCHES],
+    queryFn: async () => {
+      const response = await apiRequest('GET', API_ROUTES.MATCHES);
+      return response.json();
+    },
+    enabled: !!user,
   });
 
-  // Create review mutation
-  const createReviewMutation = useMutation<Response, Error, ReviewPayload>({
-    mutationFn: async (reviewData: ReviewPayload) => {
-      return await apiRequest(
-        'POST',
-        `/api/activities/${reviewData.activityId}/reviews`,
-        reviewData,
-      );
+  const { data: reviews = [] } = useQuery<ReviewItem[]>({
+    queryKey: [API_ROUTES.REVIEWS],
+    queryFn: async () => {
+      const response = await apiRequest('GET', API_ROUTES.REVIEWS);
+      return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: 'Review submitted!',
-        description: 'Thank you for your feedback.',
-      });
-      setShowReviewModal(false);
+    enabled: !!user,
+  });
+
+  const createReviewMutation = useMutation({
+    mutationFn: async (payload: ReviewPayload) => {
+      const response = await apiRequest('POST', API_ROUTES.REVIEWS, payload);
+      if (!response.ok) {
+        throw new Error('Failed to submit review');
+      }
+      return response.json();
+    },
+    onSuccess: async () => {
+      toast({ title: 'Review submitted', description: 'Thanks for sharing your feedback.' });
+      setSelectedOpportunity(null);
       setRating(0);
-      setReviewText('');
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/attended-activities`] });
+      setComment('');
+      await queryClient.invalidateQueries({ queryKey: [API_ROUTES.REVIEWS] });
     },
-    onError: (error) => {
-      console.error('Error submitting review:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to submit review',
-        variant: 'destructive',
-      });
+    onError: () => {
+      toast({ title: 'Error', description: 'Could not submit review.', variant: 'destructive' });
     },
   });
 
-  const handleReviewActivity = (activity: AttendedActivity) => {
-    setSelectedActivity(activity);
-    setShowReviewModal(true);
+  const opportunities = useMemo<ReviewOpportunity[]>(() => {
+    if (!user) {
+      return [];
+    }
+
+    const userId = Number(user.id);
+    const reviewedKeys = new Set(
+      reviews
+        .filter((review) => review.reviewerId === userId)
+        .map((review) => `${review.activityPk}:${review.revieweePk}`),
+    );
+
+    return matches
+      .filter((match) => Boolean(match.activity_id) && Boolean(match.user_a_id) && Boolean(match.user_b_id))
+      .map((match) => {
+        const isUserA = match.user_a_id === userId;
+        return {
+          matchId: match.id,
+          activityId: Number(match.activity_id),
+          activity: match.activity,
+          revieweeId: isUserA ? Number(match.user_b_id) : Number(match.user_a_id),
+          revieweeName: isUserA ? match.user_b : match.user_a,
+        };
+      })
+      .filter((item) => item.revieweeId !== userId)
+      .filter((item) => !reviewedKeys.has(`${item.activityId}:${item.revieweeId}`));
+  }, [matches, reviews, user]);
+
+  const myReviews = useMemo(() => {
+    if (!user) {
+      return [];
+    }
+    return reviews.filter((review) => review.reviewerId === Number(user.id));
+  }, [reviews, user]);
+
+  const openReview = (item: ReviewOpportunity) => {
+    setSelectedOpportunity(item);
+    setRating(0);
+    setComment('');
   };
 
-  const handleSubmitReview = () => {
-    if (rating === 0) {
-      toast({
-        title: 'Rating required',
-        description: 'Please select a star rating',
-        variant: 'destructive',
-      });
+  const submitReview = () => {
+    if (!selectedOpportunity || rating < 1) {
       return;
     }
 
     createReviewMutation.mutate({
-      activityId: selectedActivity!.id,
+      revieweeId: selectedOpportunity.revieweeId,
+      activityId: selectedOpportunity.activityId,
       rating,
-      review: reviewText,
+      comment: comment.trim(),
     });
   };
 
-  const renderStars = (currentRating: number, interactive: boolean = false) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-5 w-5 ${
-              star <= currentRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-            onClick={interactive ? () => setRating(star) : undefined}
-          />
-        ))}
-      </div>
-    );
-  };
+  const renderStars = (value: number, interactive = false) => (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`h-5 w-5 ${star <= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} ${interactive ? 'cursor-pointer' : ''}`}
+          onClick={interactive ? () => setRating(star) : undefined}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Reviews & Ratings</h1>
-          <p className="text-muted-foreground">
-            Share your experience and help others discover great activities
-          </p>
-        </div>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <header>
+          <h1 className="text-2xl font-bold">Reviews</h1>
+          <p className="text-sm text-muted-foreground">Rate your matched activities and participants.</p>
+        </header>
 
-        <Tabs defaultValue="to-review" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="to-review">Activities to Review</TabsTrigger>
-            <TabsTrigger value="my-reviews">My Reviews</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="to-review" className="space-y-4 mt-6">
-            {attendedActivities.length > 0 ? (
-              <div className="grid gap-4">
-                {attendedActivities.map((activity: AttendedActivity) => (
-                  <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <CardTitle className="text-lg">{activity.title}</CardTitle>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {format(
-                                new Date(activity.time || activity.dateTime || ''),
-                                'MMM d, yyyy',
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {activity.location}
-                            </div>
-                          </div>
-                          <Badge variant="secondary">{activity.category}</Badge>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={activity.host?.profileImageUrl} />
-                              <AvatarFallback>
-                                {activity.host?.firstName?.[0]}
-                                {activity.host?.lastName?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">
-                              {activity.host?.firstName} {activity.host?.lastName}
-                            </span>
-                          </div>
-                          <Button onClick={() => handleReviewActivity(activity)} size="sm">
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Write Review
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Reviews</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {opportunities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No pending reviews right now.</p>
             ) : (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No activities to review</h3>
-                  <p className="text-muted-foreground">
-                    Attend some activities to share your experience with others!
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="my-reviews" className="space-y-4 mt-6">
-            <Card>
-              <CardContent className="text-center py-8">
-                <Star className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Your reviews will appear here</h3>
-                <p className="text-muted-foreground">
-                  Once you submit reviews, you&apos;ll be able to see and manage them here.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Review Modal */}
-        <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Review Activity</DialogTitle>
-            </DialogHeader>
-
-            {selectedActivity && (
-              <div className="space-y-6">
-                {/* Activity Info */}
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">{selectedActivity.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {format(
-                        new Date(selectedActivity.time || selectedActivity.dateTime || ''),
-                        'MMM d, yyyy',
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {selectedActivity.location}
-                    </div>
+              opportunities.map((item) => (
+                <div key={`${item.matchId}-${item.revieweeId}`} className="flex items-center justify-between rounded border p-3">
+                  <div>
+                    <p className="font-medium">{item.activity}</p>
+                    <p className="text-sm text-muted-foreground">Review {item.revieweeName}</p>
                   </div>
-                </div>
-
-                {/* Rating */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Overall Rating</div>
-                  <div className="flex items-center gap-2">
-                    {renderStars(rating, true)}
-                    <span className="text-sm text-muted-foreground ml-2">
-                      {rating > 0 ? `${rating} star${rating !== 1 ? 's' : ''}` : 'Select rating'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Review Text */}
-                <div className="space-y-2">
-                  <label htmlFor="review-text" className="text-sm font-medium">
-                    Your Review
-                  </label>
-                  <Textarea
-                    id="review-text"
-                    placeholder="Share your experience with this activity..."
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowReviewModal(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSubmitReview}
-                    disabled={createReviewMutation.isPending || rating === 0}
-                    className="flex-1"
-                  >
-                    {createReviewMutation.isPending ? 'Submitting...' : 'Submit Review'}
+                  <Button size="sm" onClick={() => openReview(item)}>
+                    Write review
                   </Button>
                 </div>
-              </div>
+              ))
             )}
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>My Reviews</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {myReviews.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No submitted reviews yet.</p>
+            ) : (
+              myReviews.map((review) => (
+                <div key={review.id} className="rounded border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{review.activity}</p>
+                      <p className="text-sm text-muted-foreground">For {review.reviewee}</p>
+                    </div>
+                    <Badge variant="secondary">{format(new Date(review.created_at), 'MMM d, yyyy')}</Badge>
+                  </div>
+                  {renderStars(review.rating)}
+                  {review.comment ? <p className="text-sm">{review.comment}</p> : null}
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <Dialog open={!!selectedOpportunity} onOpenChange={() => setSelectedOpportunity(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Write review</DialogTitle>
+          </DialogHeader>
+
+          {selectedOpportunity && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                {selectedOpportunity.activity} · {selectedOpportunity.revieweeName}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Rating</p>
+                {renderStars(rating, true)}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Comment</p>
+                <Textarea
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Share your experience"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setSelectedOpportunity(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  disabled={rating < 1 || createReviewMutation.isPending}
+                  onClick={submitReview}
+                >
+                  {createReviewMutation.isPending ? 'Submitting...' : 'Submit'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

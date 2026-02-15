@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Star, Calendar, MapPin } from 'lucide-react';
@@ -30,9 +31,9 @@ export default function UserReviewsModal({
   userName,
 }: UserReviewsModalProps) {
   const { data: reviews = [], isLoading } = useQuery<Review[]>({
-    queryKey: ['/api/reviews', userName],
+    queryKey: [API_ROUTES.REVIEWS, userName],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/reviews/');
+      const response = await apiRequest('GET', API_ROUTES.REVIEWS);
       const allReviews = (await response.json()) as Review[];
       return allReviews.filter((review) => review.reviewee === userName);
     },

@@ -1,11 +1,13 @@
 from datetime import timedelta
+from unittest.mock import Mock, patch
 
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from users.models import User
+from users.models import PushDeviceToken, User
+from users.push_notifications import send_push_to_user
 
 
 class PasswordResetConfirmTests(APITestCase):
@@ -156,3 +158,59 @@ class OnboardingAndInviteTests(APITestCase):
         )
         self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
         self.assertEqual(accept_response.data['status'], 'accepted')
+
+
+class PushNotificationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='push-test-user',
+            email='push-test@example.com',
+            password='password123',
+        )
+        self.user.preferences = {'notifications': {'pushNotifications': True}}
+        self.user.save(update_fields=['preferences'])
+
+    @patch('users.push_notifications.requests.post')
+    def test_send_push_deactivates_device_not_registered_token(self, mock_post):
+        token = PushDeviceToken.objects.create(
+            user=self.user,
+            token='ExponentPushToken[test-deactivate]',
+            platform='ios',
+            is_active=True,
+        )
+
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.json.return_value = {
+            'data': [
+                {
+                    'status': 'error',
+                    'details': {'error': 'DeviceNotRegistered'},
+                }
+            ]
+        }
+        mock_post.return_value = mock_response
+
+        send_push_to_user(self.user, 'Test', 'Body')
+
+        token.refresh_from_db()
+        self.assertFalse(token.is_active)
+
+    @patch('users.push_notifications.requests.post')
+    def test_send_push_keeps_token_active_on_success(self, mock_post):
+        token = PushDeviceToken.objects.create(
+            user=self.user,
+            token='ExponentPushToken[test-active]',
+            platform='ios',
+            is_active=True,
+        )
+
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.json.return_value = {'data': [{'status': 'ok', 'id': 'ticket-1'}]}
+        mock_post.return_value = mock_response
+
+        send_push_to_user(self.user, 'Test', 'Body')
+
+        token.refresh_from_db()
+        self.assertTrue(token.is_active)

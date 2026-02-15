@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import {
   ArrowLeft,
   Bell,
@@ -97,7 +98,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
 
   const loadUserSettings = useCallback(async () => {
     try {
-      const response = await apiRequest('GET', '/api/users/profile/');
+      const response = await apiRequest('GET', API_ROUTES.USER_PROFILE);
       if (!response.ok) {
         throw new Error('Failed to load settings');
       }
@@ -136,12 +137,20 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       try {
         setLoading(true);
 
-        const payload: Partial<UserSettings> =
-          section === 'preferences'
-            ? { preferences: newSettings as PreferenceSettings }
-            : ({ [section]: newSettings } as Partial<UserSettings>);
+        const nextSettings: UserSettings = {
+          ...settings,
+          [section]: newSettings,
+        } as UserSettings;
 
-        const response = await apiRequest('PATCH', '/api/users/profile/', payload);
+        const payload = {
+          preferences: {
+            ...nextSettings.preferences,
+            notifications: nextSettings.notifications,
+            privacy: nextSettings.privacy,
+          },
+        };
+
+        const response = await apiRequest('PATCH', API_ROUTES.USER_PROFILE, payload);
 
         if (!response.ok) {
           throw new Error('Failed to update settings');
@@ -161,9 +170,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
             privacy ?? (section === 'privacy' ? (newSettings as PrivacySettings) : prev.privacy),
           preferences: {
             ...prev.preferences,
-            ...(section === 'preferences'
-              ? (newSettings as PreferenceSettings)
-              : preferenceOverrides),
+            ...preferenceOverrides,
           },
         }));
 
@@ -182,7 +189,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
         setLoading(false);
       }
     },
-    [toast],
+    [settings, toast],
   );
 
   const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
@@ -215,7 +222,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
 
   const exportData = async () => {
     try {
-      const response = await apiRequest('GET', '/api/users/profile/export/');
+      const response = await apiRequest('GET', API_ROUTES.USER_PROFILE_EXPORT);
 
       if (response.ok) {
         const data = await response.json();
@@ -256,7 +263,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       )
     ) {
       try {
-        await apiRequest('DELETE', '/api/users/profile/delete/');
+        await apiRequest('DELETE', API_ROUTES.USER_PROFILE_DELETE);
 
         // Clear all user data from local storage
         localStorage.removeItem('authToken');

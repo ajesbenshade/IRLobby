@@ -253,6 +253,9 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='ajesbenshade@gmail.com')
 
+EXPO_PUSH_API_URL = config('EXPO_PUSH_API_URL', default='https://exp.host/--/api/v2/push/send')
+EXPO_PUSH_ACCESS_TOKEN = config('EXPO_PUSH_ACCESS_TOKEN', default='')
+
 # Frontend base URL for password reset links
 FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:5173/')
 

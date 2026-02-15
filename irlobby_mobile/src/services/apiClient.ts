@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import { API_ROUTES } from '@shared/schema';
 
 import { config } from '@constants/config';
 import { authStorage, getAccessToken, getRefreshToken } from './authStorage';
@@ -32,7 +33,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const payload = refreshToken ? { refresh: refreshToken } : {};
 
     const response = await axios.post<Partial<AuthTokens> & { access?: string; refresh?: string }>(
-      `${config.apiBaseUrl}/api/auth/token/refresh/`,
+      `${config.apiBaseUrl}${API_ROUTES.AUTH_REFRESH}`,
       payload,
       {
         headers: { 'Content-Type': 'application/json' },

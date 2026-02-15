@@ -10,9 +10,21 @@ class ReviewListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Review.objects.filter(
+        queryset = Review.objects.filter(
             Q(reviewer=user) | Q(reviewee=user)
-        ).order_by('-created_at')
+        )
+
+        role = self.request.query_params.get('role')
+        if role == 'given':
+            queryset = queryset.filter(reviewer=user)
+        elif role == 'received':
+            queryset = queryset.filter(reviewee=user)
+
+        activity_id = self.request.query_params.get('activityId')
+        if activity_id:
+            queryset = queryset.filter(activity_id=activity_id)
+
+        return queryset.order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(reviewer=self.request.user)

@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from activities.models import Activity
 from matches.models import Match
+from users.push_notifications import send_new_match_notifications
 from .models import Swipe
 from .serializers import SwipeSerializer
 
@@ -37,6 +38,7 @@ def swipe_activity(request, pk):
     with transaction.atomic():
         # Create the swipe
         swipe = Swipe.objects.create(user=user, activity=activity, direction=direction)
+        created_match = None
 
         matched = False
         # If it's a right swipe, check for matches
@@ -59,7 +61,12 @@ def swipe_activity(request, pk):
                         user_two=activity.host,
                     )
                     matched = created  # Only consider it a new match if it was just created
+                    if created:
+                        created_match = match_obj
                     break
+
+    if created_match is not None:
+        send_new_match_notifications(created_match)
 
     return Response({
         'message': f'Swiped {direction}',

@@ -16,6 +16,7 @@ export interface AuthUser {
   bio?: string | null;
   city?: string | null;
   interests?: string[];
+  photoAlbum?: string[];
   onboardingCompleted?: boolean;
   isHost?: boolean;
 }

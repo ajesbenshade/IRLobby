@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -110,7 +111,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: [
-      '/api/activities',
+      API_ROUTES.ACTIVITIES,
       userLocation?.latitude,
       userLocation?.longitude,
       searchRadius,
@@ -140,7 +141,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         params.set(key, String(value));
       }
 
-      const response = await apiRequest('GET', `/api/activities/?${params.toString()}`);
+      const response = await apiRequest('GET', API_ROUTE_BUILDERS.activitiesWithSearch(params.toString()));
       if (!response.ok) {
         throw new Error('Failed to fetch activities');
       }

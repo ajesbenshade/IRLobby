@@ -1,5 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  deactivatePushTokens,
+  registerCurrentDevicePushToken,
+} from '@services/pushNotificationService';
 import {
   fetchProfile,
   login,
@@ -31,6 +35,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const registeredPushUserIdRef = useRef<string | number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,7 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
+    await deactivatePushTokens();
     await logoutService();
+    registeredPushUserIdRef.current = null;
     setUser(null);
   }, []);
 
@@ -107,6 +114,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const resetPassword = useCallback(async (token: string, newPassword: string) => {
     await resetPasswordService(token, newPassword);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      registeredPushUserIdRef.current = null;
+      return;
+    }
+
+    if (registeredPushUserIdRef.current === user.id) {
+      return;
+    }
+
+    registeredPushUserIdRef.current = user.id;
+    void registerCurrentDevicePushToken();
+  }, [user?.id]);
 
   const value = useMemo(
     () => ({

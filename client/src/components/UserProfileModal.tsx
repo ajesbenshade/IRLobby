@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { Star, MapPin, Calendar, Users, Award } from 'lucide-react';
 import { useState } from 'react';
@@ -44,7 +45,7 @@ export default function UserProfileModal({
 
   // Fetch user profile data
   const { data: user, isLoading } = useQuery<UserProfile>({
-    queryKey: [`/api/users/${userId}`],
+    queryKey: [API_ROUTES.USER_PROFILE],
     enabled: isOpen && !!userId,
   });
 

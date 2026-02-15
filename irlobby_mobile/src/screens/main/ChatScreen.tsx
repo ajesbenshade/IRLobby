@@ -1,19 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { config } from '@constants/config';
 import {
   fetchConversationMessages,
   fetchConversations,
   sendConversationMessage,
 } from '@services/chatService';
+import { getAccessToken } from '@services/authStorage';
 import { getErrorMessage } from '@utils/error';
 
 export const ChatScreen = () => {
   const queryClient = useQueryClient();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
+  const websocketRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data: conversations = [],
@@ -56,6 +60,60 @@ export const ChatScreen = () => {
       await queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
     },
   });
+
+  useEffect(() => {
+    if (selectedConversationId === null) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const connect = async () => {
+      const token = await getAccessToken();
+      if (!token || isCancelled) {
+        return;
+      }
+
+      const wsUrl = `${config.websocketUrl}/ws/chat/${selectedConversationId}/?token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsUrl);
+      websocketRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as { type?: string; conversationId?: number };
+          if (payload.type === 'chat.message' && payload.conversationId === selectedConversationId) {
+            void queryClient.invalidateQueries({
+              queryKey: ['mobile-conversation-messages', selectedConversationId],
+            });
+            void queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+          }
+        } catch {
+          // no-op: ignore malformed websocket payloads
+        }
+      };
+
+      ws.onclose = () => {
+        if (isCancelled) {
+          return;
+        }
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          void connect();
+        }, 3000);
+      };
+    };
+
+    void connect();
+
+    return () => {
+      isCancelled = true;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      websocketRef.current?.close();
+      websocketRef.current = null;
+    };
+  }, [queryClient, selectedConversationId]);
 
   if (selectedConversationId !== null) {
     return (

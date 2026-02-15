@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useState } from 'react';
@@ -135,7 +136,7 @@ export default function Onboarding() {
   const saveOnboarding = async (markCompleted: boolean) => {
     setIsSaving(true);
     try {
-      await apiRequest('PATCH', '/api/users/onboarding/', {
+      await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, {
         bio,
         city,
         age_range: ageRange,
@@ -146,8 +147,8 @@ export default function Onboarding() {
         onboarding_completed: markCompleted,
       });
 
-      await queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/users/profile'] });
+      await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
+      await queryClient.refetchQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
 
       toast({
         title: markCompleted ? 'Onboarding complete' : 'Saved',
@@ -175,7 +176,7 @@ export default function Onboarding() {
 
     setIsInviting(true);
     try {
-      const response = await apiRequest('POST', '/api/users/invites/', {
+      const response = await apiRequest('POST', API_ROUTES.USER_INVITES, {
         contact_name: inviteName,
         contact_value: inviteContact,
         channel: inviteChannel,

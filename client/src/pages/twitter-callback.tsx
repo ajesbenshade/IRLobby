@@ -1,5 +1,6 @@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -34,7 +35,7 @@ const TwitterCallback = () => {
         // Exchange code for tokens
         const response = await apiRequest(
           'GET',
-          `/api/auth/twitter/callback/?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
+          `${API_ROUTES.AUTH_TWITTER_CALLBACK}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
         );
 
         if (!response.ok) {

@@ -1,137 +1,169 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import UserProfileModal from '@/components/UserProfileModal';
-import { useAuth } from '@/hooks/useAuth';
-import { useWebSocket } from '@/hooks/useWebSocket';
 import { apiRequest } from '@/lib/queryClient';
-import { ChatMessage, Participant } from '@/types/activity';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, Users } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Send } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ChatProps {
-  activityId: number;
+  matchId: number;
   onBack: () => void;
 }
 
-export default function Chat({ activityId, onBack }: ChatProps) {
-  const { user } = useAuth();
+interface ConversationMessage {
+  id: number;
+  userId: number;
+  user?: {
+    id: number;
+    firstName?: string;
+    email?: string;
+  };
+  message: string;
+  createdAt: string;
+}
+
+interface ConversationItem {
+  id: number;
+  match: string;
+  matchId: number;
+  activityId?: number | null;
+  messages: ConversationMessage[];
+  created_at: string;
+}
+
+export default function Chat({ matchId, onBack }: ChatProps) {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const websocketRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
-  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
-  const openUserProfile = (userId: string) => {
-    setSelectedUserId(userId);
-    setIsUserProfileModalOpen(true);
-  };
+  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<ConversationItem[]>({
+    queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
+    queryFn: async () => {
+      const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
+      return response.json();
+    },
+    retry: 1,
+  });
 
-  const closeUserProfile = () => {
-    setIsUserProfileModalOpen(false);
-    setSelectedUserId(null);
-  };
+  const selectedConversation = conversations.find((conversation) => conversation.matchId === matchId);
 
-  // Fetch messages with proper error handling
   const {
     data: messages = [],
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ['/api/activities', activityId, 'chat'],
+  } = useQuery<ConversationMessage[]>({
+    queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, selectedConversation?.id, 'messages'],
     queryFn: async () => {
-      console.log(`Fetching chat messages for activity: ${activityId}`);
-      try {
-        const response = await apiRequest('GET', `/api/activities/${activityId}/chat`);
-        const data = await response.json();
-        console.log(`Fetched ${data.length} chat messages`);
-        return data;
-      } catch (err) {
-        console.error('Error fetching chat messages:', err);
-        throw err;
-      }
-    },
-    retry: 1,
-  });
-
-  useEffect(() => {
-    if (error) {
-      console.error('Chat messages fetch error:', error);
-    }
-  }, [error]);
-
-  const { data: activity } = useQuery({
-    queryKey: ['/api/activities', activityId],
-    queryFn: async () => {
-      const response = await apiRequest('GET', `/api/activities/${activityId}`);
+      const response = await apiRequest(
+        'GET',
+        API_ROUTE_BUILDERS.conversationMessages(selectedConversation?.id ?? 0),
+      );
       return response.json();
     },
     retry: 1,
-  });
-
-  // Fetch participants for this activity
-  const { data: participants = [], isLoading: isParticipantsLoading } = useQuery({
-    queryKey: ['/api/activities', activityId, 'participants'],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest('GET', `/api/activities/${activityId}/participants`);
-        return response.json();
-      } catch (err) {
-        console.error('Error fetching participants:', err);
-        throw err;
-      }
-    },
-    retry: 1,
-    enabled: !!activityId,
+    enabled: !!selectedConversation,
   });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
-      console.log(`Sending message to activity ${activityId}: ${messageText}`);
-      const response = await apiRequest('POST', `/api/activities/${activityId}/chat`, {
-        message: messageText,
-      });
+      if (!selectedConversation) {
+        throw new Error('No conversation selected.');
+      }
+
+      const response = await apiRequest(
+        'POST',
+        API_ROUTE_BUILDERS.conversationMessages(selectedConversation.id),
+        {
+          message: messageText,
+        },
+      );
       return response.json();
     },
-    onSuccess: (data) => {
-      console.log('Message sent successfully:', data);
+    onSuccess: () => {
       setMessage('');
       queryClient.invalidateQueries({
-        queryKey: ['/api/activities', activityId, 'chat'],
+        queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, selectedConversation?.id, 'messages'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
       });
     },
-    onError: (error) => {
-      console.error('Failed to send message:', error);
-    },
   });
-
-  const { sendMessage: sendWebSocketMessage } = useWebSocket({
-    onMessage: (wsMessage) => {
-      if (wsMessage.type === 'new_message') {
-        queryClient.invalidateQueries({
-          queryKey: ['/api/activities', activityId, 'chat'],
-        });
-      }
-    },
-  });
-
-  useEffect(() => {
-    if (user) {
-      sendWebSocketMessage({
-        type: 'join_activity',
-        activityId,
-        userId: user.id,
-      });
-    }
-  }, [activityId, user, sendWebSocketMessage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const conversationId = selectedConversation?.id;
+    const token = localStorage.getItem('authToken');
+
+    if (!conversationId || !token) {
+      return;
+    }
+
+    const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    const websocketBaseUrl = configuredApiBase
+      ? configuredApiBase.replace(/^https?:\/\//, (prefix) =>
+          prefix === 'https://' ? 'wss://' : 'ws://',
+        )
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+
+    let isCancelled = false;
+
+    const connect = () => {
+      if (isCancelled) {
+        return;
+      }
+
+      const wsUrl = `${websocketBaseUrl}/ws/chat/${conversationId}/?token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsUrl);
+      websocketRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as {
+            type?: string;
+            conversationId?: number;
+          };
+
+          if (payload.type === 'chat.message' && payload.conversationId === conversationId) {
+            queryClient.invalidateQueries({
+              queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, conversationId, 'messages'],
+            });
+            queryClient.invalidateQueries({ queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS] });
+          }
+        } catch {
+          // no-op: ignore malformed websocket payloads
+        }
+      };
+
+      ws.onclose = () => {
+        if (isCancelled) {
+          return;
+        }
+
+        reconnectTimeoutRef.current = window.setTimeout(() => {
+          connect();
+        }, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      isCancelled = true;
+      if (reconnectTimeoutRef.current) {
+        window.clearTimeout(reconnectTimeoutRef.current);
+      }
+      websocketRef.current?.close();
+      websocketRef.current = null;
+    };
+  }, [queryClient, selectedConversation?.id]);
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -146,6 +178,32 @@ export default function Chat({ activityId, onBack }: ChatProps) {
     }
   };
 
+  if (isLoadingConversations) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!selectedConversation) {
+    return (
+      <div className="flex flex-col h-screen bg-white">
+        <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h2 className="font-semibold text-gray-800 truncate">Chat</h2>
+          </div>
+        </header>
+        <div className="flex items-center justify-center flex-1 p-6 text-center">
+          <p className="text-gray-500">Conversation not found for this match.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -156,78 +214,33 @@ export default function Chat({ activityId, onBack }: ChatProps) {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">
-          <h2 className="font-semibold text-gray-800 truncate">
-            {activity?.title || 'Activity Chat'}
-          </h2>
-          <p className="text-sm text-gray-500">{activity?.currentParticipants || 0} participants</p>
+          <h2 className="font-semibold text-gray-800 truncate">{selectedConversation.match}</h2>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={() => setIsParticipantsModalOpen(true)}
-        >
-          <Users className="w-4 h-4" />
-          <span>Participants</span>
-        </Button>
       </header>
 
-      {/* Messages */}
+      {error && <p className="text-sm text-red-600 px-4 py-2">Failed to load messages.</p>}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((msg: ChatMessage) => {
-            const isOwnMessage = msg.senderId === user?.id;
-            const senderInitials =
-              msg.sender?.firstName && msg.sender?.lastName
-                ? `${msg.sender.firstName.charAt(0)}${msg.sender.lastName.charAt(0)}`
-                : msg.sender?.email?.charAt(0) || 'U';
+          messages.map((msg) => {
+            const senderName = msg.user?.firstName || msg.user?.email?.split('@')[0] || 'User';
 
             return (
-              <div
-                key={msg.id}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`flex items-end space-x-2 max-w-xs ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}
-                >
-                  {!isOwnMessage && (
-                    <Avatar
-                      className="w-8 h-8 cursor-pointer"
-                      onClick={() => openUserProfile(msg.senderId)}
-                    >
-                      <AvatarImage src={msg.sender?.profileImageUrl} />
-                      <AvatarFallback className="text-xs">{senderInitials}</AvatarFallback>
-                    </Avatar>
-                  )}
-
-                  <div
-                    className={`rounded-2xl px-4 py-2 ${
-                      isOwnMessage ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {!isOwnMessage && (
-                      <button
-                        className="text-xs opacity-70 mb-1 cursor-pointer hover:underline bg-transparent border-none p-0 text-left"
-                        onClick={() => openUserProfile(msg.senderId)}
-                        type="button"
-                      >
-                        {msg.sender?.firstName || msg.sender?.email?.split('@')[0] || 'User'}
-                      </button>
-                    )}
+              <div key={msg.id} className="flex justify-start">
+                <div className="flex items-end space-x-2 max-w-xs">
+                  <div className="rounded-2xl px-4 py-2 bg-gray-100 text-gray-800">
+                    <p className="text-xs opacity-70 mb-1">{senderName}</p>
                     <p className="text-sm">{msg.message}</p>
-                    <p
-                      className={`text-xs mt-1 ${isOwnMessage ? 'text-white/70' : 'text-gray-500'}`}
-                    >
+                    <p className="text-xs mt-1 text-gray-500">
                       {format(new Date(msg.createdAt), 'h:mm a')}
                     </p>
                   </div>
@@ -239,13 +252,12 @@ export default function Chat({ activityId, onBack }: ChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center space-x-2">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1"
             disabled={sendMessageMutation.isPending}
@@ -260,74 +272,6 @@ export default function Chat({ activityId, onBack }: ChatProps) {
           </Button>
         </div>
       </div>
-
-      {/* Participants Modal */}
-      <Dialog open={isParticipantsModalOpen} onOpenChange={setIsParticipantsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Participants</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {isParticipantsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
-            ) : participants.length === 0 ? (
-              <p className="text-center text-gray-500">No participants found</p>
-            ) : (
-              participants.map((participant: Participant) => (
-                <div key={participant.id} className="flex items-center space-x-4">
-                  <Avatar
-                    className="cursor-pointer"
-                    onClick={() => openUserProfile(participant.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        openUserProfile(participant.id);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                  >
-                    <AvatarImage src={participant.profileImageUrl} alt={participant.firstName} />
-                    <AvatarFallback>
-                      {participant.firstName?.[0] || participant.email?.[0] || '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-sm font-medium text-gray-900 cursor-pointer hover:underline bg-transparent border-none p-0 text-left"
-                        onClick={() => openUserProfile(participant.id)}
-                        type="button"
-                      >
-                        {participant.firstName} {participant.lastName}
-                      </button>
-                      {participant.isHost && (
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                          Host
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500">{participant.email}</p>
-                  </div>
-                  {user?.id !== participant.id && <span className="text-xs text-gray-400">Peer</span>}
-                </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* User Profile Modal */}
-      {selectedUserId && (
-        <UserProfileModal
-          isOpen={isUserProfileModalOpen}
-          onClose={closeUserProfile}
-          userId={selectedUserId}
-        />
-      )}
     </div>
   );
 }
-// Force rebuild

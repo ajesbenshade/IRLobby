@@ -60,3 +60,26 @@ class Invite(models.Model):
 
     def __str__(self):
         return f"Invite({self.channel}) by {self.inviter_id} to {self.contact_value}"
+
+
+class PushDeviceToken(models.Model):
+    PLATFORM_CHOICES = [
+        ('ios', 'iOS'),
+        ('android', 'Android'),
+        ('web', 'Web'),
+        ('unknown', 'Unknown'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, default='unknown')
+    device_id = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-last_seen_at']
+
+    def __str__(self):
+        return f"PushDeviceToken(user={self.user_id}, platform={self.platform}, active={self.is_active})"

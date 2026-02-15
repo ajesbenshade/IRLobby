@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiRequest } from '@/lib/queryClient';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
+import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart } from 'lucide-react';
@@ -48,11 +49,11 @@ export default function Discovery() {
     error,
     refetch,
   } = useQuery<Activity[]>({
-    queryKey: ['/api/activities', filters],
+    queryKey: [API_ROUTES.ACTIVITIES, filters],
     queryFn: async ({ queryKey }) => {
       const [, activeFilters] = queryKey as [string, Partial<ActivityFilters>];
       const params = buildActivitySearchParams(activeFilters ?? {});
-      const endpoint = params ? `/api/activities/?${params}` : '/api/activities/';
+      const endpoint = params ? API_ROUTE_BUILDERS.activitiesWithSearch(params) : API_ROUTES.ACTIVITIES;
 
       const response = await apiRequest('GET', endpoint);
 
@@ -82,7 +83,9 @@ export default function Discovery() {
   const swipeMutation = useMutation<SwipeMutationResult, Error, SwipePayload>({
     mutationFn: async ({ activityId, swipeType }) => {
       const direction = swipeType === 'like' ? 'right' : 'left';
-      const response = await apiRequest('POST', `/api/swipes/${activityId}/swipe/`, { direction });
+      const response = await apiRequest('POST', API_ROUTE_BUILDERS.activitySwipe(activityId), {
+        direction,
+      });
       return (await response.json()) as SwipeMutationResult;
     },
     onSuccess: (data) => {
@@ -90,7 +93,7 @@ export default function Discovery() {
         const activity = activities[currentActivityIndex];
         setMatchedActivity(activity);
         setShowMatchSuccess(true);
-        queryClient.invalidateQueries({ queryKey: ['/api/matches'] });
+        queryClient.invalidateQueries({ queryKey: [API_ROUTES.MATCHES] });
       }
       nextActivity();
     },

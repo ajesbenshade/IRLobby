@@ -84,6 +84,9 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
         <Button mode="text" onPress={() => navigation.goBack()} disabled={isPending}>
           Back to sign in
         </Button>
+        <Button mode="text" onPress={() => navigation.navigate('ResetPassword')} disabled={isPending}>
+          I already have a reset token
+        </Button>
       </Surface>
     </KeyboardAvoidingView>
   );

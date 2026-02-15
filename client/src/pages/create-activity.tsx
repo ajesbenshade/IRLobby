@@ -20,6 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, MapPin, X } from 'lucide-react';
@@ -155,7 +156,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
         // This can be enhanced later with proper file upload
         images: imagePreviews, // Store preview URLs for now
       };
-      const response = await apiRequest('POST', '/api/activities/', activityData);
+      const response = await apiRequest('POST', API_ROUTES.ACTIVITIES, activityData);
       if (!response.ok) {
         const message = (await response.text()) || 'Failed to create activity';
         throw new Error(message);
@@ -167,8 +168,8 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
         title: 'Activity created!',
         description: 'Your activity has been posted successfully.',
       });
-      await queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/activities'] });
+      await queryClient.invalidateQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
+      await queryClient.refetchQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
       onActivityCreated();
     },
     onError: (error: Error) => {

@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { API_ROUTES } from '@shared/schema';
 
 import { config } from '@constants/config';
 
@@ -33,48 +34,40 @@ const normalizeTokens = (tokens: Partial<AuthTokens> | null | undefined): AuthTo
   };
 };
 
-const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): AuthUser => ({
-  id: user.id,
-  email: (user as Record<string, unknown>).email as string,
-  firstName:
-    (user as Record<string, unknown>).firstName?.toString() ??
-    (user as Record<string, unknown>).first_name?.toString(),
-  lastName:
-    (user as Record<string, unknown>).lastName?.toString() ??
-    (user as Record<string, unknown>).last_name?.toString(),
-  username: (user as Record<string, unknown>).username?.toString(),
-  avatarUrl:
-    ((user as Record<string, unknown>).avatarUrl ??
-      (user as Record<string, unknown>).avatar_url ??
-      null) as string | null,
-  bio:
-    ((user as Record<string, unknown>).bio ??
-      (user as Record<string, unknown>).about ??
-      null) as string | null,
-  city:
-    ((user as Record<string, unknown>).city ??
-      (user as Record<string, unknown>).location ??
-      null) as string | null,
-  interests: Array.isArray((user as Record<string, unknown>).interests)
-    ? ((user as Record<string, unknown>).interests as unknown[]).filter(
-        (interest): interest is string => typeof interest === 'string',
-      )
-    : [],
-  onboardingCompleted:
-    Boolean(
-      (user as Record<string, unknown>).onboardingCompleted ??
-        (user as Record<string, unknown>).onboarding_completed,
-    ),
-  isHost:
-    Boolean(
-      (user as Record<string, unknown>).isHost ??
-        (user as Record<string, unknown>).is_host ??
-        (user as Record<string, unknown>).host,
-    ),
-});
+const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): AuthUser => {
+  const userRecord = user as Record<string, unknown>;
+  const preferences = userRecord.preferences as Record<string, unknown> | undefined;
+
+  const interests = Array.isArray(userRecord.interests)
+    ? (userRecord.interests as unknown[])
+    : Array.isArray(preferences?.interests)
+      ? (preferences?.interests as unknown[])
+      : [];
+
+  const photoAlbum = Array.isArray(userRecord.photoAlbum)
+    ? (userRecord.photoAlbum as unknown[])
+    : Array.isArray(preferences?.photo_album)
+      ? (preferences?.photo_album as unknown[])
+      : [];
+
+  return {
+    id: user.id,
+    email: userRecord.email as string,
+    firstName: userRecord.firstName?.toString() ?? userRecord.first_name?.toString(),
+    lastName: userRecord.lastName?.toString() ?? userRecord.last_name?.toString(),
+    username: userRecord.username?.toString(),
+    avatarUrl: (userRecord.avatarUrl ?? userRecord.avatar_url ?? null) as string | null,
+    bio: (userRecord.bio ?? userRecord.about ?? null) as string | null,
+    city: (userRecord.city ?? userRecord.location ?? null) as string | null,
+    interests: interests.filter((interest): interest is string => typeof interest === 'string'),
+    photoAlbum: photoAlbum.filter((photo): photo is string => typeof photo === 'string'),
+    onboardingCompleted: Boolean(userRecord.onboardingCompleted ?? userRecord.onboarding_completed),
+    isHost: Boolean(userRecord.isHost ?? userRecord.is_host ?? userRecord.host),
+  };
+};
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  const response = await api.post<AuthResponse>('/api/users/login/', {
+  const response = await api.post<AuthResponse>(API_ROUTES.USER_LOGIN, {
     email: payload.email.trim().toLowerCase(),
     password: payload.password,
   });
@@ -95,7 +88,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
     last_name: payload.lastName,
   };
 
-  const response = await api.post<AuthResponse>('/api/users/register/', requestPayload);
+  const response = await api.post<AuthResponse>(API_ROUTES.USER_REGISTER, requestPayload);
   const normalizedTokens = normalizeTokens(response.data.tokens);
   await authStorage.setTokens(normalizedTokens);
   return { user: normalizeUser(response.data.user), tokens: normalizedTokens };
@@ -125,12 +118,12 @@ const parseCallbackUser = (value: unknown) => {
 export async function loginWithTwitter(): Promise<AuthResponse> {
   const returnUrl = config.twitterRedirectUri?.trim() || Linking.createURL('auth/twitter');
 
-  const statusResponse = await api.get<TwitterOAuthStatusResponse>('/api/auth/twitter/status/');
+  const statusResponse = await api.get<TwitterOAuthStatusResponse>(API_ROUTES.AUTH_TWITTER_STATUS);
   if (!statusResponse.data?.configured) {
     throw new Error('X/Twitter login is not configured on the backend yet.');
   }
 
-  const oauthUrlResponse = await api.get<TwitterOAuthUrlResponse>('/api/auth/twitter/url/', {
+  const oauthUrlResponse = await api.get<TwitterOAuthUrlResponse>(API_ROUTES.AUTH_TWITTER_URL, {
     params: {
       mobile_redirect_uri: returnUrl,
     },
@@ -176,7 +169,7 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 
 export async function logout(): Promise<void> {
   try {
-    await api.post('/api/auth/logout/');
+    await api.post(API_ROUTES.AUTH_LOGOUT);
   } catch (error) {
     console.warn('[authService] Logout request failed', error);
   } finally {
@@ -185,16 +178,16 @@ export async function logout(): Promise<void> {
 }
 
 export async function fetchProfile(): Promise<AuthUser> {
-  const response = await api.get<AuthUser>('/api/users/profile/');
+  const response = await api.get<AuthUser>(API_ROUTES.USER_PROFILE);
   return normalizeUser(response.data);
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  await api.post('/api/auth/request-password-reset/', { email });
+  await api.post(API_ROUTES.AUTH_REQUEST_PASSWORD_RESET, { email });
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {
-  await api.post('/api/auth/reset-password/', { token, new_password: password });
+  await api.post(API_ROUTES.AUTH_RESET_PASSWORD, { token, new_password: password });
 }
 
 export interface OnboardingPayload {
@@ -222,10 +215,10 @@ export interface InviteResponse {
 }
 
 export async function updateOnboarding(payload: OnboardingPayload): Promise<void> {
-  await api.patch('/api/users/onboarding/', payload);
+  await api.patch(API_ROUTES.USER_ONBOARDING, payload);
 }
 
 export async function createInvite(payload: InvitePayload): Promise<InviteResponse> {
-  const response = await api.post<InviteResponse>('/api/users/invites/', payload);
+  const response = await api.post<InviteResponse>(API_ROUTES.USER_INVITES, payload);
   return response.data;
 }

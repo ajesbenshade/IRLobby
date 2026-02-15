@@ -75,6 +75,10 @@
 
 ## 🚀 Production Deployment
 
+Before any mobile/web release, run the parity gate in:
+
+- `docs/PARITY_RELEASE_GATE.md`
+
 ### Frontend
 Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, or GitHub Pages).
 

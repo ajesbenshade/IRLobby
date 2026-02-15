@@ -2,27 +2,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { apiRequest } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Star, Calendar, MapPin } from 'lucide-react';
 
 interface Review {
-  id: string;
-  reviewer: {
-    profileImageUrl?: string;
-    firstName?: string;
-    lastName?: string;
-  };
-  createdAt: string;
+  id: number;
+  reviewer: string;
+  reviewee: string;
+  created_at: string;
   rating: number;
-  activity: {
-    title: string;
-    location: string;
-    dateTime: string;
-  };
+  activity: string;
   comment?: string;
-  reviewType: 'host' | 'participant';
-  wouldRecommend?: boolean;
 }
 
 interface UserReviewsModalProps {
@@ -35,12 +27,16 @@ interface UserReviewsModalProps {
 export default function UserReviewsModal({
   isOpen,
   onClose,
-  userId,
   userName,
 }: UserReviewsModalProps) {
-  const { data: reviews, isLoading } = useQuery({
-    queryKey: ['/api/users', userId, 'reviews'],
-    enabled: isOpen && !!userId,
+  const { data: reviews = [], isLoading } = useQuery<Review[]>({
+    queryKey: ['/api/reviews', userName],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/reviews/');
+      const allReviews = (await response.json()) as Review[];
+      return allReviews.filter((review) => review.reviewee === userName);
+    },
+    enabled: isOpen,
   });
 
   const renderStars = (rating: number) => {
@@ -66,46 +62,37 @@ export default function UserReviewsModal({
           <div className="text-center py-8">
             <p className="text-muted-foreground">Loading reviews...</p>
           </div>
-        ) : Array.isArray(reviews) && reviews.length > 0 ? (
+        ) : reviews.length > 0 ? (
           <div className="space-y-4">
-            {reviews.map((review: Review) => (
+            {reviews.map((review) => (
               <Card key={review.id}>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={review.reviewer?.profileImageUrl} />
-                        <AvatarFallback>
-                          {review.reviewer?.firstName?.[0]}
-                          {review.reviewer?.lastName?.[0]}
-                        </AvatarFallback>
+                        <AvatarImage src={undefined} />
+                        <AvatarFallback>{review.reviewer?.[0]}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">
-                          {review.reviewer?.firstName} {review.reviewer?.lastName}
-                        </p>
+                        <p className="font-medium text-sm">{review.reviewer}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(review.createdAt), 'MMM d, yyyy')}
+                          {format(new Date(review.created_at), 'MMM d, yyyy')}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">{renderStars(review.rating)}</div>
                   </div>
 
-                  {review.activity && (
-                    <div className="mb-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-3 w-3" />
-                        <span className="font-medium">{review.activity.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>{review.activity.location}</span>
-                        <span aria-hidden="true">&bull;</span>
-                        <span>{format(new Date(review.activity.dateTime), 'MMM d, yyyy')}</span>
-                      </div>
+                  <div className="mb-3 p-2 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3 w-3" />
+                      <span className="font-medium">{review.activity}</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <MapPin className="h-3 w-3" />
+                      <span>Activity review</span>
+                    </div>
+                  </div>
 
                   {review.comment && (
                     <p className="text-sm text-muted-foreground mb-2">
@@ -115,13 +102,8 @@ export default function UserReviewsModal({
 
                   <div className="flex justify-between items-center">
                     <Badge variant="outline" className="text-xs">
-                      {review.reviewType === 'host' ? 'As Host' : 'As Participant'}
+                      Activity Review
                     </Badge>
-                    {review.wouldRecommend && (
-                      <Badge variant="secondary" className="text-xs">
-                        Would Recommend
-                      </Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>

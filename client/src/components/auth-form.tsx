@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
@@ -35,7 +36,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
     const checkTwitterOAuthStatus = async () => {
       try {
-        const response = await apiRequest('GET', '/api/auth/twitter/status/');
+        const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_STATUS);
         const data = (await response.json()) as { configured?: boolean };
         if (isMounted) {
           setIsTwitterAvailable(Boolean(data.configured));
@@ -70,7 +71,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       setIsLoading(true);
       console.log('Starting Twitter OAuth...');
 
-      const response = await apiRequest('GET', '/api/auth/twitter/url/');
+      const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_URL);
       console.log('OAuth URL response:', response.status, response);
 
       if (!response.ok) {
@@ -146,7 +147,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     try {
       console.log('Attempting login with:', formData.email);
 
-      const response = await apiRequest('POST', '/api/users/login/', {
+      const response = await apiRequest('POST', API_ROUTES.USER_LOGIN, {
         email: formData.email,
         password: formData.password,
       });
@@ -200,7 +201,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const response = await apiRequest('POST', '/api/users/register/', {
+      const response = await apiRequest('POST', API_ROUTES.USER_REGISTER, {
         username: formData.username,
         email: formData.email,
         password: formData.password,

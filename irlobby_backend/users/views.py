@@ -18,7 +18,7 @@ from urllib.parse import urljoin
 
 from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import set_refresh_cookie, clear_refresh_cookie
-from .models import User, Invite
+from .models import User, Invite, PushDeviceToken
 from .serializers import (
     UserSerializer,
     UserRegistrationSerializer,
@@ -26,6 +26,8 @@ from .serializers import (
     UserOnboardingSerializer,
     InviteCreateSerializer,
     InviteSerializer,
+    PushDeviceTokenSerializer,
+    PushDeviceTokenUpsertSerializer,
 )
 from activities.models import Activity
 from swipes.models import Swipe
@@ -75,6 +77,42 @@ class InviteListCreateView(generics.ListCreateAPIView):
         invite = Invite.objects.create(inviter=request.user, **serializer.validated_data)
         response_serializer = InviteSerializer(invite)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def register_push_token(request):
+    serializer = PushDeviceTokenUpsertSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    token = serializer.validated_data['token']
+    platform = serializer.validated_data.get('platform', 'unknown')
+    device_id = serializer.validated_data.get('device_id', '')
+
+    push_token, _ = PushDeviceToken.objects.update_or_create(
+        token=token,
+        defaults={
+            'user': request.user,
+            'platform': platform,
+            'device_id': device_id,
+            'is_active': True,
+        },
+    )
+
+    return Response(PushDeviceTokenSerializer(push_token).data, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deactivate_push_token(request):
+    token = request.data.get('token')
+    queryset = PushDeviceToken.objects.filter(user=request.user, is_active=True)
+
+    if token:
+        queryset = queryset.filter(token=token)
+
+    deactivated_count = queryset.update(is_active=False)
+    return Response({'deactivatedCount': deactivated_count}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

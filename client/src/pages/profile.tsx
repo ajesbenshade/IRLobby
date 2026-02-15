@@ -151,6 +151,15 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
+            onClick={() => onNavigate && onNavigate('reviews')}
+          >
+            <Star className="w-4 h-4 mr-2" />
+            Reviews
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             onClick={() => onNavigate && onNavigate('help-support')}
           >
             <HelpCircle className="w-4 h-4 mr-2" />

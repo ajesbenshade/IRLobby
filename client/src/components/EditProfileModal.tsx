@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Camera, Upload, Plus, Trash2 } from 'lucide-react';
@@ -72,7 +73,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return await apiRequest('/api/users/profile/', {
+      return await apiRequest(API_ROUTES.USER_PROFILE, {
         method: 'PATCH',
         body: JSON.stringify({
           ...data,
@@ -83,7 +84,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
     },
     onSuccess: () => {
       toast({ title: 'Profile updated successfully!' });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/profile/'] });
+      queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
       onClose();
     },
     onError: () => {

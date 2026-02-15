@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from '@tanstack/react-query';
+import { API_ROUTES } from '@shared/schema';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -10,7 +11,7 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
 const API_BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL || '';
-const AUTH_401_BYPASS_PATHS = ['/api/users/profile/', '/api/users/auth/status/'] as const;
+const AUTH_401_BYPASS_PATHS = [API_ROUTES.USER_PROFILE, API_ROUTES.USER_AUTH_STATUS] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',
   'POST',
@@ -99,7 +100,7 @@ async function refreshAccessToken() {
   refreshPromise = (async () => {
     try {
       const payload = storedRefreshToken ? { refresh: storedRefreshToken } : {};
-      const res = await fetch(resolveUrl('/api/auth/token/refresh/'), {
+        const res = await fetch(resolveUrl(API_ROUTES.AUTH_REFRESH), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

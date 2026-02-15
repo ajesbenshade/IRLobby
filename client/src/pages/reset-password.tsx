@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 
 const ResetPasswordPage = () => {
   const { token } = useParams<{ token: string }>();
@@ -47,7 +48,7 @@ const ResetPasswordPage = () => {
     setError('');
 
     try {
-      const response = await apiRequest('POST', '/api/auth/reset-password/', {
+      const response = await apiRequest('POST', API_ROUTES.AUTH_RESET_PASSWORD, {
         token,
         newPassword: password,
       });

@@ -3,11 +3,11 @@ import path from 'node:path';
 
 const workspaceRoot = process.cwd();
 
-const scanRoots = ['client/src', 'irlobby_mobile/src'];
+const scanRoots = ['client/src', 'irlobby_mobile/src', 'shared'];
 const fileExtensions = new Set(['.ts', '.tsx', '.js', '.jsx']);
-const endpointRegex = /["'`]\/(api\/[a-zA-Z0-9_\-/.?=&]+)["'`]/g;
-const djangoPathRegex = /path\(\s*['"]([^'"]*)['"]\s*,\s*([^\n]+?)\)/g;
-const djangoIncludeRegex = /include\(\s*['"]([^'"]+)['"]/;
+const endpointRegex = /(["'`])((?:https?:\/\/[^"'`]+)?\/api\/[^"'`]*)\1/g;
+const djangoPathRegex = /path\(\s*['"]([^'"]*)['"]\s*,\s*([\s\S]*?)\)\s*,?/g;
+const djangoIncludeRegex = /include\(\s*(?:\(\s*)?['"]([^'"]+)['"]/;
 
 function readText(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -16,16 +16,57 @@ function readText(filePath) {
   return fs.readFileSync(filePath, 'utf8');
 }
 
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function normalizeApiPath(rawPath) {
   if (!rawPath) {
     return '/';
   }
   const withLeadingSlash = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
   return withLeadingSlash.replace(/\/{2,}/g, '/');
+}
+
+function toApiRelativePath(rawEndpoint) {
+  if (!rawEndpoint) {
+    return null;
+  }
+
+  let endpoint = rawEndpoint;
+  if (/^https?:\/\//i.test(endpoint)) {
+    try {
+      const parsed = new URL(endpoint);
+      endpoint = `${parsed.pathname}${parsed.search ?? ''}`;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!endpoint.startsWith('/api/')) {
+    return null;
+  }
+
+  return normalizeApiPath(endpoint);
+}
+
+function buildEndpointCandidates(rawEndpoint) {
+  const relative = toApiRelativePath(rawEndpoint);
+  if (!relative) {
+    return [];
+  }
+
+  const variants = [relative];
+  if (relative.includes('${')) {
+    variants.push(relative.replace(/\$\{[^}]+\}/g, '1'));
+    variants.push(relative.replace(/\$\{[^}]+\}/g, 'sample'));
+    variants.push(relative.replace(/\$\{[^}]+\}/g, '00000000-0000-0000-0000-000000000000'));
+  }
+
+  const deduped = new Set();
+  for (const variant of variants) {
+    const normalized = normalizeApiPath(variant);
+    deduped.add(normalized);
+    deduped.add(normalized.replace(/\/$/, ''));
+  }
+
+  return Array.from(deduped).filter(Boolean);
 }
 
 function djangoPathToRegex(pathTemplate) {
@@ -100,32 +141,33 @@ function joinRoute(prefix, route) {
   return `/${normalizedPrefix}/${normalizedRoute}/`;
 }
 
+function collectApiRoutes(urlsFile, prefix = '', visited = new Set()) {
+  if (!urlsFile || visited.has(urlsFile) || !fs.existsSync(urlsFile)) {
+    return [];
+  }
+
+  visited.add(urlsFile);
+  const entries = collectDjangoPaths(urlsFile);
+  const routes = [];
+
+  for (const entry of entries) {
+    const fullRoute = joinRoute(prefix, entry.route);
+
+    if (entry.includeModule) {
+      const includeFile = moduleToUrlsFile(entry.includeModule);
+      routes.push(...collectApiRoutes(includeFile, fullRoute, visited));
+      continue;
+    }
+
+    routes.push(fullRoute);
+  }
+
+  return routes;
+}
+
 function buildAllowedPatterns() {
   const rootUrls = path.join(workspaceRoot, 'irlobby_backend', 'irlobby_backend', 'urls.py');
-  const rootEntries = collectDjangoPaths(rootUrls);
-  const routes = new Set();
-
-  for (const entry of rootEntries) {
-    const rootRoute = entry.route;
-    if (!rootRoute.startsWith('api/')) {
-      continue;
-    }
-
-    if (!entry.includeModule) {
-      routes.add(joinRoute('', rootRoute));
-      continue;
-    }
-
-    const includeFile = moduleToUrlsFile(entry.includeModule);
-    if (!includeFile) {
-      continue;
-    }
-
-    const includeEntries = collectDjangoPaths(includeFile);
-    for (const includeEntry of includeEntries) {
-      routes.add(joinRoute('', joinRoute(rootRoute, includeEntry.route)));
-    }
-  }
+  const routes = new Set(collectApiRoutes(rootUrls));
 
   return Array.from(routes)
     .filter((route) => route.startsWith('/api/'))
@@ -171,15 +213,20 @@ for (const root of scanRoots) {
     const content = fs.readFileSync(absoluteFile, 'utf8');
 
     for (const match of content.matchAll(endpointRegex)) {
-      const endpoint = `/${match[1]}`;
-      const normalized = endpoint.replace(/\/$/, '');
-      const allowed = allowedPatterns.some((pattern) => pattern.test(normalized) || pattern.test(endpoint));
+      const endpoint = match[2];
+      const candidates = buildEndpointCandidates(endpoint);
+      if (candidates.length === 0) {
+        continue;
+      }
+      const allowed = candidates.some((candidate) =>
+        allowedPatterns.some((pattern) => pattern.test(candidate))
+      );
 
       if (!allowed) {
         failures.push({
           file: relativeFile,
           line: getLineNumber(content, match.index ?? 0),
-          endpoint,
+          endpoint: candidates[0] ?? endpoint,
         });
       }
     }

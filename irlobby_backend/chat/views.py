@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
+from users.push_notifications import send_new_message_notification
 
 class ConversationListView(generics.ListAPIView):
     serializer_class = ConversationSerializer
@@ -37,4 +38,5 @@ class MessageListView(generics.ListCreateAPIView):
         if self.request.user not in [conversation.match.user_a, conversation.match.user_b]:
             raise serializers.ValidationError("Not authorized to send messages in this conversation")
 
-        serializer.save(conversation=conversation, sender=self.request.user)
+        message = serializer.save(conversation=conversation, sender=self.request.user)
+        send_new_message_notification(message)

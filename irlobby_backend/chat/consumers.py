@@ -217,8 +217,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        text_data_json = json.loads(text_data)
-        message = text_data_json['message']
+        try:
+            text_data_json = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid JSON payload.'
+            }))
+            return
+
+        message = str(text_data_json.get('message', '')).strip()
+        if not message:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Message is required.'
+            }))
+            return
 
         user = self.scope['user']
 
@@ -230,19 +244,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'message': saved_message.text,
-                'sender': user.username,
-                'timestamp': saved_message.created_at.isoformat(),
+                'payload': {
+                    'type': 'chat.message',
+                    'conversationId': int(self.conversation_id),
+                    'id': saved_message.id,
+                    'message': saved_message.text,
+                    'userId': saved_message.sender.id,
+                    'user': {
+                        'id': saved_message.sender.id,
+                        'firstName': saved_message.sender.first_name,
+                        'email': saved_message.sender.email,
+                    },
+                    'createdAt': saved_message.created_at.isoformat(),
+                },
             }
         )
 
     async def chat_message(self, event):
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({
-            'message': event['message'],
-            'sender': event['sender'],
-            'timestamp': event['timestamp'],
-        }))
+        await self.send(text_data=json.dumps(event['payload']))
 
     @database_sync_to_async
     def check_conversation_access(self, user, conversation_id):

@@ -8,6 +8,7 @@ const Matches = lazy(() => import('./matches'));
 const CreateActivity = lazy(() => import('./create-activity'));
 const Profile = lazy(() => import('./profile'));
 const Chat = lazy(() => import('./chat'));
+const Reviews = lazy(() => import('./reviews'));
 const Settings = lazy(() => import('./settings'));
 const HelpSupport = lazy(() => import('./help-support'));
 
@@ -24,7 +25,7 @@ const ScreenLoader = () => (
 export default function Home() {
   const { user } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<string>('discovery');
-  const [chatActivityId, setChatActivityId] = useState<number | null>(null);
+  const [chatMatchId, setChatMatchId] = useState<number | null>(null);
 
   const renderScreen = () => {
     const screenComponent = (() => {
@@ -34,8 +35,8 @@ export default function Home() {
         case 'matches':
           return (
             <Matches
-              onOpenChat={(activityId) => {
-                setChatActivityId(activityId);
+              onOpenChat={(matchId) => {
+                setChatMatchId(matchId);
                 setCurrentScreen('chat');
               }}
             />
@@ -45,8 +46,8 @@ export default function Home() {
         case 'activities':
           return (
             <Matches
-              onOpenChat={(activityId) => {
-                setChatActivityId(activityId);
+              onOpenChat={(matchId) => {
+                setChatMatchId(matchId);
                 setCurrentScreen('chat');
               }}
               showUserActivities
@@ -56,11 +57,13 @@ export default function Home() {
           return <Profile onNavigate={setCurrentScreen} />;
         case 'settings':
           return <Settings onBack={() => setCurrentScreen('profile')} />;
+        case 'reviews':
+          return <Reviews />;
         case 'help-support':
           return <HelpSupport />;
         case 'chat':
-          return chatActivityId ? (
-            <Chat activityId={chatActivityId} onBack={() => setCurrentScreen('matches')} />
+          return chatMatchId ? (
+            <Chat matchId={chatMatchId} onBack={() => setCurrentScreen('matches')} />
           ) : (
             <Discovery />
           );

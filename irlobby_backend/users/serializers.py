@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, Invite
+from .models import User, Invite, PushDeviceToken
 
 class UserSerializer(serializers.ModelSerializer):
     firstName = serializers.CharField(source='first_name', read_only=True)
@@ -206,3 +206,19 @@ class InviteSerializer(serializers.ModelSerializer):
 
     def get_inviter_name(self, obj):
         return f"{obj.inviter.first_name} {obj.inviter.last_name}".strip() or obj.inviter.username
+
+
+class PushDeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PushDeviceToken
+        fields = ('id', 'token', 'platform', 'device_id', 'is_active', 'last_seen_at', 'created_at')
+        read_only_fields = fields
+
+
+class PushDeviceTokenUpsertSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    platform = serializers.ChoiceField(
+        choices=[choice[0] for choice in PushDeviceToken.PLATFORM_CHOICES],
+        default='unknown',
+    )
+    device_id = serializers.CharField(required=False, allow_blank=True, max_length=255)

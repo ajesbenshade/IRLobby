@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 
@@ -18,9 +19,9 @@ interface FriendsModalProps {
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
   const { data: matches = [], isLoading } = useQuery<MatchConnection[]>({
-    queryKey: ['/api/matches'],
+    queryKey: [API_ROUTES.MATCHES],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/matches/');
+      const response = await apiRequest('GET', API_ROUTES.MATCHES);
       return response.json();
     },
     enabled: isOpen,

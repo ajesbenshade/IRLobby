@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTE_BUILDERS } from '@shared/schema';
 import type { Activity } from '@shared/client-types';
 import { useMutation } from '@tanstack/react-query';
 import { X, Heart, Info } from 'lucide-react';
@@ -47,7 +48,7 @@ export function SwipeStack({
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, direction }: { activityId: string; direction: string }) => {
       console.log('Making swipe request:', { activityId, direction });
-      const response = await apiRequest('POST', `/api/swipes/${activityId}/swipe/`, {
+      const response = await apiRequest('POST', API_ROUTE_BUILDERS.activitySwipe(activityId), {
         direction,
       });
       const data = await response.json();

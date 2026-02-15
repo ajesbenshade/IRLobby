@@ -25,8 +25,10 @@ class MessageSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True, read_only=True)
     match = serializers.StringRelatedField()
+    matchId = serializers.IntegerField(source='match.id', read_only=True)
+    activityId = serializers.IntegerField(source='match.activity.id', read_only=True, allow_null=True)
 
     class Meta:
         model = Conversation
-        fields = ('id', 'match', 'messages', 'created_at')
+        fields = ('id', 'match', 'matchId', 'activityId', 'messages', 'created_at')
         read_only_fields = ('id', 'created_at')

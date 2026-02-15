@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.utils.dateparse import parse_datetime
 from matches.models import Match
 from .models import Activity, ActivityParticipant
 from .permissions import IsHostOrReadOnly
@@ -37,6 +38,58 @@ class ActivityListCreateView(generics.ListCreateAPIView):
                 latitude__range=(lat_min, lat_max),
                 longitude__range=(lon_min, lon_max)
             )
+
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category__icontains=category)
+
+        location = self.request.query_params.get('location')
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+
+        skill_level = self.request.query_params.get('skill_level')
+        if skill_level:
+            queryset = queryset.filter(skill_level__icontains=skill_level)
+
+        age_restriction = self.request.query_params.get('age_restriction')
+        if age_restriction:
+            queryset = queryset.filter(age_restriction__icontains=age_restriction)
+
+        visibility = self.request.query_params.get('visibility')
+        if visibility:
+            queryset = queryset.filter(visibility__icontains=visibility)
+
+        price_min = self.request.query_params.get('price_min')
+        if price_min is not None:
+            try:
+                queryset = queryset.filter(price__gte=float(price_min))
+            except (TypeError, ValueError):
+                pass
+
+        price_max = self.request.query_params.get('price_max')
+        if price_max is not None:
+            try:
+                queryset = queryset.filter(price__lte=float(price_max))
+            except (TypeError, ValueError):
+                pass
+
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            parsed_date_from = parse_datetime(date_from)
+            if parsed_date_from is not None:
+                queryset = queryset.filter(time__gte=parsed_date_from)
+
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            parsed_date_to = parse_datetime(date_to)
+            if parsed_date_to is not None:
+                queryset = queryset.filter(time__lte=parsed_date_to)
+
+        tags = self.request.query_params.get('tags')
+        if tags:
+            normalized_tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            for tag in normalized_tags:
+                queryset = queryset.filter(tags__icontains=tag)
 
         return queryset.order_by('-created_at')
 

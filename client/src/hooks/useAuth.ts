@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@shared/schema';
 
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
@@ -81,7 +82,7 @@ export function useAuth() {
     refetch,
     isFetching,
   } = useQuery<User | null, Error>({
-    queryKey: ['/api/users/profile'],
+    queryKey: [API_ROUTES.USER_PROFILE],
     enabled: !!token,
     retry: (failureCount, queryError) => {
       if (queryError instanceof Error && /401|403/.test(queryError.message)) {
@@ -100,13 +101,13 @@ export function useAuth() {
       }
 
       try {
-        const response = await apiRequest('GET', '/api/users/profile/');
+        const response = await apiRequest('GET', API_ROUTES.USER_PROFILE);
 
         if (response.status === 401) {
           console.warn('Invalid token detected, clearing authentication');
           clearStoredCredentials();
           setToken(null);
-          queryClient.setQueryData(['/api/users/profile'], null);
+          queryClient.setQueryData([API_ROUTES.USER_PROFILE], null);
           setAuthErrorMessage('Your session has expired. Please sign in again.');
           return null;
         }
@@ -123,7 +124,7 @@ export function useAuth() {
           setAuthErrorMessage('Your session has expired. Please sign in again.');
           clearStoredCredentials();
           setToken(null);
-          queryClient.setQueryData(['/api/users/profile'], null);
+          queryClient.setQueryData([API_ROUTES.USER_PROFILE], null);
           return null;
         }
 
@@ -148,8 +149,8 @@ export function useAuth() {
       localStorage.setItem('userId', userId);
       setToken(newToken);
       setAuthErrorMessage(null);
-      await queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/users/profile'] });
+      await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
+      await queryClient.refetchQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
     },
     [queryClient, setAuthErrorMessage],
   );
@@ -157,7 +158,7 @@ export function useAuth() {
   const logout = useCallback(async () => {
     try {
       try {
-        await apiRequest('POST', '/api/auth/logout/', {});
+        await apiRequest('POST', API_ROUTES.AUTH_LOGOUT, {});
       } catch (logoutRequestError) {
         console.warn('Logout endpoint failed:', logoutRequestError);
       }
@@ -175,7 +176,7 @@ export function useAuth() {
 
   const refreshToken = useCallback(async () => {
     try {
-      const response = await apiRequest('POST', '/api/auth/token/refresh/', {});
+      const response = await apiRequest('POST', API_ROUTES.AUTH_REFRESH, {});
       const data = await response.json();
 
       if (typeof data.access !== 'string') {

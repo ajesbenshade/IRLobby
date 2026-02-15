@@ -28,7 +28,7 @@ export const HomeScreen = () => {
     refetch: refetchDiscover,
   } = useQuery({
     queryKey: ['mobile-discover-activities'],
-    queryFn: fetchActivities,
+    queryFn: () => fetchActivities(),
   });
 
   const isRefreshing = hostedRefetching || discoverRefetching;

@@ -136,7 +136,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             onClick={() => setShowFriendsModal(true)}
           >
             <Users className="w-4 h-4 mr-2" />
-            Friends
+            Connections
           </Button>
 
           <Button

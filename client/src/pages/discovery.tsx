@@ -170,6 +170,23 @@ export default function Discovery() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
+        <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+          <X className="w-12 h-12 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Unable to load activities</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          {error instanceof Error ? error.message : 'Please try refreshing and check your connection.'}
+        </p>
+        <Button onClick={() => void handleRefresh()} disabled={isRefreshing} className="bg-primary text-white">
+          {isRefreshing ? 'Retrying...' : 'Retry'}
+        </Button>
+      </div>
+    );
+  }
+
   if (!activities.length || currentActivityIndex >= activities.length) {
     return (
       <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
@@ -177,13 +194,13 @@ export default function Discovery() {
           <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-500" />
         </div>
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-          No more activities
+          No activities match your current filters
         </h2>
         <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Check back later for new events in your area!
+          Check back later for new events in your area.
         </p>
-        <Button onClick={() => window.location.reload()} className="bg-primary text-white">
-          Refresh
+        <Button onClick={() => void handleRefresh()} disabled={isRefreshing} className="bg-primary text-white">
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
     );

@@ -224,9 +224,9 @@ export const DiscoverScreen = () => {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
-      <Text variant="headlineSmall">Discover Activities</Text>
+      <Text variant="headlineSmall">Discover Events</Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Live activities from your backend.
+        Find activities near you.
       </Text>
 
       <View style={styles.toolbar}>
@@ -357,9 +357,14 @@ export const DiscoverScreen = () => {
       {isLoading && <Text>Loading activities...</Text>}
 
       {(error || swipeMutation.error) && (
-        <HelperText type="error" visible>
-          {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
-        </HelperText>
+        <View style={styles.errorContainer}>
+          <HelperText type="error" visible>
+            {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
+          </HelperText>
+          <Button mode="outlined" onPress={() => void refetch()} disabled={isRefetching}>
+            {isRefetching ? 'Retrying...' : 'Retry'}
+          </Button>
+        </View>
       )}
 
       {participationMutation.error && (
@@ -376,8 +381,12 @@ export const DiscoverScreen = () => {
 
       {!isLoading && activities.length === 0 && (
         <Card>
-          <Card.Content>
-            <Text>No activities match your current filters.</Text>
+          <Card.Content style={styles.cardContent}>
+            <Text variant="titleMedium">No activities match your current filters</Text>
+            <Text style={styles.secondaryText}>Check back later for new events in your area.</Text>
+            <Button mode="contained" onPress={resetDeck}>
+              Refresh
+            </Button>
           </Card.Content>
         </Card>
       )}
@@ -527,6 +536,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardContent: {
+    gap: 8,
+  },
+  secondaryText: {
+    opacity: 0.7,
+  },
+  errorContainer: {
     gap: 8,
   },
   actions: {

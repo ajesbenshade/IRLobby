@@ -122,16 +122,26 @@ export const ChatScreen = () => {
           <Button mode="text" onPress={() => setSelectedConversationId(null)}>
             Back
           </Button>
-          <Text variant="titleMedium" style={styles.headerTitle}>
-            {selectedConversation?.match ?? 'Conversation'}
-          </Text>
+          <View style={styles.headerTextWrap}>
+            <Text variant="titleMedium" style={styles.headerTitle}>
+              {selectedConversation?.match ?? 'Conversation'}
+            </Text>
+            <Text variant="bodySmall" style={styles.subtitleText}>
+              Live conversations and messaging.
+            </Text>
+          </View>
           <View style={styles.headerSpacer} />
         </View>
 
         {messagesError && (
-          <HelperText type="error" visible>
-            {getErrorMessage(messagesError, 'Unable to load messages.')}
-          </HelperText>
+          <View style={styles.errorContainer}>
+            <HelperText type="error" visible>
+              {getErrorMessage(messagesError, 'Unable to load messages.')}
+            </HelperText>
+            <Button mode="outlined" onPress={() => void refetchMessages()} disabled={messagesRefetching}>
+              {messagesRefetching ? 'Retrying...' : 'Retry'}
+            </Button>
+          </View>
         )}
 
         <FlatList
@@ -211,9 +221,18 @@ export const ChatScreen = () => {
             Live conversations and messaging.
           </Text>
           {conversationsError && (
-            <HelperText type="error" visible>
-              {getErrorMessage(conversationsError, 'Unable to load conversations.')}
-            </HelperText>
+            <View style={styles.errorContainer}>
+              <HelperText type="error" visible>
+                {getErrorMessage(conversationsError, 'Unable to load conversations.')}
+              </HelperText>
+              <Button
+                mode="outlined"
+                onPress={() => void refetchConversations()}
+                disabled={conversationsRefetching}
+              >
+                {conversationsRefetching ? 'Retrying...' : 'Retry'}
+              </Button>
+            </View>
           )}
           {conversationsLoading && <Text>Loading conversations...</Text>}
         </>
@@ -249,11 +268,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
-    flex: 1,
     textAlign: 'center',
+  },
+  headerTextWrap: {
+    flex: 1,
+    gap: 2,
   },
   headerSpacer: {
     width: 56,
+  },
+  subtitleText: {
+    opacity: 0.7,
+    textAlign: 'center',
   },
   messageList: {
     paddingVertical: 8,
@@ -270,5 +296,8 @@ const styles = StyleSheet.create({
   },
   composeInput: {
     flex: 1,
+  },
+  errorContainer: {
+    gap: 8,
   },
 });

@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
@@ -18,7 +19,9 @@ interface FriendsModalProps {
 }
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
-  const { data: matches = [], isLoading } = useQuery<MatchConnection[]>({
+  const { data: matches = [], isLoading, isError, error, refetch, isRefetching } = useQuery<
+    MatchConnection[]
+  >({
     queryKey: [API_ROUTES.MATCHES],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MATCHES);
@@ -44,6 +47,15 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
 
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">Loading connections...</div>
+        ) : isError ? (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {error instanceof Error ? error.message : 'Unable to load connections.'}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => void refetch()} disabled={isRefetching}>
+              {isRefetching ? 'Retrying...' : 'Retry'}
+            </Button>
+          </div>
         ) : matches.length > 0 ? (
           <div className="space-y-2">
             {matches.map((match) => (

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
-import { Card, HelperText, Text } from 'react-native-paper';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Card, Chip, HelperText, Text } from 'react-native-paper';
 
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
@@ -24,9 +24,14 @@ export const FriendsScreen = () => {
       {isLoading && <Text>Loading connections...</Text>}
 
       {error && (
-        <HelperText type="error" visible>
-          {getErrorMessage(error, 'Unable to load connections.')}
-        </HelperText>
+        <View style={styles.errorContainer}>
+          <HelperText type="error" visible>
+            {getErrorMessage(error, 'Unable to load connections.')}
+          </HelperText>
+          <Button mode="outlined" onPress={() => void refetch()} disabled={isRefetching}>
+            {isRefetching ? 'Retrying...' : 'Retry'}
+          </Button>
+        </View>
       )}
 
       {!isLoading && data.length === 0 && (
@@ -39,10 +44,12 @@ export const FriendsScreen = () => {
 
       {data.map((match) => (
         <Card key={match.id} style={styles.card}>
-          <Card.Content style={styles.cardContent}>
-            <Text variant="titleMedium">{match.activity}</Text>
-            <Text>{match.user_a}</Text>
-            <Text>{match.user_b}</Text>
+          <Card.Content style={styles.cardContentRow}>
+            <View style={styles.identityGroup}>
+              <Text variant="titleMedium">{match.user_a}</Text>
+              <Text style={styles.secondaryText}>{match.user_b}</Text>
+            </View>
+            <Chip compact>Matched</Chip>
           </Card.Content>
         </Card>
       ))}
@@ -61,7 +68,20 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 8,
   },
-  cardContent: {
+  cardContentRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  identityGroup: {
     gap: 6,
+    flex: 1,
+  },
+  secondaryText: {
+    opacity: 0.7,
+  },
+  errorContainer: {
+    gap: 8,
   },
 });

@@ -136,7 +136,11 @@ export const ProfileScreen = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <Surface elevation={2} style={styles.card}>
         <Text variant="headlineSmall">Profile</Text>
-        <Text variant="bodyMedium">{user?.email ?? 'Not signed in'}</Text>
+        <Text variant="bodyMedium" style={styles.secondaryText}>
+          {user?.email ?? 'Not signed in'}
+        </Text>
+
+        <Text variant="titleMedium">Basic information</Text>
 
         <TextInput
           label="First name"
@@ -248,6 +252,8 @@ export const ProfileScreen = () => {
           </Button>
         </View>
 
+        <Text variant="titleMedium">Navigation</Text>
+
         <View style={styles.row}>
           <Button mode="outlined" onPress={() => navigation.navigate('Settings')}>
             Settings
@@ -268,7 +274,7 @@ export const ProfileScreen = () => {
 
         <View style={styles.row}>
           <Button mode="outlined" onPress={() => navigation.navigate('HelpSupport')}>
-            Help
+            Help & Support
           </Button>
           <Button mode="outlined" onPress={() => navigation.navigate('PrivacyPolicy')}>
             Privacy
@@ -279,7 +285,7 @@ export const ProfileScreen = () => {
         </View>
 
         <Button mode="text" onPress={() => void signOut()} style={styles.signOut}>
-          Sign out
+          Sign Out
         </Button>
       </Surface>
     </ScrollView>
@@ -326,5 +332,8 @@ const styles = StyleSheet.create({
   },
   signOut: {
     alignSelf: 'flex-start',
+  },
+  secondaryText: {
+    opacity: 0.75,
   },
 });

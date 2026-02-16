@@ -311,7 +311,12 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
           <Button variant="ghost" size="sm" onClick={() => onBack && onBack()} className="mr-4">
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Manage notification and privacy preferences.
+            </p>
+          </div>
         </div>
       </header>
 

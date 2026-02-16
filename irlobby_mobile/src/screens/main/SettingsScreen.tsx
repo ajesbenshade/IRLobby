@@ -149,6 +149,21 @@ export const SettingsScreen = () => {
     updateMutation.mutate(next);
   };
 
+  const updatePreference = <Key extends keyof PreferenceSettings>(
+    key: Key,
+    value: PreferenceSettings[Key],
+  ) => {
+    const next = {
+      ...settings,
+      preferences: {
+        ...settings.preferences,
+        [key]: value,
+      },
+    };
+
+    updateMutation.mutate(next);
+  };
+
   const handleExportData = async () => {
     try {
       const payload = await exportDataMutation.mutateAsync();
@@ -199,9 +214,14 @@ export const SettingsScreen = () => {
       {(isLoading || isRefetching) && <Text>Loading settings...</Text>}
 
       {error && (
-        <HelperText type="error" visible>
-          {getErrorMessage(error, 'Unable to load settings.')}
-        </HelperText>
+        <View style={styles.errorContainer}>
+          <HelperText type="error" visible>
+            {getErrorMessage(error, 'Unable to load settings.')}
+          </HelperText>
+          <Button mode="outlined" onPress={() => void refetch()} loading={isRefetching}>
+            {isRefetching ? 'Retrying...' : 'Retry'}
+          </Button>
+        </View>
       )}
 
       {updateMutation.error && (
@@ -245,6 +265,20 @@ export const SettingsScreen = () => {
             onValueChange={() => toggleSetting('notifications', 'newMatches')}
           />
         </View>
+        <View style={styles.row}>
+          <Text>Activity reminders</Text>
+          <Switch
+            value={settings.notifications.activityReminders}
+            onValueChange={() => toggleSetting('notifications', 'activityReminders')}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text>Messages</Text>
+          <Switch
+            value={settings.notifications.messages}
+            onValueChange={() => toggleSetting('notifications', 'messages')}
+          />
+        </View>
       </Surface>
 
       <Surface elevation={1} style={styles.card}>
@@ -270,6 +304,74 @@ export const SettingsScreen = () => {
             onValueChange={() => toggleSetting('privacy', 'showEmail')}
           />
         </View>
+        <View style={styles.rowWrap}>
+          <Text>Profile visibility</Text>
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => {
+              const sequence: PrivacySettings['profileVisibility'][] = ['public', 'friends', 'private'];
+              const currentIndex = sequence.indexOf(settings.privacy.profileVisibility);
+              const nextVisibility = sequence[(currentIndex + 1) % sequence.length];
+              const next = {
+                ...settings,
+                privacy: {
+                  ...settings.privacy,
+                  profileVisibility: nextVisibility,
+                },
+              };
+              updateMutation.mutate(next);
+            }}
+          >
+            {settings.privacy.profileVisibility}
+          </Button>
+        </View>
+      </Surface>
+
+      <Surface elevation={1} style={styles.card}>
+        <Text variant="titleMedium">Preferences</Text>
+        <View style={styles.rowWrap}>
+          <Text>Theme</Text>
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => {
+              const sequence: PreferenceSettings['theme'][] = ['light', 'dark', 'system'];
+              const currentIndex = sequence.indexOf(settings.preferences.theme);
+              const nextTheme = sequence[(currentIndex + 1) % sequence.length];
+              updatePreference('theme', nextTheme);
+            }}
+          >
+            {settings.preferences.theme}
+          </Button>
+        </View>
+        <View style={styles.rowWrap}>
+          <Text>Distance unit</Text>
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => {
+              const nextDistanceUnit =
+                settings.preferences.distanceUnit === 'miles' ? 'kilometers' : 'miles';
+              updatePreference('distanceUnit', nextDistanceUnit);
+            }}
+          >
+            {settings.preferences.distanceUnit}
+          </Button>
+        </View>
+        <View style={styles.rowWrap}>
+          <Text>Maximum distance</Text>
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => {
+              const nextDistance = Math.min(100, settings.preferences.maxDistance + 5);
+              updatePreference('maxDistance', nextDistance);
+            }}
+          >
+            {settings.preferences.maxDistance}
+          </Button>
+        </View>
       </Surface>
 
       <View style={styles.actions}>
@@ -292,8 +394,12 @@ export const SettingsScreen = () => {
         >
           Delete account
         </Button>
+        <Text variant="bodySmall" style={styles.subtitle}>
+          This action cannot be undone. All your activities, swipes, matches, and reviews will be
+          permanently deleted.
+        </Text>
         <Button mode="text" onPress={() => void signOut()}>
-          Sign out
+          Sign Out
         </Button>
       </View>
     </ScrollView>
@@ -318,8 +424,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  rowWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   actions: {
     marginTop: 8,
+    gap: 8,
+  },
+  errorContainer: {
     gap: 8,
   },
 });

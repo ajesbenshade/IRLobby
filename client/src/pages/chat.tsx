@@ -55,6 +55,8 @@ export default function Chat({ matchId, onBack }: ChatProps) {
     data: messages = [],
     isLoading,
     error,
+    refetch,
+    isRefetching,
   } = useQuery<ConversationMessage[]>({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, selectedConversation?.id, 'messages'],
     queryFn: async () => {
@@ -195,6 +197,7 @@ export default function Chat({ matchId, onBack }: ChatProps) {
           </Button>
           <div className="flex-1">
             <h2 className="font-semibold text-gray-800 truncate">Chat</h2>
+            <p className="text-xs text-gray-500">Live conversations and messaging.</p>
           </div>
         </header>
         <div className="flex items-center justify-center flex-1 p-6 text-center">
@@ -220,15 +223,23 @@ export default function Chat({ matchId, onBack }: ChatProps) {
         </Button>
         <div className="flex-1">
           <h2 className="font-semibold text-gray-800 truncate">{selectedConversation.match}</h2>
+          <p className="text-xs text-gray-500">Live conversations and messaging.</p>
         </div>
       </header>
 
-      {error && <p className="text-sm text-red-600 px-4 py-2">Failed to load messages.</p>}
+      {error && (
+        <div className="px-4 py-2 space-y-2">
+          <p className="text-sm text-red-600">Failed to load messages.</p>
+          <Button size="sm" variant="outline" onClick={() => void refetch()} disabled={isRefetching}>
+            {isRefetching ? 'Retrying...' : 'Retry'}
+          </Button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No messages yet. Start the conversation!</p>
+            <p className="text-gray-500">No messages yet.</p>
           </div>
         ) : (
           messages.map((msg) => {

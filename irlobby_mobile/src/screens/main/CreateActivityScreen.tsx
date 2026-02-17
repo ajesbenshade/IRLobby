@@ -60,6 +60,7 @@ export const CreateActivityScreen = () => {
 
   const canSubmit =
     title.trim().length > 0 &&
+    description.trim().length > 0 &&
     location.trim().length > 0 &&
     time.trim().length > 0 &&
     Number(capacity) > 0;
@@ -73,12 +74,20 @@ export const CreateActivityScreen = () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
+      base64: true,
       quality: 0.7,
       selectionLimit: 5,
     });
 
     if (!result.canceled) {
-      const selected = result.assets.map((asset) => asset.uri);
+      const selected = result.assets.flatMap((asset) => {
+        if (!asset.base64) {
+          return [];
+        }
+
+        const mimeType = asset.mimeType || 'image/jpeg';
+        return [`data:${mimeType};base64,${asset.base64}`];
+      });
       setImageUris((previous) => [...previous, ...selected].slice(0, 5));
     }
   };
@@ -274,6 +283,19 @@ export const CreateActivityScreen = () => {
           loading={createMutation.isPending}
           disabled={!canSubmit || createMutation.isPending || isLocating}
           onPress={() => {
+            const parsedLatitude = Number(latitude);
+            const parsedLongitude = Number(longitude);
+
+            if (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude)) {
+              setTimeError('Latitude/Longitude must be valid numbers.');
+              return;
+            }
+
+            if (parsedLatitude === 0 && parsedLongitude === 0) {
+              setTimeError('Use current location to set coordinates before creating the activity.');
+              return;
+            }
+
             const normalizedStartTime = normalizeDateTime(time);
             const normalizedEndTime = normalizeDateTime(endTime);
 
@@ -309,8 +331,8 @@ export const CreateActivityScreen = () => {
               time: normalizedStartTime,
               end_time: normalizedEndTime ?? undefined,
               capacity: Math.min(10, Math.max(1, Number(capacity) || 1)),
-              latitude: Number(latitude) || 0,
-              longitude: Number(longitude) || 0,
+              latitude: parsedLatitude,
+              longitude: parsedLongitude,
               visibility: [normalizedVisibility],
               is_private: normalizedVisibility !== 'everyone',
               requires_approval: requiresApproval,

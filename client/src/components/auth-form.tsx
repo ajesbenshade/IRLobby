@@ -4,7 +4,6 @@ import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
@@ -267,12 +266,29 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
-          <TabsContent value="login">
+        <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1 text-muted-foreground">
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+              activeTab === 'login' ? 'bg-background text-foreground shadow-sm' : ''
+            }`}
+            onClick={() => setActiveTab('login')}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+              activeTab === 'register' ? 'bg-background text-foreground shadow-sm' : ''
+            }`}
+            onClick={() => setActiveTab('register')}
+          >
+            Register
+          </button>
+        </div>
+
+        {activeTab === 'login' ? (
+          <>
             <form onSubmit={handleLogin} className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -308,8 +324,9 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                 {isLoading ? 'Logging in...' : 'Login'}
               </Button>
             </form>
-          </TabsContent>
-          <TabsContent value="register">
+          </>
+        ) : (
+          <>
             <form onSubmit={handleRegister} className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="registerUsername">Username</Label>
@@ -389,8 +406,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
                 {isLoading ? 'Registering...' : 'Register'}
               </Button>
             </form>
-          </TabsContent>
-        </Tabs>
+          </>
+        )}
 
         {/* OAuth Section */}
         <div className="mt-6">

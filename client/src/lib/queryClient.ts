@@ -10,7 +10,9 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
-const API_BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  (import.meta.env.DEV ? '' : '');
 const AUTH_401_BYPASS_PATHS = [API_ROUTES.USER_PROFILE, API_ROUTES.USER_AUTH_STATUS] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',

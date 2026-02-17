@@ -29,10 +29,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 const MAX_EVENT_CAPACITY = 10;
+const MAX_ACTIVITY_IMAGES = 5;
 
 const insertActivitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
+  description: z.string().min(1, 'Description is required'),
   category: z.string().min(1, 'Category is required'),
   location: z.string().min(1, 'Location is required'),
   latitude: z.number().optional(),
@@ -84,9 +85,57 @@ const categories = [
 
 const participantOptions = Array.from({ length: MAX_EVENT_CAPACITY }, (_, i) => i + 1);
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result);
+        return;
+      }
+      reject(new Error('Failed to read image'));
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Failed to read image'));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function getBrowserCoordinates(): Promise<{ latitude: number; longitude: number }> {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) {
+      reject(new Error('Geolocation is not supported in this browser'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        reject(new Error(error.message || 'Unable to get your location'));
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 15_000,
+        maximumAge: 60_000,
+      },
+    );
+  });
+}
+
 export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isResolvingCoords, setIsResolvingCoords] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,10 +151,10 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
     const newFiles = Array.from(files);
     const totalFiles = selectedImages.length + newFiles.length;
 
-    if (totalFiles > 5) {
+    if (totalFiles > MAX_ACTIVITY_IMAGES) {
       toast({
         title: 'Too many photos',
-        description: 'You can only upload up to 5 photos per activity.',
+        description: `You can only upload up to ${MAX_ACTIVITY_IMAGES} photos per activity.`,
         variant: 'destructive',
       });
       return;
@@ -114,18 +163,27 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
     // Add new files to existing ones
     setSelectedImages((prev) => [...prev, ...newFiles]);
 
-    // Create previews for new files
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
-    setImagePreviews((prev) => [...prev, ...newPreviews]);
+    void (async () => {
+      try {
+        const newPreviews = await Promise.all(newFiles.map(readFileAsDataUrl));
+        setImagePreviews((prev) => [...prev, ...newPreviews]);
+      } catch (error) {
+        console.error(error);
+        toast({
+          title: 'Photo upload failed',
+          description: 'Unable to read one or more images. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        // Allow re-selecting the same file(s)
+        event.target.value = '';
+      }
+    })();
   };
 
   const removeImage = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => {
-      // Revoke the object URL to prevent memory leaks
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const form = useForm<FormData>({
@@ -135,6 +193,8 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       description: '',
       category: '',
       location: '',
+      latitude: undefined,
+      longitude: undefined,
       dateTime: '',
       maxParticipants: 6,
       visibility: ['everyone'],
@@ -142,6 +202,38 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       price: 0,
     },
   });
+
+  const resolveCoordinates = async () => {
+    if (isResolvingCoords) {
+      return;
+    }
+
+    setIsResolvingCoords(true);
+    try {
+      const coords = await getBrowserCoordinates();
+      form.setValue('latitude', coords.latitude, { shouldDirty: true, shouldValidate: true });
+      form.setValue('longitude', coords.longitude, { shouldDirty: true, shouldValidate: true });
+
+      const currentLocation = form.getValues('location');
+      if (!currentLocation.trim()) {
+        form.setValue('location', 'Current location', { shouldDirty: true, shouldValidate: true });
+      }
+
+      toast({
+        title: 'Location set',
+        description: 'Coordinates added to your activity.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to get your location';
+      toast({
+        title: 'Location error',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResolvingCoords(false);
+    }
+  };
 
   const createActivityMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -152,9 +244,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
         visibility: normalizedVisibility,
         isPrivate: !normalizedVisibility.includes('everyone'),
         dateTime: new Date(data.dateTime).toISOString(),
-        // For now, just store image data as base64 or file references
-        // This can be enhanced later with proper file upload
-        images: imagePreviews, // Store preview URLs for now
+        images: imagePreviews,
       };
       const response = await apiRequest('POST', API_ROUTES.ACTIVITIES, activityData);
       if (!response.ok) {
@@ -186,6 +276,15 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       form.setError('maxParticipants', {
         type: 'manual',
         message: `Maximum ${MAX_EVENT_CAPACITY} participants allowed`,
+      });
+      return;
+    }
+
+    if (typeof data.latitude !== 'number' || typeof data.longitude !== 'number') {
+      toast({
+        title: 'Coordinates required',
+        description: 'Tap the location pin to use your current location before creating.',
+        variant: 'destructive',
       });
       return;
     }
@@ -232,7 +331,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                   )}
 
                   {/* Upload Area */}
-                  {imagePreviews.length < 5 && (
+                  {imagePreviews.length < MAX_ACTIVITY_IMAGES && (
                     <div
                       className="w-full h-32 bg-gray-200 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={handlePhotoClick}
@@ -252,7 +351,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                           {imagePreviews.length === 0 ? 'Tap to add photos' : 'Add more photos'}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
-                          {imagePreviews.length}/5 photos
+                          {imagePreviews.length}/{MAX_ACTIVITY_IMAGES} photos
                         </p>
                       </div>
                     </div>
@@ -341,7 +440,15 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
                   <FormControl>
                     <div className="relative">
                       <Input placeholder="Enter location or address" {...field} className="pr-10" />
-                      <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <button
+                        type="button"
+                        onClick={resolveCoordinates}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
+                        aria-label="Use current location"
+                        disabled={isResolvingCoords}
+                      >
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage />

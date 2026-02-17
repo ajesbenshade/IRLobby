@@ -10,6 +10,29 @@ const STATIC_FILES = [
   // Removed icon files as they're now inline SVG
 ];
 
+function jsonServiceUnavailable(message) {
+  return new Response(
+    JSON.stringify({
+      detail: message || 'Service temporarily unavailable',
+    }),
+    {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+}
+
+function textServiceUnavailable(message) {
+  return new Response(message || 'Service temporarily unavailable', {
+    status: 503,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+    },
+  });
+}
+
 // Install event - cache static files
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
@@ -74,8 +97,18 @@ self.addEventListener('fetch', (event) => {
           })
           .catch((error) => {
             console.log('API request failed, trying cache:', error);
-            // Return cached version if available
-            return cache.match(request);
+
+            if (request.method === 'GET') {
+              return cache.match(request).then((cachedResponse) => {
+                if (cachedResponse) {
+                  return cachedResponse;
+                }
+
+                return jsonServiceUnavailable('Unable to reach API right now. Please try again.');
+              });
+            }
+
+            return jsonServiceUnavailable('Unable to reach API right now. Please try again.');
           });
       })
     );
@@ -111,8 +144,10 @@ self.addEventListener('fetch', (event) => {
         console.log('Fetch failed:', error);
         // Return offline fallback for navigation requests
         if (request.mode === 'navigate') {
-          return caches.match('/');
+          return caches.match('/').then((cachedIndex) => cachedIndex || textServiceUnavailable('Offline and no cached app shell available.'));
         }
+
+        return textServiceUnavailable('Network request failed.');
       })
   );
 });

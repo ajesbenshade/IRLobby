@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, HelperText, IconButton, Surface, Text, TextInput, useTheme } from 'react-native-paper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { config } from '@constants/config';
@@ -8,13 +12,26 @@ import {
   fetchConversationMessages,
   fetchConversations,
   sendConversationMessage,
+  type ConversationItem,
+  type ConversationMessage,
 } from '@services/chatService';
 import { getAccessToken } from '@services/authStorage';
 import { getErrorMessage } from '@utils/error';
 
+import { useAuth } from '@hooks/useAuth';
+
+import type { MainStackParamList } from '@navigation/types';
+
 export const ChatScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const route = useRoute<RouteProp<MainStackParamList, 'Chat'>>();
+  const theme = useTheme();
+  const { user } = useAuth();
+
   const queryClient = useQueryClient();
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(
+    typeof route.params?.conversationId === 'number' ? route.params.conversationId : null,
+  );
   const [draft, setDraft] = useState('');
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,7 +42,7 @@ export const ChatScreen = () => {
     isRefetching: conversationsRefetching,
     error: conversationsError,
     refetch: refetchConversations,
-  } = useQuery({
+  } = useQuery<ConversationItem[]>({
     queryKey: ['mobile-conversations'],
     queryFn: fetchConversations,
   });
@@ -35,13 +52,29 @@ export const ChatScreen = () => {
     [conversations, selectedConversationId],
   );
 
+  useEffect(() => {
+    if (selectedConversationId !== null) {
+      return;
+    }
+
+    const matchId = route.params?.matchId;
+    if (typeof matchId !== 'number') {
+      return;
+    }
+
+    const resolved = conversations.find((conversation) => conversation.matchId === matchId);
+    if (resolved) {
+      setSelectedConversationId(resolved.id);
+    }
+  }, [conversations, route.params?.matchId, selectedConversationId]);
+
   const {
     data: messages = [],
     isLoading: messagesLoading,
     isRefetching: messagesRefetching,
     error: messagesError,
     refetch: refetchMessages,
-  } = useQuery({
+  } = useQuery<ConversationMessage[]>({
     queryKey: ['mobile-conversation-messages', selectedConversationId],
     queryFn: () => fetchConversationMessages(selectedConversationId as number),
     enabled: selectedConversationId !== null,
@@ -56,6 +89,7 @@ export const ChatScreen = () => {
     },
     onSuccess: async () => {
       setDraft('');
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await queryClient.invalidateQueries({ queryKey: ['mobile-conversation-messages', selectedConversationId] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
     },
@@ -82,6 +116,7 @@ export const ChatScreen = () => {
         try {
           const payload = JSON.parse(event.data) as { type?: string; conversationId?: number };
           if (payload.type === 'chat.message' && payload.conversationId === selectedConversationId) {
+            void Haptics.selectionAsync();
             void queryClient.invalidateQueries({
               queryKey: ['mobile-conversation-messages', selectedConversationId],
             });
@@ -116,22 +151,36 @@ export const ChatScreen = () => {
   }, [queryClient, selectedConversationId]);
 
   if (selectedConversationId !== null) {
+    const shouldPopOnBack =
+      typeof route.params?.conversationId === 'number' || typeof route.params?.matchId === 'number';
+
     return (
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Button mode="text" onPress={() => setSelectedConversationId(null)}>
-            Back
-          </Button>
-          <View style={styles.headerTextWrap}>
-            <Text variant="titleMedium" style={styles.headerTitle}>
-              {selectedConversation?.match ?? 'Conversation'}
-            </Text>
-            <Text variant="bodySmall" style={styles.subtitleText}>
-              Live conversations and messaging.
-            </Text>
+        <Surface elevation={1} style={styles.header}>
+          <View style={styles.headerRow}>
+            <IconButton
+              icon="arrow-left"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                if (shouldPopOnBack && navigation.canGoBack()) {
+                  navigation.goBack();
+                  return;
+                }
+
+                setSelectedConversationId(null);
+              }}
+            />
+            <View style={styles.headerTextWrap}>
+              <Text variant="titleMedium" numberOfLines={1}>
+                {selectedConversation?.match ?? 'Conversation'}
+              </Text>
+              <Text variant="bodySmall" style={styles.subtitleText}>
+                Live conversations and messaging.
+              </Text>
+            </View>
+            <View style={styles.headerSpacer} />
           </View>
-          <View style={styles.headerSpacer} />
-        </View>
+        </Surface>
 
         {messagesError && (
           <View style={styles.errorContainer}>
@@ -144,24 +193,50 @@ export const ChatScreen = () => {
           </View>
         )}
 
-        <FlatList
+        <FlatList<ConversationMessage>
           data={messages}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.messageList}
           refreshControl={
             <RefreshControl refreshing={messagesRefetching} onRefresh={() => void refetchMessages()} />
           }
-          renderItem={({ item }) => (
-            <Card style={styles.messageCard}>
-              <Card.Content>
-                <Text variant="labelSmall">{item.user?.firstName || item.user?.email || 'User'}</Text>
-                <Text>{item.message}</Text>
-                <Text variant="bodySmall">{new Date(item.createdAt).toLocaleString()}</Text>
-              </Card.Content>
-            </Card>
-          )}
+          renderItem={({ item }) => {
+            const isSelf = user?.id != null && String(item.userId) === String(user.id);
+
+            return (
+              <View style={[styles.bubbleRow, isSelf ? styles.bubbleRowSelf : styles.bubbleRowOther]}>
+                <View
+                  style={[
+                    styles.bubble,
+                    {
+                      backgroundColor: isSelf ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                      borderColor: theme.colors.outlineVariant,
+                    },
+                  ]}
+                >
+                  <Text variant="labelSmall" style={styles.bubbleSender}>
+                    {item.user?.firstName || item.user?.email || (isSelf ? 'You' : 'User')}
+                  </Text>
+                  <Text>{item.message}</Text>
+                  <Text variant="bodySmall" style={styles.bubbleMeta}>
+                    {new Date(item.createdAt).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            );
+          }}
           ListEmptyComponent={
-            messagesLoading ? <Text>Loading messages...</Text> : <Text>No messages yet.</Text>
+            messagesLoading ? (
+              <View style={styles.centerState}>
+                <ActivityIndicator animating />
+                <Text style={styles.secondaryText}>Loading messages...</Text>
+              </View>
+            ) : (
+              <View style={styles.centerState}>
+                <Text variant="titleMedium">No messages yet</Text>
+                <Text style={styles.secondaryText}>Say hi to start the conversation.</Text>
+              </View>
+            )
           }
         />
 
@@ -179,21 +254,22 @@ export const ChatScreen = () => {
             onChangeText={setDraft}
             style={styles.composeInput}
           />
-          <Button
+          <IconButton
+            icon="send"
             mode="contained"
-            onPress={() => sendMutation.mutate()}
-            loading={sendMutation.isPending}
             disabled={!draft.trim() || sendMutation.isPending}
-          >
-            Send
-          </Button>
+            onPress={() => {
+              void Haptics.selectionAsync();
+              sendMutation.mutate();
+            }}
+          />
         </View>
       </View>
     );
   }
 
   return (
-    <FlatList
+    <FlatList<ConversationItem>
       data={conversations}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={styles.container}
@@ -203,23 +279,35 @@ export const ChatScreen = () => {
       renderItem={({ item }) => {
         const lastMessage = item.messages[item.messages.length - 1];
         return (
-          <Card style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Text variant="titleMedium">{item.match}</Text>
-              <Text>{lastMessage?.message ?? 'No messages yet.'}</Text>
-              <Button mode="text" onPress={() => setSelectedConversationId(item.id)}>
-                Open chat
-              </Button>
-            </Card.Content>
-          </Card>
+          <Surface style={styles.conversationRow} elevation={1}>
+            <View style={styles.conversationText}>
+              <Text variant="titleMedium" numberOfLines={1}>
+                {item.match}
+              </Text>
+              <Text numberOfLines={1} style={styles.secondaryText}>
+                {lastMessage?.message ?? 'No messages yet.'}
+              </Text>
+            </View>
+            <IconButton
+              icon="message-text"
+              mode="contained"
+              size={22}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setSelectedConversationId(item.id);
+              }}
+            />
+          </Surface>
         );
       }}
       ListHeaderComponent={
         <>
-          <Text variant="headlineSmall">Chat</Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            Live conversations and messaging.
-          </Text>
+          <Surface elevation={1} style={styles.header}>
+            <Text variant="headlineSmall">Chat</Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              Live conversations and messaging.
+            </Text>
+          </Surface>
           {conversationsError && (
             <View style={styles.errorContainer}>
               <HelperText type="error" visible>
@@ -234,11 +322,21 @@ export const ChatScreen = () => {
               </Button>
             </View>
           )}
-          {conversationsLoading && <Text>Loading conversations...</Text>}
+          {conversationsLoading && (
+            <View style={styles.centerState}>
+              <ActivityIndicator animating />
+              <Text style={styles.secondaryText}>Loading conversations...</Text>
+            </View>
+          )}
         </>
       }
       ListEmptyComponent={
-        conversationsLoading ? null : <Text style={styles.emptyText}>No conversations yet.</Text>
+        conversationsLoading ? null : (
+          <View style={styles.centerState}>
+            <Text variant="titleMedium">No conversations yet</Text>
+            <Text style={styles.secondaryText}>Open a match to start chatting.</Text>
+          </View>
+        )
       }
     />
   );
@@ -250,25 +348,17 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  header: {
+    borderRadius: 12,
+    padding: 12,
+  },
   subtitle: {
     opacity: 0.75,
-  },
-  card: {
-    marginBottom: 8,
-  },
-  cardContent: {
-    gap: 8,
-  },
-  emptyText: {
-    marginTop: 8,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  headerTitle: {
-    textAlign: 'center',
   },
   headerTextWrap: {
     flex: 1,
@@ -279,14 +369,33 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     opacity: 0.7,
-    textAlign: 'center',
   },
   messageList: {
     paddingVertical: 8,
     gap: 8,
   },
-  messageCard: {
-    marginBottom: 6,
+  bubbleRow: {
+    flexDirection: 'row',
+  },
+  bubbleRowSelf: {
+    justifyContent: 'flex-end',
+  },
+  bubbleRowOther: {
+    justifyContent: 'flex-start',
+  },
+  bubble: {
+    maxWidth: '84%',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 4,
+  },
+  bubbleSender: {
+    opacity: 0.7,
+  },
+  bubbleMeta: {
+    opacity: 0.6,
   },
   composeRow: {
     flexDirection: 'row',
@@ -296,6 +405,29 @@ const styles = StyleSheet.create({
   },
   composeInput: {
     flex: 1,
+  },
+  centerState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 10,
+  },
+  secondaryText: {
+    opacity: 0.7,
+  },
+  conversationRow: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  conversationText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   errorContainer: {
     gap: 8,

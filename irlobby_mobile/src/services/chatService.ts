@@ -16,6 +16,8 @@ export interface ConversationMessage {
 export interface ConversationItem {
   id: number;
   match: string;
+  matchId?: number;
+  activityId?: number | null;
   messages: ConversationMessage[];
   created_at: string;
 }

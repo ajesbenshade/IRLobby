@@ -1,9 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, Card, HelperText, Modal, Portal, Surface, Text, TextInput } from 'react-native-paper';
+import {
+  Button,
+  Card,
+  HelperText,
+  IconButton,
+  Modal,
+  Portal,
+  Surface,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   fetchActivities,
@@ -20,7 +43,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
-  const pan = useRef(new Animated.ValueXY()).current;
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -104,11 +130,10 @@ export const DiscoverScreen = () => {
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
         setMatchMessage('It\'s a match! Check your matches tab.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         setMatchMessage(null);
       }
-
-      setCurrentIndex((prev) => prev + 1);
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-matches'] });
@@ -127,70 +152,92 @@ export const DiscoverScreen = () => {
 
   const currentActivity = activities[currentIndex];
   const isBusy = swipeMutation.isPending || participationMutation.isPending;
+  const isAnimatingRef = useRef(false);
 
-  const animateSwipe = useCallback(
-    (direction: 'left' | 'right', onComplete: () => void) => {
-      Animated.timing(pan, {
-        toValue: { x: direction === 'right' ? 400 : -400, y: 0 },
-        duration: 180,
-        useNativeDriver: false,
-      }).start(() => {
-        pan.setValue({ x: 0, y: 0 });
-        onComplete();
-      });
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const swipeRatio = useDerivedValue(() => (windowWidth ? translateX.value / windowWidth : 0));
+
+  const resetCardPosition = useCallback(() => {
+    translateX.value = withSpring(0, { damping: 16, stiffness: 180 });
+    translateY.value = withSpring(0, { damping: 16, stiffness: 180 });
+  }, [translateX, translateY]);
+
+  const completeSwipe = useCallback(
+    (direction: 'left' | 'right', activityId: number | string) => {
+      swipeMutation.mutate({ activityId, direction });
     },
-    [pan],
+    [swipeMutation],
+  );
+
+  const animateOffscreen = useCallback(
+    (direction: 'left' | 'right', activityId: number | string) => {
+      if (isAnimatingRef.current || isBusy) {
+        return;
+      }
+
+      isAnimatingRef.current = true;
+
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const offscreenX = windowWidth * 1.3;
+      translateX.value = withTiming(direction === 'right' ? offscreenX : -offscreenX, { duration: 220 },
+        (finished) => {
+          if (finished) {
+            runOnJS(setCurrentIndex)((prev) => prev + 1);
+            runOnJS(completeSwipe)(direction, activityId);
+          }
+
+          translateX.value = 0;
+          translateY.value = 0;
+          isAnimatingRef.current = false;
+        },
+      );
+      translateY.value = withTiming(0, { duration: 220 });
+    },
+    [completeSwipe, isBusy, translateX, translateY, windowWidth],
   );
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
-      if (!currentActivity || isBusy) {
+      if (!currentActivity) {
         return;
       }
 
-      animateSwipe(direction, () => {
-        swipeMutation.mutate({
-          activityId: currentActivity.id,
-          direction,
-        });
-      });
+      animateOffscreen(direction, currentActivity.id);
     },
-    [animateSwipe, currentActivity, isBusy, swipeMutation],
+    [animateOffscreen, currentActivity],
   );
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          !isBusy && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-        onPanResponderMove: (_, gestureState) => {
-          pan.setValue({ x: gestureState.dx, y: 0 });
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dx > 80) {
-            handleSwipe('right');
-            return;
-          }
+  const swipeThreshold = Math.max(90, windowWidth * 0.28);
 
-          if (gestureState.dx < -80) {
-            handleSwipe('left');
-            return;
-          }
+  const panGesture = useMemo(() => {
+    return Gesture.Pan()
+      .enabled(!!currentActivity && !isBusy)
+      .activeOffsetX([-10, 10])
+      .failOffsetY([-14, 14])
+      .onUpdate((event) => {
+        translateX.value = event.translationX;
+        translateY.value = event.translationY * 0.12;
+      })
+      .onEnd(() => {
+        const shouldSwipe = Math.abs(translateX.value) > swipeThreshold;
 
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
-        },
-      }),
-    [handleSwipe, isBusy, pan],
-  );
+        if (shouldSwipe && currentActivity) {
+          runOnJS(handleSwipe)(translateX.value > 0 ? 'right' : 'left');
+          return;
+        }
+
+        runOnJS(resetCardPosition)();
+      });
+  }, [currentActivity, handleSwipe, isBusy, resetCardPosition, swipeThreshold, translateX, translateY]);
 
   const resetDeck = useCallback(() => {
     setCurrentIndex(0);
     setMatchMessage(null);
+    resetCardPosition();
     void refetch();
-  }, [refetch]);
+  }, [refetch, resetCardPosition]);
 
   const resetFilters = useCallback(() => {
     setCategoryFilter('');
@@ -207,27 +254,45 @@ export const DiscoverScreen = () => {
     setCurrentIndex(0);
   }, []);
 
-  const cardStyle = {
-    transform: [
-      { translateX: pan.x },
-      {
-        rotate: pan.x.interpolate({
-          inputRange: [-240, 0, 240],
-          outputRange: ['-10deg', '0deg', '10deg'],
-        }),
-      },
-    ],
-  };
+  const activeCardStyle = useAnimatedStyle(() => {
+    const rotateZ = `${swipeRatio.value * 12}deg`;
+
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotateZ },
+      ],
+    };
+  }, []);
+
+  const likeOverlayStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(translateX.value, [0, swipeThreshold], [0, 1]);
+    return { opacity: Math.max(0, Math.min(1, opacity)) };
+  }, [swipeThreshold]);
+
+  const passOverlayStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(translateX.value, [-swipeThreshold, 0], [1, 0]);
+    return { opacity: Math.max(0, Math.min(1, opacity)) };
+  }, [swipeThreshold]);
+
+  const visibleActivities = activities.slice(currentIndex, currentIndex + 3);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
-    >
-      <Text variant="headlineSmall">Discover Events</Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Find activities near you.
-      </Text>
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingBottom: insets.bottom + 140,
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+      >
+        <Text variant="headlineSmall">Discover Events</Text>
+        <Text variant="bodyMedium" style={styles.subtitle}>
+          Find activities near you.
+        </Text>
 
       <View style={styles.toolbar}>
         <Button mode="outlined" onPress={() => setShowFilters((prev) => !prev)}>
@@ -402,36 +467,100 @@ export const DiscoverScreen = () => {
         </Card>
       )}
 
-      {currentActivity && (
-        <Animated.View style={cardStyle} {...panResponder.panHandlers}>
-          <Card style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Text variant="titleMedium">{currentActivity.title}</Text>
-              {!!currentActivity.description && <Text>{currentActivity.description}</Text>}
-              {!!currentActivity.location && <Text>📍 {currentActivity.location}</Text>}
-              {!!currentActivity.time && <Text>🕒 {new Date(currentActivity.time).toLocaleString()}</Text>}
-              <Text>
-                👥 {currentActivity.participant_count ?? 0}
-                {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}
-              </Text>
-              <Button mode="text" onPress={() => setShowDetails(true)}>
-                View details
-              </Button>
-            </Card.Content>
-          </Card>
-        </Animated.View>
-      )}
+        <View style={styles.deckWrap}>
+          {visibleActivities.length === 0 ? null : (
+            <View style={styles.deck}>
+              {visibleActivities
+                .map((activity, index) => ({ activity, index }))
+                .reverse()
+                .map(({ activity, index }) => {
+                  const isActive = index === 0;
+                  const stackOffset = index * 6;
+                  const scale = 1 - index * 0.03;
 
-      {currentActivity && (
-        <View style={styles.actions}>
-          <Button mode="outlined" onPress={() => handleSwipe('left')} disabled={isBusy}>
-            Swipe left
-          </Button>
-          <Button mode="contained" onPress={() => handleSwipe('right')} disabled={isBusy}>
-            Swipe right
-          </Button>
+                  const baseStyle = {
+                    top: stackOffset,
+                    transform: [{ scale }],
+                    opacity: 1 - index * 0.12,
+                  } as const;
+
+                  if (!isActive) {
+                    return (
+                      <Animated.View
+                        key={String(activity.id)}
+                        style={[styles.cardShell, baseStyle]}
+                      >
+                        <Card style={styles.card}>
+                          <Card.Content style={styles.cardContent}>
+                            <Text variant="titleMedium">{activity.title}</Text>
+                            {!!activity.location && <Text>📍 {activity.location}</Text>}
+                            {!!activity.time && <Text>🕒 {new Date(activity.time).toLocaleString()}</Text>}
+                          </Card.Content>
+                        </Card>
+                      </Animated.View>
+                    );
+                  }
+
+                  return (
+                    <GestureDetector key={String(activity.id)} gesture={panGesture}>
+                      <Animated.View style={[styles.cardShell, baseStyle, activeCardStyle]}>
+                        <Animated.View
+                          style={[
+                            styles.overlay,
+                            styles.passOverlay,
+                            { backgroundColor: theme.colors.errorContainer },
+                            passOverlayStyle,
+                          ]}
+                        >
+                          <Text style={[styles.overlayText, { color: theme.colors.onErrorContainer }]}>PASS</Text>
+                        </Animated.View>
+                        <Animated.View
+                          style={[
+                            styles.overlay,
+                            styles.likeOverlay,
+                            { backgroundColor: theme.colors.secondaryContainer },
+                            likeOverlayStyle,
+                          ]}
+                        >
+                          <Text
+                            style={[styles.overlayText, { color: theme.colors.onSecondaryContainer }]}
+                          >
+                            LIKE
+                          </Text>
+                        </Animated.View>
+
+                        <Card style={styles.card}>
+                          <Card.Content style={styles.cardContent}>
+                            <Text variant="titleMedium">{activity.title}</Text>
+                            {!!activity.description && (
+                              <Text numberOfLines={3}>{activity.description}</Text>
+                            )}
+                            {!!activity.location && <Text>📍 {activity.location}</Text>}
+                            {!!activity.time && (
+                              <Text>🕒 {new Date(activity.time).toLocaleString()}</Text>
+                            )}
+                            <Text>
+                              👥 {activity.participant_count ?? 0}
+                              {activity.capacity ? ` / ${activity.capacity}` : ''}
+                            </Text>
+                            <Button
+                              mode="text"
+                              onPress={() => {
+                                void Haptics.selectionAsync();
+                                setShowDetails(true);
+                              }}
+                            >
+                              View details
+                            </Button>
+                          </Card.Content>
+                        </Card>
+                      </Animated.View>
+                    </GestureDetector>
+                  );
+                })}
+            </View>
+          )}
         </View>
-      )}
 
       <Portal>
         <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
@@ -496,11 +625,58 @@ export const DiscoverScreen = () => {
           ) : null}
         </Modal>
       </Portal>
-    </ScrollView>
+      </ScrollView>
+
+      {currentActivity ? (
+        <View
+          style={[
+            styles.actionBar,
+            {
+              paddingBottom: insets.bottom + 12,
+              backgroundColor: theme.colors.elevation.level2,
+              borderTopColor: theme.colors.outlineVariant,
+            },
+          ]}
+        >
+          <IconButton
+            icon="close"
+            mode="outlined"
+            size={28}
+            disabled={isBusy}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              handleSwipe('left');
+            }}
+          />
+          <IconButton
+            icon="information-outline"
+            mode="outlined"
+            size={26}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setShowDetails(true);
+            }}
+          />
+          <IconButton
+            icon="heart"
+            mode="contained"
+            size={28}
+            disabled={isBusy}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              handleSwipe('right');
+            }}
+          />
+        </View>
+      ) : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     gap: 12,
@@ -535,6 +711,18 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 8,
   },
+  deckWrap: {
+    minHeight: 440,
+  },
+  deck: {
+    position: 'relative',
+    height: 440,
+  },
+  cardShell: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
   cardContent: {
     gap: 8,
   },
@@ -544,10 +732,24 @@ const styles = StyleSheet.create({
   errorContainer: {
     gap: 8,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+  overlay: {
+    position: 'absolute',
+    top: 18,
+    zIndex: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  likeOverlay: {
+    left: 18,
+  },
+  passOverlay: {
+    right: 18,
+  },
+  overlayText: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   detailsModal: {
     backgroundColor: 'white',
@@ -563,5 +765,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
+  },
+  actionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 18,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

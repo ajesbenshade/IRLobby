@@ -1,29 +1,59 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Chip, HelperText, Text } from 'react-native-paper';
+import * as Haptics from 'expo-haptics';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Button, Card, Chip, HelperText, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
+import type { MainStackParamList } from '@navigation/types';
+import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
 
 export const MatchesScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const theme = useTheme();
+
   const { data = [], isLoading, isRefetching, refetch, error } = useQuery({
     queryKey: ['mobile-matches'],
     queryFn: fetchMatches,
   });
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['mobile-conversations'],
+    queryFn: fetchConversations,
+  });
+
+  const conversationByMatchId = new Map<number, number>();
+  for (const conversation of conversations) {
+    if (typeof conversation.matchId === 'number') {
+      conversationByMatchId.set(conversation.matchId, conversation.id);
+    }
+  }
 
   return (
     <ScrollView
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
-      <Text variant="headlineSmall">Matches</Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        People who matched with you.
-      </Text>
+      <Surface elevation={1} style={styles.header}>
+        <View style={styles.headerText}>
+          <Text variant="headlineSmall">Matches</Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            People who matched with you.
+          </Text>
+        </View>
+      </Surface>
 
-      {isLoading && <Text>Loading matches...</Text>}
+      {isLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator animating />
+          <Text style={styles.secondaryText}>Loading matches...</Text>
+        </View>
+      ) : null}
 
-      {error && (
+      {error ? (
         <View style={styles.errorContainer}>
           <HelperText type="error" visible>
             {getErrorMessage(error, 'Unable to load matches.')}
@@ -32,31 +62,78 @@ export const MatchesScreen = () => {
             {isRefetching ? 'Retrying...' : 'Retry'}
           </Button>
         </View>
-      )}
+      ) : null}
 
-      {!isLoading && data.length === 0 && (
-        <Card>
-          <Card.Content>
-            <Text>No matches yet.</Text>
-            <Text style={styles.secondaryText}>Start swiping to find activities you love.</Text>
-          </Card.Content>
-        </Card>
-      )}
+      {!isLoading && !error && data.length === 0 ? (
+        <View style={styles.centerState}>
+          <MaterialCommunityIcons name="message-text-outline" size={56} color={theme.colors.onSurfaceVariant} />
+          <Text variant="titleMedium">No matches yet</Text>
+          <Text style={styles.secondaryText}>Start swiping to find activities you love!</Text>
+        </View>
+      ) : null}
 
-      {data.map((match) => (
-        <Card key={match.id} style={styles.card}>
-          <Card.Content style={styles.cardContent}>
-            <View style={styles.headerRow}>
-              <Text variant="titleMedium" style={styles.flexText}>
-                {match.activity}
-              </Text>
-              <Chip compact>Matched</Chip>
-            </View>
-            <Text>{match.user_a} ↔ {match.user_b}</Text>
-            <Text style={styles.secondaryText}>{new Date(match.created_at).toLocaleString()}</Text>
-          </Card.Content>
-        </Card>
-      ))}
+      {!isLoading && !error
+        ? data.map((match) => {
+            const conversationId = conversationByMatchId.get(match.id);
+            const title = match.activity || 'Activity';
+            const titleInitial = title.trim().slice(0, 1).toUpperCase() || 'A';
+
+            return (
+              <Card key={match.id} style={styles.card}>
+                <Card.Content>
+                  <View style={styles.row}>
+                    <View
+                      style={[
+                        styles.thumb,
+                        {
+                          backgroundColor: theme.colors.primaryContainer,
+                        },
+                      ]}
+                    >
+                      <Text
+                        variant="titleLarge"
+                        style={{ color: theme.colors.onPrimaryContainer }}
+                      >
+                        {titleInitial}
+                      </Text>
+                    </View>
+
+                    <View style={styles.matchText}>
+                      <Text variant="titleMedium" numberOfLines={1}>
+                        {title}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.secondaryText}>
+                        {match.user_a} ↔ {match.user_b}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        <Chip compact>Matched</Chip>
+                        <Text variant="bodySmall" style={styles.secondaryText}>
+                          {new Date(match.created_at).toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.trailing}>
+                      {conversationId ? (
+                        <IconButton
+                          icon="message-text"
+                          mode="contained"
+                          size={22}
+                          onPress={() => {
+                            void Haptics.selectionAsync();
+                            navigation.navigate('Chat', { conversationId });
+                          }}
+                        />
+                      ) : (
+                        <IconButton icon="clock-outline" mode="outlined" size={22} disabled />
+                      )}
+                    </View>
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          })
+        : null}
     </ScrollView>
   );
 };
@@ -66,23 +143,51 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  header: {
+    borderRadius: 12,
+    padding: 12,
+  },
+  headerText: {
+    gap: 2,
+  },
   subtitle: {
     opacity: 0.75,
+  },
+  centerState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 10,
   },
   card: {
     marginBottom: 8,
   },
-  cardContent: {
-    gap: 6,
-  },
-  headerRow: {
-    alignItems: 'center',
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
   },
-  flexText: {
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    gap: 10,
+  },
+  trailing: {
+    alignItems: 'flex-end',
   },
   secondaryText: {
     opacity: 0.7,

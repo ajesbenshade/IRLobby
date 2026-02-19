@@ -1,110 +1,44 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Surface, Switch, Text } from 'react-native-paper';
+import * as Haptics from 'expo-haptics';
+import { Button, HelperText, SegmentedButtons, Surface, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
+import {
+  defaultSettings,
+  fetchUserSettings,
+  saveUserSettings,
+  type PreferenceSettings,
+  type PrivacySettings,
+  type NotificationSettings,
+  type UserSettings,
+} from '@services/settingsService';
 import { getErrorMessage } from '@utils/error';
-
-interface NotificationSettings {
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  activityReminders: boolean;
-  newMatches: boolean;
-  messages: boolean;
-}
-
-interface PrivacySettings {
-  profileVisibility: 'public' | 'friends' | 'private';
-  locationSharing: boolean;
-  showAge: boolean;
-  showEmail: boolean;
-}
-
-interface PreferenceSettings {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  distanceUnit: 'miles' | 'kilometers';
-  maxDistance: number;
-}
-
-interface UserSettings {
-  notifications: NotificationSettings;
-  privacy: PrivacySettings;
-  preferences: PreferenceSettings;
-}
-
-interface UserProfileResponse {
-  preferences?: Partial<PreferenceSettings> & {
-    notifications?: NotificationSettings;
-    privacy?: PrivacySettings;
-  };
-}
-
-const defaultSettings: UserSettings = {
-  notifications: {
-    pushNotifications: true,
-    emailNotifications: true,
-    activityReminders: true,
-    newMatches: true,
-    messages: true,
-  },
-  privacy: {
-    profileVisibility: 'public',
-    locationSharing: true,
-    showAge: true,
-    showEmail: false,
-  },
-  preferences: {
-    theme: 'system',
-    language: 'English',
-    distanceUnit: 'miles',
-    maxDistance: 25,
-  },
-};
-
-const toPayload = (settings: UserSettings) => ({
-  preferences: {
-    ...settings.preferences,
-    notifications: settings.notifications,
-    privacy: settings.privacy,
-  },
-});
-
-const loadSettings = async (): Promise<UserSettings> => {
-  const response = await api.get<UserProfileResponse>(API_ROUTES.USER_PROFILE);
-  const preferences = response.data.preferences ?? {};
-  const { notifications, privacy, ...preferenceOverrides } = preferences;
-
-  return {
-    notifications: {
-      ...defaultSettings.notifications,
-      ...(notifications ?? {}),
-    },
-    privacy: {
-      ...defaultSettings.privacy,
-      ...(privacy ?? {}),
-    },
-    preferences: {
-      ...defaultSettings.preferences,
-      ...preferenceOverrides,
-    },
-  };
-};
 
 export const SettingsScreen = () => {
   const { signOut } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
     queryKey: ['mobile-settings'],
-    queryFn: loadSettings,
+    queryFn: fetchUserSettings,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (next: UserSettings) => {
-      await api.patch(API_ROUTES.USER_PROFILE, toPayload(next));
+    mutationFn: saveUserSettings,
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: ['mobile-settings'] });
+      const previous = queryClient.getQueryData<UserSettings>(['mobile-settings']);
+      queryClient.setQueryData(['mobile-settings'], next);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['mobile-settings'], context.previous);
+      }
     },
     onSuccess: async () => {
       await refetch();
@@ -160,6 +94,10 @@ export const SettingsScreen = () => {
         [key]: value,
       },
     };
+
+    if (key === 'theme') {
+      void Haptics.selectionAsync();
+    }
 
     updateMutation.mutate(next);
   };
@@ -332,18 +270,16 @@ export const SettingsScreen = () => {
         <Text variant="titleMedium">Preferences</Text>
         <View style={styles.rowWrap}>
           <Text>Theme</Text>
-          <Button
-            mode="outlined"
-            compact
-            onPress={() => {
-              const sequence: PreferenceSettings['theme'][] = ['light', 'dark', 'system'];
-              const currentIndex = sequence.indexOf(settings.preferences.theme);
-              const nextTheme = sequence[(currentIndex + 1) % sequence.length];
-              updatePreference('theme', nextTheme);
-            }}
-          >
-            {settings.preferences.theme}
-          </Button>
+          <SegmentedButtons
+            value={settings.preferences.theme}
+            onValueChange={(value) => updatePreference('theme', value as PreferenceSettings['theme'])}
+            buttons={[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              { value: 'system', label: 'System' },
+            ]}
+            style={styles.segmented}
+          />
         </View>
         <View style={styles.rowWrap}>
           <Text>Distance unit</Text>
@@ -429,6 +365,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  segmented: {
+    flexShrink: 1,
   },
   actions: {
     marginTop: 8,

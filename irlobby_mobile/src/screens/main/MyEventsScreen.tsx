@@ -1,22 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
-import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
-import { Card, HelperText, Surface, Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  ActivityIndicator,
+  Card,
+  Chip,
+  HelperText,
+  IconButton,
+  Surface,
+  Text,
+  useTheme,
+} from 'react-native-paper';
 
-import { fetchHostedActivities } from '@services/activityService';
+import type { MainStackParamList } from '@navigation/types';
+import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
 
 export const MyEventsScreen = () => {
-  const {
-    data: hosted = [],
-    isLoading: hostedLoading,
-    isRefetching: hostedRefetching,
-    error: hostedError,
-    refetch: refetchHosted,
-  } = useQuery({
-    queryKey: ['mobile-hosted-activities'],
-    queryFn: fetchHostedActivities,
-  });
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const theme = useTheme();
 
   const {
     data: matches = [],
@@ -29,7 +35,25 @@ export const MyEventsScreen = () => {
     queryFn: fetchMatches,
   });
 
-  const isRefreshing = hostedRefetching || matchesRefetching;
+  const {
+    data: conversations = [],
+    isRefetching: conversationsRefetching,
+    error: conversationsError,
+    refetch: refetchConversations,
+  } = useQuery({
+    queryKey: ['mobile-conversations'],
+    queryFn: fetchConversations,
+  });
+
+  const conversationByMatchId = new Map<number, number>();
+  for (const conversation of conversations) {
+    if (typeof conversation.matchId === 'number') {
+      conversationByMatchId.set(conversation.matchId, conversation.id);
+    }
+  }
+
+  const isRefreshing = matchesRefetching || conversationsRefetching;
+  const error = matchesError ?? conversationsError;
 
   return (
     <ScrollView
@@ -38,54 +62,103 @@ export const MyEventsScreen = () => {
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={() => {
-            void refetchHosted();
             void refetchMatches();
+            void refetchConversations();
           }}
         />
       }
     >
-      <Text variant="headlineSmall">My Events</Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Hosted and matched activity history.
-      </Text>
-
-      {(hostedError || matchesError) && (
-        <HelperText type="error" visible>
-          {getErrorMessage(hostedError ?? matchesError, 'Unable to load your events.')}
-        </HelperText>
-      )}
-
-      <Card>
-        <Card.Title title="Hosted" />
-        <Card.Content>
-          <Text variant="displaySmall">{hostedLoading ? '…' : hosted.length}</Text>
-          <Text>Activities you created</Text>
-        </Card.Content>
-      </Card>
-
-      <Card>
-        <Card.Title title="Joined/Matched" />
-        <Card.Content>
-          <Text variant="displaySmall">{matchesLoading ? '…' : matches.length}</Text>
-          <Text>Matches from activities</Text>
-        </Card.Content>
-      </Card>
-
-      <Surface elevation={1} style={styles.listCard}>
-        <Text variant="titleMedium">Latest Hosted</Text>
-        {hosted.slice(0, 5).map((activity) => (
-          <Text key={String(activity.id)}>• {activity.title}</Text>
-        ))}
-        {!hostedLoading && hosted.length === 0 && <Text>No hosted activities yet.</Text>}
+      <Surface elevation={1} style={styles.header}>
+        <View style={styles.headerText}>
+          <Text variant="headlineSmall">My Events</Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            Activities you've joined
+          </Text>
+        </View>
       </Surface>
 
-      <Surface elevation={1} style={styles.listCard}>
-        <Text variant="titleMedium">Latest Matched</Text>
-        {matches.slice(0, 5).map((match) => (
-          <Text key={match.id}>• {match.activity}</Text>
-        ))}
-        {!matchesLoading && matches.length === 0 && <Text>No matched activities yet.</Text>}
-      </Surface>
+      {matchesLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator animating />
+          <Text style={styles.secondaryText}>Loading your events...</Text>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View style={styles.errorContainer}>
+          <HelperText type="error" visible>
+            {getErrorMessage(error, 'Unable to load your events.')}
+          </HelperText>
+        </View>
+      ) : null}
+
+      {!matchesLoading && !error && matches.length === 0 ? (
+        <View style={styles.centerState}>
+          <MaterialCommunityIcons name="calendar-month-outline" size={56} color={theme.colors.onSurfaceVariant} />
+          <Text variant="titleMedium">No events yet</Text>
+          <Text style={styles.secondaryText}>Swipe and join activities to see them here.</Text>
+        </View>
+      ) : null}
+
+      {!matchesLoading && !error
+        ? matches.map((match) => {
+            const conversationId = conversationByMatchId.get(match.id);
+            const title = match.activity || 'Activity';
+            const titleInitial = title.trim().slice(0, 1).toUpperCase() || 'A';
+
+            return (
+              <Card key={match.id} style={styles.card}>
+                <Card.Content>
+                  <View style={styles.row}>
+                    <View
+                      style={[
+                        styles.thumb,
+                        {
+                          backgroundColor: theme.colors.primaryContainer,
+                        },
+                      ]}
+                    >
+                      <Text variant="titleLarge" style={{ color: theme.colors.onPrimaryContainer }}>
+                        {titleInitial}
+                      </Text>
+                    </View>
+
+                    <View style={styles.matchText}>
+                      <Text variant="titleMedium" numberOfLines={1}>
+                        {title}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.secondaryText}>
+                        {match.user_a} ↔ {match.user_b}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        <Chip compact>Matched</Chip>
+                        <Text variant="bodySmall" style={styles.secondaryText}>
+                          {new Date(match.created_at).toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.trailing}>
+                      {conversationId ? (
+                        <IconButton
+                          icon="message-text"
+                          mode="contained"
+                          size={22}
+                          onPress={() => {
+                            void Haptics.selectionAsync();
+                            navigation.navigate('Chat', { conversationId });
+                          }}
+                        />
+                      ) : (
+                        <IconButton icon="clock-outline" mode="outlined" size={22} disabled />
+                      )}
+                    </View>
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          })
+        : null}
     </ScrollView>
   );
 };
@@ -95,12 +168,56 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  header: {
+    borderRadius: 12,
+    padding: 12,
+  },
+  headerText: {
+    gap: 2,
+  },
   subtitle: {
     opacity: 0.75,
   },
-  listCard: {
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
+  centerState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 10,
+  },
+  secondaryText: {
+    opacity: 0.7,
+  },
+  errorContainer: {
+    gap: 8,
+  },
+  card: {
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    gap: 10,
+  },
+  trailing: {
+    alignItems: 'flex-end',
   },
 });

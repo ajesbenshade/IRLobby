@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_ROUTES } from '@shared/schema';
 
 import { useAuth } from '@hooks/useAuth';
+import { OfflineBanner } from '@components/OfflineBanner';
 import { api } from '@services/apiClient';
 import { updateOnboarding } from '@services/authService';
 import { getErrorMessage } from '@utils/error';
@@ -57,6 +58,8 @@ export const ProfileScreen = () => {
   const trimmedAvatarUrl = avatarUrl.trim();
   const avatarUrlIsSavable = trimmedAvatarUrl === '' || isRemoteHttpUrl(trimmedAvatarUrl);
   const avatarImageUri = avatarPreviewUri.trim() || trimmedAvatarUrl;
+  const isPreviewOnlyAvatar =
+    avatarPreviewUri.trim().length > 0 && !isRemoteHttpUrl(avatarPreviewUri) && !isRemoteHttpUrl(trimmedAvatarUrl);
   const hasUnsavablePhotos = photoAlbum.some((value) => {
     const trimmed = value.trim();
     return trimmed !== '' && !isRemoteHttpUrl(trimmed);
@@ -202,6 +205,8 @@ export const ProfileScreen = () => {
         </View>
       </Surface>
 
+      <OfflineBanner />
+
       <Surface elevation={2} style={styles.card}>
         <Text variant="titleMedium">Edit profile</Text>
 
@@ -244,6 +249,11 @@ export const ProfileScreen = () => {
         <Button mode="outlined" onPress={pickAvatarFromLibrary}>
           Pick avatar from library
         </Button>
+        {isPreviewOnlyAvatar ? (
+          <HelperText type="info" visible>
+            Library avatar picks are preview-only. Paste an http(s) URL above to save.
+          </HelperText>
+        ) : null}
 
         <Text variant="titleMedium">Interests ({interests.length}/{MAX_INTERESTS})</Text>
         <View style={styles.row}>

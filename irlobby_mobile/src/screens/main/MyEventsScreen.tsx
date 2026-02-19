@@ -16,6 +16,7 @@ import {
 } from 'react-native-paper';
 
 import type { MainStackParamList } from '@navigation/types';
+import { OfflineBanner } from '@components/OfflineBanner';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
@@ -76,6 +77,8 @@ export const MyEventsScreen = () => {
           </Text>
         </View>
       </Surface>
+
+      <OfflineBanner />
 
       {matchesLoading ? (
         <View style={styles.centerState}>

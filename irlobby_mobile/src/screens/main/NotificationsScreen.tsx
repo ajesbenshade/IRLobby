@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Card, HelperText, Surface, Text, useTheme } from 'react-native-paper';
 
 import type { MainStackParamList } from '@navigation/types';
+import { OfflineBanner } from '@components/OfflineBanner';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
@@ -95,6 +96,8 @@ export const NotificationsScreen = () => {
       <Text variant="bodyMedium" style={styles.subtitle}>
         Matches and message updates.
       </Text>
+
+      <OfflineBanner />
 
       {isLoading ? (
         <View style={styles.centerState}>

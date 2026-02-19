@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityIndicator, Button, Card, Chip, HelperText, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 import type { MainStackParamList } from '@navigation/types';
+import { OfflineBanner } from '@components/OfflineBanner';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
@@ -45,6 +46,8 @@ export const MatchesScreen = () => {
           </Text>
         </View>
       </Surface>
+
+      <OfflineBanner />
 
       {isLoading ? (
         <View style={styles.centerState}>

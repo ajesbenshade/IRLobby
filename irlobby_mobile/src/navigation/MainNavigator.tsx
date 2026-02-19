@@ -1,12 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTheme } from 'react-native-paper';
 
-import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
 import { DiscoverScreen } from '@screens/main/DiscoverScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
-import { HomeScreen } from '@screens/main/HomeScreen';
+import { ChatScreen } from '@screens/main/ChatScreen';
 import { MatchesScreen } from '@screens/main/MatchesScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
@@ -20,41 +20,46 @@ import type { MainStackParamList, MainTabParamList } from './types';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-const MainTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarActiveTintColor: '#2563eb',
-      tabBarInactiveTintColor: '#64748b',
-      tabBarIcon: ({ color, size }) => {
-        const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> =
-          {
-            Home: 'home-variant',
-            MyEvents: 'calendar-month-outline',
-            Discover: 'compass-outline',
-            Create: 'plus-circle-outline',
-            Matches: 'heart-outline',
-            Chat: 'message-text-outline',
-            Profile: 'account-circle-outline',
-          };
-        const iconName = iconMap[route.name as keyof MainTabParamList];
-        return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
-      },
-    })}
-  >
-    <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="MyEvents" component={MyEventsScreen} options={{ title: 'My Events' }} />
-    <Tab.Screen name="Discover" component={DiscoverScreen} />
-    <Tab.Screen name="Create" component={CreateActivityScreen} />
-    <Tab.Screen name="Matches" component={MatchesScreen} />
-    <Tab.Screen name="Chat" component={ChatScreen} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
-  </Tab.Navigator>
-);
+const MainTabs = () => {
+  const theme = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarStyle: {
+          backgroundColor: theme.colors.elevation.level2,
+          borderTopColor: theme.colors.outlineVariant,
+        },
+        tabBarIcon: ({ color, size }) => {
+          const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> =
+            {
+              Discover: 'compass-outline',
+              Matches: 'heart-outline',
+              Create: 'plus-circle-outline',
+              MyEvents: 'calendar-month-outline',
+              Profile: 'account-circle-outline',
+            };
+          const iconName = iconMap[route.name as keyof MainTabParamList];
+          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Discover" component={DiscoverScreen} />
+      <Tab.Screen name="Matches" component={MatchesScreen} />
+      <Tab.Screen name="Create" component={CreateActivityScreen} />
+      <Tab.Screen name="MyEvents" component={MyEventsScreen} options={{ title: 'My Events' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+};
 
 export const MainNavigator = () => (
   <Stack.Navigator>
     <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+    <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
     <Stack.Screen name="Friends" component={FriendsScreen} options={{ title: 'Connections' }} />
     <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ title: 'Reviews' }} />

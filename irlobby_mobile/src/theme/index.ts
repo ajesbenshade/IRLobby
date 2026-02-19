@@ -6,8 +6,10 @@ const fontConfig = configureFonts({
   },
 });
 
-const primaryColor = '#2563eb';
-const secondaryColor = '#0ea5e9';
+// Web parity tokens (see client/src/index.css)
+const primaryColor = '#6366F1';
+const secondaryColor = '#F59E0B';
+const tertiaryColor = '#10B981';
 
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
@@ -16,7 +18,7 @@ export const lightTheme: MD3Theme = {
     ...MD3LightTheme.colors,
     primary: primaryColor,
     secondary: secondaryColor,
-    tertiary: '#f97316',
+    tertiary: tertiaryColor,
     background: '#f9fafb',
   },
 };
@@ -28,6 +30,6 @@ export const darkTheme: MD3Theme = {
     ...MD3DarkTheme.colors,
     primary: primaryColor,
     secondary: secondaryColor,
-    tertiary: '#f97316',
+    tertiary: tertiaryColor,
   },
 };

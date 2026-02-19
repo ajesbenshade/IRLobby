@@ -3,7 +3,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Onboarding: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainStackParamList> | undefined;
   Modal?: { screen: string; params?: Record<string, unknown> };
 };
 
@@ -15,17 +15,16 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
-  Home: undefined;
-  MyEvents: undefined;
   Discover: undefined;
-  Create: undefined;
   Matches: undefined;
-  Chat: undefined;
+  Create: undefined;
+  MyEvents: undefined;
   Profile: undefined;
 };
 
 export type MainStackParamList = {
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  Chat: { matchId?: number; conversationId?: number } | undefined;
   Settings: undefined;
   Friends: undefined;
   Reviews: undefined;

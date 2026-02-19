@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
@@ -27,6 +28,7 @@ const MainTabs = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
         tabBarStyle: {
@@ -34,24 +36,45 @@ const MainTabs = () => {
           borderTopColor: theme.colors.outlineVariant,
         },
         tabBarIcon: ({ color, size }) => {
-          const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> =
-            {
-              Discover: 'compass-outline',
-              Matches: 'heart-outline',
-              Create: 'plus-circle-outline',
-              MyEvents: 'calendar-month-outline',
-              Profile: 'account-circle-outline',
-            };
+          const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> = {
+            Discover: 'magnify',
+            Matches: 'message-text-outline',
+            Create: 'plus',
+            MyEvents: 'calendar-month-outline',
+            Profile: 'account-outline',
+          };
+
+          if (route.name === 'Create') {
+            return (
+              <View
+                style={{
+                  width: Math.max(size + 10, 36),
+                  height: Math.max(size + 10, 36),
+                  borderRadius: 999,
+                  backgroundColor: theme.colors.primary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialCommunityIcons
+                  name={iconMap.Create}
+                  size={Math.max(size - 2, 18)}
+                  color={theme.colors.onPrimary}
+                />
+              </View>
+            );
+          }
+
           const iconName = iconMap[route.name as keyof MainTabParamList];
           return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Discover" component={DiscoverScreen} />
-      <Tab.Screen name="Matches" component={MatchesScreen} />
-      <Tab.Screen name="Create" component={CreateActivityScreen} />
+      <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="Matches" component={MatchesScreen} options={{ title: 'Matches' }} />
+      <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Create' }} />
       <Tab.Screen name="MyEvents" component={MyEventsScreen} options={{ title: 'My Events' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 };

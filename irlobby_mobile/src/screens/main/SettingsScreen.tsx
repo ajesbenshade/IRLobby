@@ -6,6 +6,7 @@ import { Button, HelperText, SegmentedButtons, Surface, Switch, Text } from 'rea
 import { API_ROUTES } from '@shared/schema';
 
 import { useAuth } from '@hooks/useAuth';
+import { OfflineBanner } from '@components/OfflineBanner';
 import { api } from '@services/apiClient';
 import {
   defaultSettings,
@@ -80,6 +81,7 @@ export const SettingsScreen = () => {
       },
     } as UserSettings;
 
+    void Haptics.selectionAsync();
     updateMutation.mutate(next);
   };
 
@@ -123,6 +125,7 @@ export const SettingsScreen = () => {
   };
 
   const confirmDeleteAccount = () => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
       'Delete account',
       'Are you sure you want to delete your account? This action cannot be undone.',
@@ -135,6 +138,7 @@ export const SettingsScreen = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             deleteAccountMutation.mutate();
           },
         },
@@ -148,6 +152,8 @@ export const SettingsScreen = () => {
       <Text variant="bodyMedium" style={styles.subtitle}>
         Manage notification and privacy preferences.
       </Text>
+
+      <OfflineBanner />
 
       {(isLoading || isRefetching) && <Text>Loading settings...</Text>}
 

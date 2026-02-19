@@ -3,7 +3,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { AppState, type AppStateStatus, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, HelperText, IconButton, Surface, Text, TextInput, useTheme } from 'react-native-paper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -19,6 +19,7 @@ import { getAccessToken } from '@services/authStorage';
 import { getErrorMessage } from '@utils/error';
 
 import { useAuth } from '@hooks/useAuth';
+import { OfflineBanner } from '@components/OfflineBanner';
 
 import type { MainStackParamList } from '@navigation/types';
 
@@ -35,6 +36,9 @@ export const ChatScreen = () => {
   const [draft, setDraft] = useState('');
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const [wsStatus, setWsStatus] = useState<'idle' | 'connecting' | 'open' | 'closed'>('idle');
 
   const {
     data: conversations = [],
@@ -48,7 +52,7 @@ export const ChatScreen = () => {
   });
 
   const selectedConversation = useMemo(
-    () => conversations.find((item) => item.id === selectedConversationId),
+    () => conversations.find((item: ConversationItem) => item.id === selectedConversationId),
     [conversations, selectedConversationId],
   );
 
@@ -62,7 +66,9 @@ export const ChatScreen = () => {
       return;
     }
 
-    const resolved = conversations.find((conversation) => conversation.matchId === matchId);
+    const resolved = conversations.find(
+      (conversation: ConversationItem) => conversation.matchId === matchId,
+    );
     if (resolved) {
       setSelectedConversationId(resolved.id);
     }
@@ -102,15 +108,75 @@ export const ChatScreen = () => {
 
     let isCancelled = false;
 
-    const connect = async () => {
+    const clearReconnect = () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
+
+    const cleanupSocket = () => {
+      const ws = websocketRef.current;
+      if (ws) {
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        ws.close();
+      }
+      websocketRef.current = null;
+    };
+
+    const scheduleReconnect = (reason: 'close' | 'error') => {
+      if (isCancelled) {
+        return;
+      }
+
+      if (appStateRef.current !== 'active') {
+        setWsStatus('closed');
+        return;
+      }
+
+      reconnectAttemptRef.current += 1;
+
+      const attempt = reconnectAttemptRef.current;
+      const baseDelay = Math.min(30_000, 1000 * 2 ** Math.min(6, attempt));
+      const jitter = Math.floor(Math.random() * 400);
+      const delay = baseDelay + jitter;
+
+      setWsStatus('closed');
+      clearReconnect();
+      reconnectTimeoutRef.current = setTimeout(() => {
+        void connect(reason);
+      }, delay);
+    };
+
+    const connect = async (_reason: 'initial' | 'close' | 'error') => {
       const token = await getAccessToken();
       if (!token || isCancelled) {
         return;
       }
 
+      if (appStateRef.current !== 'active') {
+        return;
+      }
+
+      clearReconnect();
+      cleanupSocket();
+      setWsStatus('connecting');
+
       const wsUrl = `${config.websocketUrl}/ws/chat/${selectedConversationId}/?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
+
+      ws.onopen = () => {
+        reconnectAttemptRef.current = 0;
+        setWsStatus('open');
+      };
+
+      ws.onerror = () => {
+        scheduleReconnect('error');
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -132,21 +198,32 @@ export const ChatScreen = () => {
           return;
         }
 
-        reconnectTimeoutRef.current = setTimeout(() => {
-          void connect();
-        }, 3000);
+        scheduleReconnect('close');
       };
     };
 
-    void connect();
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      appStateRef.current = nextAppState;
+
+      if (nextAppState !== 'active') {
+        clearReconnect();
+        setWsStatus('closed');
+        cleanupSocket();
+        return;
+      }
+
+      void connect('initial');
+    });
+
+    void connect('initial');
 
     return () => {
       isCancelled = true;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      websocketRef.current?.close();
-      websocketRef.current = null;
+
+      appStateSubscription.remove();
+
+      clearReconnect();
+      cleanupSocket();
     };
   }, [queryClient, selectedConversationId]);
 
@@ -175,12 +252,18 @@ export const ChatScreen = () => {
                 {selectedConversation?.match ?? 'Conversation'}
               </Text>
               <Text variant="bodySmall" style={styles.subtitleText}>
-                Live conversations and messaging.
+                {wsStatus === 'open'
+                  ? 'Connected'
+                  : wsStatus === 'connecting'
+                    ? 'Connecting…'
+                    : 'Offline — will reconnect'}
               </Text>
             </View>
             <View style={styles.headerSpacer} />
           </View>
         </Surface>
+
+        <OfflineBanner />
 
         {messagesError && (
           <View style={styles.errorContainer}>
@@ -195,12 +278,12 @@ export const ChatScreen = () => {
 
         <FlatList<ConversationMessage>
           data={messages}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item: ConversationMessage) => String(item.id)}
           contentContainerStyle={styles.messageList}
           refreshControl={
             <RefreshControl refreshing={messagesRefetching} onRefresh={() => void refetchMessages()} />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item }: { item: ConversationMessage }) => {
             const isSelf = user?.id != null && String(item.userId) === String(user.id);
 
             return (
@@ -271,12 +354,12 @@ export const ChatScreen = () => {
   return (
     <FlatList<ConversationItem>
       data={conversations}
-      keyExtractor={(item) => String(item.id)}
+      keyExtractor={(item: ConversationItem) => String(item.id)}
       contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl refreshing={conversationsRefetching} onRefresh={() => void refetchConversations()} />
       }
-      renderItem={({ item }) => {
+      renderItem={({ item }: { item: ConversationItem }) => {
         const lastMessage = item.messages[item.messages.length - 1];
         return (
           <Surface style={styles.conversationRow} elevation={1}>
@@ -308,6 +391,8 @@ export const ChatScreen = () => {
               Live conversations and messaging.
             </Text>
           </Surface>
+
+          <OfflineBanner />
           {conversationsError && (
             <View style={styles.errorContainer}>
               <HelperText type="error" visible>

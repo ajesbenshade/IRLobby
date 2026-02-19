@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppNavigator } from '@navigation/AppNavigator';
 import { handlePushNavigation, navigationRef } from '@navigation/navigationRef';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 import { AuthProvider } from '@providers/AuthProvider';
 import { AppThemeProvider, useAppTheme } from '@providers/AppThemeProvider';
 import { QueryProvider } from '@providers/queryClient';
@@ -17,13 +18,21 @@ import { useAuth } from '@hooks/useAuth';
 
 import type { RootStackParamList } from '@navigation/types';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [Linking.createURL('/'), 'irlobby://', 'https://liyf.app', 'https://www.liyf.app'],
   config: {
     screens: {
       Auth: {
         screens: {
-          ResetPassword: 'reset-password/:token',
+          ResetPassword: 'reset-password/:token?',
         },
       },
     },
@@ -52,16 +61,32 @@ const AppShell = () => {
   const { paperTheme, mode } = useAppTheme();
   const { isAuthenticated } = useAuth();
   const pendingPushDataRef = useRef<unknown>(null);
+  const handledInitialNotificationRef = useRef(false);
 
   useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
+    if (handledInitialNotificationRef.current) {
+      return;
+    }
+
+    handledInitialNotificationRef.current = true;
+
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      const data = response?.notification.request.content.data;
+      if (!data) {
+        return;
+      }
+
+      if (!isAuthenticated) {
+        pendingPushDataRef.current = data;
+        return;
+      }
+
+      const handled = handlePushNavigation(data);
+      if (!handled) {
+        pendingPushDataRef.current = data;
+      }
     });
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
@@ -101,7 +126,9 @@ const AppShell = () => {
   return (
     <PaperProvider theme={paperTheme}>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      <AppBootstrap />
+      <ErrorBoundary>
+        <AppBootstrap />
+      </ErrorBoundary>
     </PaperProvider>
   );
 };

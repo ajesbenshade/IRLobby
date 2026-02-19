@@ -1,8 +1,9 @@
 import * as Contacts from 'expo-contacts';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { ScrollView, Share, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Surface, Switch, Text, TextInput } from 'react-native-paper';
+import { Button, HelperText, Surface, Switch, Text, TextInput, useTheme } from 'react-native-paper';
 
 import { useAuth } from '@hooks/useAuth';
 import { config } from '@constants/config';
@@ -13,6 +14,7 @@ const MAX_INTERESTS = 20;
 
 export const OnboardingScreen = () => {
   const { refreshProfile, signOut } = useAuth();
+  const theme = useTheme();
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
   const [ageRange, setAgeRange] = useState('');
@@ -25,6 +27,8 @@ export const OnboardingScreen = () => {
   const [inviteName, setInviteName] = useState('');
   const [inviteContact, setInviteContact] = useState('');
 
+  const [contactsError, setContactsError] = useState<string | null>(null);
+
   const interests = useMemo(
     () =>
       interestsInput
@@ -36,8 +40,12 @@ export const OnboardingScreen = () => {
   );
 
   const onboardingMutation = useMutation({
-    mutationFn: async (onboardingCompleted: boolean) =>
-      updateOnboarding({
+    mutationFn: async (mode: 'skip' | 'complete') => {
+      if (mode === 'skip') {
+        return updateOnboarding({ onboarding_completed: true });
+      }
+
+      return updateOnboarding({
         bio,
         city,
         age_range: ageRange,
@@ -48,9 +56,11 @@ export const OnboardingScreen = () => {
           smallGroups,
           weekendPreferred,
         },
-        onboarding_completed: onboardingCompleted,
-      }),
+        onboarding_completed: true,
+      });
+    },
     onSuccess: async () => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await refreshProfile();
     },
   });
@@ -63,6 +73,9 @@ export const OnboardingScreen = () => {
     if (!inviteContact.trim()) {
       return;
     }
+
+    setContactsError(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const invite = await inviteMutation.mutateAsync({
       contact_name: inviteName,
@@ -82,8 +95,12 @@ export const OnboardingScreen = () => {
   const importContactsAndInvite = async () => {
     const permission = await Contacts.requestPermissionsAsync();
     if (permission.status !== 'granted') {
+      setContactsError('Contacts permission is required to import and invite.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+
+    setContactsError(null);
 
     const result = await Contacts.getContactsAsync({
       fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
@@ -97,6 +114,7 @@ export const OnboardingScreen = () => {
     );
 
     if (!firstInvitable) {
+      setContactsError('No contacts with phone numbers or emails were found.');
       return;
     }
 
@@ -104,8 +122,11 @@ export const OnboardingScreen = () => {
       firstInvitable.phoneNumbers?.[0]?.number ?? firstInvitable.emails?.[0]?.email ?? '';
 
     if (!contactValue) {
+      setContactsError('Selected contact is missing a phone number or email.');
       return;
     }
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const invite = await inviteMutation.mutateAsync({
       contact_name: firstInvitable.name,
@@ -165,24 +186,36 @@ export const OnboardingScreen = () => {
           </HelperText>
         )}
 
+        {contactsError ? (
+          <HelperText type="error" visible>
+            {contactsError}
+          </HelperText>
+        ) : null}
+
         <View style={styles.actionRow}>
           <Button
             mode="text"
-            onPress={() => onboardingMutation.mutate(true)}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              onboardingMutation.mutate('skip');
+            }}
             disabled={onboardingMutation.isPending}
           >
             Skip for now
           </Button>
           <Button
             mode="contained"
-            onPress={() => onboardingMutation.mutate(true)}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onboardingMutation.mutate('complete');
+            }}
             loading={onboardingMutation.isPending}
           >
             Complete
           </Button>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
 
         <Text variant="titleMedium">Invite friends</Text>
         <TextInput
@@ -247,7 +280,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#cbd5e1',
     marginVertical: 8,
   },
 });

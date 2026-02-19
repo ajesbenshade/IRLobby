@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Button, HelperText, Surface, Text, TextInput, useTheme } from 'react-native-paper';
 
@@ -18,6 +19,13 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  useEffect(() => {
+    const routeToken = route.params?.token;
+    if (typeof routeToken === 'string' && routeToken.length > 0) {
+      setToken(routeToken);
+    }
+  }, [route.params?.token]);
+
   const tokenValue = token.trim();
   const isPasswordValid = password.length >= 8;
   const passwordsMatch = password === confirmPassword;
@@ -28,12 +36,16 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
 
   const { mutateAsync, isPending, error, isSuccess } = useMutation({
     mutationFn: () => resetPassword(tokenValue, password),
+    onSuccess: () => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
   });
 
   const handleSubmit = useCallback(async () => {
     if (!isFormValid || isPending) {
       return;
     }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await mutateAsync();
   }, [isFormValid, isPending, mutateAsync]);
 
@@ -94,6 +106,16 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
             </HelperText>
           )}
 
+          {isSuccess ? (
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Login')}
+              disabled={isPending}
+            >
+              Continue to sign in
+            </Button>
+          ) : null}
+
           <Button
             mode="contained"
             onPress={handleSubmit}
@@ -133,7 +155,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: 'center',
-    color: '#64748b',
+    opacity: 0.75,
   },
   form: {
     gap: 12,

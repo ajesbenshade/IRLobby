@@ -88,6 +88,8 @@ export const CreateActivityScreen = () => {
   const handlePickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setFormError('Photo library permission is required to pick images.');
       return;
     }
 
@@ -109,11 +111,13 @@ export const CreateActivityScreen = () => {
         return [`data:${mimeType};base64,${asset.base64}`];
       });
       setImageUris((previous) => [...previous, ...selected].slice(0, 5));
+      void Haptics.selectionAsync();
     }
   };
 
   const removeImageAtIndex = (targetIndex: number) => {
     setImageUris((previous) => previous.filter((_, index) => index !== targetIndex));
+    void Haptics.selectionAsync();
   };
 
   const normalizeDateTime = (value: string): string | null => {
@@ -143,14 +147,19 @@ export const CreateActivityScreen = () => {
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== 'granted') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setFormError('Location permission is required to auto-fill coordinates.');
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
       const { latitude: currentLat, longitude: currentLng } = currentLocation.coords;
       setLatitude(String(currentLat));
       setLongitude(String(currentLng));
+
+      void Haptics.selectionAsync();
 
       const reverse = await Location.reverseGeocodeAsync({
         latitude: currentLat,
@@ -160,11 +169,19 @@ export const CreateActivityScreen = () => {
       if (firstMatch && !location.trim()) {
         const city = firstMatch.city || firstMatch.subregion || firstMatch.region || '';
         const country = firstMatch.country || '';
+        const street = firstMatch.street || '';
+        const name = firstMatch.name || '';
+
+        const primary = [name, street].filter(Boolean).join(' ').trim();
         const label = [city, country].filter(Boolean).join(', ');
-        if (label) {
-          setLocation(label);
+        const combined = [primary, label].filter(Boolean).join(' · ');
+        if (combined) {
+          setLocation(combined);
         }
       }
+    } catch (error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setFormError(getErrorMessage(error, 'Unable to resolve your current location.'));
     } finally {
       setIsLocating(false);
     }
@@ -216,6 +233,7 @@ export const CreateActivityScreen = () => {
 
     if (parsedLatitude === 0 && parsedLongitude === 0) {
       setFormError('Use current location to set coordinates before creating the activity.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
@@ -224,16 +242,19 @@ export const CreateActivityScreen = () => {
 
     if (!normalizedStartTime) {
       setFormError('Start time format is invalid. Use ISO or YYYY-MM-DD HH:mm.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
     if (endTime.trim() && !normalizedEndTime) {
       setFormError('End time format is invalid. Use ISO or YYYY-MM-DD HH:mm.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
     if (normalizedEndTime && new Date(normalizedEndTime).getTime() <= new Date(normalizedStartTime).getTime()) {
       setFormError('End time must be after the start time.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
@@ -334,6 +355,10 @@ export const CreateActivityScreen = () => {
               Use current location
             </Button>
 
+            <HelperText type="info" visible>
+              Coordinates are required to create an activity.
+            </HelperText>
+
             <View style={styles.row}>
               <TextInput
                 label="Latitude"
@@ -360,6 +385,7 @@ export const CreateActivityScreen = () => {
                   setFormError(null);
                 }
               }}
+              placeholder="2026-02-19 19:30"
               style={styles.input}
               autoCapitalize="none"
             />

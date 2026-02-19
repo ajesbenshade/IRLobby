@@ -27,17 +27,33 @@ export const handlePushNavigation = (data: unknown): boolean => {
   const matchId = getNumber(payload.matchId);
   const conversationId = getNumber(payload.conversationId);
 
-  if (type === 'new_message' && conversationId != null) {
+  const currentRoute = navigationRef.getCurrentRoute();
+  if (type === 'new_message' && currentRoute?.name === 'Chat') {
+    const params = (currentRoute.params ?? {}) as { conversationId?: number; matchId?: number };
+    if (conversationId != null && params.conversationId === conversationId) {
+      return true;
+    }
+    if (conversationId == null && matchId != null && params.matchId === matchId) {
+      return true;
+    }
+  }
+
+  if (type === 'new_message' && (conversationId != null || matchId != null)) {
     navigationRef.dispatch(
       CommonActions.navigate('Main', {
         screen: 'Chat',
-        params: { conversationId },
+        params:
+          conversationId != null
+            ? { conversationId, matchId }
+            : matchId != null
+              ? { matchId }
+              : undefined,
       }),
     );
     return true;
   }
 
-  if (type === 'new_match' && matchId != null) {
+  if (type === 'new_match') {
     navigationRef.dispatch(
       CommonActions.navigate('Main', {
         screen: 'Tabs',

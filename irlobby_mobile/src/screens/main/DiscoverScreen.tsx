@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { type CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -28,6 +29,7 @@ import {
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { OfflineBanner } from '@components/OfflineBanner';
 import {
   fetchActivities,
   joinActivity,
@@ -39,9 +41,15 @@ import { getErrorMessage } from '@utils/error';
 
 import type { MainStackParamList } from '@navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainTabParamList } from '@navigation/types';
+
+type DiscoverNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Discover'>,
+  NativeStackNavigationProp<MainStackParamList>
+>;
 
 export const DiscoverScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const navigation = useNavigation<DiscoverNavigation>();
   const queryClient = useQueryClient();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -49,6 +57,7 @@ export const DiscoverScreen = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -129,10 +138,12 @@ export const DiscoverScreen = () => {
       swipeActivity(activityId, direction),
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
-        setMatchMessage('It\'s a match! Check your matches tab.');
+        setMatchMessage("It's a match! Check your matches tab.");
+        setShowMatchModal(true);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         setMatchMessage(null);
+        setShowMatchModal(false);
       }
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
@@ -153,15 +164,26 @@ export const DiscoverScreen = () => {
   const currentActivity = activities[currentIndex];
   const isBusy = swipeMutation.isPending || participationMutation.isPending;
   const isAnimatingRef = useRef(false);
+  const thresholdHapticArmedRef = useRef(true);
+
+  const swipeThreshold = Math.max(90, windowWidth * 0.28);
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const swipeRatio = useDerivedValue(() => (windowWidth ? translateX.value / windowWidth : 0));
+  const swipeProgress = useDerivedValue(() => {
+    'worklet';
+    const threshold = Math.max(1, swipeThreshold);
+    return Math.min(1, Math.abs(translateX.value) / threshold);
+  });
 
-  const resetCardPosition = useCallback(() => {
-    translateX.value = withSpring(0, { damping: 16, stiffness: 180 });
-    translateY.value = withSpring(0, { damping: 16, stiffness: 180 });
-  }, [translateX, translateY]);
+  const resetCardPosition = useCallback(
+    (velocityX = 0) => {
+      translateX.value = withSpring(0, { damping: 18, stiffness: 190, velocity: velocityX });
+      translateY.value = withSpring(0, { damping: 18, stiffness: 190 });
+    },
+    [translateX, translateY],
+  );
 
   const completeSwipe = useCallback(
     (direction: 'left' | 'right', activityId: number | string) => {
@@ -171,7 +193,7 @@ export const DiscoverScreen = () => {
   );
 
   const animateOffscreen = useCallback(
-    (direction: 'left' | 'right', activityId: number | string) => {
+    (direction: 'left' | 'right', activityId: number | string, velocityX = 0) => {
       if (isAnimatingRef.current || isBusy) {
         return;
       }
@@ -180,8 +202,14 @@ export const DiscoverScreen = () => {
 
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const offscreenX = windowWidth * 1.3;
-      translateX.value = withTiming(direction === 'right' ? offscreenX : -offscreenX, { duration: 220 },
+      const offscreenX = windowWidth * 1.35;
+      translateX.value = withSpring(
+        direction === 'right' ? offscreenX : -offscreenX,
+        {
+          damping: 16,
+          stiffness: 220,
+          velocity: velocityX,
+        },
         (finished) => {
           if (finished) {
             runOnJS(setCurrentIndex)((prev) => prev + 1);
@@ -193,23 +221,21 @@ export const DiscoverScreen = () => {
           isAnimatingRef.current = false;
         },
       );
-      translateY.value = withTiming(0, { duration: 220 });
+      translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
     },
     [completeSwipe, isBusy, translateX, translateY, windowWidth],
   );
 
   const handleSwipe = useCallback(
-    (direction: 'left' | 'right') => {
+    (direction: 'left' | 'right', velocityX = 0) => {
       if (!currentActivity) {
         return;
       }
 
-      animateOffscreen(direction, currentActivity.id);
+      animateOffscreen(direction, currentActivity.id, velocityX);
     },
     [animateOffscreen, currentActivity],
   );
-
-  const swipeThreshold = Math.max(90, windowWidth * 0.28);
 
   const panGesture = useMemo(() => {
     return Gesture.Pan()
@@ -219,16 +245,30 @@ export const DiscoverScreen = () => {
       .onUpdate((event) => {
         translateX.value = event.translationX;
         translateY.value = event.translationY * 0.12;
-      })
-      .onEnd(() => {
-        const shouldSwipe = Math.abs(translateX.value) > swipeThreshold;
 
-        if (shouldSwipe && currentActivity) {
-          runOnJS(handleSwipe)(translateX.value > 0 ? 'right' : 'left');
+        if (!currentActivity) {
           return;
         }
 
-        runOnJS(resetCardPosition)();
+        const crossed = Math.abs(event.translationX) > swipeThreshold;
+        if (crossed && thresholdHapticArmedRef.current) {
+          thresholdHapticArmedRef.current = false;
+          runOnJS(Haptics.selectionAsync)();
+        }
+
+        if (!crossed) {
+          thresholdHapticArmedRef.current = true;
+        }
+      })
+      .onEnd((event) => {
+        const shouldSwipe = Math.abs(translateX.value) > swipeThreshold;
+
+        if (shouldSwipe && currentActivity) {
+          runOnJS(handleSwipe)(translateX.value > 0 ? 'right' : 'left', event.velocityX);
+          return;
+        }
+
+        runOnJS(resetCardPosition)(event.velocityX);
       });
   }, [currentActivity, handleSwipe, isBusy, resetCardPosition, swipeThreshold, translateX, translateY]);
 
@@ -256,24 +296,36 @@ export const DiscoverScreen = () => {
 
   const activeCardStyle = useAnimatedStyle(() => {
     const rotateZ = `${swipeRatio.value * 12}deg`;
+    const scale = 1 - swipeProgress.value * 0.02;
 
     return {
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotateZ },
+        { scale },
       ],
     };
   }, []);
 
   const likeOverlayStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateX.value, [0, swipeThreshold], [0, 1]);
-    return { opacity: Math.max(0, Math.min(1, opacity)) };
+    const opacity = interpolate(translateX.value, [0, swipeThreshold * 0.6, swipeThreshold], [0, 0.7, 1]);
+    const scale = interpolate(translateX.value, [0, swipeThreshold], [0.9, 1.05]);
+    const rotate = `${interpolate(translateX.value, [0, swipeThreshold], [-4, 0])}deg`;
+    return {
+      opacity: Math.max(0, Math.min(1, opacity)),
+      transform: [{ scale }, { rotateZ: rotate }],
+    };
   }, [swipeThreshold]);
 
   const passOverlayStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateX.value, [-swipeThreshold, 0], [1, 0]);
-    return { opacity: Math.max(0, Math.min(1, opacity)) };
+    const opacity = interpolate(translateX.value, [-swipeThreshold, -swipeThreshold * 0.6, 0], [1, 0.7, 0]);
+    const scale = interpolate(translateX.value, [-swipeThreshold, 0], [1.05, 0.9]);
+    const rotate = `${interpolate(translateX.value, [-swipeThreshold, 0], [0, 4])}deg`;
+    return {
+      opacity: Math.max(0, Math.min(1, opacity)),
+      transform: [{ scale }, { rotateZ: rotate }],
+    };
   }, [swipeThreshold]);
 
   const visibleActivities = activities.slice(currentIndex, currentIndex + 3);
@@ -293,6 +345,8 @@ export const DiscoverScreen = () => {
         <Text variant="bodyMedium" style={styles.subtitle}>
           Find activities near you.
         </Text>
+
+        <OfflineBanner />
 
       <View style={styles.toolbar}>
         <Button mode="outlined" onPress={() => setShowFilters((prev) => !prev)}>
@@ -563,7 +617,40 @@ export const DiscoverScreen = () => {
         </View>
 
       <Portal>
-        <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
+        <Modal
+          visible={showMatchModal}
+          onDismiss={() => setShowMatchModal(false)}
+          contentContainerStyle={[
+            styles.detailsModal,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
+          ]}
+        >
+          <Text variant="headlineSmall">It's a match!</Text>
+          <Text style={styles.secondaryText}>You can message them from Matches.</Text>
+          <View style={styles.matchActions}>
+            <Button mode="outlined" onPress={() => setShowMatchModal(false)}>
+              Keep swiping
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setShowMatchModal(false);
+                navigation.navigate('Matches');
+              }}
+            >
+              Go to Matches
+            </Button>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showDetails}
+          onDismiss={() => setShowDetails(false)}
+          contentContainerStyle={[
+            styles.detailsModal,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
+          ]}
+        >
           {currentActivity ? (
             <ScrollView>
               <Text variant="headlineSmall">{currentActivity.title}</Text>
@@ -592,12 +679,13 @@ export const DiscoverScreen = () => {
                     participationMutation.isPending &&
                     participationMutation.variables?.action === 'leave'
                   }
-                  onPress={() =>
+                  onPress={() => {
+                    void Haptics.selectionAsync();
                     participationMutation.mutate({
                       activityId: currentActivity.id,
                       action: 'leave',
-                    })
-                  }
+                    });
+                  }}
                 >
                   Leave
                 </Button>
@@ -608,16 +696,25 @@ export const DiscoverScreen = () => {
                     participationMutation.isPending &&
                     participationMutation.variables?.action === 'join'
                   }
-                  onPress={() =>
+                  onPress={() => {
+                    void Haptics.selectionAsync();
                     participationMutation.mutate({
                       activityId: currentActivity.id,
                       action: 'join',
-                    })
-                  }
+                    });
+                  }}
                 >
                   Join
                 </Button>
-                <Button mode="contained" onPress={() => { setShowDetails(false); handleSwipe('right'); }}>
+                <Button
+                  mode="contained"
+                  disabled={isBusy}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setShowDetails(false);
+                    handleSwipe('right');
+                  }}
+                >
                   Swipe right
                 </Button>
               </View>
@@ -643,6 +740,7 @@ export const DiscoverScreen = () => {
             mode="outlined"
             size={28}
             disabled={isBusy}
+            accessibilityLabel="Pass"
             onPress={() => {
               void Haptics.selectionAsync();
               handleSwipe('left');
@@ -652,6 +750,7 @@ export const DiscoverScreen = () => {
             icon="information-outline"
             mode="outlined"
             size={26}
+            accessibilityLabel="View details"
             onPress={() => {
               void Haptics.selectionAsync();
               setShowDetails(true);
@@ -662,6 +761,7 @@ export const DiscoverScreen = () => {
             mode="contained"
             size={28}
             disabled={isBusy}
+            accessibilityLabel="Like"
             onPress={() => {
               void Haptics.selectionAsync();
               handleSwipe('right');
@@ -752,11 +852,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   detailsModal: {
-    backgroundColor: 'white',
     margin: 16,
     padding: 16,
     borderRadius: 12,
     maxHeight: '80%',
+    borderWidth: StyleSheet.hairlineWidth,
   },
   detailsText: {
     marginVertical: 8,
@@ -765,6 +865,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
+  },
+  matchActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
   },
   actionBar: {
     position: 'absolute',

@@ -18,7 +18,10 @@ interface AppThemeValue {
 
 const AppThemeContext = createContext<AppThemeValue | undefined>(undefined);
 
-const resolveThemeMode = (preference: ThemePreference, systemScheme: string | null): ThemeMode => {
+const resolveThemeMode = (
+  preference: ThemePreference,
+  systemScheme: string | null | undefined,
+): ThemeMode => {
   if (preference === 'light' || preference === 'dark') {
     return preference;
   }

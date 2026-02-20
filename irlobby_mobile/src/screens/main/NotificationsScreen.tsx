@@ -41,36 +41,39 @@ export const NotificationsScreen = () => {
 
   const isLoading = conversationsLoading && matches.length === 0;
 
-  const notifications: NotificationItem[] = [
-    ...matches.map((match) => ({
-      id: `match-${match.id}`,
-      title: 'New match confirmed',
-      body: `${match.user_a} and ${match.user_b} matched for ${match.activity}.`,
-      createdAt: match.created_at,
-      action: { type: 'openMatches' },
-    })),
-    ...conversations
-      .map((conversation) => {
-        const lastMessage = conversation.messages[conversation.messages.length - 1];
-        if (!lastMessage) {
-          return null;
-        }
+  const matchNotifications: NotificationItem[] = matches.map((match) => ({
+    id: `match-${match.id}`,
+    title: 'New match confirmed',
+    body: `${match.user_a} and ${match.user_b} matched for ${match.activity}.`,
+    createdAt: match.created_at,
+    action: { type: 'openMatches' },
+  }));
 
-        const sender = lastMessage.user?.firstName || lastMessage.user?.email || 'Someone';
-        return {
-          id: `message-${conversation.id}-${lastMessage.id}`,
-          title: `New message in ${conversation.match}`,
-          body: `${sender}: ${lastMessage.message}`,
-          createdAt: lastMessage.createdAt,
-          action: {
-            type: 'openChat',
-            conversationId: conversation.id,
-            matchId: conversation.matchId,
-          },
-        };
-      })
-      .filter((item): item is NotificationItem => item !== null),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const conversationNotifications: NotificationItem[] = conversations
+    .map<NotificationItem | null>((conversation) => {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      if (!lastMessage) {
+        return null;
+      }
+
+      const sender = lastMessage.user?.firstName || lastMessage.user?.email || 'Someone';
+      return {
+        id: `message-${conversation.id}-${lastMessage.id}`,
+        title: `New message in ${conversation.match}`,
+        body: `${sender}: ${lastMessage.message}`,
+        createdAt: lastMessage.createdAt,
+        action: {
+          type: 'openChat',
+          conversationId: conversation.id,
+          matchId: conversation.matchId,
+        },
+      };
+    })
+    .filter((item): item is NotificationItem => item !== null);
+
+  const notifications = [...matchNotifications, ...conversationNotifications].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 
   const onPressNotification = (item: NotificationItem) => {
     if (!item.action) {

@@ -14,7 +14,7 @@
       "@constants/*": ["src/constants/*"],
       "@theme/*": ["src/theme/*"],
       "@utils/*": ["src/utils/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../../packages/shared/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "app.config.ts", "babel.config.js"],

@@ -189,18 +189,18 @@ Use this checklist to validate behavior + UX parity across platforms, plus backe
 
 ## File Map
 
-- shared/schema.ts
+- packages/shared/schema.ts
 - scripts/check-api-contract.mjs
 
-- client/src/pages/onboarding.tsx
-- client/src/pages/profile.tsx
-- client/src/pages/create-activity.tsx
+- apps/web/src/pages/onboarding.tsx
+- apps/web/src/pages/profile.tsx
+- apps/web/src/pages/create-activity.tsx
 
 - irlobby_backend/activities/models.py
 - irlobby_backend/activities/serializers.py
 - irlobby_backend/activities/views.py
 
-- irlobby_mobile/src/screens/main/OnboardingScreen.tsx
-- irlobby_mobile/src/screens/main/ProfileScreen.tsx
-- irlobby_mobile/src/screens/main/CreateActivityScreen.tsx
-- irlobby_mobile/src/services/activityService.ts
+- apps/mobile/src/screens/main/OnboardingScreen.tsx
+- apps/mobile/src/screens/main/ProfileScreen.tsx
+- apps/mobile/src/screens/main/CreateActivityScreen.tsx
+- apps/mobile/src/services/activityService.ts

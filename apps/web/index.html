@@ -7,19 +7,19 @@
     <meta name="description" content="IRLobby is the social activity matching app that combines Tinder-style swiping with event hosting. Your lobby for IRL meetups - discover activities, meet new people, and join events in your area." />
     <meta name="keywords" content="IRL meetups, social activities, event hosting, activity matching, real life connections, local events, social app, meetups, networking" />
     <meta name="author" content="IRLobby" />
-    
+
     <!-- Open Graph meta tags -->
     <meta property="og:title" content="IRLobby - Your Lobby for IRL Meetups" />
     <meta property="og:description" content="Your lobby for IRL meetups! Swipe through activities, meet new people, and discover events in your area." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://irlobby.app" />
     <meta property="og:site_name" content="IRLobby" />
-    
+
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="IRLobby - Your Lobby for IRL Meetups" />
     <meta name="twitter:description" content="Your lobby for IRL meetups! Swipe through activities, meet new people, and discover events in your area." />
-    
+
     <!-- PWA meta tags -->
     <meta name="theme-color" content="#6366F1" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -27,27 +27,27 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="IRLobby" />
     <meta name="apple-touch-fullscreen" content="yes" />
-    
+
     <!-- PWA Icons - Using a simple SVG approach for now -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%236366F1'/%3E%3Ctext x='96' y='110' font-family='Arial, sans-serif' font-size='80' font-weight='bold' text-anchor='middle' fill='white'%3EIRL%3C/text%3E%3C/svg%3E" />
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%236366F1'/%3E%3Ctext x='96' y='110' font-family='Arial, sans-serif' font-size='80' font-weight='bold' text-anchor='middle' fill='white'%3EIRL%3C/text%3E%3C/svg%3E" />
-    
+
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
+
     <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    
+
     <style>
       /* Prevent flash of unstyled content */
       html {
         font-family: 'Inter', system-ui, sans-serif;
       }
-      
+
       /* Loading spinner styles */
       .loading-spinner {
         border: 2px solid #f3f4f6;
@@ -57,12 +57,12 @@
         height: 24px;
         animation: spin 1s linear infinite;
       }
-      
+
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      
+
       /* Prevent zoom on input focus on iOS */
       @media screen and (-webkit-min-device-pixel-ratio: 0) {
         select,
@@ -84,14 +84,14 @@
           font-size: 16px;
         }
       }
-      
+
       /* iOS Safari specific fixes */
       @supports (-webkit-touch-callout: none) {
         /* iOS Safari viewport height fix */
         .min-h-screen {
           min-height: -webkit-fill-available;
         }
-        
+
         /* Prevent zoom on input focus */
         input[type="text"],
         input[type="email"],
@@ -100,12 +100,12 @@
         select {
           font-size: 16px !important;
         }
-        
+
         /* Fix iOS Safari momentum scrolling */
         * {
           -webkit-overflow-scrolling: touch;
         }
-        
+
         /* iOS Safari button styling */
         button {
           -webkit-appearance: none;
@@ -113,7 +113,7 @@
           border-radius: 0;
         }
       }
-      
+
       /* Mobile-specific optimizations */
       @media (max-width: 768px) {
         /* Reduce motion for better performance on mobile */
@@ -122,7 +122,7 @@
           animation-delay: 0s !important;
           transition-duration: 0.2s !important;
         }
-        
+
         /* Optimize text rendering on mobile */
         body {
           -webkit-font-smoothing: antialiased;
@@ -162,7 +162,7 @@
           // These are expected authentication errors, don't log them
           return;
         }
-        
+
         // Log all other errors normally
         originalConsoleError.apply(console, args);
       };

@@ -2,10 +2,10 @@ from django.db import migrations
 
 
 def normalize_match_user_order(apps, schema_editor):
-    Match = apps.get_model('matches', 'Match')
+    Match = apps.get_model("matches", "Match")
 
     seen = set()
-    for match in Match.objects.all().order_by('created_at', 'id'):
+    for match in Match.objects.all().order_by("created_at", "id"):
         user_a_id = match.user_a_id
         user_b_id = match.user_b_id
 
@@ -14,7 +14,7 @@ def normalize_match_user_order(apps, schema_editor):
 
         if user_a_id > user_b_id:
             match.user_a_id, match.user_b_id = user_b_id, user_a_id
-            match.save(update_fields=['user_a', 'user_b'])
+            match.save(update_fields=["user_a", "user_b"])
 
         key = (match.activity_id, match.user_a_id, match.user_b_id)
         if key in seen:
@@ -26,7 +26,7 @@ def normalize_match_user_order(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('matches', '0002_initial'),
+        ("matches", "0002_initial"),
     ]
 
     operations = [

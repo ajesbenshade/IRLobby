@@ -5,24 +5,27 @@ from django.db.models import Count
 
 
 def cleanup_duplicate_emails(apps, schema_editor):
-    User = apps.get_model('users', 'User')
-    
+    User = apps.get_model("users", "User")
+
     # Find emails that appear more than once
-    duplicate_emails = User.objects.values('email').annotate(
-        email_count=Count('email')
-    ).filter(email_count__gt=1).values_list('email', flat=True)
-    
+    duplicate_emails = (
+        User.objects.values("email")
+        .annotate(email_count=Count("email"))
+        .filter(email_count__gt=1)
+        .values_list("email", flat=True)
+    )
+
     for email in duplicate_emails:
         # Get all users with this email
-        users_with_email = User.objects.filter(email=email).order_by('-last_login', '-date_joined')
-        
+        users_with_email = User.objects.filter(email=email).order_by("-last_login", "-date_joined")
+
         # Keep the first user (most recent login/join date)
         user_to_keep = users_with_email.first()
-        
+
         # Delete the rest
         users_to_delete = users_with_email.exclude(id=user_to_keep.id)
         count_deleted = users_to_delete.count()
-        
+
         if count_deleted > 0:
             users_to_delete.delete()
             print(f"Cleaned up {count_deleted} duplicate users for email: {email}")
@@ -31,7 +34,7 @@ def cleanup_duplicate_emails(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0002_user_oauth_id_user_oauth_provider'),
+        ("users", "0002_user_oauth_id_user_oauth_provider"),
     ]
 
     operations = [

@@ -1,0 +1,38 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = '''
+/(\
+  \.git
+  | \.venv
+  | node_modules
+  | apps
+  | packages
+  | dist
+  | build
+  | migrations
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+  "apps",
+  "packages",
+  "node_modules",
+  "dist",
+  "build",
+  "irlobby_backend/**/migrations/*",
+]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+exclude = "(^|/)(migrations|\\.agents)/"
+disable_error_code = ["import-untyped"]

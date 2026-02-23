@@ -10,6 +10,8 @@ From repo root:
 npm run check:api-contract
 npm run check:web
 npm run check:mobile
+python -m pytest
+python irlobby_backend/manage.py check --deploy
 ```
 
 Or one-shot:

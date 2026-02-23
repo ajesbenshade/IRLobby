@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0003_add_unique_email_constraint'),
+        ("users", "0003_add_unique_email_constraint"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='password_reset_token',
+            model_name="user",
+            name="password_reset_token",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='token_created_at',
+            model_name="user",
+            name="token_created_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

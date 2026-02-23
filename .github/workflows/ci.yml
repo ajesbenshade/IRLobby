@@ -9,6 +9,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: irlobby
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d irlobby"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: ci-secret-key
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
 
     steps:
       - uses: actions/checkout@v4
@@ -28,17 +45,48 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r irlobby_backend/requirements.txt
 
+      - name: Enable PostGIS
+        run: |
+          psql "postgres://postgres:postgres@localhost:5432/irlobby" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
       - name: Run Django checks
         working-directory: irlobby_backend
         run: |
           python manage.py check
+          python manage.py check --deploy
+
+      - name: Security scans
+        working-directory: irlobby_backend
+        run: |
+          bandit -r .
+          safety check
+
+      - name: Lint (ruff)
+        working-directory: irlobby_backend
+        run: |
+          ruff check . --config ../pyproject.toml
+
+      - name: Format check (black)
+        working-directory: irlobby_backend
+        run: |
+          black --check . --config ../pyproject.toml
+
+      - name: Type check (mypy)
+        working-directory: irlobby_backend
+        run: |
+          mypy . --config-file ../pyproject.toml
+
+      - name: Run tests (pytest)
+        working-directory: irlobby_backend
+        run: |
+          pytest
 
       - name: Lint Python (optional)
         working-directory: irlobby_backend

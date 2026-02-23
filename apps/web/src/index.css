@@ -154,9 +154,9 @@ html {
   body {
     font-display: swap;
   }
-  
+
   /* Better touch targets */
-  button, 
+  button,
   .cursor-pointer,
   input,
   select,
@@ -164,12 +164,12 @@ html {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* Prevent horizontal scroll */
   body {
     overflow-x: hidden;
   }
-  
+
   /* Optimize images for mobile */
   img {
     max-width: 100%;
@@ -184,20 +184,20 @@ html {
     height: 100vh;
     height: -webkit-fill-available;
   }
-  
+
   .min-h-screen {
     min-height: 100vh;
     min-height: -webkit-fill-available;
   }
-  
+
   /* Better scrolling on iOS */
   .overflow-auto {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Fix iOS Safari input zoom */
   input[type="text"],
-  input[type="email"], 
+  input[type="email"],
   input[type="password"],
   input[type="tel"],
   input[type="number"],
@@ -206,7 +206,7 @@ html {
     font-size: 16px !important;
     transform: translateZ(0);
   }
-  
+
   /* Fix iOS Safari input focus issues */
   input:focus, textarea:focus, select:focus {
     -webkit-user-select: text;
@@ -217,7 +217,7 @@ html {
     border: 2px solid #6366f1;
     border-radius: 8px;
   }
-  
+
   /* Prevent iOS Safari from zooming on form elements */
   input[type="text"],
   input[type="email"],
@@ -231,22 +231,22 @@ html {
     appearance: none;
     border-radius: 8px;
   }
-  
+
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
-  
+
   /* iOS Safari safe area support */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
-  
+
   /* Fix iOS Safari modal and overlay issues */
   [role="dialog"],
   .modal-overlay {
@@ -261,16 +261,16 @@ html {
   .shadow-lg {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
-  
+
   .backdrop-blur {
     backdrop-filter: none;
     background-color: rgba(255, 255, 255, 0.8);
   }
-  
+
   .dark .backdrop-blur {
     background-color: rgba(0, 0, 0, 0.8);
   }
-  
+
   /* Optimize animations for mobile performance */
   *, *::before, *::after {
     animation-duration: 0.2s !important;
@@ -292,7 +292,7 @@ html {
     border: 2px solid #6366f1;
     border-radius: 8px;
   }
-  
+
   /* Prevent iOS Safari from zooming on form elements */
   input[type="text"],
   input[type="email"],
@@ -306,22 +306,22 @@ html {
     appearance: none;
     border-radius: 8px;
   }
-  
+
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
-  
+
   /* iOS Safari safe area support */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
-  
+
   /* Fix iOS Safari modal and overlay issues */
   [role="dialog"],
   .modal-overlay {
@@ -339,16 +339,16 @@ html {
     backdrop-filter: none !important;
     background-color: rgba(255, 255, 255, 0.95);
   }
-  
+
   .dark .backdrop-blur {
     background-color: rgba(0, 0, 0, 0.95);
   }
-  
+
   /* Optimize shadows for mobile */
   .shadow-lg {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
-  
+
   /* Reduce animation complexity */
   .animate-fade-in {
     animation: none;
@@ -377,4 +377,3 @@ html {
     border-width: 2px;
   }
 }
-

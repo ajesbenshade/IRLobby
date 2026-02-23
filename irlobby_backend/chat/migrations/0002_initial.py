@@ -9,19 +9,25 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('chat', '0001_initial'),
-        ('matches', '0001_initial'),
+        ("chat", "0001_initial"),
+        ("matches", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conversation',
-            name='match',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='matches.match'),
+            model_name="conversation",
+            name="match",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE, to="matches.match"
+            ),
         ),
         migrations.AddField(
-            model_name='message',
-            name='conversation',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='chat.conversation'),
+            model_name="message",
+            name="conversation",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="messages",
+                to="chat.conversation",
+            ),
         ),
     ]

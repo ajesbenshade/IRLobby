@@ -9,17 +9,32 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('activities', '0001_initial'),
+        ("activities", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Swipe',
+            name="Swipe",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('direction', models.CharField(choices=[('left', 'Pass'), ('right', 'Interested')], max_length=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('activity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='activities.activity')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "direction",
+                    models.CharField(
+                        choices=[("left", "Pass"), ("right", "Interested")], max_length=10
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "activity",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="activities.activity"
+                    ),
+                ),
             ],
         ),
     ]

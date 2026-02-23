@@ -245,13 +245,28 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+# Email configuration
+# In development we default to the console backend so that password reset emails
+# are printed to the terminal rather than requiring a real SMTP server.  The
+# frontend will still receive a usable reset URL because `FRONTEND_BASE_URL` is
+# set to the local web dev server by default.
+if DEBUG:
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.console.EmailBackend',
+    )
+else:
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.smtp.EmailBackend',
+    )
+
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='ajesbenshade@gmail.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@irlobby.local')
 
 EXPO_PUSH_API_URL = config('EXPO_PUSH_API_URL', default='https://exp.host/--/api/v2/push/send')
 EXPO_PUSH_ACCESS_TOKEN = config('EXPO_PUSH_ACCESS_TOKEN', default='')

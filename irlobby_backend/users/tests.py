@@ -10,6 +10,50 @@ from users.models import PushDeviceToken, User
 from users.push_notifications import send_push_to_user
 
 
+from django.core import mail
+
+class PasswordResetRequestTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='request-user',
+            email='request@example.com',
+            password='password123',
+        )
+        self.url = reverse('request-password-reset')
+
+    def test_request_sets_token_and_sends_email(self):
+        mail.outbox = []  # ensure empty
+
+        response = self.client.post(
+            self.url,
+            {'email': self.user.email},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # user should now have a token stored
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.password_reset_token)
+        self.assertIsNotNone(self.user.token_created_at)
+
+        # email should have been queued in the backend
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertIn(self.user.email, sent.to)
+        self.assertIn('Password Reset', sent.subject)
+        self.assertIn(self.user.password_reset_token, sent.body)
+
+    def test_request_with_unknown_email_still_returns_200_but_no_mail(self):
+        mail.outbox = []
+        response = self.client.post(
+            self.url,
+            {'email': 'doesnotexist@example.com'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+
 class PasswordResetConfirmTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(

@@ -441,37 +441,14 @@ def auth_status(request):
     }, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@throttle_classes([AuthAnonThrottle, AuthUserThrottle])
-def password_reset_request(request):
-    """Handle password reset requests."""
-    email = request.data.get('email')
-    if not email:
-        return Response({'error': 'Email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        logger.warning("Password reset requested for non-existent user: email=%s", email)
-        return Response({'detail': 'Password reset link has been sent if the email is associated with an account.'}, status=status.HTTP_200_OK)
-
-    token = get_random_string(length=32)
-    user.password_reset_token = token
-    user.token_created_at = timezone.now()
-    user.save()
-
-    reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{token}"
-    send_mail(
-        'Password Reset Request',
-        f'Please use the following link to reset your password: {reset_link}',
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
-
-    logger.info("Password reset link sent to email=%s", email)
-    return Response({'detail': 'Password reset link sent.'}, status=status.HTTP_200_OK)
+# old simple password reset helper removed; logic below handles requests and email delivery
+#
+# The previous implementation above generated a token and sent mail directly using
+# request.get_host(), which meant the link pointed back to the API server.  We now
+# use `request_password_reset` further down, which builds a frontend URL using
+# `FRONTEND_BASE_URL` and respects DEBUG email settings.  Keeping the implementation
+# behind a separate view avoids duplicate behaviour and ensures the route defined in
+# `urls.py` is exercised.
 
 
 @api_view(['GET', 'POST', 'OPTIONS'])

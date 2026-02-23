@@ -8,7 +8,7 @@ constantly==23.10.4
 cryptography==45.0.7
 daphne==4.2.1
 dj-database-url==3.0.1
-Django==5.2.6
+Django>=4.2,<5      # compatible with local Python 3.9 LTS
 django-cors-headers==4.4.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
@@ -21,7 +21,7 @@ hyperlink==21.0.0
 idna==3.10
 incremental==24.7.2
 packaging==25.0
-psycopg2-binary==2.9.10
+# psycopg2-binary==2.9.10  # removed for local SQLite development
 pyasn1==0.6.1
 pyasn1-modules==0.4.2
 pycparser==2.22

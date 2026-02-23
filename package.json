@@ -1,7 +1,18 @@
 {
   "name": "irlobby-workspace",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
+    "dev": "npm run dev:web",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:mobile": "npm --prefix apps/mobile run start",
+    "build": "npm run build:web",
+    "build:web": "npm --prefix apps/web run build",
+    "build:mobile": "npm --prefix apps/mobile run bundle:ios",
+    "start": "echo \"Backend is Python; run 'cd irlobby_backend && python manage.py runserver'\"",
     "check:api-contract": "node scripts/check-api-contract.mjs",
     "check:web:lint": "npm --prefix apps/web run lint",
     "check:web": "npm --prefix apps/web run test && npm --prefix apps/web run build",

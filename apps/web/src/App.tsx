@@ -6,7 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-import { queryClient } from './lib/queryClient';
+import { queryClient } from '@/lib/queryClient';
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));

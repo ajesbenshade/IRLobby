@@ -1,282 +1,172 @@
 # IRLobby - Your Lobby for IRL Meetups
 
-**IRLobby** is a social activity matching app that combines Tinder-style swiping with event hosting. Connect with people in real life through shared activities and experiences.
+**IRLobby** is a social activity matching application. It pairs real‑world activities with familiar swipe‑based discovery and includes chat, hosting, and location‑aware features.
 
-## Tagline
-"Your Lobby for IRL Meetups"
+---
 
-## Features
-- **Activity Discovery**: Swipe through activities in your area
-- **Event Hosting**: Create and host your own activities
-- **Smart Matching**: Get matched with activities that fit your interests
-- **Real-time Chat**: Connect with hosts and participants
-- **Location-based**: Find activities near you
-- **Comprehensive Settings**: Customize your experience with detailed privacy and notification controls
+## Overview
 
-## Technology Stack
-- **Frontend**: React, TypeScript, Tailwind CSS, Vite
-- **Backend**: Django, Django REST Framework, Django Channels
-- **Database**: SQLite (development) / PostgreSQL (production)
-- **Real-time**: WebSocket for chat functionality
-- **UI Components**: Radix UI with custom styling
-- **Authentication**: JWT tokens
+- **Frontend**: React + TypeScript application located in `apps/web`.
+- **Mobile**: React Native/Expo project in `apps/mobile` (used for mobile builds).
+- **Backend**: Django application under `irlobby_backend` serving a REST/WS API.
+- **Shared code**: reusable utilities in `packages/shared`.
+
+> ⚠️ The old `client/` directory was a previous copy of the web frontend. It has been removed; please use `apps/web` going forward.
+
+## Quick port reference
+
+| Service              | Default port | Description                               |
+|---------------------|--------------|-------------------------------------------|
+| Frontend dev server | 5173         | Vite hot‑reload UI                        |
+| Django API          | 8000         | REST endpoints                            |
+| WebSocket (ASGI)    | 8001         | real‑time chat via Channels/Daphne        |
+| PostgreSQL (Docker) | 5432         | backend database                          |
+| Expo mobile server  | 19006        | (when running `expo start` in `apps/mobile`)
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 16+
+
+- Python 3.8 or later
+- Node.js 16 or later
 - Git
 
-### Local Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd IRLobby
-   ```
-
-2. **Set up the Django backend**
-   ```bash
-   cd irlobby_backend
-
-   # Create virtual environment
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-   # Install dependencies
-   pip install -r requirements.txt
-
-   # Run migrations
-   python manage.py migrate
-
-   # Create superuser (optional)
-   python manage.py createsuperuser
-
-   # Start Django server
-   python manage.py runserver
-   ```
-
-3. **Set up the React frontend**
-   ```bash
-   cd ../client
-
-   # Install dependencies
-   npm install
-
-   # Start development server
-   npm run dev
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - Django Admin: http://localhost:8000/admin
-
-## 🚀 Production Deployment
-
-Before any mobile/web release, run the parity gate in:
-
-- `docs/PARITY_RELEASE_GATE.md`
-
-### Frontend
-Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, or GitHub Pages).
-
-1. **Build frontend**
-   ```bash
-   cd client
-   npm install
-   npm run build
-   ```
-
-2. **Environment Variables** (set in your frontend host):
-   ```
-   VITE_API_BASE_URL=https://liyf.app
-   ```
-
-### Backend (Oracle VM + Neon)
-The production backend is deployed on Oracle VM with Docker Compose and uses Neon Postgres.
-
-1. **Prepare VM + app services**
-   - Use the runbook in `irlobby_backend/deploy/oracle/README.md`
-   - Configure `.env.production` on the VM
-   - Deploy with `bash deploy/oracle/deploy.sh`
-
-2. **Database**
-   - Neon pooled connection string in `DATABASE_URL`
-   - Optional migration helper: `bash deploy/oracle/migrate-to-neon.sh`
-
-### Deployment Architecture
-```
-Frontend (Static Host)
-    ↓ API calls
-Backend (Render - Django + DRF)
-    ↓ Database queries
-PostgreSQL (Neon)
-    ↓ Real-time communication
-WebSocket Worker (Daphne)
-```
-
-## Environment Variables
-
-### Development
-Copy `.env.example` to `.env` and configure:
+### 1. Backend (Django)
 
 ```bash
-# Django Configuration
-SECRET_KEY=your_django_secret_key_here
+# from repo root
+cd irlobby_backend
+python -m venv .venv        # create virtualenv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# copy example env and tweak values
+cp ../.env.example .env
+# adjust DATABASE_URL, SECRET_KEY etc
+
+# apply migrations
+python manage.py migrate
+
+# optionally create an admin user
+python manage.py createsuperuser
+
+# start development server (API + WebSocket)
+python manage.py runserver
+```
+
+The API will be available at `http://localhost:8000`; the WebSocket endpoint is `ws://localhost:8001`.
+
+### 2. Frontend (Web)
+
+```bash
+cd apps/web
+npm install          # or yarn
+npm run dev
+```
+
+Open http://localhost:5173 in your browser to view the application.  The frontend talks to the backend at port 8000 by default (see `VITE_API_BASE_URL` in `.env`).
+
+### 3. Mobile (optional)
+
+```bash
+cd apps/mobile
+npm install
+npm run start        # Expo CLI
+```
+
+Follow Expo's CLI instructions to launch on simulator or device.
+
+---
+
+## Dockerized development
+
+A simple Docker Compose configuration is provided to run the backend and database together.
+
+```bash
+# build and start containers (development configuration):
+docker-compose -f docker-compose.dev.yml up --build
+
+# production-like (uses same compose file without overrides):
+docker-compose up --build -d
+```
+
+Services:
+- `db` – Postgres database
+- `backend` – Django application (migrations run automatically)
+
+Access the API at the same ports listed above.  You may still run the web frontend with `npm run dev` outside Docker.
+
+---
+
+## Environment variables
+
+Copy `.env.example` to `.env` (backend reads it via `python-decouple`).
+
+```bash
+cp .env.example .env
+```
+
+The example file contains comments explaining common values such as:
+
+```
+# Django
+SECRET_KEY=...
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Database Configuration
+# Database
 DATABASE_URL=sqlite:///db.sqlite3
+# or: postgresql://user:pass@localhost:5432/irlobby
+
+# API/CORS
+domain origins or FRONTEND_BASE_URL
+
+# OAuth / email / third‑party keys
+TWITTER_CLIENT_ID=...
+TWITTER_CLIENT_SECRET=...
+
+# any other custom settings
 ```
 
-### Production
-Set these in your deployment platform:
+Only the backend reads `.env`; frontend configuration is injected via Vite's `VITE_API_BASE_URL`.
 
-```bash
-# Django Configuration
-DEBUG=False
-SECRET_KEY=your-production-secret-key
-ALLOWED_HOSTS=liyf.app,www.liyf.app
+---
 
-# Database Configuration
-DATABASE_URL=postgresql://<role>:<password>@<neon-pooler-host>/neondb?sslmode=require&channel_binding=require
+## Workspace configuration
 
-# CORS Configuration
-CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
+This repository uses npm workspaces to manage the JavaScript packages in `apps/` and `packages/`.  Run `npm install` at the root to install dependencies for all workspaces.
 
-# Frontend Configuration
-VITE_API_BASE_URL=https://liyf.app
-```
 
-## Project Structure
+## Continuous Integration
 
-```
-IRLobby/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── lib/           # Utilities and helpers
-│   │   ├── pages/         # Page components
-│   │   └── types/         # TypeScript types
-│   ├── vite.config.ts     # Vite configuration
-│   └── package.json
-├── irlobby_backend/        # Django backend
-│   ├── activities/         # Activities app
-│   ├── users/             # User management app
-│   ├── matches/           # Matching system app
-│   ├── chat/              # Chat functionality app
-│   ├── swipes/            # Swipe system app
-│   └── reviews/           # Review system app
-├── django_env/            # Python virtual environment
-└── README.md
-```
+A GitHub Actions workflow (`.github/workflows/ci.yml`) installs both Node and Python dependencies, lints/builds the web client, and runs `python manage.py check` to validate the Django configuration.  The workflow will fail early if any path or script is broken.
 
-## API Endpoints
+---
 
-### Authentication
-- `POST /api/auth/token/` - Login
-- `POST /api/users/register/` - Register
-- `POST /api/auth/token/refresh/` - Refresh token
+## Legacy/removed
 
-### Activities
-- `GET /api/activities/` - List activities
-- `POST /api/activities/` - Create activity
-- `GET /api/activities/{id}/` - Get activity details
-- `PUT /api/activities/{id}/` - Update activity
-- `DELETE /api/activities/{id}/` - Delete activity
-- `POST /api/activities/{id}/join/` - Join activity
-- `POST /api/activities/{id}/leave/` - Leave activity
-- `GET /api/activities/{id}/chat/` - Get chat messages
-- `POST /api/activities/{id}/chat/` - Send chat message
+- The `client/` folder has been deprecated and removed.
+- Previous Node.js/Express backend and Render-specific instructions are no longer applicable.
 
-### Users
-- `GET /api/users/profile/` - Get user profile
-- `PUT /api/users/profile/` - Update user profile
+---
+
+## Deployment notes
+
+Production deployments currently target an Oracle VM using Docker Compose with a Neon PostgreSQL database.  See `irlobby_backend/deploy/oracle/README.md` for the deployment runbook.  The React frontend can be hosted as static files on any CDN or platform; build output lives in `apps/web/dist`.
+
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Test thoroughly (backend `pytest` or `manage.py test`, web `npm run test`)
 5. Submit a pull request
+
+---
 
 ## License
 
-This project is licensed under the MIT License.
-
-See RAILWAY_DEPLOYMENT.md for Railway specific steps.
-
-### DigitalOcean App Platform
-
-To avoid a double build (Node autodetect + Docker), force App Platform to use the Dockerfile:
-
-- Ensure `Dockerfile` exists at the repo root.
-- Use the App Spec under `.do/app.yaml` or `.do/deploy.template.yaml` which sets `dockerfile_path: ./Dockerfile`.
-- In the App creation wizard, choose “Use existing app spec” and point to `.do/app.yaml`, or select Dockerfile when prompted.
-
-Environment variables:
-
-- `NODE_ENV=production`
-- `DATABASE_URL` (append `?sslmode=require` for DO PostgreSQL or set `PGSSLMODE=require`)
-- Any required app secrets (SESSION_SECRET, JWT_SECRET, etc.)
-
-Build/Run inside Docker:
-
-- Build: `npm run build` (builds client to `dist/public` and server to `dist/index.js`)
-- Start: `npm start` (uses PORT provided by DO)
-
-### Quick Start with Docker (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd irlobby
-   ```
-
-2. **Start with Docker Compose**
-   ```bash
-   # For development
-   docker-compose -f docker-compose.dev.yml up --build
-
-   # For production
-   docker-compose up --build -d
-   ```
-
-3. **Access the application**
-   - Frontend: http://localhost:4001
-   - Database: localhost:5432
-
-### Manual Setup
-
-#### Prerequisites
-- Node.js 18+
-- PostgreSQL 13+
-
-#### Installation
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Set up your database in `.env`
-4. Push database schema: `npm run db:push`
-5. Start development server: `npm run dev`
-
-#### Environment Variables
-```
-DATABASE_URL=postgresql://username:password@localhost:port/irlobby_app
-```
-
-## Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run db:push` - Push database schema changes
-- `npm run db:seed` - Seed database with sample data
-
-## Contributing
-IRLobby is designed to bring people together through shared activities and real-world connections.
-
----
-*IRLobby - Where digital connections become real-world experiences*
+MIT

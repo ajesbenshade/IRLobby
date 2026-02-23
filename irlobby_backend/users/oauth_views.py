@@ -398,7 +398,7 @@ def twitter_oauth_status(request):
         client_id, client_secret = get_twitter_credentials()
 
         status_info = {
-            "configured": bool(client_id and client_secret),
+            "configured": bool(client_id),
             "client_id_set": bool(client_id),
             "client_secret_set": bool(client_secret),
             "debug_mode": getattr(settings, "DEBUG", False),

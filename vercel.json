@@ -1,7 +1,5 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "engines": { "node": "20.x" },
-  "postinstall": "npm rebuild rollup"
+  "installCommand": "npm install"
 }

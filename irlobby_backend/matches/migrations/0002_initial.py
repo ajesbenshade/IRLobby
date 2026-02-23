@@ -10,23 +10,31 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('matches', '0001_initial'),
+        ("matches", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='match',
-            name='user_a',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='matches_as_a', to=settings.AUTH_USER_MODEL),
+            model_name="match",
+            name="user_a",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="matches_as_a",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='match',
-            name='user_b',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='matches_as_b', to=settings.AUTH_USER_MODEL),
+            model_name="match",
+            name="user_b",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="matches_as_b",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='match',
-            unique_together={('user_a', 'user_b', 'activity')},
+            name="match",
+            unique_together={("user_a", "user_b", "activity")},
         ),
     ]

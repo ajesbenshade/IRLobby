@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  MessageCircle, 
-  Plus, 
-  Calendar, 
-  User 
+import {
+  Search,
+  MessageCircle,
+  Plus,
+  Calendar,
+  User
 } from "lucide-react";
 
 interface BottomNavigationProps {
@@ -50,7 +50,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;
           const Icon = item.icon;
-          
+
           return (
             <Button
               key={item.id}
@@ -58,8 +58,8 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
               size="sm"
               onClick={() => onNavigate(item.id)}
               className={`flex flex-col items-center justify-center p-2 relative min-h-[60px] flex-1 ${
-                isActive 
-                  ? 'text-primary' 
+                isActive
+                  ? 'text-primary'
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
@@ -70,12 +70,12 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
               ) : (
                 <Icon className="w-5 h-5 mb-1" />
               )}
-              
+
               <span className="text-xs font-medium text-center">{item.label}</span>
-              
+
               {item.badge && item.badge > 0 && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute top-1 right-2 w-5 h-5 p-0 text-xs flex items-center justify-center"
                 >
                   {item.badge}

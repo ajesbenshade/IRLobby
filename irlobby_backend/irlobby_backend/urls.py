@@ -14,40 +14,50 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
-from django.urls import path, include, re_path
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import include, path, re_path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
-from users.views import CookieTokenRefreshView, logout_view, request_password_reset, password_reset_confirm
+from users.views import (
+    CookieTokenRefreshView,
+    logout_view,
+    password_reset_confirm,
+    request_password_reset,
+)
+
 
 def home(request):
-    return render(request, 'index.html')
+    return render(request, "index.html")
+
 
 def react_app(request):
-    return render(request, 'index.html')
+    return render(request, "index.html")
+
 
 def health_check(request):
-    return JsonResponse({'status': 'ok'})
+    return JsonResponse({"status": "ok"})
+
 
 urlpatterns = [
-    path('', home, name='home'),
-    path('admin/', admin.site.urls),
-    path('api/health/', health_check, name='health'),
-    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
-    path('api/auth/logout/', logout_view, name='token_logout'),
-    path('api/auth/request-password-reset/', request_password_reset, name='request-password-reset'),
-    path('api/auth/password-reset-confirm/', password_reset_confirm, name='password-reset-confirm'),
-    path('api/auth/reset-password/', password_reset_confirm, name='reset-password'),
-    path('api/auth/twitter/', include('users.oauth_urls')),
-    path('api/users/', include('users.urls')),
-    path('api/activities/', include('activities.urls')),
-    path('api/swipes/', include('swipes.urls')),
-    path('api/matches/', include('matches.urls')),
-    path('api/messages/', include('chat.urls')),
-    path('api/reviews/', include('reviews.urls')),
-    re_path(r'^(?!api|admin).*$', react_app),  # Serve React for non-API routes
+    path("", home, name="home"),
+    path("admin/", admin.site.urls),
+    path("api/health/", health_check, name="health"),
+    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/logout/", logout_view, name="token_logout"),
+    path("api/auth/request-password-reset/", request_password_reset, name="request-password-reset"),
+    path("api/auth/password-reset-confirm/", password_reset_confirm, name="password-reset-confirm"),
+    path("api/auth/reset-password/", password_reset_confirm, name="reset-password"),
+    path("api/auth/twitter/", include("users.oauth_urls")),
+    path("api/users/", include("users.urls")),
+    path("api/activities/", include("activities.urls")),
+    path("api/swipes/", include("swipes.urls")),
+    path("api/matches/", include("matches.urls")),
+    path("api/messages/", include("chat.urls")),
+    path("api/reviews/", include("reviews.urls")),
+    re_path(r"^(?!api|admin).*$", react_app),  # Serve React for non-API routes
 ]

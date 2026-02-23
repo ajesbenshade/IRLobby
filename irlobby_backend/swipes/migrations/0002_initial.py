@@ -10,18 +10,20 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('swipes', '0001_initial'),
+        ("swipes", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='swipe',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            model_name="swipe",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='swipe',
-            unique_together={('user', 'activity')},
+            name="swipe",
+            unique_together={("user", "activity")},
         ),
     ]

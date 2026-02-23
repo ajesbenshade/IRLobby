@@ -12,6 +12,23 @@ jobs:
   release-gate:
     name: Check Release Gate
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: irlobby
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d irlobby"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: ci-release-key
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
 
     steps:
       - name: Checkout
@@ -34,3 +51,23 @@ jobs:
 
       - name: Run release gate
         run: npm run check:release
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r irlobby_backend/requirements.txt
+
+      - name: Enable PostGIS
+        run: |
+          psql "postgres://postgres:postgres@localhost:5432/irlobby" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
+      - name: Backend checks
+        working-directory: irlobby_backend
+        run: |
+          python manage.py check --deploy
+          pytest

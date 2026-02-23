@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
-        ('users', '0004_cleanup_duplicate_emails'),
+        ("auth", "0012_alter_user_first_name_max_length"),
+        ("users", "0004_cleanup_duplicate_emails"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='user',
+            name="user",
             options={},
         ),
         migrations.AddConstraint(
-            model_name='user',
-            constraint=models.UniqueConstraint(fields=('email',), name='unique_user_email'),
+            model_name="user",
+            constraint=models.UniqueConstraint(fields=("email",), name="unique_user_email"),
         ),
     ]

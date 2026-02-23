@@ -583,4 +583,3 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
     </div>
   );
 }
-

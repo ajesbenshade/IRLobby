@@ -6,11 +6,11 @@ from django.conf import settings
 
 def _refresh_cookie_config() -> Tuple[bool, str, int]:
     """Return secure flag, samesite value, and max age for refresh cookies."""
-    secure = not getattr(settings, 'DEBUG', False)
-    samesite = 'None' if secure else 'Lax'
+    secure = not getattr(settings, "DEBUG", False)
+    samesite = "None" if secure else "Lax"
 
     # Get refresh token lifetime with fallback
-    lifetime = getattr(settings, 'SIMPLE_JWT', {}).get('REFRESH_TOKEN_LIFETIME')
+    lifetime = getattr(settings, "SIMPLE_JWT", {}).get("REFRESH_TOKEN_LIFETIME")
 
     if lifetime is None:
         # Default to 7 days if not configured
@@ -21,7 +21,7 @@ def _refresh_cookie_config() -> Tuple[bool, str, int]:
         # Try to parse string duration (e.g., "7 days")
         try:
             # Simple parsing for common cases
-            if 'days' in lifetime.lower():
+            if "days" in lifetime.lower():
                 days = int(lifetime.split()[0])
                 max_age = int(timedelta(days=days).total_seconds())
             else:
@@ -56,4 +56,3 @@ def clear_refresh_cookie(response) -> None:
         secure=secure,
         samesite=samesite,
     )
-

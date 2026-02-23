@@ -10,28 +10,40 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('activities', '0001_initial'),
+        ("activities", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='activity',
-            name='host',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='hosted_activities', to=settings.AUTH_USER_MODEL),
+            model_name="activity",
+            name="host",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="hosted_activities",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='activityparticipant',
-            name='activity',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='participants', to='activities.activity'),
+            model_name="activityparticipant",
+            name="activity",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="participants",
+                to="activities.activity",
+            ),
         ),
         migrations.AddField(
-            model_name='activityparticipant',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='participating_activities', to=settings.AUTH_USER_MODEL),
+            model_name="activityparticipant",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="participating_activities",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='activityparticipant',
-            unique_together={('activity', 'user')},
+            name="activityparticipant",
+            unique_together={("activity", "user")},
         ),
     ]

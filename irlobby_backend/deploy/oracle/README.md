@@ -114,6 +114,7 @@ Expected health endpoint response: HTTP `200`.
 - Mobile `EXPO_PUBLIC_API_BASE_URL`: `https://liyf.app`
 - Mobile `EXPO_PUBLIC_WEBSOCKET_URL`: `wss://liyf.app`
 - Web `VITE_API_BASE_URL`: `https://liyf.app`
+- Local dev override: set `VITE_DEV_PROXY_TARGET` when running the web client (defaults to http://127.0.0.1:8000).
 
 ## 8) Backups
 

@@ -4,7 +4,8 @@ import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 
-const devProxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'https://liyf.app';
+const devProxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8000';
+const devProxyIsHttps = devProxyTarget.startsWith('https://');
 
 export default defineConfig({
   plugins: [react()],
@@ -46,13 +47,13 @@ export default defineConfig({
       '/api': {
         target: devProxyTarget,
         changeOrigin: true,
-        secure: true,
+        secure: devProxyIsHttps,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/ws': {
         target: devProxyTarget,
         changeOrigin: true,
-        secure: true,
+        secure: devProxyIsHttps,
         ws: true,
       }
     }

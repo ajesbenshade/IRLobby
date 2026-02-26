@@ -80,7 +80,6 @@ export function useAuth() {
     isLoading,
     error,
     refetch,
-    isFetching,
   } = useQuery<User | null, Error>({
     queryKey: [API_ROUTES.USER_PROFILE],
     enabled: !!token,
@@ -198,7 +197,7 @@ export function useAuth() {
   return {
     user,
     isAuthenticated: !!user,
-    isLoading: isLoading || isFetching,
+    isLoading,
     token,
     handleAuthentication,
     logout,

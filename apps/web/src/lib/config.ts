@@ -1,4 +1,3 @@
-const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000';
 const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
@@ -12,19 +11,41 @@ const configuredApiBaseUrl =
   normalizeValue(import.meta.env.VITE_API_BASE_URL as string | undefined) ||
   normalizeValue(import.meta.env.EXPO_PUBLIC_API_BASE_URL as string | undefined);
 
-const apiBaseUrl = configuredApiBaseUrl || (import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL);
+const getDefaultApiBaseUrl = () => {
+  if (import.meta.env.DEV) {
+    return '';
+  }
+
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+
+  return DEFAULT_PROD_API_BASE_URL;
+};
+
+const apiBaseUrl = configuredApiBaseUrl || getDefaultApiBaseUrl();
 
 const configuredWebsocketUrl =
   normalizeValue(import.meta.env.VITE_WEBSOCKET_URL as string | undefined) ||
   normalizeValue(import.meta.env.EXPO_PUBLIC_WEBSOCKET_URL as string | undefined);
 
-const websocketUrl =
-  configuredWebsocketUrl ||
-  removeTrailingSlash(
-    apiBaseUrl.replace(/^https?:\/\//, (prefix) =>
-      prefix === 'https://' ? 'wss://' : 'ws://',
-    ),
-  );
+const deriveWebsocketUrl = (baseUrl: string) => {
+  if (baseUrl) {
+    return removeTrailingSlash(
+      baseUrl.replace(/^https?:\/\//, (prefix) =>
+        prefix === 'https://' ? 'wss://' : 'ws://',
+      ),
+    );
+  }
+
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+  }
+
+  return 'wss://liyf.app';
+};
+
+const websocketUrl = configuredWebsocketUrl || deriveWebsocketUrl(apiBaseUrl);
 
 export const config = {
   apiBaseUrl,

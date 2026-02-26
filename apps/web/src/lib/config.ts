@@ -1,3 +1,4 @@
+const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000';
 const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
@@ -13,11 +14,7 @@ const configuredApiBaseUrl =
 
 const getDefaultApiBaseUrl = () => {
   if (import.meta.env.DEV) {
-    return '';
-  }
-
-  if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.host}`;
+    return DEFAULT_DEV_API_BASE_URL;
   }
 
   return DEFAULT_PROD_API_BASE_URL;

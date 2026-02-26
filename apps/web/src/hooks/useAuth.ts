@@ -5,6 +5,14 @@ import { API_ROUTES } from '@shared/schema';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
 
+const AUTH_TOKEN_EVENT = 'irlobby:auth-token-changed';
+
+const dispatchAuthTokenChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_TOKEN_EVENT));
+  }
+};
+
 interface User {
   id: string;
   email?: string;
@@ -63,6 +71,22 @@ export function useAuth() {
     localStorage.removeItem('refreshToken');
 
     localStorage.removeItem('userId');
+    dispatchAuthTokenChange();
+  }, []);
+
+  useEffect(() => {
+    const syncTokenFromStorage = () => {
+      const nextToken = localStorage.getItem('authToken');
+      setToken((prevToken) => (prevToken === nextToken ? prevToken : nextToken));
+    };
+
+    window.addEventListener('storage', syncTokenFromStorage);
+    window.addEventListener(AUTH_TOKEN_EVENT, syncTokenFromStorage);
+
+    return () => {
+      window.removeEventListener('storage', syncTokenFromStorage);
+      window.removeEventListener(AUTH_TOKEN_EVENT, syncTokenFromStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -147,6 +171,7 @@ export function useAuth() {
       localStorage.setItem('authToken', newToken);
       localStorage.setItem('userId', userId);
       setToken(newToken);
+      dispatchAuthTokenChange();
       setAuthErrorMessage(null);
       await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
       await queryClient.refetchQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
@@ -184,6 +209,7 @@ export function useAuth() {
 
       localStorage.setItem('authToken', data.access);
       setToken(data.access);
+      dispatchAuthTokenChange();
       setAuthErrorMessage(null);
       return data.access;
     } catch (refreshError) {

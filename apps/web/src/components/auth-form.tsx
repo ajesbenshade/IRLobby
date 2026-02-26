@@ -12,6 +12,38 @@ interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
 }
 
+type AuthResponsePayload = {
+  tokens?: {
+    access?: string;
+    refresh?: string;
+  };
+  access?: string;
+  refresh?: string;
+  user?: {
+    id?: string | number;
+  };
+  detail?: string;
+  error?: string;
+};
+
+const resolveAuthTokens = (data: AuthResponsePayload) => {
+  const accessToken =
+    typeof data.tokens?.access === 'string'
+      ? data.tokens.access
+      : typeof data.access === 'string'
+        ? data.access
+        : null;
+
+  const refreshToken =
+    typeof data.tokens?.refresh === 'string'
+      ? data.tokens.refresh
+      : typeof data.refresh === 'string'
+        ? data.refresh
+        : null;
+
+  return { accessToken, refreshToken };
+};
+
 const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
   const [activeTab, setActiveTab] = useState('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -152,32 +184,34 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       });
 
       console.log('Login response status:', response.status);
-      const data = await response.json();
+      const data = (await response.json()) as AuthResponsePayload;
       console.log('Login response data:', data);
       console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
+        throw new Error(data.detail || data.error || 'Login failed');
+      }
+
+      const { accessToken, refreshToken } = resolveAuthTokens(data);
+      const userId = data.user?.id;
+      if (!accessToken || userId === undefined || userId === null) {
+        throw new Error('Login response missing authentication data');
       }
 
       // Store the tokens in localStorage (Django JWT format)
       if (
         typeof window !== 'undefined' &&
         window.location.protocol !== 'https:' &&
-        data.tokens.refresh
+        refreshToken
       ) {
-        localStorage.setItem('refreshToken', data.tokens.refresh);
+        localStorage.setItem('refreshToken', refreshToken);
       }
 
-      localStorage.setItem('authToken', data.tokens.access);
-      localStorage.setItem('userId', data.user.id);
-      console.log('Login successful, token stored:', data.tokens.access);
+      localStorage.setItem('authToken', accessToken);
+      localStorage.setItem('userId', String(userId));
+      console.log('Login successful, token stored:', accessToken);
 
-      // Small delay to ensure token is stored before making authenticated requests
-      setTimeout(async () => {
-        // Call the onAuthenticated callback
-        await onAuthenticated(data.tokens.access, data.user.id);
-      }, 100);
+      await onAuthenticated(accessToken, String(userId));
 
       toast({
         title: 'Success',
@@ -209,7 +243,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         last_name: formData.lastName,
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as AuthResponsePayload;
 
       if (!response.ok) {
         // Handle Django's error format
@@ -218,28 +252,31 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
           data.email?.[0] ||
           data.password?.[0] ||
           data.detail ||
+          data.error ||
           'Registration failed';
         throw new Error(errorMessage);
+      }
+
+      const { accessToken, refreshToken } = resolveAuthTokens(data);
+      const userId = data.user?.id;
+      if (!accessToken || userId === undefined || userId === null) {
+        throw new Error('Registration response missing authentication data');
       }
 
       // Store the tokens in localStorage (Django JWT format)
       if (
         typeof window !== 'undefined' &&
         window.location.protocol !== 'https:' &&
-        data.tokens.refresh
+        refreshToken
       ) {
-        localStorage.setItem('refreshToken', data.tokens.refresh);
+        localStorage.setItem('refreshToken', refreshToken);
       }
 
-      localStorage.setItem('authToken', data.tokens.access);
-      localStorage.setItem('userId', data.user.id);
-      console.log('Registration successful, token stored:', data.tokens.access);
+      localStorage.setItem('authToken', accessToken);
+      localStorage.setItem('userId', String(userId));
+      console.log('Registration successful, token stored:', accessToken);
 
-      // Small delay to ensure token is stored before making authenticated requests
-      setTimeout(async () => {
-        // Call the onAuthenticated callback
-        await onAuthenticated(data.tokens.access, data.user.id);
-      }, 100);
+      await onAuthenticated(accessToken, String(userId));
 
       toast({
         title: 'Success',

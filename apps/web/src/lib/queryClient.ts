@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from '@tanstack/react-query';
 import { API_ROUTES } from '@shared/schema';
+import { config } from './config';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -10,9 +11,7 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  (import.meta.env.DEV ? '' : '');
+const API_BASE_URL = config.apiBaseUrl;
 const AUTH_401_BYPASS_PATHS = [API_ROUTES.USER_PROFILE, API_ROUTES.USER_AUTH_STATUS] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',

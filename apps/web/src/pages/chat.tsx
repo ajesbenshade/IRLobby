@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { config } from '@/lib/config';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -108,12 +109,7 @@ export default function Chat({ matchId, onBack }: ChatProps) {
       return;
     }
 
-    const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const websocketBaseUrl = configuredApiBase
-      ? configuredApiBase.replace(/^https?:\/\//, (prefix) =>
-          prefix === 'https://' ? 'wss://' : 'ws://',
-        )
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+    const websocketBaseUrl = config.websocketUrl;
 
     let isCancelled = false;
 

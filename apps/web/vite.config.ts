@@ -9,6 +9,7 @@ const devProxyIsHttps = devProxyTarget.startsWith('https://');
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ['VITE_', 'EXPO_PUBLIC_'],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -57,8 +58,5 @@ export default defineConfig({
         ws: true,
       }
     }
-  },
-  define: {
-    __API_BASE_URL__: JSON.stringify(process.env.VITE_API_BASE_URL || 'https://liyf.app')
   }
 });

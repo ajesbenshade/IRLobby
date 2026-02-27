@@ -185,9 +185,21 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       });
     } catch (error) {
       console.error('Login error:', error);
+
+      // if we detect a 503 we show a friendlier message rather than the raw
+      // status text that axios or fetch might produce.
+      let description = 'Login failed';
+      if (error instanceof Error) {
+        if (error.message.includes('503')) {
+          description = 'Unable to reach API right now. Please try again.';
+        } else {
+          description = error.message;
+        }
+      }
+
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Login failed',
+        description,
         variant: 'destructive',
       });
     } finally {
@@ -247,9 +259,19 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       });
     } catch (error) {
       console.error('Registration error:', error);
+
+      let description = 'Registration failed';
+      if (error instanceof Error) {
+        if (error.message.includes('503')) {
+          description = 'Unable to reach API right now. Please try again.';
+        } else {
+          description = error.message;
+        }
+      }
+
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Registration failed',
+        description,
         variant: 'destructive',
       });
     } finally {

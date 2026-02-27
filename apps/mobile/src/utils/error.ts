@@ -2,6 +2,12 @@ import axios from 'axios';
 
 export const getErrorMessage = (error: unknown, fallback = 'Something went wrong. Please try again.') => {
   if (axios.isAxiosError(error)) {
+    // if the server is unreachable or explicitly returns 503 we want a
+    // friendly, consistent message instead of the generic axios text.
+    if (error.response?.status === 503) {
+      return 'Unable to reach API right now. Please try again.';
+    }
+
     const responseData = error.response?.data;
     if (typeof responseData === 'string') {
       return responseData;

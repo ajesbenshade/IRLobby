@@ -1,10 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Surface, Text, TextInput, useTheme } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Button, HelperText, Text, TextInput } from 'react-native-paper';
 
+import { AccentPill, AuthShell } from '@components/AppChrome';
 import { useAuth } from '@hooks/useAuth';
+import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { AuthStackParamList } from '@navigation/types';
@@ -12,7 +14,6 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
 
 export const ResetPasswordScreen = ({ navigation, route }: Props) => {
-  const theme = useTheme();
   const { resetPassword } = useAuth();
   const [token, setToken] = useState(route.params?.token ?? '');
   const [password, setPassword] = useState('');
@@ -38,25 +39,26 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
   }, [isFormValid, isPending, mutateAsync]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <AuthShell
+      eyebrow="Secure access"
+      title="Choose a fresh password."
+      subtitle="Paste the reset token from email and set a new password for your account."
+      footer={
+        <Button mode="text" onPress={() => navigation.navigate('Login')} disabled={isPending} compact>
+          Back to sign in
+        </Button>
+      }
     >
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Set a new password
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Enter the reset token from your email and choose a new password.
-        </Text>
+      <AccentPill tone="secondary">Token-based reset</AccentPill>
 
-        <View style={styles.form}>
+      <View style={styles.form}>
           <TextInput
             label="Reset token"
             value={token}
             onChangeText={setToken}
             autoCapitalize="none"
             autoCorrect={false}
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -65,6 +67,7 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -73,6 +76,7 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
             onChangeText={setConfirmPassword}
             secureTextEntry
             autoCapitalize="none"
+            mode="outlined"
             style={styles.input}
           />
 
@@ -100,49 +104,28 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
             disabled={!isFormValid || isPending}
             loading={isPending}
             style={styles.submitButton}
+            contentStyle={styles.submitButtonContent}
+            buttonColor={appColors.primary}
           >
             Update password
           </Button>
-        </View>
-
-        <Button mode="text" onPress={() => navigation.navigate('Login')} disabled={isPending}>
-          Back to sign in
-        </Button>
-      </Surface>
-    </KeyboardAvoidingView>
+      </View>
+    </AuthShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: '#64748b',
-  },
   form: {
     gap: 12,
-    marginTop: 16,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: appColors.card,
   },
   submitButton: {
     marginTop: 12,
+    borderRadius: 18,
+  },
+  submitButtonContent: {
+    minHeight: 52,
   },
 });

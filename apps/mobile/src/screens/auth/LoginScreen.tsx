@@ -1,19 +1,19 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
-  HelperText,
-  Surface,
   Divider,
+  HelperText,
   Text,
   TextInput,
-  useTheme,
 } from 'react-native-paper';
 
+import { AccentPill, AuthShell } from '@components/AppChrome';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
+import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { AuthStackParamList } from '@navigation/types';
@@ -21,7 +21,6 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export const LoginScreen = ({ navigation }: Props) => {
-  const theme = useTheme();
   const { signIn, signInWithTwitter } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,19 +59,25 @@ export const LoginScreen = ({ navigation }: Props) => {
   }, [isBusy, signInWithTwitterAsync]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <AuthShell
+      eyebrow="IRLobby"
+      title="Real plans, real people."
+      subtitle="Sign in to discover nearby activities, keep your chats moving, and turn swipes into actual plans."
+      footer={
+        <View style={styles.footer}>
+          <Text variant="bodyMedium" style={styles.footerText}>New to IRLobby?</Text>
+          <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy} compact>
+            Create an account
+          </Button>
+        </View>
+      }
     >
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Welcome back
-        </Text>
-        <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }] }>
-          Sign in to discover nearby IRL activities.
-        </Text>
+      <View style={styles.heroRow}>
+        <AccentPill>Production preview</AccentPill>
+        <Text style={styles.heroMetric}>Nearby, curated, and worth leaving the house for.</Text>
+      </View>
 
-        <View style={styles.form}>
+      <View style={styles.form}>
           <TextInput
             label="Email"
             autoCapitalize="none"
@@ -80,6 +85,7 @@ export const LoginScreen = ({ navigation }: Props) => {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -88,6 +94,7 @@ export const LoginScreen = ({ navigation }: Props) => {
             autoCapitalize="none"
             value={password}
             onChangeText={setPassword}
+            mode="outlined"
             style={styles.input}
           />
           {authError && (
@@ -108,6 +115,8 @@ export const LoginScreen = ({ navigation }: Props) => {
             disabled={!isFormValid || isBusy}
             loading={isPending}
             style={styles.submitButton}
+            contentStyle={styles.submitButtonContent}
+            buttonColor={appColors.primary}
           >
             Sign in
           </Button>
@@ -119,6 +128,7 @@ export const LoginScreen = ({ navigation }: Props) => {
               onPress={handleTwitterSignIn}
               disabled={isBusy}
               loading={isTwitterPending}
+              style={styles.oauthButton}
             >
               Continue with X
             </Button>
@@ -132,49 +142,33 @@ export const LoginScreen = ({ navigation }: Props) => {
           >
             Forgot password?
           </Button>
-        </View>
-
-        <View style={styles.footer}>
-          <Text variant="bodyMedium">New to IRLobby?</Text>
-          <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy}>
-            Create an account
-          </Button>
-        </View>
-      </Surface>
-    </KeyboardAvoidingView>
+      </View>
+    </AuthShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+  heroRow: {
+    gap: 10,
   },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
+  heroMetric: {
+    color: appColors.ink,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
   },
   form: {
     gap: 12,
-    marginTop: 16,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: appColors.card,
   },
   submitButton: {
     marginTop: 12,
+    borderRadius: 18,
+  },
+  submitButtonContent: {
+    minHeight: 52,
   },
   linkButton: {
     alignSelf: 'flex-start',
@@ -183,11 +177,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 12,
   },
+  oauthButton: {
+    borderRadius: 16,
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 4,
-    marginTop: 16,
+  },
+  footerText: {
+    color: appColors.mutedInk,
   },
 });

@@ -3,12 +3,22 @@ import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Image, ScrollView, Share, StyleSheet, View } from 'react-native';
-import { Button, HelperText, RadioButton, Surface, Switch, Text, TextInput } from 'react-native-paper';
+import { Image, Share, StyleSheet, View } from 'react-native';
+import { Button, HelperText, RadioButton, Switch, Text, TextInput } from 'react-native-paper';
 
+import {
+  AccentPill,
+  AppScrollView,
+  DetailRow,
+  EmptyStatePanel,
+  PageHeader,
+  PanelCard,
+  SectionIntro,
+} from '@components/AppChrome';
 import { useAuth } from '@hooks/useAuth';
 import { config } from '@constants/config';
 import { createInvite, updateOnboarding } from '@services/authService';
+import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 const MAX_INTERESTS = 20;
@@ -199,46 +209,118 @@ export const OnboardingScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineSmall">Finish your profile</Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Tell us what you enjoy so we can improve your matches.
-        </Text>
+    <AppScrollView contentContainerStyle={styles.container}>
+      <PageHeader
+        eyebrow="Onboarding"
+        title="Shape your first impression"
+        subtitle="Finish the profile people will see across discovery, matches, and chat, then send a few invites to start your network with momentum."
+      />
 
-        <TextInput label="Short bio" value={bio} onChangeText={setBio} multiline style={styles.input} />
-        <TextInput label="City" value={city} onChangeText={setCity} style={styles.input} />
-        <TextInput
-          label="Age range (e.g. 25-34)"
-          value={ageRange}
-          onChangeText={setAgeRange}
-          style={styles.input}
+      <PanelCard tone="accent" style={styles.heroCard}>
+        <AccentPill>Production-ready profile</AccentPill>
+        <Text variant="headlineSmall" style={styles.heroTitle}>
+          Complete the parts that make your account feel real.
+        </Text>
+        <Text style={styles.heroSubtitle}>
+          Better photos, clearer interests, and a sharper preference profile lead to stronger matches and better event recommendations.
+        </Text>
+        <View style={styles.heroStatsRow}>
+          <View style={styles.heroStatCard}>
+            <Text style={styles.heroStatValue}>{interests.length}</Text>
+            <Text style={styles.heroStatLabel}>Interests parsed</Text>
+          </View>
+          <View style={styles.heroStatCard}>
+            <Text style={styles.heroStatValue}>{1 + photoAlbum.length}</Text>
+            <Text style={styles.heroStatLabel}>Photos ready</Text>
+          </View>
+          <View style={styles.heroStatCard}>
+            <Text style={styles.heroStatValue}>{[indoor, outdoor, smallGroups, weekendPreferred].filter(Boolean).length}</Text>
+            <Text style={styles.heroStatLabel}>Preferences set</Text>
+          </View>
+        </View>
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Identity"
+          title="Tell people what kind of energy you bring"
+          subtitle="Keep this concise and specific so your profile reads like a person, not an empty account shell."
         />
+        <TextInput label="Short bio" value={bio} onChangeText={setBio} multiline mode="outlined" style={styles.input} />
+        <View style={styles.row}>
+          <TextInput label="City" value={city} onChangeText={setCity} mode="outlined" style={[styles.input, styles.halfInput]} />
+          <TextInput
+            label="Age range"
+            placeholder="25-34"
+            value={ageRange}
+            onChangeText={setAgeRange}
+            mode="outlined"
+            style={[styles.input, styles.halfInput]}
+          />
+        </View>
         <TextInput
-          label="Hobbies (comma separated)"
+          label="Interests"
+          placeholder="Hiking, brunch, tennis, books"
           value={interestsInput}
           onChangeText={setInterestsInput}
+          mode="outlined"
           style={styles.input}
         />
-
-        <Text variant="titleMedium">Profile photo</Text>
-        {profilePhotoUrl ? (
-          <Image source={{ uri: profilePhotoUrl }} style={styles.avatarPreview} />
+        {interests.length > 0 ? (
+          <View style={styles.interestsWrap}>
+            {interests.map((interest) => (
+              <View key={interest} style={styles.interestChip}>
+                <Text style={styles.interestChipText}>{interest}</Text>
+              </View>
+            ))}
+          </View>
         ) : (
-          <Text style={styles.secondaryText}>No photo selected</Text>
+          <Text style={styles.helperCopy}>Add a few comma-separated interests so discovery starts with better context.</Text>
         )}
-        <Button mode="outlined" onPress={pickProfilePhotoFromLibrary}>
-          Pick profile photo
-        </Button>
+      </PanelCard>
 
-        <Text variant="titleMedium">Photo album ({photoAlbum.length}/{MAX_PHOTOS})</Text>
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Photos"
+          title="Make the profile visual"
+          subtitle="A clear avatar plus a small album gives people more confidence before they swipe, match, or show up."
+        />
+        <View style={styles.photoHeroRow}>
+          {profilePhotoUrl ? (
+            <Image source={{ uri: profilePhotoUrl }} style={styles.avatarPreview} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>+</Text>
+            </View>
+          )}
+          <View style={styles.photoHeroCopy}>
+            <Text variant="titleMedium" style={styles.photoHeroTitle}>
+              Profile photo
+            </Text>
+            <Text style={styles.photoHeroSubtitle}>
+              Use a recent, clear photo that feels approachable and easy to recognize in person.
+            </Text>
+            <Button mode="outlined" onPress={pickProfilePhotoFromLibrary}>
+              Pick profile photo
+            </Button>
+          </View>
+        </View>
+
+        <View style={styles.albumHeaderRow}>
+          <Text variant="titleMedium" style={styles.albumTitle}>
+            Photo album
+          </Text>
+          <AccentPill tone="neutral">
+            {photoAlbum.length}/{MAX_PHOTOS} used
+          </AccentPill>
+        </View>
         <Button mode="outlined" onPress={addAlbumPhotosFromLibrary} disabled={photoAlbum.length >= MAX_PHOTOS}>
           Add album photos
         </Button>
-        {photoAlbum.length > 0 && (
+        {photoAlbum.length > 0 ? (
           <View style={styles.albumGrid}>
             {photoAlbum.map((uri, index) => (
-              <View key={`${index}-${uri.slice(0, 24)}`} style={styles.albumItem}>
+              <View key={`${index}-${uri.slice(0, 24)}`} style={styles.albumTile}>
                 <Image source={{ uri }} style={styles.albumImage} />
                 <Button mode="text" compact onPress={() => removeAlbumPhoto(index)}>
                   Remove
@@ -246,147 +328,300 @@ export const OnboardingScreen = () => {
               </View>
             ))}
           </View>
+        ) : (
+          <EmptyStatePanel
+            title="No album photos yet"
+            description="Add a few candid or activity photos to make your profile feel complete without overloading it."
+          />
         )}
+      </PanelCard>
 
-        <View style={styles.preferenceRow}>
-          <Text>Indoor activities</Text>
-          <Switch value={indoor} onValueChange={setIndoor} />
-        </View>
-        <View style={styles.preferenceRow}>
-          <Text>Outdoor activities</Text>
-          <Switch value={outdoor} onValueChange={setOutdoor} />
-        </View>
-        <View style={styles.preferenceRow}>
-          <Text>Prefer small groups</Text>
-          <Switch value={smallGroups} onValueChange={setSmallGroups} />
-        </View>
-        <View style={styles.preferenceRow}>
-          <Text>Prefer weekends</Text>
-          <Switch value={weekendPreferred} onValueChange={setWeekendPreferred} />
-        </View>
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Preferences"
+          title="Tune the kinds of plans you want"
+          subtitle="These toggles help the app shape recommendations and make your profile feel intentional from day one."
+        />
+        <DetailRow
+          title="Indoor activities"
+          subtitle="Classes, dinners, workshops, game nights, and weather-proof plans."
+          accessory={<Switch value={indoor} onValueChange={setIndoor} />}
+        />
+        <DetailRow
+          title="Outdoor activities"
+          subtitle="Walks, hikes, beach plans, sports, and any plan that needs open air."
+          accessory={<Switch value={outdoor} onValueChange={setOutdoor} />}
+        />
+        <DetailRow
+          title="Prefer small groups"
+          subtitle="Keep invites tighter for easier conversation and lower social friction."
+          accessory={<Switch value={smallGroups} onValueChange={setSmallGroups} />}
+        />
+        <DetailRow
+          title="Prefer weekends"
+          subtitle="Bias recommendations toward Friday through Sunday."
+          accessory={<Switch value={weekendPreferred} onValueChange={setWeekendPreferred} />}
+        />
+      </PanelCard>
 
-        {onboardingMutation.error && (
-          <HelperText type="error" visible>
-            {getErrorMessage(onboardingMutation.error, 'Unable to save onboarding.')}
-          </HelperText>
-        )}
-
-        <View style={styles.actionRow}>
-          <Button
-            mode="text"
-            onPress={() => onboardingMutation.mutate(true)}
-            disabled={onboardingMutation.isPending}
-          >
-            Skip for now
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => onboardingMutation.mutate(true)}
-            loading={onboardingMutation.isPending}
-          >
-            Complete
-          </Button>
-        </View>
-
-        <View style={styles.divider} />
-
-        <Text variant="titleMedium">Invite friends</Text>
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Invites"
+          title="Start with a few known people"
+          subtitle="Invite friends by text or email so your first matches and events do not depend only on discovery."
+        />
         <RadioButton.Group value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
-          <View style={styles.inviteChannelRow}>
-            <RadioButton.Item label="SMS" value="sms" />
-            <RadioButton.Item label="Email" value="email" />
+          <View style={styles.channelWrap}>
+            <View style={[styles.channelCard, inviteChannel === 'sms' ? styles.channelCardActive : null]}>
+              <RadioButton value="sms" />
+              <Text style={styles.channelTitle}>SMS</Text>
+            </View>
+            <View style={[styles.channelCard, inviteChannel === 'email' ? styles.channelCardActive : null]}>
+              <RadioButton value="email" />
+              <Text style={styles.channelTitle}>Email</Text>
+            </View>
           </View>
         </RadioButton.Group>
         <TextInput
-          label="Friend name (optional)"
+          label="Friend name"
+          placeholder="Optional"
           value={inviteName}
           onChangeText={setInviteName}
+          mode="outlined"
           style={styles.input}
         />
         <TextInput
-          label="Phone or email"
+          label={inviteChannel === 'sms' ? 'Phone number' : 'Email address'}
           value={inviteContact}
           onChangeText={setInviteContact}
+          mode="outlined"
           style={styles.input}
         />
-
-        {inviteMutation.error && (
+        {inviteMutation.error ? (
           <HelperText type="error" visible>
             {getErrorMessage(inviteMutation.error, 'Unable to create invite.')}
           </HelperText>
-        )}
+        ) : null}
+        <View style={styles.inviteActions}>
+          <Button
+            mode="outlined"
+            onPress={sendManualInvite}
+            loading={inviteMutation.isPending}
+            disabled={!inviteContact.trim() || inviteMutation.isPending}
+          >
+            Create invite link
+          </Button>
+          <Button mode="contained-tonal" onPress={importContactsAndInvite} loading={inviteMutation.isPending}>
+            Import contacts and invite
+          </Button>
+        </View>
+      </PanelCard>
 
-        <Button mode="outlined" onPress={sendManualInvite} loading={inviteMutation.isPending}>
-          Create invite link
-        </Button>
-        <Button mode="outlined" onPress={importContactsAndInvite} loading={inviteMutation.isPending}>
-          Allow contacts and invite
-        </Button>
-        <Button mode="text" onPress={() => void signOut()}>
+      <PanelCard tone="dark" style={styles.footerCard}>
+        <Text variant="titleLarge" style={styles.footerTitle}>
+          Finish setup and start matching.
+        </Text>
+        <Text style={styles.footerSubtitle}>
+          You can still change photos, interests, and preferences later from your profile.
+        </Text>
+        {onboardingMutation.error ? (
+          <HelperText type="error" visible style={styles.footerError}>
+            {getErrorMessage(onboardingMutation.error, 'Unable to save onboarding.')}
+          </HelperText>
+        ) : null}
+        <View style={styles.footerActions}>
+          <Button mode="text" textColor={appColors.white} onPress={() => onboardingMutation.mutate(true)} disabled={onboardingMutation.isPending}>
+            Skip for now
+          </Button>
+          <Button mode="contained" onPress={() => onboardingMutation.mutate(true)} loading={onboardingMutation.isPending}>
+            Complete setup
+          </Button>
+        </View>
+        <Button mode="text" textColor="#cfd8f6" onPress={() => void signOut()}>
           Sign out
         </Button>
-      </Surface>
-    </ScrollView>
+      </PanelCard>
+    </AppScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    gap: spacing.lg,
+  },
+  heroCard: {
+    gap: spacing.md,
+  },
+  heroTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
+    letterSpacing: -0.7,
+  },
+  heroSubtitle: {
+    color: appColors.mutedInk,
+    lineHeight: 22,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  heroStatCard: {
     flexGrow: 1,
-    justifyContent: 'center',
+    minWidth: 96,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: '#ffffffc7',
+    borderWidth: 1,
+    borderColor: '#e2ecf2',
   },
-  card: {
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
+  heroStatValue: {
+    color: appColors.ink,
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.6,
   },
-  subtitle: {
-    opacity: 0.75,
+  heroStatLabel: {
+    color: appColors.mutedInk,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
-  secondaryText: {
-    opacity: 0.75,
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   input: {
     backgroundColor: 'transparent',
   },
+  halfInput: {
+    flex: 1,
+  },
+  helperCopy: {
+    color: appColors.mutedInk,
+    lineHeight: 20,
+  },
+  interestsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  interestChip: {
+    borderRadius: radii.pill,
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  interestChipText: {
+    color: appColors.primaryDeep,
+    fontWeight: '700',
+  },
   avatarPreview: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignSelf: 'flex-start',
+    width: 108,
+    height: 108,
+    borderRadius: 32,
+  },
+  avatarFallback: {
+    width: 108,
+    height: 108,
+    borderRadius: 32,
+    backgroundColor: '#e7ecf8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: {
+    color: appColors.primary,
+    fontSize: 44,
+    fontWeight: '300',
+  },
+  photoHeroRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  photoHeroCopy: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  photoHeroTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
+  },
+  photoHeroSubtitle: {
+    color: appColors.mutedInk,
+    lineHeight: 20,
+  },
+  albumHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  albumTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
   },
   albumGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.sm,
   },
-  albumItem: {
-    width: 96,
+  albumTile: {
+    width: 92,
+    gap: 4,
     alignItems: 'center',
   },
   albumImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 12,
+    width: 92,
+    height: 92,
+    borderRadius: radii.sm,
   },
-  inviteChannelRow: {
+  channelWrap: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  preferenceRow: {
+  channelCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: '#dbe3f0',
+    backgroundColor: '#f8fbff',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  channelCardActive: {
+    borderColor: '#c2cbff',
+    backgroundColor: '#edf0ff',
+  },
+  channelTitle: {
+    color: appColors.ink,
+    fontWeight: '700',
+  },
+  inviteActions: {
+    gap: spacing.sm,
+  },
+  footerCard: {
+    gap: spacing.sm,
+  },
+  footerTitle: {
+    color: appColors.white,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  footerSubtitle: {
+    color: '#cbd5ea',
+    lineHeight: 21,
+  },
+  footerError: {
+    color: '#fecaca',
+  },
+  footerActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#cbd5e1',
-    marginVertical: 8,
+    gap: spacing.sm,
   },
 });

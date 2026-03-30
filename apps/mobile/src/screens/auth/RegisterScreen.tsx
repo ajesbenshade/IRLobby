@@ -1,17 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import {
-  Button,
-  HelperText,
-  Surface,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Button, HelperText, Text, TextInput } from 'react-native-paper';
 
+import { AccentPill, AuthShell } from '@components/AppChrome';
 import { useAuth } from '@hooks/useAuth';
+import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { AuthStackParamList } from '@navigation/types';
@@ -19,7 +14,6 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export const RegisterScreen = ({ navigation }: Props) => {
-  const theme = useTheme();
   const { signUp } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -60,24 +54,28 @@ export const RegisterScreen = ({ navigation }: Props) => {
   }, [isFormValid, isPending, mutateAsync]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <AuthShell
+      eyebrow="New account"
+      title="Build a social life with intent."
+      subtitle="Create your profile, host something worth showing up for, and discover people who want the same kind of offline energy."
+      footer={
+        <View style={styles.footer}>
+          <Text variant="bodyMedium" style={styles.footerText}>Already have an account?</Text>
+          <Button mode="text" onPress={() => navigation.navigate('Login')} disabled={isPending} compact>
+            Sign in
+          </Button>
+        </View>
+      }
     >
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Join IRLobby
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Create an account to host and discover real-world activities.
-        </Text>
+      <AccentPill tone="secondary">Host, discover, match</AccentPill>
 
-        <View style={styles.form}>
+      <View style={styles.form}>
           <TextInput
             label="First name"
             value={firstName}
             onChangeText={setFirstName}
             autoCapitalize="words"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -85,6 +83,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
             value={lastName}
             onChangeText={setLastName}
             autoCapitalize="words"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -94,6 +93,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -102,6 +102,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
             onChangeText={setUsername}
             autoCapitalize="none"
             autoComplete="username"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -110,6 +111,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            mode="outlined"
             style={styles.input}
           />
           <TextInput
@@ -118,6 +120,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
             onChangeText={setConfirmPassword}
             secureTextEntry
             autoCapitalize="none"
+            mode="outlined"
             style={styles.input}
           />
           {!passwordsMatch && confirmPassword.length > 0 && (
@@ -137,59 +140,37 @@ export const RegisterScreen = ({ navigation }: Props) => {
             disabled={!isFormValid}
             loading={isPending}
             style={styles.submitButton}
+            contentStyle={styles.submitButtonContent}
+            buttonColor={appColors.primary}
           >
             Create account
           </Button>
-        </View>
-
-        <View style={styles.footer}>
-          <Text variant="bodyMedium">Already have an account?</Text>
-          <Button mode="text" onPress={() => navigation.navigate('Login')} disabled={isPending}>
-            Sign in
-          </Button>
-        </View>
-      </Surface>
-    </KeyboardAvoidingView>
+      </View>
+    </AuthShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: '#64748b',
-  },
   form: {
     gap: 12,
-    marginTop: 16,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: appColors.card,
   },
   submitButton: {
     marginTop: 12,
+    borderRadius: 18,
+  },
+  submitButtonContent: {
+    minHeight: 52,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 4,
-    marginTop: 16,
+  },
+  footerText: {
+    color: appColors.mutedInk,
   },
 });

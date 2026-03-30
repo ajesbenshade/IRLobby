@@ -1,33 +1,144 @@
-import { MD3DarkTheme, MD3LightTheme, configureFonts, type MD3Theme } from 'react-native-paper';
+import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
 
-const fontConfig = configureFonts({
-  config: {
-    fontFamily: 'System',
+export const appColors = {
+  primary: '#5b61f6',
+  primaryDeep: '#4338ca',
+  secondary: '#f6b94a',
+  accent: '#20b77d',
+  success: '#15a36d',
+  warning: '#f59e0b',
+  danger: '#e35d6a',
+  ink: '#121826',
+  mutedInk: '#667085',
+  softInk: '#8d99ae',
+  line: '#dde3f0',
+  card: '#ffffff',
+  cardStrong: '#f7f9fe',
+  background: '#f4f7fb',
+  backgroundAccent: '#eef2ff',
+  overlay: '#0f172acc',
+  white: '#ffffff',
+  darkBackground: '#0b1020',
+  darkCard: '#111830',
+  darkLine: '#25304d',
+  darkMutedInk: '#9aa6c2',
+} as const;
+
+export const radii = {
+  xs: 10,
+  sm: 14,
+  md: 18,
+  lg: 24,
+  xl: 32,
+  pill: 999,
+} as const;
+
+export const spacing = {
+  xs: 6,
+  sm: 10,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 32,
+} as const;
+
+export const shadows = {
+  card: {
+    shadowColor: '#23304d',
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
-});
-
-const primaryColor = '#2563eb';
-const secondaryColor = '#0ea5e9';
+  float: {
+    shadowColor: '#1d4ed8',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 6,
+  },
+} as const;
 
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
-  fonts: fontConfig,
+  roundness: radii.md,
   colors: {
     ...MD3LightTheme.colors,
-    primary: primaryColor,
-    secondary: secondaryColor,
-    tertiary: '#f97316',
-    background: '#f9fafb',
+    primary: appColors.primary,
+    onPrimary: appColors.white,
+    primaryContainer: '#e7e9ff',
+    onPrimaryContainer: '#1c1d69',
+    secondary: appColors.secondary,
+    onSecondary: appColors.ink,
+    secondaryContainer: '#fff1d1',
+    onSecondaryContainer: '#4f3712',
+    tertiary: appColors.accent,
+    onTertiary: appColors.white,
+    tertiaryContainer: '#d8f6ea',
+    onTertiaryContainer: '#093a28',
+    error: appColors.danger,
+    background: appColors.background,
+    onBackground: appColors.ink,
+    surface: appColors.card,
+    onSurface: appColors.ink,
+    surfaceVariant: appColors.cardStrong,
+    onSurfaceVariant: appColors.mutedInk,
+    outline: appColors.line,
+    outlineVariant: '#ebeff7',
+    shadow: '#22304f',
+    scrim: appColors.overlay,
+    inverseSurface: appColors.ink,
+    inverseOnSurface: appColors.white,
+    inversePrimary: '#c2c5ff',
+    elevation: {
+      level0: 'transparent',
+      level1: '#fbfcff',
+      level2: '#f6f8ff',
+      level3: '#eef2ff',
+      level4: '#e8edff',
+      level5: '#dde6ff',
+    },
   },
 };
 
 export const darkTheme: MD3Theme = {
   ...MD3DarkTheme,
-  fonts: fontConfig,
+  roundness: radii.md,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: primaryColor,
-    secondary: secondaryColor,
-    tertiary: '#f97316',
+    primary: '#bbc0ff',
+    onPrimary: '#242880',
+    primaryContainer: '#2f3497',
+    onPrimaryContainer: '#e1e4ff',
+    secondary: '#ffd58a',
+    onSecondary: '#422c00',
+    secondaryContainer: '#5f4200',
+    onSecondaryContainer: '#ffdfab',
+    tertiary: '#7ae3b7',
+    onTertiary: '#003826',
+    tertiaryContainer: '#005239',
+    onTertiaryContainer: '#96ffd2',
+    error: '#ffb4ab',
+    background: appColors.darkBackground,
+    onBackground: '#eef2ff',
+    surface: appColors.darkCard,
+    onSurface: '#eef2ff',
+    surfaceVariant: '#1a2440',
+    onSurfaceVariant: appColors.darkMutedInk,
+    outline: appColors.darkLine,
+    outlineVariant: '#2f3d5d',
+    shadow: '#000000',
+    scrim: '#000000',
+    inverseSurface: '#e8ecf9',
+    inverseOnSurface: '#20283f',
+    inversePrimary: appColors.primary,
+    elevation: {
+      level0: 'transparent',
+      level1: '#10172d',
+      level2: '#141d37',
+      level3: '#1a2440',
+      level4: '#1f2b49',
+      level5: '#243152',
+    },
   },
 };

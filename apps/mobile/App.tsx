@@ -6,16 +6,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from '@navigation/AppNavigator';
 import { AuthProvider } from '@providers/AuthProvider';
 import { QueryProvider } from '@providers/queryClient';
-import { lightTheme } from '@theme/index';
+import { appColors, lightTheme } from '@theme/index';
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: appColors.background }}>
       <SafeAreaProvider>
         <PaperProvider theme={lightTheme}>
           <QueryProvider>
             <AuthProvider>
-              <StatusBar style="dark" />
+              <StatusBar style="dark" backgroundColor={appColors.background} />
               <AppNavigator />
             </AuthProvider>
           </QueryProvider>

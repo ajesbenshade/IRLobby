@@ -1,17 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import {
-  Button,
-  HelperText,
-  Surface,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Button, HelperText, Text, TextInput } from 'react-native-paper';
 
+import { AccentPill, AuthShell } from '@components/AppChrome';
 import { useAuth } from '@hooks/useAuth';
+import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { AuthStackParamList } from '@navigation/types';
@@ -19,7 +14,6 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 export const ForgotPasswordScreen = ({ navigation }: Props) => {
-  const theme = useTheme();
   const { requestPasswordReset } = useAuth();
   const [email, setEmail] = useState('');
 
@@ -37,19 +31,24 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
   }, [isFormValid, isPending, mutateAsync]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <AuthShell
+      eyebrow="Recovery"
+      title="Get back in quickly."
+      subtitle="Enter the email tied to your profile and we’ll send reset instructions if the account exists."
+      footer={
+        <View style={styles.footer}>
+          <Button mode="text" onPress={() => navigation.goBack()} disabled={isPending} compact>
+            Back to sign in
+          </Button>
+          <Button mode="text" onPress={() => navigation.navigate('ResetPassword')} disabled={isPending} compact>
+            I have a token
+          </Button>
+        </View>
+      }
     >
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Reset your password
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Enter the email linked to your account and we will send you reset instructions.
-        </Text>
+      <AccentPill tone="neutral">Password support</AccentPill>
 
-        <View style={styles.form}>
+      <View style={styles.form}>
           <TextInput
             label="Email"
             value={email}
@@ -57,6 +56,7 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
+            mode="outlined"
             style={styles.input}
           />
           {error && (
@@ -76,52 +76,31 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
             disabled={!isFormValid}
             loading={isPending}
             style={styles.submitButton}
+            contentStyle={styles.submitButtonContent}
+            buttonColor={appColors.primary}
           >
             Send reset link
           </Button>
-        </View>
-
-        <Button mode="text" onPress={() => navigation.goBack()} disabled={isPending}>
-          Back to sign in
-        </Button>
-        <Button mode="text" onPress={() => navigation.navigate('ResetPassword')} disabled={isPending}>
-          I already have a reset token
-        </Button>
-      </Surface>
-    </KeyboardAvoidingView>
+      </View>
+    </AuthShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: '#64748b',
-  },
   form: {
     gap: 12,
-    marginTop: 16,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: appColors.card,
   },
   submitButton: {
     marginTop: 12,
+    borderRadius: 18,
+  },
+  submitButtonContent: {
+    minHeight: 52,
+  },
+  footer: {
+    gap: 8,
   },
 });

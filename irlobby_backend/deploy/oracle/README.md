@@ -53,6 +53,11 @@ Required values to set:
 - `CSRF_TRUSTED_ORIGINS`
 - `CORS_ALLOWED_ORIGINS`
 
+If web is hosted on Vercel, include your Vercel domain in:
+- `CSRF_TRUSTED_ORIGINS` (for example: `https://your-project.vercel.app`)
+- `CORS_ALLOWED_ORIGINS` (same Vercel origin)
+- `FRONTEND_BASE_URL` (set to your primary web URL)
+
 If using local PostgreSQL on the VM (recommended for low-cost single-VM launch):
 - Set `USE_LOCAL_POSTGRES=true`
 - Set `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
@@ -113,7 +118,8 @@ Expected health endpoint response: HTTP `200`.
 
 - Mobile `EXPO_PUBLIC_API_BASE_URL`: `https://liyf.app`
 - Mobile `EXPO_PUBLIC_WEBSOCKET_URL`: `wss://liyf.app`
-- Web `VITE_API_BASE_URL`: `https://liyf.app`
+- Web static hosting without a proxy `VITE_API_BASE_URL`: `https://liyf.app`
+- Vercel: set project root to repo root, keep `VITE_API_BASE_URL` empty so `/api/*` uses the `vercel.json` rewrite, and set `VITE_WEBSOCKET_BASE_URL` to `wss://liyf.app`.
 
 ## 8) Backups
 

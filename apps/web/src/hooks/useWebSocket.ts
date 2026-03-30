@@ -22,10 +22,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return;
     }
 
-    // Determine correct WebSocket URL based on current environment
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const configuredWebSocketBase = (import.meta.env.VITE_WEBSOCKET_BASE_URL as string | undefined)?.trim();
+    const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    const websocketBaseSource = configuredWebSocketBase || configuredApiBase;
+    const wsBaseUrl = websocketBaseSource
+      ? websocketBaseSource
+          .replace(/^https?:\/\//, (prefix) => (prefix === 'https://' ? 'wss://' : 'ws://'))
+          .replace(/\/$/, '')
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+    const wsUrl = `${wsBaseUrl}/ws`;
 
     console.log('Connecting to WebSocket at:', wsUrl);
 

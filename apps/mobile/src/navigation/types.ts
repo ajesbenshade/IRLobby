@@ -15,11 +15,9 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
-  Home: undefined;
-  MyEvents: undefined;
   Discover: undefined;
+  Activity: undefined;
   Create: undefined;
-  Matches: undefined;
   Chat: undefined;
   Profile: undefined;
 };

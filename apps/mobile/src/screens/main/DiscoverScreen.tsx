@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, HelperText, Modal, Portal, Text, TextInput } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper';
 
 import {
   AccentPill,
@@ -12,6 +12,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { HomeOverviewContent } from '@screens/main/HomeScreen';
 import type { MainStackParamList } from '@navigation/types';
 import {
   fetchActivities,
@@ -29,6 +30,7 @@ export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
   const pan = useRef(new Animated.ValueXY()).current;
+  const [activeSegment, setActiveSegment] = useState<'discover' | 'home'>('discover');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -275,315 +277,349 @@ export const DiscoverScreen = () => {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <PageHeader
-        eyebrow="Flagship"
-        title="Discover events"
-        subtitle="Swipe through activities with cleaner hierarchy, better context, and faster decisions."
+        eyebrow={activeSegment === 'discover' ? 'Discover' : 'Home'}
+        title={activeSegment === 'discover' ? 'Find your next plan' : 'Quick home snapshot'}
+        subtitle={
+          activeSegment === 'discover'
+            ? 'Browse the live deck first, then flip over to Home whenever you want a lighter read on what you are hosting.'
+            : 'Check your numbers, recent hosted plans, and jump back into discovery without adding another bottom tab.'
+        }
         rightContent={
-          <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
-            Alerts
-          </Button>
+          activeSegment === 'discover' ? (
+            <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
+              Alerts
+            </Button>
+          ) : null
         }
       />
 
-      <View style={styles.toolbar}>
-        <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
-          {showFilters ? 'Hide filters' : `Filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
-        </Button>
-        <Button mode={showMap ? 'contained-tonal' : 'outlined'} onPress={() => setShowMap((previous) => !previous)}>
-          {showMap ? 'Hide map' : 'Map'}
-        </Button>
-        <AccentPill tone="secondary">{activities.length} live</AccentPill>
-      </View>
-
-      {showFilters ? (
-        <PanelCard style={styles.filterCard}>
-          <View style={styles.filterHeader}>
-            <View style={styles.filterHeaderCopy}>
-              <Text variant="titleMedium" style={styles.filterTitle}>
-                Refine the deck
-              </Text>
-              <Text style={styles.filterSubtitle}>Adjust discovery without leaving the screen.</Text>
-            </View>
-            <Button mode="text" compact onPress={resetFilters}>
-              Reset
-            </Button>
-          </View>
-          <TextInput label="Category (tag)" value={categoryFilter} onChangeText={setCategoryFilter} mode="outlined" style={styles.input} />
-          <TextInput label="Location" value={locationFilter} onChangeText={setLocationFilter} mode="outlined" style={styles.input} />
-          <TextInput label="Tags (comma separated)" value={tagFilter} onChangeText={setTagFilter} mode="outlined" style={styles.input} />
-          <TextInput
-            label="Max distance (km)"
-            value={distanceFilter}
-            onChangeText={setDistanceFilter}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput label="Skill level" value={skillFilter} onChangeText={setSkillFilter} mode="outlined" style={styles.input} />
-          <TextInput label="Age restriction" value={ageFilter} onChangeText={setAgeFilter} mode="outlined" style={styles.input} />
-          <TextInput
-            label="Visibility (everyone/friends/friendsOfFriends)"
-            value={visibilityFilter}
-            onChangeText={setVisibilityFilter}
-            mode="outlined"
-            style={styles.input}
-          />
-          <View style={styles.filterRow}>
-            <TextInput
-              label="Price min"
-              value={priceMinFilter}
-              onChangeText={setPriceMinFilter}
-              keyboardType="numeric"
-              mode="outlined"
-              style={[styles.input, styles.halfInput]}
-            />
-            <TextInput
-              label="Price max"
-              value={priceMaxFilter}
-              onChangeText={setPriceMaxFilter}
-              keyboardType="numeric"
-              mode="outlined"
-              style={[styles.input, styles.halfInput]}
-            />
-          </View>
-          <TextInput
-            label="Date from (YYYY-MM-DD or ISO)"
-            value={dateFromFilter}
-            onChangeText={setDateFromFilter}
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Date to (YYYY-MM-DD or ISO)"
-            value={dateToFilter}
-            onChangeText={setDateToFilter}
-            mode="outlined"
-            style={styles.input}
-          />
-        </PanelCard>
-      ) : null}
-
-      {showMap && activities.length > 0 ? (
-        <PanelCard style={styles.mapCard}>
-          <Text variant="titleMedium" style={styles.mapTitle}>
-            Nearby view
+      <PanelCard style={styles.segmentShell} tone={activeSegment === 'discover' ? 'default' : 'warm'}>
+        <View style={styles.segmentShellHeader}>
+          <AccentPill tone={activeSegment === 'discover' ? 'secondary' : 'neutral'}>
+            {activeSegment === 'discover' ? 'Primary mode' : 'Compact mode'}
+          </AccentPill>
+          <Text style={styles.segmentShellCopy}>
+            {activeSegment === 'discover'
+              ? 'Discover stays in front. Home is available as a quick sidecar view.'
+              : 'Home stays compact here so the swipe deck keeps the main spotlight.'}
           </Text>
-          <Text style={styles.mapSubtitle}>Tap a pin to jump straight into that activity.</Text>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: Number(activities[0].latitude ?? 37.7749),
-              longitude: Number(activities[0].longitude ?? -122.4194),
-              latitudeDelta: 0.12,
-              longitudeDelta: 0.12,
-            }}
-          >
-            {activities
-              .filter((item) => item.latitude != null && item.longitude != null)
-              .map((activity) => (
-                <Marker
-                  key={String(activity.id)}
-                  coordinate={{
-                    latitude: Number(activity.latitude),
-                    longitude: Number(activity.longitude),
-                  }}
-                  title={activity.title}
-                  description={activity.location ?? undefined}
-                  onPress={() => {
-                    const targetIndex = activities.findIndex((entry) => entry.id === activity.id);
-                    if (targetIndex >= 0) {
-                      setCurrentIndex(targetIndex);
-                      setShowDetails(true);
-                    }
-                  }}
-                />
-              ))}
-          </MapView>
-        </PanelCard>
-      ) : null}
-
-      {isLoading ? <Text style={styles.loadingText}>Loading activities...</Text> : null}
-
-      {error || swipeMutation.error ? (
-        <View style={styles.errorContainer}>
-          <HelperText type="error" visible>
-            {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
-          </HelperText>
-          <Button mode="outlined" onPress={() => void refetch()} disabled={isRefetching}>
-            {isRefetching ? 'Retrying...' : 'Retry'}
-          </Button>
         </View>
-      ) : null}
-
-      {participationMutation.error ? (
-        <HelperText type="error" visible>
-          {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
-        </HelperText>
-      ) : null}
-
-      {matchMessage ? (
-        <PanelCard style={styles.matchCard} tone="accent">
-          <AccentPill tone="secondary">New match</AccentPill>
-          <Text variant="titleMedium" style={styles.matchTitle}>
-            {matchMessage}
-          </Text>
-        </PanelCard>
-      ) : null}
-
-      {!isLoading && activities.length === 0 ? (
-        <EmptyStatePanel
-          title="No activities match your filters"
-          description="Widen the radius, clear a few filters, or refresh to pull in the latest nearby events."
-          action={
-            <Button mode="contained" buttonColor={appColors.primary} onPress={resetDeck}>
-              Refresh deck
-            </Button>
-          }
+        <SegmentedButtons
+          value={activeSegment}
+          onValueChange={(value) => setActiveSegment(value as 'discover' | 'home')}
+          buttons={[
+            { value: 'discover', label: 'Discover' },
+            { value: 'home', label: 'Home' },
+          ]}
+          style={styles.segmentedControl}
         />
-      ) : null}
+      </PanelCard>
 
-      {!isLoading && activities.length > 0 && !currentActivity ? (
-        <EmptyStatePanel
-          title="You’re all caught up"
-          description="You’ve seen the current deck. Refresh to reshuffle and load anything new."
-          action={
-            <Button mode="outlined" onPress={resetDeck}>
-              Reload activities
+      {activeSegment === 'home' ? (
+        <HomeOverviewContent compact onOpenDiscover={() => setActiveSegment('discover')} />
+      ) : (
+        <>
+          <View style={styles.toolbar}>
+            <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
+              {showFilters ? 'Hide filters' : `Filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
             </Button>
-          }
-        />
-      ) : null}
+            <Button mode={showMap ? 'contained-tonal' : 'outlined'} onPress={() => setShowMap((previous) => !previous)}>
+              {showMap ? 'Hide map' : 'Map'}
+            </Button>
+            <AccentPill tone="secondary">{activities.length} live</AccentPill>
+          </View>
 
-      {currentActivity ? (
-        <Animated.View style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
-          <PanelCard style={styles.card}>
-            <View style={styles.cardHero}>
-              <AccentPill tone="secondary">{currentTag}</AccentPill>
-              <Text style={styles.cardHeroLetter}>{currentActivity.title.charAt(0).toUpperCase()}</Text>
-              <Text style={styles.cardHeroText}>Swipe right if you’d show up. Left if it’s not your scene.</Text>
-            </View>
-            <View style={styles.cardContent}>
-              <Text variant="headlineSmall" style={styles.cardTitle}>
-                {currentActivity.title}
-              </Text>
-              {currentActivity.description ? (
-                <Text style={styles.cardDescription} numberOfLines={3}>
-                  {currentActivity.description}
-                </Text>
-              ) : null}
-              <View style={styles.metaStack}>
-                <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
-                <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
-                <Text style={styles.metaLine}>
-                  👥 {currentActivity.participant_count ?? 0}
-                  {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
-                </Text>
-              </View>
-              <View style={styles.hostRow}>
-                <View style={styles.hostAvatar}>
-                  <Text style={styles.hostAvatarText}>{currentHostName.charAt(0).toUpperCase()}</Text>
+          {showFilters ? (
+            <PanelCard style={styles.filterCard}>
+              <View style={styles.filterHeader}>
+                <View style={styles.filterHeaderCopy}>
+                  <Text variant="titleMedium" style={styles.filterTitle}>
+                    Refine the deck
+                  </Text>
+                  <Text style={styles.filterSubtitle}>Adjust discovery without leaving the screen.</Text>
                 </View>
-                <View style={styles.hostCopy}>
-                  <Text style={styles.hostName}>{currentHostName}</Text>
-                  <Text style={styles.hostLabel}>Host</Text>
-                </View>
-                <Button mode="text" compact onPress={() => setShowDetails(true)}>
-                  View details
+                <Button mode="text" compact onPress={resetFilters}>
+                  Reset
                 </Button>
               </View>
-            </View>
-          </PanelCard>
-        </Animated.View>
-      ) : null}
-
-      {currentActivity ? (
-        <View style={styles.actions}>
-          <Button mode="outlined" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
-            Swipe left
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => handleSwipe('right')}
-            disabled={isBusy}
-            style={styles.actionButton}
-            buttonColor={appColors.primary}
-          >
-            Swipe right
-          </Button>
-        </View>
-      ) : null}
-
-      <Portal>
-        <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
-          {currentActivity ? (
-            <ScrollView contentContainerStyle={styles.detailsScroll}>
-              <AccentPill tone="secondary">{currentTag}</AccentPill>
-              <Text variant="headlineSmall" style={styles.detailsTitle}>
-                {currentActivity.title}
-              </Text>
-              <Text variant="bodyMedium" style={styles.detailsText}>
-                {currentActivity.description || 'No description provided.'}
-              </Text>
-              <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
-              <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
-              <Text style={styles.metaLine}>
-                👥 {currentActivity.participant_count ?? 0}
-                {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
-              </Text>
-              {currentActivity.tags?.length ? (
-                <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
-              ) : null}
-              <View style={styles.modalActions}>
-                <Button mode="outlined" onPress={() => setShowDetails(false)}>
-                  Close
-                </Button>
-                <Button
+              <TextInput label="Category (tag)" value={categoryFilter} onChangeText={setCategoryFilter} mode="outlined" style={styles.input} />
+              <TextInput label="Location" value={locationFilter} onChangeText={setLocationFilter} mode="outlined" style={styles.input} />
+              <TextInput label="Tags (comma separated)" value={tagFilter} onChangeText={setTagFilter} mode="outlined" style={styles.input} />
+              <TextInput
+                label="Max distance (km)"
+                value={distanceFilter}
+                onChangeText={setDistanceFilter}
+                keyboardType="numeric"
+                mode="outlined"
+                style={styles.input}
+              />
+              <TextInput label="Skill level" value={skillFilter} onChangeText={setSkillFilter} mode="outlined" style={styles.input} />
+              <TextInput label="Age restriction" value={ageFilter} onChangeText={setAgeFilter} mode="outlined" style={styles.input} />
+              <TextInput
+                label="Visibility (everyone/friends/friendsOfFriends)"
+                value={visibilityFilter}
+                onChangeText={setVisibilityFilter}
+                mode="outlined"
+                style={styles.input}
+              />
+              <View style={styles.filterRow}>
+                <TextInput
+                  label="Price min"
+                  value={priceMinFilter}
+                  onChangeText={setPriceMinFilter}
+                  keyboardType="numeric"
                   mode="outlined"
-                  disabled={participationMutation.isPending}
-                  loading={
-                    participationMutation.isPending &&
-                    participationMutation.variables?.action === 'leave'
-                  }
-                  onPress={() =>
-                    participationMutation.mutate({
-                      activityId: currentActivity.id,
-                      action: 'leave',
-                    })
-                  }
-                >
-                  Leave
-                </Button>
-                <Button
-                  mode="contained-tonal"
-                  disabled={participationMutation.isPending}
-                  loading={
-                    participationMutation.isPending &&
-                    participationMutation.variables?.action === 'join'
-                  }
-                  onPress={() =>
-                    participationMutation.mutate({
-                      activityId: currentActivity.id,
-                      action: 'join',
-                    })
-                  }
-                >
-                  Join
-                </Button>
-                <Button
-                  mode="contained"
-                  buttonColor={appColors.primary}
-                  onPress={() => {
-                    setShowDetails(false);
-                    handleSwipe('right');
-                  }}
-                >
-                  Swipe right
-                </Button>
+                  style={[styles.input, styles.halfInput]}
+                />
+                <TextInput
+                  label="Price max"
+                  value={priceMaxFilter}
+                  onChangeText={setPriceMaxFilter}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  style={[styles.input, styles.halfInput]}
+                />
               </View>
-            </ScrollView>
+              <TextInput
+                label="Date from (YYYY-MM-DD or ISO)"
+                value={dateFromFilter}
+                onChangeText={setDateFromFilter}
+                mode="outlined"
+                style={styles.input}
+              />
+              <TextInput
+                label="Date to (YYYY-MM-DD or ISO)"
+                value={dateToFilter}
+                onChangeText={setDateToFilter}
+                mode="outlined"
+                style={styles.input}
+              />
+            </PanelCard>
           ) : null}
-        </Modal>
-      </Portal>
+
+          {showMap && activities.length > 0 ? (
+            <PanelCard style={styles.mapCard}>
+              <Text variant="titleMedium" style={styles.mapTitle}>
+                Nearby view
+              </Text>
+              <Text style={styles.mapSubtitle}>Tap a pin to jump straight into that activity.</Text>
+              <MapView
+                style={styles.map}
+                initialRegion={{
+                  latitude: Number(activities[0].latitude ?? 37.7749),
+                  longitude: Number(activities[0].longitude ?? -122.4194),
+                  latitudeDelta: 0.12,
+                  longitudeDelta: 0.12,
+                }}
+              >
+                {activities
+                  .filter((item) => item.latitude != null && item.longitude != null)
+                  .map((activity) => (
+                    <Marker
+                      key={String(activity.id)}
+                      coordinate={{
+                        latitude: Number(activity.latitude),
+                        longitude: Number(activity.longitude),
+                      }}
+                      title={activity.title}
+                      description={activity.location ?? undefined}
+                      onPress={() => {
+                        const targetIndex = activities.findIndex((entry) => entry.id === activity.id);
+                        if (targetIndex >= 0) {
+                          setCurrentIndex(targetIndex);
+                          setShowDetails(true);
+                        }
+                      }}
+                    />
+                  ))}
+              </MapView>
+            </PanelCard>
+          ) : null}
+
+          {isLoading ? <Text style={styles.loadingText}>Loading activities...</Text> : null}
+
+          {error || swipeMutation.error ? (
+            <View style={styles.errorContainer}>
+              <HelperText type="error" visible>
+                {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
+              </HelperText>
+              <Button mode="outlined" onPress={() => void refetch()} disabled={isRefetching}>
+                {isRefetching ? 'Retrying...' : 'Retry'}
+              </Button>
+            </View>
+          ) : null}
+
+          {participationMutation.error ? (
+            <HelperText type="error" visible>
+              {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
+            </HelperText>
+          ) : null}
+
+          {matchMessage ? (
+            <PanelCard style={styles.matchCard} tone="accent">
+              <AccentPill tone="secondary">New match</AccentPill>
+              <Text variant="titleMedium" style={styles.matchTitle}>
+                {matchMessage}
+              </Text>
+            </PanelCard>
+          ) : null}
+
+          {!isLoading && activities.length === 0 ? (
+            <EmptyStatePanel
+              title="No activities match your filters"
+              description="Widen the radius, clear a few filters, or refresh to pull in the latest nearby events."
+              action={
+                <Button mode="contained" buttonColor={appColors.primary} onPress={resetDeck}>
+                  Refresh deck
+                </Button>
+              }
+            />
+          ) : null}
+
+          {!isLoading && activities.length > 0 && !currentActivity ? (
+            <EmptyStatePanel
+              title="You’re all caught up"
+              description="You’ve seen the current deck. Refresh to reshuffle and load anything new."
+              action={
+                <Button mode="outlined" onPress={resetDeck}>
+                  Reload activities
+                </Button>
+              }
+            />
+          ) : null}
+
+          {currentActivity ? (
+            <Animated.View style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
+              <PanelCard style={styles.card}>
+                <View style={styles.cardHero}>
+                  <AccentPill tone="secondary">{currentTag}</AccentPill>
+                  <Text style={styles.cardHeroLetter}>{currentActivity.title.charAt(0).toUpperCase()}</Text>
+                  <Text style={styles.cardHeroText}>Swipe right if you’d show up. Left if it’s not your scene.</Text>
+                </View>
+                <View style={styles.cardContent}>
+                  <Text variant="headlineSmall" style={styles.cardTitle}>
+                    {currentActivity.title}
+                  </Text>
+                  {currentActivity.description ? (
+                    <Text style={styles.cardDescription} numberOfLines={3}>
+                      {currentActivity.description}
+                    </Text>
+                  ) : null}
+                  <View style={styles.metaStack}>
+                    <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
+                    <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
+                    <Text style={styles.metaLine}>
+                      👥 {currentActivity.participant_count ?? 0}
+                      {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
+                    </Text>
+                  </View>
+                  <View style={styles.hostRow}>
+                    <View style={styles.hostAvatar}>
+                      <Text style={styles.hostAvatarText}>{currentHostName.charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.hostCopy}>
+                      <Text style={styles.hostName}>{currentHostName}</Text>
+                      <Text style={styles.hostLabel}>Host</Text>
+                    </View>
+                    <Button mode="text" compact onPress={() => setShowDetails(true)}>
+                      View details
+                    </Button>
+                  </View>
+                </View>
+              </PanelCard>
+            </Animated.View>
+          ) : null}
+
+          {currentActivity ? (
+            <View style={styles.actions}>
+              <Button mode="outlined" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
+                Swipe left
+              </Button>
+              <Button
+                mode="contained"
+                onPress={() => handleSwipe('right')}
+                disabled={isBusy}
+                style={styles.actionButton}
+                buttonColor={appColors.primary}
+              >
+                Swipe right
+              </Button>
+            </View>
+          ) : null}
+
+          <Portal>
+            <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
+              {currentActivity ? (
+                <ScrollView contentContainerStyle={styles.detailsScroll}>
+                  <AccentPill tone="secondary">{currentTag}</AccentPill>
+                  <Text variant="headlineSmall" style={styles.detailsTitle}>
+                    {currentActivity.title}
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.detailsText}>
+                    {currentActivity.description || 'No description provided.'}
+                  </Text>
+                  <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
+                  <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
+                  <Text style={styles.metaLine}>
+                    👥 {currentActivity.participant_count ?? 0}
+                    {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
+                  </Text>
+                  {currentActivity.tags?.length ? (
+                    <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
+                  ) : null}
+                  <View style={styles.modalActions}>
+                    <Button mode="outlined" onPress={() => setShowDetails(false)}>
+                      Close
+                    </Button>
+                    <Button
+                      mode="outlined"
+                      disabled={participationMutation.isPending}
+                      loading={
+                        participationMutation.isPending &&
+                        participationMutation.variables?.action === 'leave'
+                      }
+                      onPress={() =>
+                        participationMutation.mutate({
+                          activityId: currentActivity.id,
+                          action: 'leave',
+                        })
+                      }
+                    >
+                      Leave
+                    </Button>
+                    <Button
+                      mode="contained-tonal"
+                      disabled={participationMutation.isPending}
+                      loading={
+                        participationMutation.isPending &&
+                        participationMutation.variables?.action === 'join'
+                      }
+                      onPress={() =>
+                        participationMutation.mutate({
+                          activityId: currentActivity.id,
+                          action: 'join',
+                        })
+                      }
+                    >
+                      Join
+                    </Button>
+                    <Button
+                      mode="contained"
+                      buttonColor={appColors.primary}
+                      onPress={() => {
+                        setShowDetails(false);
+                        handleSwipe('right');
+                      }}
+                    >
+                      Swipe right
+                    </Button>
+                  </View>
+                </ScrollView>
+              ) : null}
+            </Modal>
+          </Portal>
+        </>
+      )}
     </AppScrollView>
   );
 };
@@ -591,6 +627,20 @@ export const DiscoverScreen = () => {
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+  },
+  segmentShell: {
+    gap: 12,
+    paddingVertical: 14,
+  },
+  segmentShellHeader: {
+    gap: 8,
+  },
+  segmentShellCopy: {
+    color: appColors.mutedInk,
+    lineHeight: 20,
+  },
+  segmentedControl: {
+    marginBottom: 0,
   },
   toolbar: {
     flexDirection: 'row',

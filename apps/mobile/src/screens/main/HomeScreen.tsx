@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
 
 import { AppScrollView, EmptyStatePanel, PageHeader, PanelCard, StatCard } from '@components/AppChrome';
@@ -12,16 +12,19 @@ import { getErrorMessage } from '@utils/error';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
-export const HomeScreen = () => {
+type HomeOverviewContentProps = {
+  compact?: boolean;
+  onOpenDiscover?: () => void;
+};
+
+export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOverviewContentProps) => {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { user } = useAuth();
 
   const {
     data: hosted = [],
     isLoading: hostedLoading,
-    isRefetching: hostedRefetching,
     error: hostedError,
-    refetch: refetchHosted,
   } = useQuery({
     queryKey: ['mobile-hosted-activities'],
     queryFn: fetchHostedActivities,
@@ -30,36 +33,37 @@ export const HomeScreen = () => {
   const {
     data: discover = [],
     isLoading: discoverLoading,
-    isRefetching: discoverRefetching,
     error: discoverError,
-    refetch: refetchDiscover,
   } = useQuery({
     queryKey: ['mobile-discover-activities'],
     queryFn: () => fetchActivities(),
   });
 
-  const isRefreshing = hostedRefetching || discoverRefetching;
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'there';
-  const latestHosted = hosted.slice(0, 3);
+  const latestHosted = hosted.slice(0, compact ? 2 : 3);
+
+  const handleOpenDiscover = () => {
+    if (onOpenDiscover) {
+      onOpenDiscover();
+      return;
+    }
+
+    navigation.navigate('Discover');
+  };
 
   return (
-    <AppScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={() => {
-            void refetchHosted();
-            void refetchDiscover();
-          }}
-        />
-      }
-    >
-      <PageHeader
-        eyebrow="Dashboard"
-        title={`Welcome back, ${firstName}`}
-        subtitle="A cleaner snapshot of what you’re hosting, what’s nearby, and where momentum is building."
-      />
+    <>
+      {compact ? (
+        <PanelCard style={styles.snapshotCard}>
+          <Text style={styles.snapshotEyebrow}>Home</Text>
+          <Text variant="titleLarge" style={styles.snapshotTitle}>
+            Welcome back, {firstName}
+          </Text>
+          <Text style={styles.snapshotSubtitle}>
+            Your hosting snapshot stays lightweight here so discovery can keep the main stage.
+          </Text>
+        </PanelCard>
+      ) : null}
 
       <View style={styles.statGrid}>
         <StatCard
@@ -77,17 +81,19 @@ export const HomeScreen = () => {
 
       <PanelCard style={styles.ctaCard}>
         <Text variant="titleLarge" style={styles.ctaTitle}>
-          Move from browsing to booking something real.
+          {compact ? 'Host something or jump back into the deck.' : 'Move from browsing to booking something real.'}
         </Text>
         <Text style={styles.ctaSubtitle}>
-          Keep the app useful by creating a plan or checking what is trending nearby.
+          {compact
+            ? 'This condensed view keeps your counts, latest hosted plans, and a fast path back to discovery in one place.'
+            : 'Keep the app useful by creating a plan or checking what is trending nearby.'}
         </Text>
         <View style={styles.ctaActions}>
           <Button mode="contained" onPress={() => navigation.navigate('Create')} buttonColor={appColors.primary}>
-            Create activity
+            Host something
           </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('Discover')}>
-            Explore now
+          <Button mode="outlined" onPress={handleOpenDiscover}>
+            {compact ? 'Open swipe deck' : 'Explore now'}
           </Button>
         </View>
       </PanelCard>
@@ -103,7 +109,7 @@ export const HomeScreen = () => {
           <Text variant="titleMedium" style={styles.sectionTitle}>
             Latest hosted
           </Text>
-          <Text style={styles.sectionMeta}>Your freshest activity updates</Text>
+          <Text style={styles.sectionMeta}>{compact ? 'A quick look at what you are hosting' : 'Your freshest activity updates'}</Text>
         </View>
 
         <View style={styles.listContent}>
@@ -126,13 +132,30 @@ export const HomeScreen = () => {
               description="Your hosted events will appear here once you publish one."
               action={
                 <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Create')}>
-                  Create your first activity
+                  Host your first activity
                 </Button>
               }
             />
           )}
         </View>
       </PanelCard>
+    </>
+  );
+};
+
+export const HomeScreen = () => {
+  const { user } = useAuth();
+  const firstName = user?.firstName || user?.email?.split('@')[0] || 'there';
+
+  return (
+    <AppScrollView contentContainerStyle={styles.container}>
+      <PageHeader
+        eyebrow="Dashboard"
+        title={`Welcome back, ${firstName}`}
+        subtitle="A cleaner snapshot of what you’re hosting, what’s nearby, and where momentum is building."
+      />
+
+      <HomeOverviewContent />
     </AppScrollView>
   );
 };
@@ -204,5 +227,25 @@ const styles = StyleSheet.create({
   },
   activitySubtitle: {
     color: appColors.mutedInk,
+  },
+  snapshotCard: {
+    gap: 8,
+    backgroundColor: '#fcfbf7',
+  },
+  snapshotEyebrow: {
+    color: appColors.softInk,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  snapshotTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  snapshotSubtitle: {
+    color: appColors.mutedInk,
+    lineHeight: 21,
   },
 });

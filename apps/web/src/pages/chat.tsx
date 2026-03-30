@@ -108,11 +108,13 @@ export default function Chat({ matchId, onBack }: ChatProps) {
       return;
     }
 
+    const configuredWebSocketBase = (import.meta.env.VITE_WEBSOCKET_BASE_URL as string | undefined)?.trim();
     const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const websocketBaseUrl = configuredApiBase
-      ? configuredApiBase.replace(/^https?:\/\//, (prefix) =>
-          prefix === 'https://' ? 'wss://' : 'ws://',
-        )
+    const websocketBaseSource = configuredWebSocketBase || configuredApiBase;
+    const websocketBaseUrl = websocketBaseSource
+      ? websocketBaseSource
+          .replace(/^https?:\/\//, (prefix) => (prefix === 'https://' ? 'wss://' : 'ws://'))
+          .replace(/\/$/, '')
       : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
     let isCancelled = false;

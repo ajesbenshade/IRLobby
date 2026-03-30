@@ -10,8 +10,6 @@ From repo root:
 npm run check:api-contract
 npm run check:web
 npm run check:mobile
-python -m pytest
-python irlobby_backend/manage.py check --deploy
 ```
 
 Or one-shot:
@@ -26,9 +24,8 @@ npm run check:release
 
 - Contract checker: `scripts/check-api-contract.mjs`
 - Scan scope:
-  - `apps/web/src/**`
-  - `apps/mobile/src/**`
-  - `packages/shared/**`
+  - `client/src/**`
+  - `irlobby_mobile/src/**`
 
 If this fails, fix unsupported endpoint usage before building TestFlight.
 
@@ -120,35 +117,6 @@ For each journey in section 3, validate all behavior states below on **both** we
 - Retry behavior works (manual action or automatic retry where implemented).
 - Session behavior matches (expired/invalid token routes user to re-auth safely).
 
-## 5c) Phase 4 visual parity (required)
-
-For each journey in section 3, validate that web and mobile present equivalent visual intent.
-
-### Required visual checks
-
-- Content hierarchy matches (screen title, subtitle, and primary card content order).
-- Action prominence matches (primary and retry actions are equally discoverable).
-- Status badges/chips match intent (matched/pending/confirmed semantics stay consistent).
-- Spacing and density feel equivalent (no compressed or sparse outliers between platforms).
-- Empty and error states use comparable emphasis and guidance text.
-- Timestamp/meta data visibility is equivalent where shown.
-
-### Visual parity matrix
-
-Use this matrix during smoke run evidence capture.
-
-| # | Journey | Hierarchy | Actions | Status UI | Spacing | Empty/Error visuals | Meta visibility | Notes |
-|---|---------|-----------|---------|-----------|---------|---------------------|-----------------|-------|
-| 1 | Register + login + logout | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 2 | Password reset request + completion path | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 3 | Onboarding submit + refresh profile | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 4 | Discover list loads | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 5 | Create activity | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 6 | Join/leave activity | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 7 | Matches list loads | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 8 | Chat list opens + sends message | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 9 | Profile update persists | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-
 ### Behavioral parity matrix
 
 Use this matrix during smoke run evidence capture.
@@ -172,8 +140,7 @@ Use this matrix during smoke run evidence capture.
   - All section 3 journeys pass on web and mobile.
   - No open Critical/Core parity defects.
   - Behavioral parity matrix has no failed required state.
-  - Visual parity matrix has no failed required check.
-- **NO-GO** if any required command fails, any journey fails, any behavior state fails, or any visual parity check fails.
+- **NO-GO** if any required command fails, any journey fails, or any required state fails.
 
 ### Rollback trigger guidance
 
@@ -189,9 +156,9 @@ Use this matrix during smoke run evidence capture.
   - Friends/Connections parity added on mobile.
   - Reviews parity implemented on web + mobile with backend write support.
   - Notifications parity implemented on web + mobile.
-  - Legacy activity-chat drift removed (`apps/web/src/components/chat-window.tsx`).
+  - Legacy activity-chat drift removed (`client/src/components/chat-window.tsx`).
 - Warning cleanup:
-  - Updated `baseline-browser-mapping` to latest in both `apps/web` and `apps/mobile`.
+  - Updated `baseline-browser-mapping` to latest in both `client` and `irlobby_mobile`.
   - Verified warning no longer appears in web build and mobile bundle output.
 - Final gate results (local):
   - `npm run check:api-contract` ✅

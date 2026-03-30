@@ -4,7 +4,8 @@ import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 
-const devProxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'https://liyf.app';
+const devProxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000';
+const apiBaseUrl = process.env.VITE_API_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://liyf.app' : '');
 
 export default defineConfig({
   plugins: [react()],
@@ -58,6 +59,6 @@ export default defineConfig({
     }
   },
   define: {
-    __API_BASE_URL__: JSON.stringify(process.env.VITE_API_BASE_URL || 'https://liyf.app')
+    __API_BASE_URL__: JSON.stringify(apiBaseUrl)
   }
 });

@@ -4,13 +4,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Surface, Text, TextInput } from 'react-native-paper';
+import { Image, StyleSheet, View } from 'react-native';
+import { Button, HelperText, Text, TextInput } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
+import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { updateOnboarding } from '@services/authService';
+import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { MainStackParamList } from '@navigation/types';
@@ -170,94 +172,115 @@ export const ProfileScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Surface elevation={2} style={styles.card}>
-        <Text variant="headlineSmall">Profile</Text>
-        <Text variant="bodyMedium" style={styles.secondaryText}>
-          {user?.email ?? 'Not signed in'}
-        </Text>
+    <AppScrollView contentContainerStyle={styles.container}>
+      <PageHeader
+        eyebrow="Profile"
+        title="Your presence"
+        subtitle="Tighten the profile people see before they join your events, match with you, or open a conversation."
+      />
 
-        <Text variant="titleMedium">Basic information</Text>
-
-        <TextInput
-          label="First name"
-          value={firstName}
-          onChangeText={setFirstName}
-          style={styles.input}
-        />
-        <TextInput label="Last name" value={lastName} onChangeText={setLastName} style={styles.input} />
-        <TextInput label="City" value={city} onChangeText={setCity} style={styles.input} />
-        <TextInput
-          label="Bio"
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          style={styles.input}
-        />
-
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} />
-        ) : (
-          <Text style={styles.secondaryText}>No avatar set</Text>
-        )}
-        <Button mode="outlined" onPress={pickAvatarFromLibrary}>
+      <PanelCard style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>{(firstName || user?.email || 'U').charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+          <View style={styles.heroCopy}>
+            <AccentPill>Public profile</AccentPill>
+            <Text variant="titleLarge" style={styles.heroName}>
+              {[firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Your profile'}
+            </Text>
+            <Text style={styles.heroEmail}>{user?.email ?? 'Not signed in'}</Text>
+          </View>
+        </View>
+        <Button mode="outlined" onPress={pickAvatarFromLibrary} style={styles.inlineButton}>
           Pick avatar from library
         </Button>
+      </PanelCard>
 
-        <Text variant="titleMedium">Interests ({interests.length}/{MAX_INTERESTS})</Text>
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Basics"
+          title="Who are you?"
+          subtitle="This is the identity layer people will see across events, matches, and chat."
+        />
+        <View style={styles.row}>
+          <TextInput label="First name" value={firstName} onChangeText={setFirstName} mode="outlined" style={[styles.input, styles.half]} />
+          <TextInput label="Last name" value={lastName} onChangeText={setLastName} mode="outlined" style={[styles.input, styles.half]} />
+        </View>
+        <TextInput label="City" value={city} onChangeText={setCity} mode="outlined" style={styles.input} />
+        <TextInput label="Bio" value={bio} onChangeText={setBio} multiline mode="outlined" style={styles.input} />
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Interests"
+          title={`What are you into? (${interests.length}/${MAX_INTERESTS})`}
+          subtitle="Use short, specific interests so the app can surface better activity and people matches."
+        />
         <View style={styles.row}>
           <TextInput
             label="Add interest"
             value={interestInput}
             onChangeText={setInterestInput}
+            mode="outlined"
             style={[styles.input, styles.flexInput]}
           />
           <Button mode="outlined" onPress={addInterest} disabled={!interestInput.trim()}>
             Add
           </Button>
         </View>
-        {interests.length > 0 && (
+        {interests.length > 0 ? (
           <View style={styles.inlineWrap}>
             {interests.map((interest) => (
-              <Button
-                key={interest}
-                mode="text"
-                compact
-                onPress={() => removeInterest(interest)}
-              >
-                {interest} ×
-              </Button>
+              <View key={interest} style={styles.interestChip}>
+                <Text style={styles.interestText}>{interest}</Text>
+                <Button mode="text" compact onPress={() => removeInterest(interest)}>
+                  Remove
+                </Button>
+              </View>
             ))}
           </View>
+        ) : (
+          <EmptyStatePanel
+            title="No interests added yet"
+            description="Add a few interests so your profile feels specific instead of empty."
+          />
         )}
+      </PanelCard>
 
-        <Text variant="titleMedium">Photo album ({photoAlbum.length}/{MAX_PHOTOS})</Text>
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Media"
+          title={`Photo album (${photoAlbum.length}/${MAX_PHOTOS})`}
+          subtitle="Give people a sense of who you are before they open chat or show up to an event."
+        />
         <View style={styles.row}>
           <TextInput
             label="Photo URL"
             value={photoInput}
             onChangeText={setPhotoInput}
             autoCapitalize="none"
+            mode="outlined"
             style={[styles.input, styles.flexInput]}
           />
           <Button mode="outlined" onPress={addPhotoByUrl} disabled={!photoInput.trim()}>
             Add
           </Button>
         </View>
-        <Button
-          mode="outlined"
-          onPress={addPhotoFromLibrary}
-          disabled={photoAlbum.length >= MAX_PHOTOS}
-        >
+        <Button mode="outlined" onPress={addPhotoFromLibrary} disabled={photoAlbum.length >= MAX_PHOTOS} style={styles.inlineButton}>
           Add photo from library
         </Button>
-        {photoAlbum.length > 0 && (
-          <View style={styles.albumList}>
+        {photoAlbum.length > 0 ? (
+          <View style={styles.albumGrid}>
             {photoAlbum.map((photo, index) => (
-              <View key={`${index}-${photo.slice(0, 24)}`} style={styles.albumRow}>
+              <View key={`${index}-${photo.slice(0, 24)}`} style={styles.albumTile}>
                 <Image source={{ uri: photo }} style={styles.albumPreview} />
                 <Text numberOfLines={1} style={styles.albumText}>
-                  {photo.startsWith('data:') ? `Photo ${index + 1} (data URL)` : photo}
+                  {photo.startsWith('data:') ? `Photo ${index + 1}` : `Photo ${index + 1}`}
                 </Text>
                 <Button mode="text" compact onPress={() => removePhotoAt(index)}>
                   Remove
@@ -265,81 +288,97 @@ export const ProfileScreen = () => {
               </View>
             ))}
           </View>
+        ) : (
+          <EmptyStatePanel
+            title="No photo album yet"
+            description="A few photos make your profile feel trusted and lived-in instead of anonymous."
+          />
         )}
+      </PanelCard>
 
-        {updateMutation.error && (
-          <HelperText type="error" visible>
-            {getErrorMessage(updateMutation.error, 'Unable to update profile.')}
-          </HelperText>
-        )}
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Shortcuts"
+          title="Profile-related destinations"
+          subtitle="Keep the secondary destinations grouped here instead of mixing them into the editing flow."
+        />
+        <View style={styles.navWrap}>
+          <Button mode="outlined" onPress={() => navigation.navigate('Settings')}>Settings</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('Friends')}>Connections</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('Reviews')}>Reviews</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('Notifications')}>Notifications</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('HelpSupport')}>Help & Support</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('PrivacyPolicy')}>Privacy</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('TermsOfService')}>Terms</Button>
+        </View>
+      </PanelCard>
 
-        {updateMutation.isSuccess && (
-          <HelperText type="info" visible>
-            Profile updated.
-          </HelperText>
-        )}
+      {updateMutation.error ? (
+        <HelperText type="error" visible>
+          {getErrorMessage(updateMutation.error, 'Unable to update profile.')}
+        </HelperText>
+      ) : null}
 
-        <View style={styles.row}>
-          <Button mode="contained" onPress={() => updateMutation.mutate()} loading={updateMutation.isPending}>
+      {updateMutation.isSuccess ? (
+        <PanelCard tone="accent">
+          <AccentPill tone="secondary">Saved</AccentPill>
+          <Text style={styles.savedText}>Profile updated.</Text>
+        </PanelCard>
+      ) : null}
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Actions"
+          title="Keep your profile current"
+          subtitle="Save edits, refresh from the server, or end your session from here."
+        />
+        <View style={styles.actionRow}>
+          <Button
+            mode="contained"
+            buttonColor={appColors.primary}
+            onPress={() => updateMutation.mutate()}
+            loading={updateMutation.isPending}
+            style={styles.primaryAction}
+          >
             Save profile
           </Button>
-          <Button mode="outlined" onPress={() => void refreshProfile()}>
+          <Button mode="outlined" onPress={() => void refreshProfile()} style={styles.secondaryAction}>
             Refresh
           </Button>
         </View>
-
-        <Text variant="titleMedium">Navigation</Text>
-
-        <View style={styles.row}>
-          <Button mode="outlined" onPress={() => navigation.navigate('Settings')}>
-            Settings
-          </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('Friends')}>
-            Connections
-          </Button>
-        </View>
-
-        <View style={styles.row}>
-          <Button mode="outlined" onPress={() => navigation.navigate('Reviews')}>
-            Reviews
-          </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('Notifications')}>
-            Notifications
-          </Button>
-        </View>
-
-        <View style={styles.row}>
-          <Button mode="outlined" onPress={() => navigation.navigate('HelpSupport')}>
-            Help & Support
-          </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('PrivacyPolicy')}>
-            Privacy
-          </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('TermsOfService')}>
-            Terms
-          </Button>
-        </View>
-
-        <Button mode="text" onPress={() => void signOut()} style={styles.signOut}>
-          Sign Out
+        <Button mode="text" onPress={() => void signOut()} style={styles.signOut} textColor={appColors.danger}>
+          Sign out
         </Button>
-      </Surface>
-    </ScrollView>
+      </PanelCard>
+    </AppScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    flexGrow: 1,
+    gap: 16,
   },
-  card: {
-    borderRadius: 16,
-    padding: 16,
+  heroCard: {
     gap: 10,
   },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  heroCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  heroName: {
+    color: appColors.ink,
+    fontWeight: '800',
+  },
+  heroEmail: {
+    color: appColors.mutedInk,
+  },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: appColors.card,
   },
   row: {
     flexDirection: 'row',
@@ -349,38 +388,88 @@ const styles = StyleSheet.create({
   flexInput: {
     flex: 1,
   },
+  half: {
+    flex: 1,
+  },
   inlineWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 10,
   },
-  albumList: {
-    gap: 6,
-  },
-  albumRow: {
+  interestChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 4,
+    borderRadius: 999,
+    backgroundColor: '#edf2ff',
+    paddingLeft: 14,
+    paddingRight: 4,
+    paddingVertical: 4,
+  },
+  interestText: {
+    color: appColors.primaryDeep,
+    fontWeight: '700',
+  },
+  albumGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   avatarPreview: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+  },
+  avatarFallback: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ebefff',
+  },
+  avatarFallbackText: {
+    color: appColors.primaryDeep,
+    fontSize: 32,
+    fontWeight: '900',
+  },
+  inlineButton: {
     alignSelf: 'flex-start',
   },
+  albumTile: {
+    width: '47%',
+    gap: 6,
+  },
   albumPreview: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 18,
+    backgroundColor: '#edf2f8',
   },
   albumText: {
-    flex: 1,
+    color: appColors.mutedInk,
+  },
+  navWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  savedText: {
+    color: appColors.ink,
+    fontWeight: '700',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  primaryAction: {
+    flexGrow: 1,
+  },
+  secondaryAction: {
+    flexGrow: 1,
   },
   signOut: {
     alignSelf: 'flex-start',
-  },
-  secondaryText: {
-    opacity: 0.75,
   },
 });

@@ -6,8 +6,6 @@ import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
 import { DiscoverScreen } from '@screens/main/DiscoverScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
-import { HomeScreen } from '@screens/main/HomeScreen';
-import { MatchesScreen } from '@screens/main/MatchesScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
 import { ProfileScreen } from '@screens/main/ProfileScreen';
@@ -56,11 +54,9 @@ const MainTabs = () => (
       tabBarIcon: ({ color, size }) => {
         const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> =
           {
-            Home: 'home-variant',
-            MyEvents: 'calendar-month-outline',
             Discover: 'compass-outline',
+            Activity: 'calendar-month-outline',
             Create: 'plus-circle-outline',
-            Matches: 'heart-outline',
             Chat: 'message-text-outline',
             Profile: 'account-circle-outline',
           };
@@ -88,11 +84,9 @@ const MainTabs = () => (
       tabBarLabelPosition: 'below-icon',
     })}
   >
-    <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="MyEvents" component={MyEventsScreen} options={{ title: 'My Events' }} />
     <Tab.Screen name="Discover" component={DiscoverScreen} />
-    <Tab.Screen name="Create" component={CreateActivityScreen} />
-    <Tab.Screen name="Matches" component={MatchesScreen} />
+    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Activity' }} />
+    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} />
     <Tab.Screen name="Chat" component={ChatScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>

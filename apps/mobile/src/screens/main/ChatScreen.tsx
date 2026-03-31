@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, HelperText, Text } from 'react-native-paper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { FlatList, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import {
@@ -150,13 +152,13 @@ export const ChatScreen = () => {
 
         <FlatList
           data={messages}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item: (typeof messages)[number]) => String(item.id)}
           contentContainerStyle={styles.messageList}
           style={styles.messageListFrame}
           refreshControl={
             <RefreshControl refreshing={messagesRefetching} onRefresh={() => void refetchMessages()} />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item }: { item: (typeof messages)[number] }) => {
             const isOwnMessage = user?.id != null && String(item.userId) === String(user.id);
             return (
               <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
@@ -254,9 +256,9 @@ export const ChatScreen = () => {
                 </View>
                 <View style={styles.cardTextBlock}>
                   <Text variant="titleMedium" style={styles.cardTitle}>{item.match}</Text>
-                  <Text style={styles.cardSubtitle} numberOfLines={2}>
+                  <NativeText style={styles.cardSubtitle} numberOfLines={2}>
                     {lastMessage?.message ?? 'No messages yet.'}
-                  </Text>
+                  </NativeText>
                 </View>
                 <AccentPill>Open</AccentPill>
               </View>

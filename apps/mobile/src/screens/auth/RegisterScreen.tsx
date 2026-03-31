@@ -1,10 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Button, HelperText, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, HelperText, Text } from 'react-native-paper';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';

@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Surface, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, Card, HelperText, Surface, Text } from 'react-native-paper';
 
+import { TextInput } from '@components/PaperCompat';
+import { ScrollView, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { fetchMatches } from '@services/matchService';
 import { createReview, fetchReviews } from '@services/reviewService';
@@ -144,7 +146,7 @@ export const ReviewsScreen = () => {
             <TextInput
               label="Rating (1-5)"
               value={rating ? String(rating) : ''}
-              onChangeText={(value) => setRating(Math.max(0, Math.min(5, Number(value) || 0)))}
+              onChangeText={(value: string) => setRating(Math.max(0, Math.min(5, Number(value) || 0)))}
               keyboardType="number-pad"
               style={styles.input}
             />

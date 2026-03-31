@@ -4,11 +4,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, HelperText, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { Image, Text as NativeText, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { updateOnboarding } from '@services/authService';
@@ -279,9 +281,9 @@ export const ProfileScreen = () => {
             {photoAlbum.map((photo, index) => (
               <View key={`${index}-${photo.slice(0, 24)}`} style={styles.albumTile}>
                 <Image source={{ uri: photo }} style={styles.albumPreview} />
-                <Text numberOfLines={1} style={styles.albumText}>
+                <NativeText numberOfLines={1} style={styles.albumText}>
                   {photo.startsWith('data:') ? `Photo ${index + 1}` : `Photo ${index + 1}`}
-                </Text>
+                </NativeText>
                 <Button mode="text" compact onPress={() => removePhotoAt(index)}>
                   Remove
                 </Button>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { Alert, Share, StyleSheet, View } from 'react-native';
+import { Alert, Share, StyleSheet } from 'react-native';
 import { Button, HelperText, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
@@ -12,6 +12,7 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
+import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { appColors, radii, spacing } from '@theme/index';

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
 
 import {
@@ -11,6 +11,7 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
+import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { appColors, radii, spacing } from '@theme/index';
@@ -188,9 +189,9 @@ export const NotificationsScreen = () => {
                     </Text>
                     <AccentPill tone="neutral">Message</AccentPill>
                   </View>
-                  <Text style={styles.feedBody} numberOfLines={2}>
+                  <NativeText style={styles.feedBody} numberOfLines={2}>
                     {item.body}
-                  </Text>
+                  </NativeText>
                   <Text style={styles.feedTime}>{formatTimestamp(item.createdAt)}</Text>
                 </View>
               </View>
@@ -219,9 +220,9 @@ export const NotificationsScreen = () => {
                     </Text>
                     <AccentPill tone="secondary">Match</AccentPill>
                   </View>
-                  <Text style={styles.feedBody} numberOfLines={2}>
+                  <NativeText style={styles.feedBody} numberOfLines={2}>
                     {item.body}
-                  </Text>
+                  </NativeText>
                   <Text style={styles.feedTime}>{formatTimestamp(item.createdAt)}</Text>
                 </View>
               </View>

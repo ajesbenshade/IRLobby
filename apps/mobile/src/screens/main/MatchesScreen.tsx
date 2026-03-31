@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
+import { RefreshControl, View } from '@components/RNCompat';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchMatches } from '@services/matchService';
 import { appColors } from '@theme/index';

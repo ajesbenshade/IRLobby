@@ -3,8 +3,8 @@ import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Image, Share, StyleSheet, View } from 'react-native';
-import { Button, HelperText, RadioButton, Switch, Text, TextInput } from 'react-native-paper';
+import { Share, StyleSheet } from 'react-native';
+import { Button, HelperText, RadioButton, Switch, Text } from 'react-native-paper';
 
 import {
   AccentPill,
@@ -15,6 +15,8 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { Image, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { config } from '@constants/config';
 import { createInvite, updateOnboarding } from '@services/authService';

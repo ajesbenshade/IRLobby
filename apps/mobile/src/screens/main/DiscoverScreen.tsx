@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import type { ComponentType } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, PanResponder, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, HelperText, Modal, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, SegmentedButtons, Text } from 'react-native-paper';
 
 import {
   AccentPill,
@@ -12,6 +13,8 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
 import { HomeOverviewContent } from '@screens/main/HomeScreen';
 import type { MainStackParamList } from '@navigation/types';
 import {
@@ -25,6 +28,8 @@ import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
 export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
@@ -489,7 +494,7 @@ export const DiscoverScreen = () => {
           ) : null}
 
           {currentActivity ? (
-            <Animated.View style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
+            <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
               <PanelCard style={styles.card}>
                 <View style={styles.cardHero}>
                   <AccentPill tone="secondary">{currentTag}</AccentPill>
@@ -501,9 +506,9 @@ export const DiscoverScreen = () => {
                     {currentActivity.title}
                   </Text>
                   {currentActivity.description ? (
-                    <Text style={styles.cardDescription} numberOfLines={3}>
+                    <NativeText style={styles.cardDescription} numberOfLines={3}>
                       {currentActivity.description}
-                    </Text>
+                    </NativeText>
                   ) : null}
                   <View style={styles.metaStack}>
                     <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
@@ -527,7 +532,7 @@ export const DiscoverScreen = () => {
                   </View>
                 </View>
               </PanelCard>
-            </Animated.View>
+            </AnimatedView>
           ) : null}
 
           {currentActivity ? (

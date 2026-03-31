@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, Card, Chip, HelperText, Text } from 'react-native-paper';
 
+import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { fetchMatches } from '@services/matchService';
 import { getErrorMessage } from '@utils/error';
 

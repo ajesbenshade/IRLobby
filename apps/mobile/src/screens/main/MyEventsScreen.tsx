@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, HelperText, SegmentedButtons, Text } from 'react-native-paper';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
+import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchMatches } from '@services/matchService';
@@ -177,9 +178,9 @@ export const MyEventsScreen = () => {
                       <Text style={styles.eventMeta}>
                         {formatDateLabel(activity.time)} · {activity.location || 'Location pending'}
                       </Text>
-                      <Text style={styles.eventDescription} numberOfLines={2}>
+                      <NativeText style={styles.eventDescription} numberOfLines={2}>
                         {activity.description || 'No description added yet.'}
-                      </Text>
+                      </NativeText>
                     </View>
                     <View style={styles.eventAside}>
                       <AccentPill tone="secondary">{activity.participant_count ?? 0} going</AccentPill>

@@ -1,11 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import {
-  KeyboardAvoidingView,
   Platform,
-  RefreshControl,
-  ScrollView,
   StyleSheet,
-  View,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
@@ -13,6 +9,7 @@ import {
 import { Surface, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardAvoidingView, ScrollView, View } from '@components/RNCompat';
 import { appColors, radii, shadows, spacing } from '@theme/index';
 
 type AppScrollViewProps = PropsWithChildren<{

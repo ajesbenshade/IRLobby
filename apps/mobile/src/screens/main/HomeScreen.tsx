@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
 
 import { AppScrollView, EmptyStatePanel, PageHeader, PanelCard, StatCard } from '@components/AppChrome';
+import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchActivities, fetchHostedActivities } from '@services/activityService';

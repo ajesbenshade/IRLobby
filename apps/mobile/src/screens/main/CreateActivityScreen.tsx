@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Switch, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, HelperText, Switch, Text } from 'react-native-paper';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
+import { TextInput } from '@components/PaperCompat';
+import { Image, View } from '@components/RNCompat';
 import { createActivity } from '@services/activityService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -199,7 +201,7 @@ export const CreateActivityScreen = () => {
         <TextInput
           label="Start date & time (ISO or YYYY-MM-DD HH:mm)"
           value={time}
-          onChangeText={(value) => {
+          onChangeText={(value: string) => {
             setTime(value);
             if (timeError) {
               setTimeError(null);
@@ -212,7 +214,7 @@ export const CreateActivityScreen = () => {
         <TextInput
           label="End date & time (optional)"
           value={endTime}
-          onChangeText={(value) => {
+          onChangeText={(value: string) => {
             setEndTime(value);
             if (timeError) {
               setTimeError(null);

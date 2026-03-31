@@ -1,9 +1,9 @@
 import { NavigationContainer, DefaultTheme, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
-import { View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
+import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
 import { AuthNavigator } from './AuthNavigator';

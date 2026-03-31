@@ -1,12 +1,16 @@
 import { useRoute } from '@react-navigation/native';
-import { StyleSheet, View } from 'react-native';
+import type { ComponentType } from 'react';
+import { StyleSheet } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewProps } from 'react-native-webview';
 
+import { View } from '@components/RNCompat';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainStackParamList } from '@navigation/types';
 
 type WebRoute = RouteProp<MainStackParamList, 'WebContent'>;
+
+const CompatWebView = WebView as unknown as ComponentType<WebViewProps>;
 
 export const WebContentScreen = () => {
   const route = useRoute<WebRoute>();
@@ -20,7 +24,7 @@ export const WebContentScreen = () => {
   }
 
   return (
-    <WebView
+    <CompatWebView
       source={{ uri: route.params.url }}
       startInLoadingState
       renderLoading={() => (

@@ -46,6 +46,12 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...');
@@ -76,6 +82,32 @@ self.addEventListener('fetch', (event) => {
 
   // Skip caching for external domains (only cache our own domain)
   if (url.origin !== self.location.origin && !url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              try {
+                return cache.put('/', responseClone);
+              } catch (error) {
+                console.warn('Failed to update cached app shell:', error);
+              }
+            });
+          }
+
+          return response;
+        })
+        .catch(() =>
+          caches.match('/').then(
+            (cachedIndex) => cachedIndex || textServiceUnavailable('Offline and no cached app shell available.'),
+          ),
+        ),
+    );
     return;
   }
 
@@ -142,11 +174,6 @@ self.addEventListener('fetch', (event) => {
       })
       .catch((error) => {
         console.log('Fetch failed:', error);
-        // Return offline fallback for navigation requests
-        if (request.mode === 'navigate') {
-          return caches.match('/').then((cachedIndex) => cachedIndex || textServiceUnavailable('Offline and no cached app shell available.'));
-        }
-
         return textServiceUnavailable('Network request failed.');
       })
   );

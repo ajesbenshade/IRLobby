@@ -33,7 +33,109 @@
 - Node.js 16 or later
 - Git
 
-### 1. Backend (Django)
+<<<<<<< HEAD
+### Local Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd IRLobby
+   ```
+
+2. **Set up the Django backend**
+   ```bash
+   cd irlobby_backend
+
+   # Create virtual environment
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+   # Install dependencies
+   pip install -r requirements.txt
+
+   # Run migrations
+   python manage.py migrate
+
+   # Create superuser (optional)
+   python manage.py createsuperuser
+
+   # Start Django server
+   python manage.py runserver
+   ```
+
+3. **Set up the React frontend**
+   ```bash
+   cd ../client
+
+   # Install dependencies
+   npm install
+
+   # Start development server
+   npm run dev
+   ```
+
+4. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8000
+   - Django Admin: http://localhost:8000/admin
+
+## 🚀 Production Deployment
+
+Before any mobile/web release, run the parity gate in:
+
+- `docs/PARITY_RELEASE_GATE.md`
+
+### Frontend
+Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, or GitHub Pages).
+
+1. **Build frontend**
+   ```bash
+   cd client
+   npm install
+   npm run build
+   ```
+
+2. **Environment Variables** (set in your frontend host):
+   ```
+   VITE_API_BASE_URL=https://liyf.app
+   ```
+
+3. **Local development proxy behavior** (when running `client` with Vite):
+   - Default API/WebSocket proxy target: `http://127.0.0.1:8000`
+   - Override target by setting `VITE_DEV_PROXY_TARGET` in your shell or `.env`
+   - Example:
+     ```bash
+     VITE_DEV_PROXY_TARGET=https://liyf.app npm run dev
+     ```
+
+### Backend (Oracle VM + Neon)
+The production backend is deployed on Oracle VM with Docker Compose and uses Neon Postgres.
+
+1. **Prepare VM + app services**
+   - Use the runbook in `irlobby_backend/deploy/oracle/README.md`
+   - Configure `.env.production` on the VM
+   - Deploy with `bash deploy/oracle/deploy.sh`
+
+2. **Database**
+   - Neon pooled connection string in `DATABASE_URL`
+   - Optional migration helper: `bash deploy/oracle/migrate-to-neon.sh`
+
+### Deployment Architecture
+```
+Frontend (Static Host)
+    ↓ API calls
+Backend (Render - Django + DRF)
+    ↓ Database queries
+PostgreSQL (Neon)
+    ↓ Real-time communication
+WebSocket Worker (Daphne)
+```
+
+## Environment Variables
+
+### Development
+Copy `.env.example` to `.env` and configure:
+>>>>>>> a58c114 (fix(web): restore local vite proxy default and document VITE_DEV_PROXY_TARGET)
 
 ```bash
 # from repo root
@@ -67,6 +169,8 @@ npm run dev
 ```
 
 Open http://localhost:5173 in your browser to view the application.  The frontend talks to the backend at port 8000 by default (see `VITE_API_BASE_URL` in `.env`).
+
+> ⚠️ **Local dev proxy** – when running the web app via Vite the dev server proxies `/api` and `/ws` to the backend. By default this target is `http://127.0.0.1:8000`; you can override it with `VITE_DEV_PROXY_TARGET` in your environment (e.g. `VITE_DEV_PROXY_TARGET=https://liyf.app npm run dev`).
 
 ### 3. Mobile (optional)
 

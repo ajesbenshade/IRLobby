@@ -9,6 +9,7 @@ const apiBaseUrl = process.env.VITE_API_BASE_URL || (process.env.NODE_ENV === 'p
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ['VITE_', 'EXPO_PUBLIC_'],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -47,13 +48,13 @@ export default defineConfig({
       '/api': {
         target: devProxyTarget,
         changeOrigin: true,
-        secure: true,
+        secure: devProxyIsHttps,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/ws': {
         target: devProxyTarget,
         changeOrigin: true,
-        secure: true,
+        secure: devProxyIsHttps,
         ws: true,
       }
     }

@@ -231,9 +231,9 @@ export default function Onboarding() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Age range</Label>
+                <Label htmlFor="age-range">Age range</Label>
                 <Select value={ageRange} onValueChange={setAgeRange}>
-                  <SelectTrigger>
+                  <SelectTrigger id="age-range" aria-label="Age range">
                     <SelectValue placeholder="Select age range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -248,9 +248,11 @@ export default function Onboarding() {
             </div>
 
             <div className="space-y-2">
-              <Label>Hobbies & interests</Label>
+              <Label htmlFor="interest-input">Hobbies & interests</Label>
               <div className="flex gap-2">
                 <Input
+                  id="interest-input"
+                  aria-label="Add a hobby or interest"
                   value={interestInput}
                   onChange={(event) => setInterestInput(event.target.value)}
                   placeholder="Hiking, board games, coffee..."
@@ -269,7 +271,12 @@ export default function Onboarding() {
                 {interests.map((interest) => (
                   <Badge key={interest} variant="secondary" className="flex items-center gap-1">
                     {interest}
-                    <button type="button" onClick={() => removeInterest(interest)}>
+                    <button
+                      type="button"
+                      onClick={() => removeInterest(interest)}
+                      aria-label={`Remove interest ${interest}`}
+                      title={`Remove interest ${interest}`}
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
@@ -284,6 +291,8 @@ export default function Onboarding() {
                 type="file"
                 accept="image/*"
                 onChange={onSelectProfilePhoto}
+                aria-label="Upload profile photo"
+                title="Upload profile photo"
                 className="block w-full text-sm"
               />
               {profilePhotoUrl && (
@@ -302,6 +311,8 @@ export default function Onboarding() {
                   accept="image/*"
                   multiple
                   onChange={onSelectAlbumPhotos}
+                  aria-label="Upload photo album images"
+                  title="Upload photo album images"
                   className="block w-full text-sm"
                 />
                 <span className="text-sm text-gray-500">{photoAlbum.length}/12</span>
@@ -317,6 +328,8 @@ export default function Onboarding() {
                     <button
                       type="button"
                       onClick={() => removeAlbumPhoto(index)}
+                      aria-label={`Remove album photo ${index + 1}`}
+                      title={`Remove album photo ${index + 1}`}
                       className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1"
                     >
                       <X className="w-3 h-3" />
@@ -367,25 +380,36 @@ export default function Onboarding() {
             <CardTitle>Invite friends</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Input
-              value={inviteName}
-              onChange={(event) => setInviteName(event.target.value)}
-              placeholder="Friend name (optional)"
-            />
-            <Input
-              value={inviteContact}
-              onChange={(event) => setInviteContact(event.target.value)}
-              placeholder="Phone number or email"
-            />
-            <Select value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
-              <SelectTrigger>
-                <SelectValue placeholder="Invite channel" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sms">SMS</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="invite-name">Friend name</Label>
+              <Input
+                id="invite-name"
+                value={inviteName}
+                onChange={(event) => setInviteName(event.target.value)}
+                placeholder="Friend name (optional)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-contact">Phone number or email</Label>
+              <Input
+                id="invite-contact"
+                value={inviteContact}
+                onChange={(event) => setInviteContact(event.target.value)}
+                placeholder="Phone number or email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-channel">Invite channel</Label>
+              <Select value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
+                <SelectTrigger id="invite-channel" aria-label="Invite channel">
+                  <SelectValue placeholder="Invite channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sms">SMS</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="button" variant="outline" onClick={sendInvite} disabled={isInviting}>
               {isInviting ? 'Creating invite...' : 'Create invite link'}
             </Button>

@@ -19,6 +19,8 @@ class User(AbstractUser):
     # Password reset fields
     password_reset_token = models.CharField(max_length=100, blank=True, null=True)
     token_created_at = models.DateTimeField(null=True, blank=True)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    privacy_accepted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         # Add unique constraint on email to prevent duplicates

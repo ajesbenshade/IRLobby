@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Invite, PushDeviceToken, User
@@ -14,6 +15,11 @@ class UserSerializer(serializers.ModelSerializer):
     activityPreferences = serializers.SerializerMethodField()
     photoAlbum = serializers.SerializerMethodField()
     onboardingCompleted = serializers.SerializerMethodField()
+    termsAccepted = serializers.SerializerMethodField()
+    privacyAccepted = serializers.SerializerMethodField()
+    legalAccepted = serializers.SerializerMethodField()
+    termsAcceptedAt = serializers.DateTimeField(source="terms_accepted_at", read_only=True)
+    privacyAcceptedAt = serializers.DateTimeField(source="privacy_accepted_at", read_only=True)
 
     class Meta:
         model = User
@@ -36,6 +42,11 @@ class UserSerializer(serializers.ModelSerializer):
             "activityPreferences",
             "photoAlbum",
             "onboardingCompleted",
+            "termsAccepted",
+            "privacyAccepted",
+            "legalAccepted",
+            "termsAcceptedAt",
+            "privacyAcceptedAt",
             "latitude",
             "longitude",
         )
@@ -55,6 +66,15 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_onboardingCompleted(self, obj):
         return bool((obj.preferences or {}).get("onboarding_completed", False))
+
+    def get_termsAccepted(self, obj):
+        return bool(obj.terms_accepted_at)
+
+    def get_privacyAccepted(self, obj):
+        return bool(obj.privacy_accepted_at)
+
+    def get_legalAccepted(self, obj):
+        return bool(obj.terms_accepted_at and obj.privacy_accepted_at)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -111,6 +131,8 @@ class UserOnboardingSerializer(serializers.Serializer):
     photo_album = serializers.ListField(
         child=serializers.CharField(), required=False, allow_empty=True
     )
+    terms_accepted = serializers.BooleanField(required=False)
+    privacy_accepted = serializers.BooleanField(required=False)
     onboarding_completed = serializers.BooleanField(required=False)
 
     def to_internal_value(self, data):
@@ -120,12 +142,62 @@ class UserOnboardingSerializer(serializers.Serializer):
             "ageRange": "age_range",
             "activityPreferences": "activity_preferences",
             "photoAlbum": "photo_album",
+            "termsAccepted": "terms_accepted",
+            "privacyAccepted": "privacy_accepted",
             "onboardingCompleted": "onboarding_completed",
         }
         for alias, normalized in key_aliases.items():
             if alias in normalized_data and normalized not in normalized_data:
                 normalized_data[normalized] = normalized_data[alias]
         return super().to_internal_value(normalized_data)
+
+    def validate(self, attrs):
+        if not attrs.get("onboarding_completed"):
+            return attrs
+
+        instance = getattr(self, "instance", None)
+        preferences = dict(instance.preferences or {}) if instance else {}
+
+        bio = (attrs.get("bio", instance.bio if instance else "") or "").strip()
+        city = (attrs.get("city", instance.location if instance else "") or "").strip()
+        avatar_url = (
+            attrs.get("avatar_url", instance.avatar_url if instance else "") or ""
+        ).strip()
+        interests = attrs.get("interests", preferences.get("interests", []))
+        activity_preferences = attrs.get(
+            "activity_preferences", preferences.get("activity_preferences", {})
+        )
+
+        terms_accepted = self._is_acceptance_satisfied(
+            instance=instance,
+            accepted_in_request=attrs.get("terms_accepted"),
+            timestamp_attr="terms_accepted_at",
+        )
+        privacy_accepted = self._is_acceptance_satisfied(
+            instance=instance,
+            accepted_in_request=attrs.get("privacy_accepted"),
+            timestamp_attr="privacy_accepted_at",
+        )
+
+        has_preferences = bool(interests) or any(
+            bool(value) for value in (activity_preferences or {}).values()
+        )
+
+        if bio and city and avatar_url and has_preferences and terms_accepted and privacy_accepted:
+            return attrs
+
+        raise serializers.ValidationError(
+            {
+                "detail": (
+                    "Complete your bio, city, profile photo, interests or activity preferences, "
+                    "and accept the terms and privacy policy before finishing onboarding."
+                )
+            }
+        )
+
+    def _is_acceptance_satisfied(self, instance, accepted_in_request, timestamp_attr):
+        existing_timestamp = getattr(instance, timestamp_attr, None) if instance else None
+        return bool(existing_timestamp or accepted_in_request)
 
     def validate_interests(self, value):
         cleaned = [
@@ -142,6 +214,7 @@ class UserOnboardingSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         preferences = dict(instance.preferences or {})
+        accepted_at = timezone.now()
 
         if "bio" in validated_data:
             instance.bio = validated_data["bio"]
@@ -157,6 +230,10 @@ class UserOnboardingSerializer(serializers.Serializer):
             preferences["activity_preferences"] = validated_data["activity_preferences"]
         if "photo_album" in validated_data:
             preferences["photo_album"] = validated_data["photo_album"]
+        if validated_data.get("terms_accepted") and not instance.terms_accepted_at:
+            instance.terms_accepted_at = accepted_at
+        if validated_data.get("privacy_accepted") and not instance.privacy_accepted_at:
+            instance.privacy_accepted_at = accepted_at
         if "onboarding_completed" in validated_data:
             preferences["onboarding_completed"] = validated_data["onboarding_completed"]
 
@@ -177,11 +254,21 @@ class UserOnboardingSerializer(serializers.Serializer):
             "age_range": preferences.get("age_range", ""),
             "activity_preferences": preferences.get("activity_preferences", {}),
             "photo_album": preferences.get("photo_album", []),
+            "terms_accepted": bool(instance.terms_accepted_at),
+            "privacy_accepted": bool(instance.privacy_accepted_at),
+            "legal_accepted": bool(instance.terms_accepted_at and instance.privacy_accepted_at),
+            "terms_accepted_at": instance.terms_accepted_at,
+            "privacy_accepted_at": instance.privacy_accepted_at,
             "onboarding_completed": bool(preferences.get("onboarding_completed", False)),
             "avatarUrl": instance.avatar_url or "",
             "ageRange": preferences.get("age_range", ""),
             "activityPreferences": preferences.get("activity_preferences", {}),
             "photoAlbum": preferences.get("photo_album", []),
+            "termsAccepted": bool(instance.terms_accepted_at),
+            "privacyAccepted": bool(instance.privacy_accepted_at),
+            "legalAccepted": bool(instance.terms_accepted_at and instance.privacy_accepted_at),
+            "termsAcceptedAt": instance.terms_accepted_at,
+            "privacyAcceptedAt": instance.privacy_accepted_at,
             "onboardingCompleted": bool(preferences.get("onboarding_completed", False)),
         }
 

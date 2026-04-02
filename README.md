@@ -85,6 +85,8 @@ Before any mobile/web release, run the parity gate in:
 
 - `docs/PARITY_RELEASE_GATE.md`
 
+Mobile production builds can be triggered automatically from GitHub Actions via `.github/workflows/mobile-eas-build.yml` once the `EXPO_TOKEN` repository secret is configured and EAS iOS credentials have been initialized with one successful manual production build.
+
 ### Frontend
 Deploy the React frontend to your preferred static host (for example Netlify, Cloudflare Pages, or GitHub Pages).
 

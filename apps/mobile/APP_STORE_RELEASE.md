@@ -7,6 +7,22 @@ Use this checklist to publish `irlobby_mobile` with your Apple Developer account
 - Active Apple Developer Program membership
 - Access to App Store Connect for your team
 - `eas-cli` installed and logged in (`npx eas login`)
+- One-time EAS credential setup completed so production iOS builds can run without interactive Apple login
+
+## 1.1) Enable automatic Expo builds from GitHub
+
+This repository can now trigger a new iOS production build automatically on every push to `main` when mobile files change.
+
+Required one-time setup:
+
+1. Create an Expo access token from your Expo account.
+2. Add it to GitHub repository secrets as `EXPO_TOKEN`.
+3. Run one successful `eas build -p ios --profile production` manually on a trusted machine and complete any Apple credential prompts so EAS stores the required iOS credentials remotely.
+
+Notes:
+- Automatic builds use `.github/workflows/mobile-eas-build.yml`.
+- The workflow triggers `eas build --platform ios --profile production --non-interactive --no-wait`.
+- If EAS still needs missing Apple credentials, the GitHub workflow will fail until the one-time manual credential setup is finished.
 
 ## 2) Configure production environment values
 
@@ -41,6 +57,8 @@ npm run build:ios
 ```
 
 This runs `eas build -p ios --profile production`.
+
+For automated builds, pushes to `main` that touch `apps/mobile/**` or the root `package-lock.json` will submit the same production build through GitHub Actions.
 
 ## 5) Submit to App Store Connect
 

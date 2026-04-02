@@ -8,13 +8,14 @@ import { TextInput } from '@components/PaperCompat';
 import { FlatList, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
+import { fetchMatches } from '@services/matchService';
 import {
   fetchConversationMessages,
   fetchConversations,
   sendConversationMessage,
 } from '@services/chatService';
 import { getAccessToken } from '@services/authStorage';
-import { appColors } from '@theme/index';
+import { appColors, appTypography } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 export const ChatScreen = () => {
@@ -36,9 +37,21 @@ export const ChatScreen = () => {
     queryFn: fetchConversations,
   });
 
+  const { data: matches = [] } = useQuery({
+    queryKey: ['mobile-matches'],
+    queryFn: fetchMatches,
+  });
+
   const selectedConversation = useMemo(
     () => conversations.find((item) => item.id === selectedConversationId),
     [conversations, selectedConversationId],
+  );
+  const sparkCount = matches.length;
+  const activeThreads = conversations.length;
+  const freshSparkCount = useMemo(
+    () =>
+      matches.filter((match) => Date.now() - new Date(match.created_at).getTime() < 1000 * 60 * 60 * 24).length,
+    [matches],
   );
 
   const {
@@ -130,13 +143,13 @@ export const ChatScreen = () => {
           </Button>
           <View style={styles.headerTextWrap}>
             <Text variant="titleMedium" style={styles.headerTitle}>
-              {selectedConversation?.match ?? 'Conversation'}
+              {selectedConversation?.match ?? 'Your spark'}
             </Text>
             <Text variant="bodySmall" style={styles.subtitleText}>
-              Live, low-friction messaging.
+              Keep the energy moving while the plan is still warm.
             </Text>
           </View>
-          <AccentPill tone="secondary">Live</AccentPill>
+          <AccentPill tone="secondary">Live now</AccentPill>
         </View>
 
         {messagesError && (
@@ -175,7 +188,7 @@ export const ChatScreen = () => {
             );
           }}
           ListEmptyComponent={
-            messagesLoading ? <Text style={styles.loadingText}>Loading messages...</Text> : <Text style={styles.loadingText}>No messages yet.</Text>
+            messagesLoading ? <Text style={styles.loadingText}>Loading messages...</Text> : <Text style={styles.loadingText}>No messages yet. Break the ice first.</Text>
           }
         />
 
@@ -188,7 +201,7 @@ export const ChatScreen = () => {
         <View style={styles.composeRow}>
           <TextInput
             mode="outlined"
-            placeholder="Type a message"
+            placeholder="Keep it light. Make the plan."
             value={draft}
             onChangeText={setDraft}
             style={styles.composeInput}
@@ -201,7 +214,7 @@ export const ChatScreen = () => {
             buttonColor={appColors.primary}
             style={styles.sendButton}
           >
-            Send
+            Send it
           </Button>
         </View>
       </AppScreenContainer>
@@ -216,10 +229,25 @@ export const ChatScreen = () => {
       }
     >
       <PageHeader
-        eyebrow="Messaging"
-        title="Chat"
-        subtitle="Keep matched conversations moving without the clutter of a generic inbox."
+        eyebrow="Sparks"
+        title="Keep the momentum warm"
+        subtitle="Fresh sparks, active chats, and the people most likely to turn into an actual plan all live here."
       />
+
+      <PanelCard style={styles.summaryCard} tone="warm">
+        <View style={styles.summaryTopRow}>
+          <AccentPill tone="secondary">{sparkCount} sparks</AccentPill>
+          <AccentPill tone="neutral">{activeThreads} active chats</AccentPill>
+        </View>
+        <Text variant="titleMedium" style={styles.summaryTitle}>
+          {freshSparkCount > 0
+            ? `${freshSparkCount} new spark${freshSparkCount === 1 ? '' : 's'} landed in the last day.`
+            : 'Your next spark is one good swipe away.'}
+        </Text>
+        <Text style={styles.summaryText}>
+          Open the chats that already have energy, or head back to Discover when you want to find someone new to talk to.
+        </Text>
+      </PanelCard>
 
       {conversationsError && (
         <View style={styles.errorContainer}>
@@ -236,17 +264,26 @@ export const ChatScreen = () => {
         </View>
       )}
 
-      {conversationsLoading && <Text style={styles.loadingText}>Loading conversations...</Text>}
+      {conversationsLoading && <Text style={styles.loadingText}>Loading your sparks...</Text>}
 
       {!conversationsLoading && conversations.length === 0 ? (
         <EmptyStatePanel
-          title="No conversations yet"
-          description="Once you match and someone sends the first message, your active threads will appear here."
+          title="No active sparks yet"
+          description="Once you match and someone sends the first message, this turns into your running list of people and plans with momentum."
+          action={
+            <Button mode="contained" buttonColor={appColors.primary} onPress={() => queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] })}>
+              Check for fresh energy
+            </Button>
+          }
         />
       ) : null}
 
       {conversations.map((item) => {
         const lastMessage = item.messages[item.messages.length - 1];
+        const matchedRecord = matches.find((match) => match.activity === item.match);
+        const isFreshSpark = matchedRecord
+          ? Date.now() - new Date(matchedRecord.created_at).getTime() < 1000 * 60 * 60 * 24
+          : false;
         return (
           <PanelCard key={item.id} style={styles.card}>
             <View style={styles.cardContent}>
@@ -255,17 +292,21 @@ export const ChatScreen = () => {
                   <Text style={styles.matchAvatarText}>{String(item.match).charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.cardTextBlock}>
+                  <View style={styles.cardBadgeRow}>
+                    <AccentPill tone={isFreshSpark ? 'secondary' : 'neutral'}>
+                      {isFreshSpark ? 'Fresh spark' : 'Open chat'}
+                    </AccentPill>
+                  </View>
                   <Text variant="titleMedium" style={styles.cardTitle}>{item.match}</Text>
                   <NativeText style={styles.cardSubtitle} numberOfLines={2}>
                     {lastMessage?.message ?? 'No messages yet.'}
                   </NativeText>
                 </View>
-                <AccentPill>Open</AccentPill>
               </View>
               <View style={styles.cardFooter}>
-                <Text style={styles.metaText}>{lastMessage ? new Date(lastMessage.createdAt).toLocaleString() : 'Waiting for first message'}</Text>
+                <Text style={styles.metaText}>{lastMessage ? new Date(lastMessage.createdAt).toLocaleString() : 'Waiting for the first move'}</Text>
                 <Button mode="text" compact onPress={() => setSelectedConversationId(item.id)}>
-                  Open chat
+                  Jump in
                 </Button>
               </View>
             </View>
@@ -282,6 +323,25 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: appColors.mutedInk,
+  },
+  summaryCard: {
+    gap: 12,
+    backgroundColor: '#fff7df',
+    borderColor: '#ffe0a3',
+  },
+  summaryTopRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  summaryTitle: {
+    color: appColors.ink,
+    fontFamily: appTypography.heading,
+    letterSpacing: -0.5,
+  },
+  summaryText: {
+    color: appColors.mutedInk,
+    lineHeight: 21,
   },
   card: {
     marginBottom: 0,
@@ -300,20 +360,25 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ebefff',
+    backgroundColor: '#ffe3ec',
+    borderWidth: 1,
+    borderColor: '#ffc6d7',
   },
   matchAvatarText: {
     color: appColors.primaryDeep,
-    fontWeight: '900',
+    fontFamily: appTypography.headingDisplay,
     fontSize: 18,
   },
   cardTextBlock: {
     flex: 1,
     gap: 4,
   },
+  cardBadgeRow: {
+    marginBottom: 2,
+  },
   cardTitle: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontFamily: appTypography.heading,
   },
   cardSubtitle: {
     color: appColors.mutedInk,
@@ -324,7 +389,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#eef2f7',
+    borderTopColor: '#f3e2ea',
     paddingTop: 12,
   },
   metaText: {
@@ -343,7 +408,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     textAlign: 'left',
     color: appColors.ink,
-    fontWeight: '800',
+    fontFamily: appTypography.heading,
   },
   headerTextWrap: {
     flex: 1,
@@ -373,11 +438,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: appColors.card,
     borderWidth: 1,
-    borderColor: '#e8edf7',
+    borderColor: '#f0dfe7',
   },
   messageBubbleOwn: {
-    backgroundColor: '#e9ecff',
-    borderColor: '#d9deff',
+    backgroundColor: '#ffe7f0',
+    borderColor: '#ffc9da',
   },
   messageAuthor: {
     color: appColors.primaryDeep,
@@ -408,7 +473,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.card,
   },
   sendButton: {
-    borderRadius: 16,
+    borderRadius: 999,
   },
   errorContainer: {
     gap: 8,

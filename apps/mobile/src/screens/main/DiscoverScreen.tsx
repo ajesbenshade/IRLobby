@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { ComponentType } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Button, HelperText, Modal, Portal, SegmentedButtons, Text } from 'react-native-paper';
@@ -52,6 +52,8 @@ export const DiscoverScreen = () => {
   const [priceMaxFilter, setPriceMaxFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
+  const matchCardOpacity = useRef(new Animated.Value(0)).current;
+  const matchCardLift = useRef(new Animated.Value(16)).current;
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -118,7 +120,7 @@ export const DiscoverScreen = () => {
       swipeActivity(activityId, direction),
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
-        setMatchMessage("It's a match! Check your matches tab.");
+        setMatchMessage('New spark unlocked. Your match is waiting in chat.');
       } else {
         setMatchMessage(null);
       }
@@ -276,23 +278,45 @@ export const DiscoverScreen = () => {
     ? new Date(currentActivity.time).toLocaleString()
     : 'Time TBD';
 
+  useEffect(() => {
+    if (!matchMessage) {
+      matchCardOpacity.setValue(0);
+      matchCardLift.setValue(16);
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(matchCardOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.spring(matchCardLift, {
+        toValue: 0,
+        friction: 8,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [matchCardLift, matchCardOpacity, matchMessage]);
+
   return (
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <PageHeader
-        eyebrow={activeSegment === 'discover' ? 'Discover' : 'Home'}
-        title={activeSegment === 'discover' ? 'Find your next plan' : 'Quick home snapshot'}
+        eyebrow={activeSegment === 'discover' ? 'For you' : 'Quick pulse'}
+        title={activeSegment === 'discover' ? 'Find the plan worth leaving for' : 'A fast read on your scene'}
         subtitle={
           activeSegment === 'discover'
-            ? 'Browse the live deck first, then flip over to Home whenever you want a lighter read on what you are hosting.'
-            : 'Check your numbers, recent hosted plans, and jump back into discovery without adding another bottom tab.'
+            ? 'Scroll the live deck first, then flip over to Home whenever you want the quick version of what you are hosting.'
+            : 'Check your counts, latest hosted plans, and jump back into discovery without adding another tab.'
         }
         rightContent={
           activeSegment === 'discover' ? (
             <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
-              Alerts
+              Pings
             </Button>
           ) : null
         }
@@ -301,12 +325,12 @@ export const DiscoverScreen = () => {
       <PanelCard style={styles.segmentShell} tone={activeSegment === 'discover' ? 'default' : 'warm'}>
         <View style={styles.segmentShellHeader}>
           <AccentPill tone={activeSegment === 'discover' ? 'secondary' : 'neutral'}>
-            {activeSegment === 'discover' ? 'Primary mode' : 'Compact mode'}
+            {activeSegment === 'discover' ? 'Swipe mode' : 'Pulse mode'}
           </AccentPill>
           <Text style={styles.segmentShellCopy}>
             {activeSegment === 'discover'
-              ? 'Discover stays in front. Home is available as a quick sidecar view.'
-              : 'Home stays compact here so the swipe deck keeps the main spotlight.'}
+              ? 'Discover stays front and center. Home is still one tap away when you want the quick version.'
+              : 'Home stays compact here so the swipe deck keeps the spotlight.'}
           </Text>
         </View>
         <SegmentedButtons
@@ -326,12 +350,12 @@ export const DiscoverScreen = () => {
         <>
           <View style={styles.toolbar}>
             <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
-              {showFilters ? 'Hide filters' : `Filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
+              {showFilters ? 'Hide vibe filters' : `Vibe filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
             </Button>
             <Button mode={showMap ? 'contained-tonal' : 'outlined'} onPress={() => setShowMap((previous) => !previous)}>
-              {showMap ? 'Hide map' : 'Map'}
+              {showMap ? 'Hide map' : 'Map view'}
             </Button>
-            <AccentPill tone="secondary">{activities.length} live</AccentPill>
+            <AccentPill tone="secondary">{activities.length} live now</AccentPill>
           </View>
 
           {showFilters ? (
@@ -339,12 +363,12 @@ export const DiscoverScreen = () => {
               <View style={styles.filterHeader}>
                 <View style={styles.filterHeaderCopy}>
                   <Text variant="titleMedium" style={styles.filterTitle}>
-                    Refine the deck
+                    Tune your vibe
                   </Text>
-                  <Text style={styles.filterSubtitle}>Adjust discovery without leaving the screen.</Text>
+                  <Text style={styles.filterSubtitle}>Tighten the deck without leaving the moment.</Text>
                 </View>
                 <Button mode="text" compact onPress={resetFilters}>
-                  Reset
+                  Clear
                 </Button>
               </View>
               <TextInput label="Category (tag)" value={categoryFilter} onChangeText={setCategoryFilter} mode="outlined" style={styles.input} />
@@ -405,9 +429,9 @@ export const DiscoverScreen = () => {
           {showMap && activities.length > 0 ? (
             <PanelCard style={styles.mapCard}>
               <Text variant="titleMedium" style={styles.mapTitle}>
-                Nearby view
+                Nearby right now
               </Text>
-              <Text style={styles.mapSubtitle}>Tap a pin to jump straight into that activity.</Text>
+              <Text style={styles.mapSubtitle}>Tap a pin to jump straight into that plan.</Text>
               <MapView
                 style={styles.map}
                 initialRegion={{
@@ -441,7 +465,7 @@ export const DiscoverScreen = () => {
             </PanelCard>
           ) : null}
 
-          {isLoading ? <Text style={styles.loadingText}>Loading activities...</Text> : null}
+          {isLoading ? <Text style={styles.loadingText}>Pulling in fresh plans...</Text> : null}
 
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>
@@ -461,18 +485,25 @@ export const DiscoverScreen = () => {
           ) : null}
 
           {matchMessage ? (
-            <PanelCard style={styles.matchCard} tone="accent">
-              <AccentPill tone="secondary">New match</AccentPill>
-              <Text variant="titleMedium" style={styles.matchTitle}>
-                {matchMessage}
-              </Text>
-            </PanelCard>
+            <AnimatedView
+              style={{
+                opacity: matchCardOpacity,
+                transform: [{ translateY: matchCardLift }],
+              }}
+            >
+              <PanelCard style={styles.matchCard} tone="accent">
+                <AccentPill tone="secondary">New spark</AccentPill>
+                <Text variant="titleMedium" style={styles.matchTitle}>
+                  {matchMessage}
+                </Text>
+              </PanelCard>
+            </AnimatedView>
           ) : null}
 
           {!isLoading && activities.length === 0 ? (
             <EmptyStatePanel
-              title="No activities match your filters"
-              description="Widen the radius, clear a few filters, or refresh to pull in the latest nearby events."
+              title="Nothing matches this vibe yet"
+              description="Widen the radius, clear a few filters, or refresh to pull in the latest nearby plans."
               action={
                 <Button mode="contained" buttonColor={appColors.primary} onPress={resetDeck}>
                   Refresh deck
@@ -483,11 +514,11 @@ export const DiscoverScreen = () => {
 
           {!isLoading && activities.length > 0 && !currentActivity ? (
             <EmptyStatePanel
-              title="You’re all caught up"
-              description="You’ve seen the current deck. Refresh to reshuffle and load anything new."
+              title="You cleared the deck"
+              description="You’ve seen the current round. Refresh to reshuffle and catch anything new."
               action={
                 <Button mode="outlined" onPress={resetDeck}>
-                  Reload activities
+                  Reload deck
                 </Button>
               }
             />
@@ -499,7 +530,7 @@ export const DiscoverScreen = () => {
                 <View style={styles.cardHero}>
                   <AccentPill tone="secondary">{currentTag}</AccentPill>
                   <Text style={styles.cardHeroLetter}>{currentActivity.title.charAt(0).toUpperCase()}</Text>
-                  <Text style={styles.cardHeroText}>Swipe right if you’d show up. Left if it’s not your scene.</Text>
+                  <Text style={styles.cardHeroText}>Swipe right if you would actually pull up. Left if it is not your scene.</Text>
                 </View>
                 <View style={styles.cardContent}>
                   <Text variant="headlineSmall" style={styles.cardTitle}>
@@ -524,10 +555,10 @@ export const DiscoverScreen = () => {
                     </View>
                     <View style={styles.hostCopy}>
                       <Text style={styles.hostName}>{currentHostName}</Text>
-                      <Text style={styles.hostLabel}>Host</Text>
+                      <Text style={styles.hostLabel}>Hosting</Text>
                     </View>
                     <Button mode="text" compact onPress={() => setShowDetails(true)}>
-                      View details
+                      Details
                     </Button>
                   </View>
                 </View>
@@ -538,7 +569,7 @@ export const DiscoverScreen = () => {
           {currentActivity ? (
             <View style={styles.actions}>
               <Button mode="outlined" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
-                Swipe left
+                Pass
               </Button>
               <Button
                 mode="contained"
@@ -547,7 +578,7 @@ export const DiscoverScreen = () => {
                 style={styles.actionButton}
                 buttonColor={appColors.primary}
               >
-                Swipe right
+                I’m down
               </Button>
             </View>
           ) : null}
@@ -616,7 +647,7 @@ export const DiscoverScreen = () => {
                         handleSwipe('right');
                       }}
                     >
-                      Swipe right
+                      I’m down
                     </Button>
                   </View>
                 </ScrollView>
@@ -636,6 +667,8 @@ const styles = StyleSheet.create({
   segmentShell: {
     gap: 12,
     paddingVertical: 14,
+    backgroundColor: '#fff1f6',
+    borderColor: '#ffd2e0',
   },
   segmentShellHeader: {
     gap: 8,
@@ -705,6 +738,7 @@ const styles = StyleSheet.create({
   },
   matchCard: {
     gap: 10,
+    borderColor: '#b5f1e5',
   },
   matchTitle: {
     color: appColors.ink,
@@ -718,7 +752,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardHero: {
-    backgroundColor: '#eef2ff',
+    backgroundColor: '#ffeef5',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
@@ -727,7 +761,7 @@ const styles = StyleSheet.create({
   cardHeroLetter: {
     color: appColors.primaryDeep,
     fontSize: 46,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: -1,
   },
   cardHeroText: {
@@ -757,7 +791,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eef2f7',
+    borderTopColor: '#f3e2ea',
     paddingTop: 14,
   },
   hostAvatar: {
@@ -766,7 +800,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ebefff',
+    backgroundColor: '#ffe1ec',
   },
   hostAvatarText: {
     color: appColors.primaryDeep,
@@ -797,6 +831,8 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 18,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f3dfe8',
     maxHeight: '80%',
   },
   detailsScroll: {

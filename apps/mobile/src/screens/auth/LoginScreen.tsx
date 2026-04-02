@@ -62,11 +62,11 @@ export const LoginScreen = ({ navigation }: Props) => {
   return (
     <AuthShell
       eyebrow="IRLobby"
-      title="Real plans, real people."
-      subtitle="Sign in to discover nearby activities, keep your chats moving, and turn swipes into actual plans."
+      title="Find your people fast."
+      subtitle="Sign in to spot nearby plans, keep the group chat warm, and turn a maybe into an actual night out."
       footer={
         <View style={styles.footer}>
-          <Text variant="bodyMedium" style={styles.footerText}>New to IRLobby?</Text>
+          <Text variant="bodyMedium" style={styles.footerText}>New here?</Text>
           <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy} compact>
             Create an account
           </Button>
@@ -74,8 +74,8 @@ export const LoginScreen = ({ navigation }: Props) => {
       }
     >
       <View style={styles.heroRow}>
-        <AccentPill>Production preview</AccentPill>
-        <Text style={styles.heroMetric}>Nearby, curated, and worth leaving the house for.</Text>
+        <AccentPill>Good plans only</AccentPill>
+        <Text style={styles.heroMetric}>Nearby hangs, better group chats, and fewer "we should do something" texts.</Text>
       </View>
 
       <View style={styles.form}>
@@ -166,10 +166,10 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 12,
-    borderRadius: 18,
+    borderRadius: 999,
   },
   submitButtonContent: {
-    minHeight: 52,
+    minHeight: 54,
   },
   linkButton: {
     alignSelf: 'flex-start',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   oauthButton: {
-    borderRadius: 16,
+    borderRadius: 999,
   },
   footer: {
     flexDirection: 'row',

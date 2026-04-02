@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from '@tanstack/react-query';
 import { API_ROUTES } from '@shared/schema';
+import { config } from './config';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -10,9 +11,7 @@ interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 
 type ApiRequestArgs = [HttpMethod, string, unknown?] | [string, ApiRequestOptions?];
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  (import.meta.env.DEV ? '' : '');
+const API_BASE_URL = config.apiBaseUrl;
 const AUTH_401_BYPASS_PATHS = [API_ROUTES.USER_PROFILE, API_ROUTES.USER_AUTH_STATUS] as const;
 const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
   'GET',
@@ -25,6 +24,7 @@ const HTTP_METHODS: ReadonlySet<HttpMethod> = new Set([
 ]);
 
 const TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -92,6 +92,27 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 async function refreshAccessToken() {
   const storedRefreshToken = localStorage.getItem('refreshToken');
 
@@ -102,7 +123,7 @@ async function refreshAccessToken() {
   refreshPromise = (async () => {
     try {
       const payload = storedRefreshToken ? { refresh: storedRefreshToken } : {};
-        const res = await fetch(resolveUrl(API_ROUTES.AUTH_REFRESH), {
+      const res = await fetchWithTimeout(resolveUrl(API_ROUTES.AUTH_REFRESH), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -242,7 +263,7 @@ export async function apiRequest(...args: ApiRequestArgs): Promise<Response> {
       credentials: additionalFetchOptions.credentials ?? 'include',
     };
 
-    return fetch(resolvedUrl, fetchOptions);
+    return fetchWithTimeout(resolvedUrl, fetchOptions);
   };
 
   try {
@@ -303,7 +324,7 @@ export const getQueryFn =
     const resolvedUrl = resolveUrl(url);
 
     try {
-      const res = await fetch(resolvedUrl, {
+      const res = await fetchWithTimeout(resolvedUrl, {
         headers,
         credentials: 'include',
       });

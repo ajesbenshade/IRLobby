@@ -39,8 +39,8 @@ jobs:
       - name: Install JS dependencies
         run: npm ci
 
-      - name: Check web client
-        run: npm run check:web
+      - name: Check mobile client
+        run: npm --prefix apps/mobile run typecheck
 
       - name: Set up Python
         uses: actions/setup-python@v4

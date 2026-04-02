@@ -1,6 +1,7 @@
 {
   "name": "irlobby-client",
   "version": "1.0.0",
+  "description": "Archived web client kept for reference only. Mobile is the only supported client.",
   "engines": { "node": "20.x" },
   "type": "module",
   "scripts": {

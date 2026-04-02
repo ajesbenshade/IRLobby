@@ -1,5 +1,6 @@
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
+const { metroAliases } = require('./config/pathAliases');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
@@ -13,7 +14,7 @@ config.resolver.nodeModulesPaths = [
 ];
 config.resolver.alias = {
   ...(config.resolver.alias || {}),
-  '@shared': path.resolve(workspaceRoot, 'packages', 'shared'),
+  ...metroAliases,
 };
 
 module.exports = config;

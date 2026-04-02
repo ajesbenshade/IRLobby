@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
     twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
-    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+    mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
     },

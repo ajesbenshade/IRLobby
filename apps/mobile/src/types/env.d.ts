@@ -7,7 +7,7 @@ declare global {
       EXPO_PUBLIC_WEBSOCKET_URL?: string;
       EXPO_PUBLIC_TWITTER_CLIENT_ID?: string;
       EXPO_PUBLIC_TWITTER_REDIRECT_URI?: string;
-      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?: string;
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN?: string;
       EAS_PROJECT_ID?: string;
     }
   }

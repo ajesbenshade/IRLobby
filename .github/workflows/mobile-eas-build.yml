@@ -23,6 +23,9 @@ jobs:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
+      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,6 +53,26 @@ jobs:
           if [ -z "$EXPO_TOKEN" ]; then
             echo "EXPO_TOKEN is not configured for this repository."
             echo "Add the EXPO_TOKEN repository secret before relying on automatic mobile builds."
+            exit 1
+          fi
+
+      - name: Verify mobile build keys
+        run: |
+          if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ]; then
+            echo "EXPO_PUBLIC_TWITTER_CLIENT_ID is not configured in repository variables."
+            echo "Add EXPO_PUBLIC_TWITTER_CLIENT_ID under Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+
+          if [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ]; then
+            echo "EXPO_PUBLIC_TWITTER_REDIRECT_URI is not configured in repository variables."
+            echo "Set it to irlobby://auth/twitter for standalone/TestFlight builds."
+            exit 1
+          fi
+
+          if [ -z "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY" ]; then
+            echo "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not configured in repository secrets."
+            echo "Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY under Settings > Secrets and variables > Actions > Secrets."
             exit 1
           fi
 

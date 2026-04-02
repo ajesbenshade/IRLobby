@@ -9,6 +9,7 @@ export interface AuthTokens {
 export interface AuthUser {
   id: number | string;
   email: string;
+  preferences?: Record<string, unknown>;
   firstName?: string;
   lastName?: string;
   username?: string;
@@ -16,8 +17,16 @@ export interface AuthUser {
   bio?: string | null;
   city?: string | null;
   interests?: string[];
+  ageRange?: string | null;
+  activityPreferences?: Record<string, unknown>;
   photoAlbum?: string[];
   onboardingCompleted?: boolean;
+  termsAccepted?: boolean;
+  privacyAccepted?: boolean;
+  legalAccepted?: boolean;
+  termsAcceptedAt?: string | null;
+  privacyAcceptedAt?: string | null;
+  pushNotificationsEnabled?: boolean;
   isHost?: boolean;
 }
 

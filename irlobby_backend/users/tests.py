@@ -157,10 +157,13 @@ class OnboardingAndInviteTests(APITestCase):
             reverse("user-onboarding"),
             {
                 "bio": "Love hiking and board games",
+                "avatarUrl": "https://example.com/avatar.jpg",
                 "city": "Seattle",
                 "interests": ["hiking", "board games"],
                 "ageRange": "25-34",
                 "activityPreferences": {"outdoor": True, "group_size": "small"},
+                "termsAccepted": True,
+                "privacyAccepted": True,
                 "onboardingCompleted": True,
             },
             format="json",
@@ -170,9 +173,47 @@ class OnboardingAndInviteTests(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.bio, "Love hiking and board games")
         self.assertEqual(self.user.location, "Seattle")
+        self.assertEqual(self.user.avatar_url, "https://example.com/avatar.jpg")
         self.assertEqual(self.user.preferences.get("interests"), ["hiking", "board games"])
         self.assertEqual(self.user.preferences.get("age_range"), "25-34")
         self.assertTrue(self.user.preferences.get("onboarding_completed"))
+        self.assertIsNotNone(self.user.terms_accepted_at)
+        self.assertIsNotNone(self.user.privacy_accepted_at)
+        self.assertTrue(response.data["legalAccepted"])
+
+    def test_onboarding_patch_allows_partial_progress_without_completion(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "bio": "Testing step save",
+                "city": "Austin",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.bio, "Testing step save")
+        self.assertEqual(self.user.location, "Austin")
+        self.assertFalse(self.user.preferences.get("onboarding_completed", False))
+
+    def test_onboarding_completion_requires_required_fields_and_legal_acceptance(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "onboardingCompleted": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("detail", response.data)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.preferences.get("onboarding_completed", False))
+        self.assertIsNone(self.user.terms_accepted_at)
+        self.assertIsNone(self.user.privacy_accepted_at)
 
     def test_invite_create_and_accept_flow(self):
         self.client.force_authenticate(self.user)

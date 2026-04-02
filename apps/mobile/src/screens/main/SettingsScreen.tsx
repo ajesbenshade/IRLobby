@@ -15,6 +15,10 @@ import {
 import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
+import {
+  deactivatePushTokens,
+  registerCurrentDevicePushToken,
+} from '@services/pushNotificationService';
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -166,6 +170,15 @@ export const SettingsScreen = () => {
         [key]: !currentValue,
       },
     } as UserSettings;
+
+    if (section === 'notifications' && key === 'pushNotifications') {
+      const nextValue = !currentValue;
+      if (nextValue) {
+        void registerCurrentDevicePushToken();
+      } else {
+        void deactivatePushTokens();
+      }
+    }
 
     updateMutation.mutate(next);
   };

@@ -37,6 +37,12 @@ const normalizeTokens = (tokens: Partial<AuthTokens> | null | undefined): AuthTo
 const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): AuthUser => {
   const userRecord = user as Record<string, unknown>;
   const preferences = userRecord.preferences as Record<string, unknown> | undefined;
+  const activityPreferences =
+    (userRecord.activityPreferences as Record<string, unknown> | undefined) ||
+    (preferences?.activity_preferences as Record<string, unknown> | undefined) ||
+    {};
+  const notificationPreferences =
+    (preferences?.notifications as Record<string, unknown> | undefined) || {};
 
   const interests = Array.isArray(userRecord.interests)
     ? (userRecord.interests as unknown[])
@@ -53,6 +59,7 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
   return {
     id: user.id,
     email: userRecord.email as string,
+    preferences,
     firstName: userRecord.firstName?.toString() ?? userRecord.first_name?.toString(),
     lastName: userRecord.lastName?.toString() ?? userRecord.last_name?.toString(),
     username: userRecord.username?.toString(),
@@ -60,8 +67,16 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
     bio: (userRecord.bio ?? userRecord.about ?? null) as string | null,
     city: (userRecord.city ?? userRecord.location ?? null) as string | null,
     interests: interests.filter((interest): interest is string => typeof interest === 'string'),
+    ageRange: (userRecord.ageRange ?? preferences?.age_range ?? null) as string | null,
+    activityPreferences,
     photoAlbum: photoAlbum.filter((photo): photo is string => typeof photo === 'string'),
     onboardingCompleted: Boolean(userRecord.onboardingCompleted ?? userRecord.onboarding_completed),
+    termsAccepted: Boolean(userRecord.termsAccepted ?? userRecord.terms_accepted),
+    privacyAccepted: Boolean(userRecord.privacyAccepted ?? userRecord.privacy_accepted),
+    legalAccepted: Boolean(userRecord.legalAccepted ?? userRecord.legal_accepted),
+    termsAcceptedAt: (userRecord.termsAcceptedAt ?? userRecord.terms_accepted_at ?? null) as string | null,
+    privacyAcceptedAt: (userRecord.privacyAcceptedAt ?? userRecord.privacy_accepted_at ?? null) as string | null,
+    pushNotificationsEnabled: Boolean(notificationPreferences.pushNotifications),
     isHost: Boolean(userRecord.isHost ?? userRecord.is_host ?? userRecord.host),
   };
 };
@@ -198,6 +213,8 @@ export interface OnboardingPayload {
   activity_preferences?: Record<string, unknown>;
   avatar_url?: string;
   photo_album?: string[];
+  terms_accepted?: boolean;
+  privacy_accepted?: boolean;
   onboarding_completed?: boolean;
 }
 

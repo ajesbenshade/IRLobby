@@ -6,24 +6,24 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#5b61f6',
-          deep: '#4338ca',
-          warm: '#f6b94a',
-          mint: '#20b77d',
-          ink: '#121826',
-          muted: '#667085',
-          line: '#dde3f0',
-          canvas: '#f4f7fb',
-          card: '#ffffff',
+          DEFAULT: '#ff5c8a',
+          deep: '#d93b70',
+          warm: '#ffbf47',
+          mint: '#2ecfb3',
+          ink: '#241a35',
+          muted: '#726884',
+          line: '#eaddea',
+          canvas: '#fff7fb',
+          card: '#fffbff',
         },
       },
       borderRadius: {
-        xl: '24px',
-        '2xl': '32px',
+        xl: '28px',
+        '2xl': '36px',
       },
       boxShadow: {
-        card: '0px 8px 18px rgba(35, 48, 77, 0.09)',
-        float: '0px 14px 24px rgba(29, 78, 216, 0.18)',
+        card: '0px 10px 22px rgba(143, 52, 101, 0.1)',
+        float: '0px 16px 28px rgba(184, 56, 110, 0.22)',
       },
       spacing: {
         18: '4.5rem',

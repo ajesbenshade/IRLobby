@@ -56,38 +56,38 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
     <>
       {compact ? (
         <PanelCard style={styles.snapshotCard}>
-          <Text style={styles.snapshotEyebrow}>Home</Text>
+          <Text style={styles.snapshotEyebrow}>Quick pulse</Text>
           <Text variant="titleLarge" style={styles.snapshotTitle}>
-            Welcome back, {firstName}
+            Hey, {firstName}
           </Text>
           <Text style={styles.snapshotSubtitle}>
-            Your hosting snapshot stays lightweight here so discovery can keep the main stage.
+            Your latest momentum stays lightweight here so the swipe deck can keep center stage.
           </Text>
         </PanelCard>
       ) : null}
 
       <View style={styles.statGrid}>
         <StatCard
-          label="Hosted"
+          label="Hosting"
           value={hostedLoading ? '...' : String(hosted.length)}
-          detail="Events you’ve already put into the world."
+          detail="Plans you already put into the group chat universe."
         />
         <StatCard
-          label="Discoverable"
+          label="Open now"
           value={discoverLoading ? '...' : String(discover.length)}
-          detail="Open activities you can jump into next."
+          detail="Fresh options you can jump into next."
           tone="secondary"
         />
       </View>
 
       <PanelCard style={styles.ctaCard}>
         <Text variant="titleLarge" style={styles.ctaTitle}>
-          {compact ? 'Host something or jump back into the deck.' : 'Move from browsing to booking something real.'}
+          {compact ? 'Start something or jump back into the deck.' : 'Turn scrolling into an actual plan.'}
         </Text>
         <Text style={styles.ctaSubtitle}>
           {compact
-            ? 'This condensed view keeps your counts, latest hosted plans, and a fast path back to discovery in one place.'
-            : 'Keep the app useful by creating a plan or checking what is trending nearby.'}
+            ? 'This compact view keeps your counts, latest hosted plans, and a fast path back to discovery in one place.'
+            : 'Host a hang, check what is buzzing nearby, and keep momentum moving while people are still down.'}
         </Text>
         <View style={styles.ctaActions}>
           <Button mode="contained" onPress={() => navigation.navigate('Create')} buttonColor={appColors.primary}>
@@ -108,9 +108,9 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
       <PanelCard>
         <View style={styles.sectionHeader}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
-            Latest hosted
+            Latest plans
           </Text>
-          <Text style={styles.sectionMeta}>{compact ? 'A quick look at what you are hosting' : 'Your freshest activity updates'}</Text>
+          <Text style={styles.sectionMeta}>{compact ? 'A quick look at what you are hosting' : 'Your freshest plan updates'}</Text>
         </View>
 
         <View style={styles.listContent}>
@@ -123,17 +123,17 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
                 <Text variant="titleSmall" style={styles.activityTitle}>
                   {activity.title}
                 </Text>
-                <Text style={styles.activitySubtitle}>Hosted by you and ready to manage.</Text>
+                <Text style={styles.activitySubtitle}>Hosted by you and ready to rally the crew.</Text>
               </View>
             </View>
           ))}
           {!hostedLoading && latestHosted.length === 0 && (
             <EmptyStatePanel
-              title="No hosted activities yet"
-              description="Your hosted events will appear here once you publish one."
+              title="No hosted plans yet"
+              description="Once you post your first hang, it will land here for quick edits and updates."
               action={
                 <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Create')}>
-                  Host your first activity
+                  Host your first plan
                 </Button>
               }
             />
@@ -151,9 +151,9 @@ export const HomeScreen = () => {
   return (
     <AppScrollView contentContainerStyle={styles.container}>
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Your scene"
         title={`Welcome back, ${firstName}`}
-        subtitle="A cleaner snapshot of what you’re hosting, what’s nearby, and where momentum is building."
+        subtitle="See what you’re hosting, what is nearby, and where tonight’s momentum is picking up."
       />
 
       <HomeOverviewContent />
@@ -170,7 +170,8 @@ const styles = StyleSheet.create({
   },
   ctaCard: {
     gap: 12,
-    backgroundColor: '#f8f9ff',
+    backgroundColor: '#fff0f5',
+    borderColor: '#ffd2e0',
   },
   ctaTitle: {
     color: appColors.ink,
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#ebefff',
+    backgroundColor: '#ffe4ee',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -231,14 +232,14 @@ const styles = StyleSheet.create({
   },
   snapshotCard: {
     gap: 8,
-    backgroundColor: '#fcfbf7',
+    backgroundColor: '#fffaf0',
+    borderColor: '#ffe0a3',
   },
   snapshotEyebrow: {
     color: appColors.softInk,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   snapshotTitle: {
     color: appColors.ink,

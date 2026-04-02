@@ -1,5 +1,6 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useEffect, useRef, type ComponentType, type PropsWithChildren, type ReactNode } from 'react';
 import {
+  Animated,
   Platform,
   StyleSheet,
   type ScrollViewProps,
@@ -10,7 +11,9 @@ import { Surface, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KeyboardAvoidingView, ScrollView, View } from '@components/RNCompat';
-import { appColors, radii, shadows, spacing } from '@theme/index';
+import { appColors, appTypography, radii, shadows, spacing } from '@theme/index';
+
+const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
 type AppScrollViewProps = PropsWithChildren<{
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -50,6 +53,7 @@ type EmptyStatePanelProps = {
   title: string;
   description: string;
   action?: ReactNode;
+  animateOnMount?: boolean;
 };
 
 type AuthShellProps = PropsWithChildren<{
@@ -161,16 +165,47 @@ export const AccentPill = ({ children, tone = 'primary' }: PropsWithChildren<{ t
   </View>
 );
 
-export const EmptyStatePanel = ({ title, description, action }: EmptyStatePanelProps) => (
-  <PanelCard style={styles.emptyCard}>
-    <AccentPill tone="neutral">Nothing here yet</AccentPill>
-    <Text variant="titleMedium" style={styles.emptyTitle}>
-      {title}
-    </Text>
-    <Text style={styles.emptyDescription}>{description}</Text>
-    {action ? <View style={styles.emptyAction}>{action}</View> : null}
-  </PanelCard>
-);
+export const EmptyStatePanel = ({
+  title,
+  description,
+  action,
+  animateOnMount = true,
+}: EmptyStatePanelProps) => {
+  const fade = useRef(new Animated.Value(animateOnMount ? 0 : 1)).current;
+  const lift = useRef(new Animated.Value(animateOnMount ? 14 : 0)).current;
+
+  useEffect(() => {
+    if (!animateOnMount) {
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(lift, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [animateOnMount, fade, lift]);
+
+  return (
+    <AnimatedView style={{ opacity: fade, transform: [{ translateY: lift }] }}>
+      <PanelCard style={styles.emptyCard}>
+        <AccentPill tone="neutral">Fresh space</AccentPill>
+        <Text variant="titleMedium" style={styles.emptyTitle}>
+          {title}
+        </Text>
+        <Text style={styles.emptyDescription}>{description}</Text>
+        {action ? <View style={styles.emptyAction}>{action}</View> : null}
+      </PanelCard>
+    </AnimatedView>
+  );
+};
 
 export const AuthShell = ({ eyebrow, title, subtitle, footer, children }: AuthShellProps) => (
   <KeyboardAvoidingView
@@ -213,33 +248,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
     paddingBottom: 120,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   glowOrb: {
     position: 'absolute',
     borderRadius: 999,
-    opacity: 0.8,
+    opacity: 0.9,
   },
   glowOrbPrimary: {
-    width: 220,
-    height: 220,
-    top: -60,
-    right: -40,
-    backgroundColor: '#dfe3ff',
+    width: 240,
+    height: 240,
+    top: -70,
+    right: -36,
+    backgroundColor: '#ffd5e4',
   },
   glowOrbWarm: {
-    width: 140,
-    height: 140,
-    top: 180,
-    left: -50,
-    backgroundColor: '#ffefcc',
+    width: 168,
+    height: 168,
+    top: 168,
+    left: -62,
+    backgroundColor: '#ffe39f',
   },
   glowOrbSoft: {
-    width: 180,
-    height: 180,
-    bottom: 120,
-    right: -70,
-    backgroundColor: '#d8f5ea',
+    width: 220,
+    height: 220,
+    bottom: 98,
+    right: -92,
+    backgroundColor: '#cbf7ee',
   },
   headerRow: {
     flexDirection: 'row',
@@ -249,44 +284,50 @@ const styles = StyleSheet.create({
   },
   headerTextBlock: {
     flex: 1,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   eyebrow: {
     color: appColors.primary,
     fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   pageTitle: {
     color: appColors.ink,
+    fontFamily: appTypography.headingDisplay,
     fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -1.1,
   },
   pageSubtitle: {
     color: appColors.mutedInk,
     lineHeight: 22,
+    fontSize: 15,
   },
   headerAction: {
-    paddingTop: 6,
+    paddingTop: 10,
   },
   sectionIntro: {
-    gap: 4,
+    gap: 6,
   },
   sectionEyebrow: {
     color: appColors.softInk,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   sectionTitle: {
     color: appColors.ink,
+    fontFamily: appTypography.heading,
     fontWeight: '800',
+    fontSize: 21,
+    letterSpacing: -0.5,
   },
   sectionSubtitle: {
     color: appColors.mutedInk,
-    lineHeight: 20,
+    lineHeight: 21,
+    fontSize: 14,
   },
   detailRow: {
     flexDirection: 'row',
@@ -294,11 +335,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     paddingVertical: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     borderTopColor: appColors.line,
   },
   detailRowDanger: {
-    borderTopColor: '#f4c5cc',
+    borderTopColor: '#f7c5d4',
   },
   detailTextBlock: {
     flex: 1,
@@ -308,6 +349,7 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontSize: 15,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   detailTitleDanger: {
     color: appColors.danger,
@@ -326,34 +368,37 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: appColors.card,
     borderWidth: 1,
-    borderColor: '#eff3fa',
+    borderColor: '#f3dfe8',
     ...shadows.card,
   },
   panelAccent: {
-    backgroundColor: '#f4fbf7',
+    backgroundColor: '#ebfffa',
+    borderColor: '#c5f5ea',
   },
   panelWarm: {
-    backgroundColor: '#fff8eb',
+    backgroundColor: '#fff7df',
+    borderColor: '#ffe3a1',
   },
   panelDark: {
     backgroundColor: appColors.ink,
-    borderColor: '#24304d',
+    borderColor: '#493c61',
   },
   statCard: {
-    minHeight: 144,
+    minHeight: 152,
     justifyContent: 'space-between',
   },
   statLabel: {
     color: appColors.mutedInk,
     fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.1,
   },
   statValue: {
     color: appColors.ink,
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: -1.2,
+    fontFamily: appTypography.headingDisplay,
+    fontSize: 38,
+    fontWeight: '800',
+    letterSpacing: -1.4,
   },
   statDetail: {
     color: appColors.mutedInk,
@@ -363,20 +408,24 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: 'flex-start',
     borderRadius: radii.pill,
-    backgroundColor: '#e8ebff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: '#ffe2ec',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#ffc8d8',
   },
   pillSecondary: {
-    backgroundColor: '#fff0cf',
+    backgroundColor: '#fff0cb',
+    borderColor: '#ffdd97',
   },
   pillNeutral: {
-    backgroundColor: '#edf2f8',
+    backgroundColor: '#f7ecf3',
+    borderColor: '#ecd7e4',
   },
   pillText: {
     color: appColors.primaryDeep,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.2,
   },
   pillTextNeutral: {
@@ -384,15 +433,18 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   emptyTitle: {
     color: appColors.ink,
+    fontFamily: appTypography.heading,
     fontWeight: '800',
+    letterSpacing: -0.4,
   },
   emptyDescription: {
     color: appColors.mutedInk,
     lineHeight: 22,
+    fontSize: 15,
   },
   emptyAction: {
     marginTop: spacing.xs,
@@ -422,20 +474,25 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.xl,
+    borderRadius: radii.xl,
   },
   authTitle: {
     color: appColors.ink,
+    fontFamily: appTypography.headingDisplay,
     fontWeight: '800',
-    letterSpacing: -0.8,
+    fontSize: 32,
+    lineHeight: 36,
+    letterSpacing: -1,
     marginTop: spacing.xs,
   },
   authSubtitle: {
     color: appColors.mutedInk,
     marginTop: spacing.sm,
     lineHeight: 22,
+    fontSize: 15,
   },
   authContent: {
-    gap: spacing.md,
+    gap: spacing.lg,
     marginTop: spacing.xl,
   },
   authFooter: {

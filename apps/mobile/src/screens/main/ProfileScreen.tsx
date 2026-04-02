@@ -14,7 +14,7 @@ import { Image, Text as NativeText, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { updateOnboarding } from '@services/authService';
-import { appColors } from '@theme/index';
+import { appColors, appTypography } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { MainStackParamList } from '@navigation/types';
@@ -176,12 +176,12 @@ export const ProfileScreen = () => {
   return (
     <AppScrollView contentContainerStyle={styles.container}>
       <PageHeader
-        eyebrow="Profile"
-        title="Your presence"
-        subtitle="Tighten the profile people see before they join your events, match with you, or open a conversation."
+        eyebrow="Your vibe"
+        title="Show people why they should say yes"
+        subtitle="Shape the profile people scan before they join your plan, match with you, or open the chat."
       />
 
-      <PanelCard style={styles.heroCard}>
+      <PanelCard style={styles.heroCard} tone="accent">
         <View style={styles.heroTopRow}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} />
@@ -191,23 +191,26 @@ export const ProfileScreen = () => {
             </View>
           )}
           <View style={styles.heroCopy}>
-            <AccentPill>Public profile</AccentPill>
+            <AccentPill>Public vibe</AccentPill>
             <Text variant="titleLarge" style={styles.heroName}>
               {[firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Your profile'}
             </Text>
             <Text style={styles.heroEmail}>{user?.email ?? 'Not signed in'}</Text>
+            <Text style={styles.heroSubline}>
+              {bio?.trim() || 'Add a quick line so people know what kind of energy you bring.'}
+            </Text>
           </View>
         </View>
         <Button mode="outlined" onPress={pickAvatarFromLibrary} style={styles.inlineButton}>
-          Pick avatar from library
+          Update avatar
         </Button>
       </PanelCard>
 
       <PanelCard>
         <SectionIntro
-          eyebrow="Basics"
-          title="Who are you?"
-          subtitle="This is the identity layer people will see across events, matches, and chat."
+          eyebrow="Intro"
+          title="Give people the quick read"
+          subtitle="This is the identity layer people see across plans, sparks, and chat."
         />
         <View style={styles.row}>
           <TextInput label="First name" value={firstName} onChangeText={setFirstName} mode="outlined" style={[styles.input, styles.half]} />
@@ -221,7 +224,7 @@ export const ProfileScreen = () => {
         <SectionIntro
           eyebrow="Interests"
           title={`What are you into? (${interests.length}/${MAX_INTERESTS})`}
-          subtitle="Use short, specific interests so the app can surface better activity and people matches."
+          subtitle="Keep these short and specific so the app can surface better plans and more compatible people."
         />
         <View style={styles.row}>
           <TextInput
@@ -248,8 +251,8 @@ export const ProfileScreen = () => {
           </View>
         ) : (
           <EmptyStatePanel
-            title="No interests added yet"
-            description="Add a few interests so your profile feels specific instead of empty."
+            title="No interests yet"
+            description="Add a few interests so your profile feels specific, social, and easier to match around."
           />
         )}
       </PanelCard>
@@ -258,7 +261,7 @@ export const ProfileScreen = () => {
         <SectionIntro
           eyebrow="Media"
           title={`Photo album (${photoAlbum.length}/${MAX_PHOTOS})`}
-          subtitle="Give people a sense of who you are before they open chat or show up to an event."
+          subtitle="Give people a sense of who you are before they open the chat or show up to the plan."
         />
         <View style={styles.row}>
           <TextInput
@@ -274,7 +277,7 @@ export const ProfileScreen = () => {
           </Button>
         </View>
         <Button mode="outlined" onPress={addPhotoFromLibrary} disabled={photoAlbum.length >= MAX_PHOTOS} style={styles.inlineButton}>
-          Add photo from library
+          Add from library
         </Button>
         {photoAlbum.length > 0 ? (
           <View style={styles.albumGrid}>
@@ -293,7 +296,7 @@ export const ProfileScreen = () => {
         ) : (
           <EmptyStatePanel
             title="No photo album yet"
-            description="A few photos make your profile feel trusted and lived-in instead of anonymous."
+            description="A few photos make your profile feel trusted, lived-in, and easier to say yes to."
           />
         )}
       </PanelCard>
@@ -301,8 +304,8 @@ export const ProfileScreen = () => {
       <PanelCard>
         <SectionIntro
           eyebrow="Shortcuts"
-          title="Profile-related destinations"
-          subtitle="Keep the secondary destinations grouped here instead of mixing them into the editing flow."
+          title="Everything around your profile"
+          subtitle="Keep the side destinations grouped here instead of mixing them into the main edit flow."
         />
         <View style={styles.navWrap}>
           <Button mode="outlined" onPress={() => navigation.navigate('Settings')}>Settings</Button>
@@ -324,15 +327,15 @@ export const ProfileScreen = () => {
       {updateMutation.isSuccess ? (
         <PanelCard tone="accent">
           <AccentPill tone="secondary">Saved</AccentPill>
-          <Text style={styles.savedText}>Profile updated.</Text>
+          <Text style={styles.savedText}>Profile glow-up saved.</Text>
         </PanelCard>
       ) : null}
 
       <PanelCard>
         <SectionIntro
           eyebrow="Actions"
-          title="Keep your profile current"
-          subtitle="Save edits, refresh from the server, or end your session from here."
+          title="Keep it current"
+          subtitle="Save edits, pull the latest version, or end your session from here."
         />
         <View style={styles.actionRow}>
           <Button
@@ -342,7 +345,7 @@ export const ProfileScreen = () => {
             loading={updateMutation.isPending}
             style={styles.primaryAction}
           >
-            Save profile
+            Save glow-up
           </Button>
           <Button mode="outlined" onPress={() => void refreshProfile()} style={styles.secondaryAction}>
             Refresh
@@ -361,7 +364,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   heroCard: {
-    gap: 10,
+    gap: 12,
+    borderColor: '#bff0e6',
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -374,10 +378,15 @@ const styles = StyleSheet.create({
   },
   heroName: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontFamily: appTypography.headingDisplay,
+    letterSpacing: -0.8,
   },
   heroEmail: {
     color: appColors.mutedInk,
+  },
+  heroSubline: {
+    color: appColors.mutedInk,
+    lineHeight: 20,
   },
   input: {
     backgroundColor: appColors.card,
@@ -403,7 +412,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 999,
-    backgroundColor: '#edf2ff',
+    backgroundColor: '#ffe7f0',
+    borderWidth: 1,
+    borderColor: '#ffc9da',
     paddingLeft: 14,
     paddingRight: 4,
     paddingVertical: 4,
@@ -421,6 +432,8 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: 46,
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
   avatarFallback: {
     width: 92,
@@ -428,12 +441,14 @@ const styles = StyleSheet.create({
     borderRadius: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ebefff',
+    backgroundColor: '#ffe4ee',
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
   avatarFallbackText: {
     color: appColors.primaryDeep,
     fontSize: 32,
-    fontWeight: '900',
+    fontFamily: appTypography.headingDisplay,
   },
   inlineButton: {
     alignSelf: 'flex-start',
@@ -441,6 +456,11 @@ const styles = StyleSheet.create({
   albumTile: {
     width: '47%',
     gap: 6,
+    backgroundColor: '#fffafc',
+    borderWidth: 1,
+    borderColor: '#f3dfe8',
+    borderRadius: 20,
+    padding: 8,
   },
   albumPreview: {
     width: '100%',
@@ -458,7 +478,7 @@ const styles = StyleSheet.create({
   },
   savedText: {
     color: appColors.ink,
-    fontWeight: '700',
+    fontFamily: appTypography.heading,
   },
   actionRow: {
     flexDirection: 'row',

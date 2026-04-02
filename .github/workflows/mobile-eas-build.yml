@@ -1,0 +1,60 @@
+name: Mobile EAS Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-eas-build.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-eas-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Trigger iOS production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ env.EXPO_TOKEN }}
+
+      - name: Verify EXPO_TOKEN
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is not configured for this repository."
+            echo "Add the EXPO_TOKEN repository secret before relying on automatic mobile builds."
+            exit 1
+          fi
+
+      - name: Validate mobile TypeScript
+        run: npm run typecheck
+
+      - name: Trigger iOS production build
+        run: eas build --platform ios --profile production --non-interactive --no-wait

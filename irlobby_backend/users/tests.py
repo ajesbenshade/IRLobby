@@ -1,7 +1,10 @@
 from datetime import timedelta
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -51,6 +54,119 @@ class PasswordResetRequestTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 0)
+
+
+class TwitterOAuthTests(APITestCase):
+    def setUp(self):
+        self.status_url = reverse("twitter_oauth_status")
+        self.oauth_url = reverse("twitter_oauth_url")
+        self.callback_url = reverse("twitter_oauth_callback")
+
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="twitter-client-secret",
+        FRONTEND_BASE_URL="http://localhost:5173",
+    )
+    def test_status_requires_client_id_and_secret(self):
+        response = self.client.get(self.status_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["configured"])
+        self.assertTrue(response.data["client_id_set"])
+        self.assertTrue(response.data["client_secret_set"])
+
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="",
+        FRONTEND_BASE_URL="http://localhost:5173",
+    )
+    def test_status_reports_incomplete_credentials(self):
+        response = self.client.get(self.status_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["configured"])
+        self.assertTrue(response.data["client_id_set"])
+        self.assertFalse(response.data["client_secret_set"])
+
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="twitter-client-secret",
+    )
+    def test_oauth_url_rejects_invalid_mobile_redirect_uri(self):
+        response = self.client.get(
+            self.oauth_url,
+            {"mobile_redirect_uri": "https://example.com/not-mobile"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Invalid mobile redirect URI.")
+
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="twitter-client-secret",
+    )
+    @patch("users.oauth_views.requests.get")
+    @patch("users.oauth_views.exchange_twitter_token")
+    def test_mobile_callback_redirects_back_to_app_with_tokens(
+        self,
+        mock_exchange_twitter_token,
+        mock_requests_get,
+    ):
+        cache.set(
+            "twitter_oauth_mobile-state",
+            {
+                "code_verifier": "test-verifier",
+                "redirect_uri": "http://testserver/api/auth/twitter/callback/",
+                "mobile_redirect_uri": "irlobby://auth/twitter",
+            },
+            timeout=600,
+        )
+
+        mock_exchange_twitter_token.return_value = Mock(
+            status_code=200,
+            json=Mock(return_value={"access_token": "twitter-access-token"}),
+            text='{"access_token":"twitter-access-token"}',
+            headers={"content-type": "application/json"},
+        )
+        mock_requests_get.return_value = Mock(
+            status_code=200,
+            json=Mock(
+                return_value={
+                    "data": {
+                        "id": "twitter-user-id",
+                        "username": "irlobbytester",
+                        "name": "IR Lobby",
+                    }
+                }
+            ),
+        )
+
+        response = self.client.get(
+            self.callback_url,
+            {"code": "oauth-code", "state": "mobile-state"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        parsed_redirect = urlparse(response.url)
+        self.assertEqual(parsed_redirect.scheme, "irlobby")
+        self.assertEqual(parsed_redirect.netloc, "auth")
+        self.assertEqual(parsed_redirect.path, "/twitter")
+
+        params = parse_qs(parsed_redirect.query)
+        self.assertIn("access", params)
+        self.assertIn("refresh", params)
+        self.assertIn("user", params)
+        self.assertEqual(params["created"], ["true"])
+        self.assertTrue(User.objects.filter(oauth_id="twitter-user-id").exists())
+
+    def test_callback_rejects_expired_state(self):
+        response = self.client.get(
+            self.callback_url,
+            {"code": "oauth-code", "state": "missing-state"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Session expired or invalid state")
 
 
 class PasswordResetConfirmTests(APITestCase):

@@ -25,13 +25,18 @@ User = get_user_model()
 
 
 def get_twitter_credentials():
-    client_id = getattr(settings, "TWITTER_CLIENT_ID", None) or env_config(
-        "TWITTER_CLIENT_ID", default=""
-    )
-    client_secret = getattr(settings, "TWITTER_CLIENT_SECRET", None) or env_config(
-        "TWITTER_CLIENT_SECRET", default=""
-    )
+    client_id = (
+        getattr(settings, "TWITTER_CLIENT_ID", None) or env_config("TWITTER_CLIENT_ID", default="")
+    ).strip()
+    client_secret = (
+        getattr(settings, "TWITTER_CLIENT_SECRET", None)
+        or env_config("TWITTER_CLIENT_SECRET", default="")
+    ).strip()
     return client_id, client_secret
+
+
+def is_twitter_oauth_configured(client_id, client_secret):
+    return bool(client_id and client_secret)
 
 
 def generate_code_verifier():
@@ -133,14 +138,12 @@ def twitter_oauth_url(request):
         logger.info(f"Twitter OAuth URL request from origin: {request.META.get('HTTP_ORIGIN')}")
 
         client_id, _ = get_twitter_credentials()
-        if not client_id or client_id == "":
-            logger.error("TWITTER_CLIENT_ID not configured")
+        if not is_twitter_oauth_configured(client_id, _):
+            logger.error("Twitter OAuth credentials are incomplete")
             return Response(
                 {"error": "Twitter OAuth not configured. Please contact support."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-
-        logger.info(f"Using Twitter Client ID: {client_id[:10]}...")
 
         # Generate PKCE values
         code_verifier = generate_code_verifier()
@@ -159,7 +162,7 @@ def twitter_oauth_url(request):
             frontend_origin = resolve_frontend_origin(request)
             redirect_uri = f"{frontend_origin}/auth/twitter/callback"
 
-        logger.info(f"Using redirect URI: {redirect_uri}")
+        logger.info("Using Twitter OAuth redirect URI: %s", redirect_uri)
 
         # Store OAuth session details in cache with state as key
         state = secrets.token_urlsafe(32)
@@ -185,7 +188,7 @@ def twitter_oauth_url(request):
             f"code_challenge_method=S256"
         )
 
-        logger.info(f"Generated Twitter OAuth URL for state: {state[:10]}...")
+        logger.info("Generated Twitter OAuth URL")
 
         return Response({"auth_url": auth_url, "state": state})
 
@@ -253,20 +256,14 @@ def twitter_oauth_callback(request):
 
         client_id, client_secret = get_twitter_credentials()
 
-        if not client_id:
-            logger.error("Twitter OAuth credentials not configured")
+        if not is_twitter_oauth_configured(client_id, client_secret):
+            logger.error("Twitter OAuth credentials are incomplete")
             return Response(
                 {"error": "Twitter OAuth not configured"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        logger.info(f"Twitter callback - using client_id: {client_id[:10]}...")
-
-        logger.info(f"Twitter callback - using redirect_uri: {redirect_uri}")
-
-        logger.info(
-            f"Twitter callback - token exchange data: client_id={client_id[:10]}..., redirect_uri={redirect_uri}"
-        )
+        logger.info("Twitter callback - using redirect_uri: %s", redirect_uri)
 
         try:
             token_response = exchange_twitter_token(
@@ -398,7 +395,7 @@ def twitter_oauth_status(request):
         client_id, client_secret = get_twitter_credentials()
 
         status_info = {
-            "configured": bool(client_id),
+            "configured": is_twitter_oauth_configured(client_id, client_secret),
             "client_id_set": bool(client_id),
             "client_secret_set": bool(client_secret),
             "debug_mode": getattr(settings, "DEBUG", False),

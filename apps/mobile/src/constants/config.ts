@@ -38,5 +38,5 @@ export const config = {
   apiBaseUrlSource: isUsingFallbackApiBaseUrl ? (__DEV__ ? 'fallback-dev' : 'fallback-production') : 'configured',
   twitterClientId: extra.twitterClientId as string | undefined,
   twitterRedirectUri: extra.twitterRedirectUri as string | undefined,
-  googleMapsApiKey: extra.googleMapsApiKey as string | undefined,
+  mapboxPublicToken: extra.mapboxPublicToken as string | undefined,
 };

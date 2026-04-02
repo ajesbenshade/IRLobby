@@ -25,7 +25,7 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,9 +70,9 @@ jobs:
             exit 1
           fi
 
-          if [ -z "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY" ]; then
-            echo "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not configured in repository secrets."
-            echo "Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY under Settings > Secrets and variables > Actions > Secrets."
+          if [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
+            echo "EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN is not configured in repository variables."
+            echo "Add EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN under Settings > Secrets and variables > Actions > Variables."
             exit 1
           fi
 

@@ -9,52 +9,103 @@ import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, Sect
 import { TextInput } from '@components/PaperCompat';
 import { Image, View } from '@components/RNCompat';
 import { createActivity } from '@services/activityService';
+import type { CreateActivityPayload } from '@services/activityService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+
+type ActivityFormState = {
+  title: string;
+  description: string;
+  location: string;
+  time: string;
+  endTime: string;
+  capacity: string;
+  latitude: string;
+  longitude: string;
+  tags: string;
+  category: string;
+  visibility: string;
+  requiresApproval: boolean;
+  skillLevel: string;
+  ageRestriction: string;
+  equipmentRequired: string;
+  weatherDependent: boolean;
+  imageUris: string[];
+};
+
+type StringFormField = {
+  [Key in keyof ActivityFormState]: ActivityFormState[Key] extends string ? Key : never;
+}[keyof ActivityFormState];
+
+type BooleanFormField = {
+  [Key in keyof ActivityFormState]: ActivityFormState[Key] extends boolean ? Key : never;
+}[keyof ActivityFormState];
+
+const INITIAL_FORM_STATE: ActivityFormState = {
+  title: '',
+  description: '',
+  location: '',
+  time: '',
+  endTime: '',
+  capacity: '6',
+  latitude: '0',
+  longitude: '0',
+  tags: '',
+  category: 'Social',
+  visibility: 'everyone',
+  requiresApproval: false,
+  skillLevel: 'All Levels',
+  ageRestriction: 'All Ages',
+  equipmentRequired: '',
+  weatherDependent: false,
+  imageUris: [],
+};
+
+const VALID_VISIBILITY = ['everyone', 'friends', 'friendsOfFriends'] as const;
 
 export const CreateActivityScreen = () => {
   const queryClient = useQueryClient();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [time, setTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [capacity, setCapacity] = useState('6');
-  const [latitude, setLatitude] = useState('0');
-  const [longitude, setLongitude] = useState('0');
-  const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('Social');
-  const [visibility, setVisibility] = useState('everyone');
-  const [requiresApproval, setRequiresApproval] = useState(false);
-  const [skillLevel, setSkillLevel] = useState('All Levels');
-  const [ageRestriction, setAgeRestriction] = useState('All Ages');
-  const [equipmentRequired, setEquipmentRequired] = useState('');
-  const [weatherDependent, setWeatherDependent] = useState(false);
-  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [form, setForm] = useState<ActivityFormState>(INITIAL_FORM_STATE);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+
+  const {
+    ageRestriction,
+    capacity,
+    category,
+    description,
+    endTime,
+    equipmentRequired,
+    imageUris,
+    latitude,
+    location,
+    longitude,
+    requiresApproval,
+    skillLevel,
+    tags,
+    time,
+    title,
+    visibility,
+    weatherDependent,
+  } = form;
+
+  const updateForm = <Key extends keyof ActivityFormState>(key: Key, value: ActivityFormState[Key]) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateTextField = (key: StringFormField) => (value: string) => {
+    updateForm(key, value);
+  };
+
+  const updateToggleField = (key: BooleanFormField) => (value: boolean) => {
+    updateForm(key, value);
+  };
 
   const createMutation = useMutation({
     mutationFn: createActivity,
     onSuccess: async () => {
-      setTitle('');
-      setDescription('');
-      setLocation('');
-      setTime('');
-      setEndTime('');
-      setCapacity('6');
-      setLatitude('0');
-      setLongitude('0');
-      setTags('');
-      setCategory('Social');
-      setVisibility('everyone');
-      setRequiresApproval(false);
-      setSkillLevel('All Levels');
-      setAgeRestriction('All Ages');
-      setEquipmentRequired('');
-      setWeatherDependent(false);
-      setImageUris([]);
+      setForm(INITIAL_FORM_STATE);
       setTimeError(null);
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
@@ -68,6 +119,74 @@ export const CreateActivityScreen = () => {
     location.trim().length > 0 &&
     time.trim().length > 0 &&
     Number(capacity) > 0;
+
+  const clearTimeError = () => {
+    if (timeError) {
+      setTimeError(null);
+    }
+  };
+
+  const buildPayload = (): { payload?: CreateActivityPayload; error?: string } => {
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+
+    if (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude)) {
+      return { error: 'Latitude/Longitude must be valid numbers.' };
+    }
+
+    if (parsedLatitude === 0 && parsedLongitude === 0) {
+      return { error: 'Use current location to set coordinates before creating the activity.' };
+    }
+
+    const normalizedStartTime = normalizeDateTime(time);
+    const normalizedEndTime = normalizeDateTime(endTime);
+
+    if (!normalizedStartTime) {
+      return { error: 'Start time format is invalid. Use ISO or YYYY-MM-DD HH:mm.' };
+    }
+
+    if (endTime.trim() && !normalizedEndTime) {
+      return { error: 'End time format is invalid. Use ISO or YYYY-MM-DD HH:mm.' };
+    }
+
+    if (normalizedEndTime && new Date(normalizedEndTime).getTime() <= new Date(normalizedStartTime).getTime()) {
+      return { error: 'End time must be after the start time.' };
+    }
+
+    const visibilityValue = visibility.trim() || 'everyone';
+    const normalizedVisibility = VALID_VISIBILITY.includes(visibilityValue as (typeof VALID_VISIBILITY)[number])
+      ? visibilityValue
+      : 'everyone';
+
+    return {
+      payload: {
+        title: title.trim(),
+        description: description.trim(),
+        category: category.trim() || 'Social',
+        location: location.trim(),
+        time: normalizedStartTime,
+        end_time: normalizedEndTime ?? undefined,
+        capacity: Math.min(10, Math.max(1, Number(capacity) || 1)),
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
+        visibility: [normalizedVisibility],
+        is_private: normalizedVisibility !== 'everyone',
+        requires_approval: requiresApproval,
+        price: 0,
+        currency: 'USD',
+        age_restriction: ageRestriction.trim(),
+        skill_level: skillLevel.trim(),
+        equipment_provided: false,
+        equipment_required: equipmentRequired.trim(),
+        weather_dependent: weatherDependent,
+        tags: tags
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+        images: imageUris,
+      },
+    };
+  };
 
   const handlePickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -92,7 +211,10 @@ export const CreateActivityScreen = () => {
         const mimeType = asset.mimeType || 'image/jpeg';
         return [`data:${mimeType};base64,${asset.base64}`];
       });
-      setImageUris((previous) => [...previous, ...selected].slice(0, 5));
+      setForm((current) => ({
+        ...current,
+        imageUris: [...current.imageUris, ...selected].slice(0, 5),
+      }));
     }
   };
 
@@ -128,8 +250,11 @@ export const CreateActivityScreen = () => {
 
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude: currentLat, longitude: currentLng } = currentLocation.coords;
-      setLatitude(String(currentLat));
-      setLongitude(String(currentLng));
+      setForm((current) => ({
+        ...current,
+        latitude: String(currentLat),
+        longitude: String(currentLng),
+      }));
 
       const reverse = await Location.reverseGeocodeAsync({
         latitude: currentLat,
@@ -141,7 +266,7 @@ export const CreateActivityScreen = () => {
         const country = firstMatch.country || '';
         const label = [city, country].filter(Boolean).join(', ');
         if (label) {
-          setLocation(label);
+          updateForm('location', label);
         }
       }
     } finally {
@@ -173,18 +298,18 @@ export const CreateActivityScreen = () => {
           title="What is this activity?"
           subtitle="Start with the event identity people use to decide if it’s worth a closer look."
         />
-        <TextInput label="Title" value={title} onChangeText={setTitle} mode="outlined" style={styles.input} />
+        <TextInput label="Title" value={title} onChangeText={updateTextField('title')} mode="outlined" style={styles.input} />
         <TextInput
           label="Description"
           value={description}
-          onChangeText={setDescription}
+          onChangeText={updateTextField('description')}
           multiline
           mode="outlined"
           style={styles.input}
         />
         <View style={styles.row}>
-          <TextInput label="Category" value={category} onChangeText={setCategory} mode="outlined" style={[styles.input, styles.half]} />
-          <TextInput label="Tags (comma separated)" value={tags} onChangeText={setTags} mode="outlined" style={[styles.input, styles.half]} />
+          <TextInput label="Category" value={category} onChangeText={updateTextField('category')} mode="outlined" style={[styles.input, styles.half]} />
+          <TextInput label="Tags (comma separated)" value={tags} onChangeText={updateTextField('tags')} mode="outlined" style={[styles.input, styles.half]} />
         </View>
       </PanelCard>
 
@@ -194,7 +319,7 @@ export const CreateActivityScreen = () => {
           title="When and where does it happen?"
           subtitle="Make timing and location concrete so people can say yes quickly."
         />
-        <TextInput label="Location" value={location} onChangeText={setLocation} mode="outlined" style={styles.input} />
+        <TextInput label="Location" value={location} onChangeText={updateTextField('location')} mode="outlined" style={styles.input} />
         <Button mode="outlined" onPress={fillCurrentLocation} loading={isLocating} style={styles.inlineButton}>
           Use current location
         </Button>
@@ -202,10 +327,8 @@ export const CreateActivityScreen = () => {
           label="Start date & time (ISO or YYYY-MM-DD HH:mm)"
           value={time}
           onChangeText={(value: string) => {
-            setTime(value);
-            if (timeError) {
-              setTimeError(null);
-            }
+            updateForm('time', value);
+            clearTimeError();
           }}
           mode="outlined"
           style={styles.input}
@@ -215,10 +338,8 @@ export const CreateActivityScreen = () => {
           label="End date & time (optional)"
           value={endTime}
           onChangeText={(value: string) => {
-            setEndTime(value);
-            if (timeError) {
-              setTimeError(null);
-            }
+            updateForm('endTime', value);
+            clearTimeError();
           }}
           mode="outlined"
           style={styles.input}
@@ -233,7 +354,7 @@ export const CreateActivityScreen = () => {
           <TextInput
             label="Latitude"
             value={latitude}
-            onChangeText={setLatitude}
+            onChangeText={updateTextField('latitude')}
             keyboardType="decimal-pad"
             mode="outlined"
             style={[styles.input, styles.half]}
@@ -241,7 +362,7 @@ export const CreateActivityScreen = () => {
           <TextInput
             label="Longitude"
             value={longitude}
-            onChangeText={setLongitude}
+            onChangeText={updateTextField('longitude')}
             keyboardType="decimal-pad"
             mode="outlined"
             style={[styles.input, styles.half]}
@@ -259,7 +380,7 @@ export const CreateActivityScreen = () => {
           <TextInput
             label="Capacity (1-10)"
             value={capacity}
-            onChangeText={setCapacity}
+            onChangeText={updateTextField('capacity')}
             keyboardType="number-pad"
             mode="outlined"
             style={[styles.input, styles.half]}
@@ -267,19 +388,19 @@ export const CreateActivityScreen = () => {
           <TextInput
             label="Visibility"
             value={visibility}
-            onChangeText={setVisibility}
+            onChangeText={updateTextField('visibility')}
             mode="outlined"
             style={[styles.input, styles.half]}
           />
         </View>
         <View style={styles.row}>
-          <TextInput label="Skill level" value={skillLevel} onChangeText={setSkillLevel} mode="outlined" style={[styles.input, styles.half]} />
-          <TextInput label="Age restriction" value={ageRestriction} onChangeText={setAgeRestriction} mode="outlined" style={[styles.input, styles.half]} />
+          <TextInput label="Skill level" value={skillLevel} onChangeText={updateTextField('skillLevel')} mode="outlined" style={[styles.input, styles.half]} />
+          <TextInput label="Age restriction" value={ageRestriction} onChangeText={updateTextField('ageRestriction')} mode="outlined" style={[styles.input, styles.half]} />
         </View>
         <TextInput
           label="Equipment required"
           value={equipmentRequired}
-          onChangeText={setEquipmentRequired}
+          onChangeText={updateTextField('equipmentRequired')}
           mode="outlined"
           style={styles.input}
         />
@@ -289,7 +410,7 @@ export const CreateActivityScreen = () => {
               <Text style={styles.switchTitle}>Requires approval</Text>
               <Text style={styles.switchSubtitle}>Review attendees before they join.</Text>
             </View>
-            <Switch value={requiresApproval} onValueChange={setRequiresApproval} />
+            <Switch value={requiresApproval} onValueChange={updateToggleField('requiresApproval')} />
           </View>
           <View style={styles.switchDivider} />
           <View style={styles.switchRow}>
@@ -297,7 +418,7 @@ export const CreateActivityScreen = () => {
               <Text style={styles.switchTitle}>Weather dependent</Text>
               <Text style={styles.switchSubtitle}>Signal that outdoor conditions can change the plan.</Text>
             </View>
-            <Switch value={weatherDependent} onValueChange={setWeatherDependent} />
+            <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
           </View>
         </View>
       </PanelCard>
@@ -316,7 +437,16 @@ export const CreateActivityScreen = () => {
             {imageUris.map((uri, index) => (
               <View key={`${index}-${uri.slice(0, 16)}`} style={styles.mediaTile}>
                 <Image source={{ uri }} style={styles.mediaImage} />
-                <Button mode="text" compact onPress={() => setImageUris((previous) => previous.filter((_, currentIndex) => currentIndex !== index))}>
+                <Button
+                  mode="text"
+                  compact
+                  onPress={() => {
+                    setForm((current) => ({
+                      ...current,
+                      imageUris: current.imageUris.filter((_, currentIndex) => currentIndex !== index),
+                    }));
+                  }}
+                >
                   Remove
                 </Button>
               </View>
@@ -357,72 +487,15 @@ export const CreateActivityScreen = () => {
           disabled={!canSubmit || createMutation.isPending || isLocating}
           contentStyle={styles.submitButtonContent}
           onPress={() => {
-            const parsedLatitude = Number(latitude);
-            const parsedLongitude = Number(longitude);
+            const { error, payload } = buildPayload();
 
-            if (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude)) {
-              setTimeError('Latitude/Longitude must be valid numbers.');
+            if (error) {
+              setTimeError(error);
               return;
             }
 
-            if (parsedLatitude === 0 && parsedLongitude === 0) {
-              setTimeError('Use current location to set coordinates before creating the activity.');
-              return;
-            }
-
-            const normalizedStartTime = normalizeDateTime(time);
-            const normalizedEndTime = normalizeDateTime(endTime);
-
-            if (!normalizedStartTime) {
-              setTimeError('Start time format is invalid. Use ISO or YYYY-MM-DD HH:mm.');
-              return;
-            }
-
-            if (endTime.trim() && !normalizedEndTime) {
-              setTimeError('End time format is invalid. Use ISO or YYYY-MM-DD HH:mm.');
-              return;
-            }
-
-            if (
-              normalizedEndTime &&
-              new Date(normalizedEndTime).getTime() <= new Date(normalizedStartTime).getTime()
-            ) {
-              setTimeError('End time must be after the start time.');
-              return;
-            }
-
-            const visibilityValue = visibility.trim() || 'everyone';
-            const validVisibility = ['everyone', 'friends', 'friendsOfFriends'];
-            const normalizedVisibility = validVisibility.includes(visibilityValue)
-              ? visibilityValue
-              : 'everyone';
-
-            createMutation.mutate({
-              title: title.trim(),
-              description: description.trim(),
-              category: category.trim() || 'Social',
-              location: location.trim(),
-              time: normalizedStartTime,
-              end_time: normalizedEndTime ?? undefined,
-              capacity: Math.min(10, Math.max(1, Number(capacity) || 1)),
-              latitude: parsedLatitude,
-              longitude: parsedLongitude,
-              visibility: [normalizedVisibility],
-              is_private: normalizedVisibility !== 'everyone',
-              requires_approval: requiresApproval,
-              price: 0,
-              currency: 'USD',
-              age_restriction: ageRestriction.trim(),
-              skill_level: skillLevel.trim(),
-              equipment_provided: false,
-              equipment_required: equipmentRequired.trim(),
-              weather_dependent: weatherDependent,
-              tags: tags
-                .split(',')
-                .map((item) => item.trim())
-                .filter(Boolean),
-              images: imageUris,
-            });
+            setTimeError(null);
+            createMutation.mutate(payload!);
           }}
         >
           Create activity

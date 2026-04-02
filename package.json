@@ -13,6 +13,7 @@
     "build:web": "npm --prefix apps/web run build",
     "build:mobile": "npm --prefix apps/mobile run bundle:ios",
     "start": "echo \"Backend is Python; run 'cd irlobby_backend && python manage.py runserver'\"",
+    "postinstall": "node scripts/fix-expo-module-scripts.mjs",
     "check:api-contract": "node scripts/check-api-contract.mjs",
     "check:web:lint": "npm --prefix apps/web run lint",
     "check:web": "npm --prefix apps/web run test && npm --prefix apps/web run build",

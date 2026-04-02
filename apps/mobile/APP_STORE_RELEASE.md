@@ -2,6 +2,8 @@
 
 Use this checklist to publish `irlobby_mobile` with your Apple Developer account.
 
+> `apps/web` is archived in this repository and is no longer a supported deployment target. Mobile is the only actively released client.
+
 ## 1) Accounts and tools
 
 - Active Apple Developer Program membership

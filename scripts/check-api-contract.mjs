@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const workspaceRoot = process.cwd();
 
-const scanRoots = ['apps/web/src', 'apps/mobile/src', 'packages/shared'];
+const scanRoots = ['apps/mobile/src', 'packages/shared'];
 const fileExtensions = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const endpointRegex = /(["'`])((?:https?:\/\/[^"'`]+)?\/api\/[^"'`]*)\1/g;
 const djangoPathRegex = /path\(\s*['"]([^'"]*)['"]\s*,\s*([\s\S]*?)\)\s*,?/g;

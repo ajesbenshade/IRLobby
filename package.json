@@ -6,18 +6,18 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev:web",
-    "dev:web": "npm --prefix apps/web run dev",
+    "dev": "npm run dev:mobile",
+    "dev:web": "echo \"apps/web is archived and no longer supported for active development.\"",
     "dev:mobile": "npm --prefix apps/mobile run start",
-    "build": "npm run build:web",
-    "build:web": "npm --prefix apps/web run build",
+    "build": "npm run build:mobile",
+    "build:web": "echo \"apps/web is archived and no longer built by default.\"",
     "build:mobile": "npm --prefix apps/mobile run bundle:ios",
     "start": "echo \"Backend is Python; run 'cd irlobby_backend && python manage.py runserver'\"",
     "postinstall": "node scripts/fix-expo-module-scripts.mjs",
     "check:api-contract": "node scripts/check-api-contract.mjs",
-    "check:web:lint": "npm --prefix apps/web run lint",
-    "check:web": "npm --prefix apps/web run test && npm --prefix apps/web run build",
+    "check:web:lint": "echo \"apps/web is archived and excluded from active checks.\"",
+    "check:web": "echo \"apps/web is archived and excluded from release checks.\"",
     "check:mobile": "npm --prefix apps/mobile run typecheck && npm --prefix apps/mobile run bundle:ios",
-    "check:release": "npm run check:api-contract && npm run check:web && npm run check:mobile"
+    "check:release": "npm run check:api-contract && npm run check:mobile"
   }
 }

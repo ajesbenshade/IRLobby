@@ -42,6 +42,22 @@ Notes:
 - `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` must point to your live backend.
 - Backend must support HTTPS/WSS and include required CORS/host settings.
 
+## 2.1) Configure Twitter/X login for standalone iOS builds
+
+The mobile app uses a backend-owned Twitter OAuth flow. For standalone/TestFlight builds, the app deep link must remain `irlobby://auth/twitter`.
+
+Required setup:
+
+1. Set backend env vars `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
+2. Register the backend callback URL in the Twitter/X developer portal:
+	- Local example: `http://localhost:8000/api/auth/twitter/callback/`
+	- Production example: `https://your-backend-domain.com/api/auth/twitter/callback/`
+3. Set `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` for the mobile app if you want an explicit runtime value.
+
+Notes:
+- The backend callback exchanges the Twitter authorization code and then redirects back into the app with app JWTs.
+- This flow is intended for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
+
 ## 3) Confirm app identity
 
 Current bundle identifier is set in `app.config.ts`:

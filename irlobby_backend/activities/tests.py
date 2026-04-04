@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.urls import reverse
 from django.utils import timezone
@@ -6,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from users.models import User
 
-from activities.models import Activity, ActivityParticipant
+from activities.models import Activity, ActivityParticipant, Ticket
 
 
 class ActivityPermissionsTests(APITestCase):
@@ -165,3 +166,163 @@ class ActivityApprovalWorkflowTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get("message"), "Activity is full")
+
+
+class TicketingTests(APITestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(
+            username="ticket-host",
+            email="ticket-host@example.com",
+            password="password123",
+        )
+        self.buyer = User.objects.create_user(
+            username="ticket-buyer",
+            email="ticket-buyer@example.com",
+            password="password123",
+        )
+        self.activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Paid Event",
+            description="Ticketed event.",
+            location="Venue",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=3),
+            capacity=10,
+            tags=[],
+            images=[],
+            is_ticketed=True,
+            ticket_price=25.00,
+            max_tickets=3,
+        )
+
+    @patch("activities.views.stripe.checkout.Session.create")
+    def test_create_ticket_checkout_session(self, mock_session_create):
+        mock_session_create.return_value = {"id": "cs_test_123"}
+
+        self.client.force_authenticate(self.buyer)
+        url = reverse("activity-ticket-buy", args=[self.activity.id])
+        response = self.client.post(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["session_id"], "cs_test_123")
+        ticket = Ticket.objects.get(activity=self.activity, buyer=self.buyer)
+        self.assertEqual(ticket.status, "pending")
+        self.assertEqual(ticket.stripe_session_id, "cs_test_123")
+
+    def test_cannot_buy_non_ticketed_activity(self):
+        self.activity.is_ticketed = False
+        self.activity.save()
+
+        self.client.force_authenticate(self.buyer)
+        url = reverse("activity-ticket-buy", args=[self.activity.id])
+        response = self.client.post(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "This activity is not ticketed.")
+
+    @patch("activities.views.stripe.Webhook.construct_event")
+    def test_webhook_marks_ticket_paid_and_generates_qr(self, mock_construct_event):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+
+        mock_construct_event.return_value = {
+            "type": "checkout.session.completed",
+            "data": {"object": {"id": "cs_test_123"}},
+        }
+
+        response = self.client.post(
+            reverse("stripe-webhook"),
+            data={},
+            format="json",
+            HTTP_STRIPE_SIGNATURE="sig",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "paid")
+        self.assertIsNotNone(ticket.purchased_at)
+
+    def test_my_tickets_returns_only_user_tickets(self):
+        Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+        Ticket.objects.create(
+            buyer=self.host,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_456",
+        )
+
+        self.client.force_authenticate(self.buyer)
+        response = self.client.get(reverse("ticket-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["activityId"], self.activity.id)
+
+    def test_validate_ticket_marks_used_and_reports_attendee(self):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+        token = ticket.get_qr_token()
+
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("ticket-validate"),
+            data={"ticketToken": token},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "used")
+        self.assertEqual(response.data["buyer_username"], self.buyer.username)
+
+    def test_duplicate_validate_ticket_fails(self):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="used",
+            stripe_session_id="cs_test_123",
+        )
+        token = ticket.get_qr_token()
+
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("ticket-validate"),
+            data={"ticketToken": token},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "Ticket has already been used.")
+
+    def test_non_host_cannot_validate_ticket(self):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+        token = ticket.get_qr_token()
+
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(
+            reverse("ticket-validate"),
+            data={"ticketToken": token},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

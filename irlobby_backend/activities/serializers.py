@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Activity, ActivityParticipant
+from .models import Activity, ActivityParticipant, Ticket
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -16,6 +16,15 @@ class ActivitySerializer(serializers.ModelSerializer):
     equipmentProvided = serializers.BooleanField(source="equipment_provided", read_only=True)
     equipmentRequired = serializers.CharField(source="equipment_required", read_only=True)
     weatherDependent = serializers.BooleanField(source="weather_dependent", read_only=True)
+    isTicketed = serializers.BooleanField(source="is_ticketed")
+    ticketPrice = serializers.DecimalField(source="ticket_price", max_digits=10, decimal_places=2)
+    maxTickets = serializers.IntegerField(source="max_tickets")
+    ticketsSold = serializers.IntegerField(source="tickets_sold", read_only=True)
+    platformFeePercent = serializers.DecimalField(
+        source="platform_fee_percent", max_digits=5, decimal_places=2
+    )
+    ticketsAvailable = serializers.SerializerMethodField()
+    isSoldOut = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -52,6 +61,18 @@ class ActivitySerializer(serializers.ModelSerializer):
             "equipmentRequired",
             "weather_dependent",
             "weatherDependent",
+            "is_ticketed",
+            "isTicketed",
+            "ticket_price",
+            "ticketPrice",
+            "max_tickets",
+            "maxTickets",
+            "tickets_sold",
+            "ticketsSold",
+            "platform_fee_percent",
+            "platformFeePercent",
+            "ticketsAvailable",
+            "isSoldOut",
             "tags",
             "images",
             "created_at",
@@ -72,6 +93,10 @@ class ActivitySerializer(serializers.ModelSerializer):
             "equipmentProvided": "equipment_provided",
             "equipmentRequired": "equipment_required",
             "weatherDependent": "weather_dependent",
+            "isTicketed": "is_ticketed",
+            "ticketPrice": "ticket_price",
+            "maxTickets": "max_tickets",
+            "platformFeePercent": "platform_fee_percent",
             "imageUrls": "images",
         }
 
@@ -83,6 +108,39 @@ class ActivitySerializer(serializers.ModelSerializer):
             normalized_data["visibility"] = ["everyone"]
 
         return super().to_internal_value(normalized_data)
+
+    def validate(self, attrs):
+        is_ticketed = attrs.get("is_ticketed", getattr(self.instance, "is_ticketed", False))
+        ticket_price = attrs.get("ticket_price", getattr(self.instance, "ticket_price", 0))
+        max_tickets = attrs.get("max_tickets", getattr(self.instance, "max_tickets", 0))
+        platform_fee_percent = attrs.get(
+            "platform_fee_percent", getattr(self.instance, "platform_fee_percent", 10)
+        )
+
+        if is_ticketed:
+            if ticket_price <= 0:
+                raise serializers.ValidationError(
+                    {
+                        "ticket_price": "Ticket price must be greater than zero for ticketed activities."
+                    }
+                )
+            if max_tickets <= 0:
+                raise serializers.ValidationError(
+                    {"max_tickets": "Ticketed activities require a positive ticket quantity."}
+                )
+
+        if platform_fee_percent < 0 or platform_fee_percent > 100:
+            raise serializers.ValidationError(
+                {"platform_fee_percent": "Platform fee must be between 0 and 100."}
+            )
+
+        return attrs
+
+    def get_ticketsAvailable(self, obj):
+        return obj.tickets_available
+
+    def get_isSoldOut(self, obj):
+        return obj.is_sold_out
 
     def get_participant_count(self, obj):
         return obj.participants.filter(status="confirmed").count()
@@ -96,3 +154,48 @@ class ActivityParticipantSerializer(serializers.ModelSerializer):
         model = ActivityParticipant
         fields = ("id", "activity", "user", "status", "joined_at")
         read_only_fields = ("id", "joined_at")
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    buyer = serializers.StringRelatedField(read_only=True)
+    activity = serializers.PrimaryKeyRelatedField(read_only=True)
+    activityId = serializers.IntegerField(source="activity.id", read_only=True)
+    ticketId = serializers.UUIDField(source="ticket_id", read_only=True)
+    purchasedAt = serializers.DateTimeField(source="purchased_at", read_only=True)
+    redeemedAt = serializers.DateTimeField(source="redeemed_at", read_only=True)
+    qrCodeDataUrl = serializers.CharField(source="qr_code_data_url", read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = (
+            "id",
+            "ticketId",
+            "activity",
+            "activityId",
+            "buyer",
+            "status",
+            "purchasedAt",
+            "redeemedAt",
+            "qrCodeDataUrl",
+            "created_at",
+        )
+        read_only_fields = (
+            "id",
+            "ticketId",
+            "activity",
+            "activityId",
+            "buyer",
+            "purchasedAt",
+            "redeemedAt",
+            "qrCodeDataUrl",
+            "created_at",
+        )
+
+
+class TicketPurchaseSerializer(serializers.Serializer):
+    successUrl = serializers.URLField(required=False)
+    cancelUrl = serializers.URLField(required=False)
+
+
+class TicketValidationSerializer(serializers.Serializer):
+    ticketToken = serializers.CharField()

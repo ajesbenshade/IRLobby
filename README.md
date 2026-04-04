@@ -32,6 +32,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp ../.env.example .env
+# Add Stripe credentials before running the app
+# STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_SUCCESS_URL, STRIPE_CANCEL_URL, ENABLE_TICKETING
 python manage.py migrate
 python manage.py runserver
 ```

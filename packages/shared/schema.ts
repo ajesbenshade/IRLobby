@@ -25,9 +25,11 @@ export const API_ROUTES = {
 	MATCHES: '/api/matches/',
 	MESSAGES_CONVERSATIONS: '/api/messages/conversations/',
 	REVIEWS: '/api/reviews/',
+	TICKET_PURCHASE: '/api/activities/{activityId}/tickets/buy/',
+	TICKETS_MY: '/api/activities/tickets/my/',
+	TICKET_VALIDATE: '/api/activities/tickets/validate/',
+	STRIPE_WEBHOOK: '/api/activities/payments/webhook/',
 } as const;
-
-export type ApiRoute = (typeof API_ROUTES)[keyof typeof API_ROUTES];
 
 export const API_ROUTE_BUILDERS = {
 	activityJoin: (activityId: number | string) =>
@@ -38,6 +40,10 @@ export const API_ROUTE_BUILDERS = {
 	conversationMessages: (conversationId: number | string) =>
 		`${API_ROUTES.MESSAGES_CONVERSATIONS}${conversationId}/messages/`,
 	activitiesWithSearch: (query: string) => `${API_ROUTES.ACTIVITIES}?${query}`,
+	ticketPurchase: (activityId: number | string) =>
+		`${API_ROUTES.ACTIVITIES}${activityId}/tickets/buy/`,
+	myTickets: () => API_ROUTES.TICKETS_MY,
+	validateTicket: () => API_ROUTES.TICKET_VALIDATE,
 } as const;
 
 export interface Activity {
@@ -75,4 +81,28 @@ export interface Review {
 	rating: number;
 	comment: string;
 	created_at: string;
+}
+
+export interface Ticket {
+	id: number;
+	ticketId: string;
+	activityId: number;
+	buyer?: string;
+	status: "pending" | "paid" | "used" | "cancelled";
+	purchasedAt?: string;
+	redeemedAt?: string;
+	qrCodeDataUrl?: string;
+	created_at: string;
+}
+
+export interface TicketPurchaseResponse {
+	session_id: string;
+}
+
+export interface TicketValidationResponse {
+	ticket_id: string;
+	activity_id: number;
+	buyer_username: string;
+	status: "pending" | "paid" | "used" | "cancelled";
+	redeemed_at?: string;
 }

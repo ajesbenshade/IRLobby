@@ -1,18 +1,29 @@
+import stripe
+from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
-from django.db.models import Q
+from django.core.signing import BadSignature
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from matches.models import Match
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
+from rest_framework.views import APIView
 
-from .models import Activity, ActivityParticipant
+from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
-from .serializers import ActivitySerializer
+from .serializers import (
+    ActivitySerializer,
+    TicketPurchaseSerializer,
+    TicketSerializer,
+    TicketValidationSerializer,
+)
 
 
 class ActivityListCreateView(generics.ListCreateAPIView):
@@ -132,6 +143,208 @@ class HostedActivitiesView(generics.ListAPIView):
 
     def get_queryset(self):
         return Activity.objects.filter(host=self.request.user)
+
+
+class TicketThrottle(UserRateThrottle):
+    scope = "ticket_ops"
+
+
+class ActivityTicketPurchaseView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [TicketThrottle]
+
+    def post(self, request, pk):
+        if not settings.ENABLE_TICKETING:
+            return Response(
+                {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        activity = get_object_or_404(
+            Activity.objects.filter(Q(is_approved=True) | Q(host=request.user)),
+            pk=pk,
+        )
+
+        if not activity.is_ticketed:
+            return Response(
+                {"message": "This activity is not ticketed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if activity.is_sold_out:
+            return Response(
+                {"message": "Tickets are sold out."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = TicketPurchaseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        success_url = serializer.validated_data.get("successUrl") or settings.STRIPE_SUCCESS_URL
+        cancel_url = serializer.validated_data.get("cancelUrl") or settings.STRIPE_CANCEL_URL
+
+        stripe.api_key = settings.STRIPE_API_KEY
+        try:
+            ticket = Ticket.objects.create(
+                buyer=request.user,
+                activity=activity,
+                status="pending",
+            )
+
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                mode="payment",
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": activity.currency.lower(),
+                            "product_data": {
+                                "name": f"Ticket for {activity.title}",
+                                "description": activity.description[:200],
+                            },
+                            "unit_amount": int(activity.ticket_price * 100),
+                        },
+                        "quantity": 1,
+                    }
+                ],
+                metadata={
+                    "ticket_id": str(ticket.ticket_id),
+                    "activity_id": str(activity.id),
+                },
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+            ticket.stripe_session_id = session["id"]
+            ticket.save(update_fields=["stripe_session_id"])
+
+            return Response({"session_id": session["id"]}, status=status.HTTP_201_CREATED)
+        except stripe.error.StripeError as exc:
+            ticket.status = "cancelled"
+            ticket.save(update_fields=["status"])  # Keep the pending record for audit.
+            return Response({"message": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+class StripeWebhookView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payload = request.body
+        signature = request.headers.get("Stripe-Signature", "")
+        stripe.api_key = settings.STRIPE_API_KEY
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, signature, settings.STRIPE_WEBHOOK_SECRET
+            )
+        except (ValueError, stripe.error.SignatureVerificationError):
+            return Response(
+                {"message": "Invalid webhook payload."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if event["type"] == "checkout.session.completed":
+            session_data = event["data"]["object"]
+            stripe_session_id = session_data.get("id")
+            ticket = Ticket.objects.filter(stripe_session_id=stripe_session_id).first()
+            if ticket and ticket.status != "paid":
+                ticket.status = "paid"
+                ticket.purchased_at = timezone.now()
+                ticket.save(update_fields=["status", "purchased_at"])
+                Activity.objects.filter(pk=ticket.activity_id).update(
+                    tickets_sold=F("tickets_sold") + 1
+                )
+                from .tasks import generate_ticket_qr_code
+
+                generate_ticket_qr_code.delay(ticket.id)
+
+        return Response({"success": True})
+
+
+class UserTicketListView(generics.ListAPIView):
+    serializer_class = TicketSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Ticket.objects.filter(buyer=self.request.user).order_by("-created_at")
+
+
+class ValidateTicketView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [TicketThrottle]
+
+    def post(self, request):
+        if not settings.ENABLE_TICKETING:
+            return Response(
+                {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        serializer = TicketValidationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ticket_token = serializer.validated_data["ticketToken"]
+        try:
+            ticket_uuid, activity_id = Ticket.parse_qr_token(ticket_token)
+        except (BadSignature, ValueError):
+            return Response(
+                {"message": "Invalid ticket token."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ticket = get_object_or_404(Ticket, ticket_id=ticket_uuid, activity_id=activity_id)
+
+        if ticket.activity.host_id != request.user.id:
+            return Response(
+                {"message": "Forbidden to validate this ticket."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if ticket.status == "used":
+            TicketRedemptionLog.objects.create(
+                ticket=ticket,
+                activity=ticket.activity,
+                host=request.user,
+                successful=False,
+                status=ticket.status,
+                message="Ticket already used.",
+            )
+            return Response(
+                {"message": "Ticket has already been used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if ticket.status != "paid":
+            TicketRedemptionLog.objects.create(
+                ticket=ticket,
+                activity=ticket.activity,
+                host=request.user,
+                successful=False,
+                status=ticket.status,
+                message="Ticket is not in a valid state for redemption.",
+            )
+            return Response(
+                {"message": "Ticket is not valid for redemption."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ticket.status = "used"
+        ticket.redeemed_at = timezone.now()
+        ticket.save(update_fields=["status", "redeemed_at"])
+
+        TicketRedemptionLog.objects.create(
+            ticket=ticket,
+            activity=ticket.activity,
+            host=request.user,
+            successful=True,
+            status=ticket.status,
+            message="Validated successfully.",
+        )
+
+        return Response(
+            {
+                "ticket_id": str(ticket.ticket_id),
+                "activity_id": ticket.activity_id,
+                "buyer_username": ticket.buyer.username,
+                "status": ticket.status,
+                "redeemed_at": ticket.redeemed_at,
+            }
+        )
 
 
 @api_view(["POST"])

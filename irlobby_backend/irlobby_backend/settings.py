@@ -101,6 +101,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth_anon": "10/min",
         "auth_user": "30/min",
+        "ticket_ops": "20/min",
     },
 }
 
@@ -347,3 +348,9 @@ LOGGING = {
         },
     },
 }
+
+STRIPE_API_KEY = config("STRIPE_API_KEY", default="")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
+STRIPE_SUCCESS_URL = config("STRIPE_SUCCESS_URL", default="http://localhost:3000/tickets/success")
+STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL", default="http://localhost:3000/tickets/cancel")
+ENABLE_TICKETING = config("ENABLE_TICKETING", default=True, cast=bool)

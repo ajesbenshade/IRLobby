@@ -25,9 +25,9 @@ export const API_ROUTES = {
 	MATCHES: '/api/matches/',
 	MESSAGES_CONVERSATIONS: '/api/messages/conversations/',
 	REVIEWS: '/api/reviews/',
-	TICKET_PURCHASE: '/api/activities/{activityId}/tickets/buy/',
+	TICKET_PURCHASE: '/api/activities/{activityId}/buy-ticket/',
 	TICKETS_MY: '/api/activities/tickets/my/',
-	TICKET_VALIDATE: '/api/activities/tickets/validate/',
+	TICKET_VALIDATE: '/api/activities/tickets/{ticketId}/validate/',
 	STRIPE_WEBHOOK: '/api/activities/payments/webhook/',
 } as const;
 
@@ -41,9 +41,10 @@ export const API_ROUTE_BUILDERS = {
 		`${API_ROUTES.MESSAGES_CONVERSATIONS}${conversationId}/messages/`,
 	activitiesWithSearch: (query: string) => `${API_ROUTES.ACTIVITIES}?${query}`,
 	ticketPurchase: (activityId: number | string) =>
-		`${API_ROUTES.ACTIVITIES}${activityId}/tickets/buy/`,
+		`${API_ROUTES.ACTIVITIES}${activityId}/buy-ticket/`,
 	myTickets: () => API_ROUTES.TICKETS_MY,
-	validateTicket: () => API_ROUTES.TICKET_VALIDATE,
+	validateTicket: (ticketId: number | string) =>
+		`${API_ROUTES.ACTIVITIES}tickets/${ticketId}/validate/`,
 } as const;
 
 export interface Activity {

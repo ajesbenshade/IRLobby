@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     "django.contrib.sites",
     "corsheaders",
+    "waffle",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -121,6 +122,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "waffle.middleware.WaffleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -214,6 +216,8 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
+
+WAFFLE_FLAG_DEFAULT = False
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

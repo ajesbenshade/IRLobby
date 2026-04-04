@@ -248,6 +248,38 @@ class TicketingTests(APITestCase):
         self.assertEqual(ticket.status, "paid")
         self.assertIsNotNone(ticket.purchased_at)
 
+    @patch("activities.views.stripe.Webhook.construct_event")
+    def test_webhook_falls_back_to_ticket_id_metadata(self, mock_construct_event):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="pending",
+            stripe_session_id=None,
+        )
+
+        mock_construct_event.return_value = {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "missing_session",
+                    "metadata": {"ticket_id": str(ticket.ticket_id)},
+                    "payment_intent": "pi_test_456",
+                }
+            },
+        }
+
+        response = self.client.post(
+            reverse("stripe-webhook"),
+            data={},
+            format="json",
+            HTTP_STRIPE_SIGNATURE="sig",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "paid")
+        self.assertEqual(ticket.stripe_payment_intent_id, "pi_test_456")
+
     def test_my_tickets_returns_only_user_tickets(self):
         Ticket.objects.create(
             buyer=self.buyer,
@@ -280,7 +312,7 @@ class TicketingTests(APITestCase):
 
         self.client.force_authenticate(self.host)
         response = self.client.post(
-            reverse("ticket-validate"),
+            reverse("ticket-validate", args=[ticket.ticket_id]),
             data={"ticketToken": token},
             format="json",
         )
@@ -301,7 +333,7 @@ class TicketingTests(APITestCase):
 
         self.client.force_authenticate(self.host)
         response = self.client.post(
-            reverse("ticket-validate"),
+            reverse("ticket-validate", args=[ticket.ticket_id]),
             data={"ticketToken": token},
             format="json",
         )
@@ -320,7 +352,7 @@ class TicketingTests(APITestCase):
 
         self.client.force_authenticate(self.buyer)
         response = self.client.post(
-            reverse("ticket-validate"),
+            reverse("ticket-validate", args=[ticket.ticket_id]),
             data={"ticketToken": token},
             format="json",
         )

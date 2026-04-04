@@ -10,11 +10,15 @@ urlpatterns = [
     path("<int:pk>/leave/", views.leave_activity, name="leave-activity"),
     path("<int:pk>/chat/", views.activity_chat, name="activity-chat"),
     path(
-        "<int:pk>/tickets/buy/",
+        "<int:pk>/buy-ticket/",
         views.ActivityTicketPurchaseView.as_view(),
         name="activity-ticket-buy",
     ),
     path("tickets/my/", views.UserTicketListView.as_view(), name="ticket-list"),
-    path("tickets/validate/", views.ValidateTicketView.as_view(), name="ticket-validate"),
+    path(
+        "tickets/<uuid:ticket_id>/validate/",
+        views.ValidateTicketView.as_view(),
+        name="ticket-validate",
+    ),
     path("payments/webhook/", views.StripeWebhookView.as_view(), name="stripe-webhook"),
 ]

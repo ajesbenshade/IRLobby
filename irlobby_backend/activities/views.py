@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
+from waffle import flag_is_active
 
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
@@ -24,6 +25,10 @@ from .serializers import (
     TicketSerializer,
     TicketValidationSerializer,
 )
+
+
+def ticketing_enabled(request):
+    return flag_is_active(request, "ticketed_events_enabled") or settings.ENABLE_TICKETING
 
 
 class ActivityListCreateView(generics.ListCreateAPIView):
@@ -154,7 +159,7 @@ class ActivityTicketPurchaseView(APIView):
     throttle_classes = [TicketThrottle]
 
     def post(self, request, pk):
-        if not settings.ENABLE_TICKETING:
+        if not ticketing_enabled(request):
             return Response(
                 {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
@@ -244,10 +249,17 @@ class StripeWebhookView(APIView):
             session_data = event["data"]["object"]
             stripe_session_id = session_data.get("id")
             ticket = Ticket.objects.filter(stripe_session_id=stripe_session_id).first()
+            if not ticket:
+                metadata = session_data.get("metadata", {}) or {}
+                ticket_id = metadata.get("ticket_id")
+                if ticket_id:
+                    ticket = Ticket.objects.filter(ticket_id=ticket_id).first()
+
             if ticket and ticket.status != "paid":
                 ticket.status = "paid"
                 ticket.purchased_at = timezone.now()
-                ticket.save(update_fields=["status", "purchased_at"])
+                ticket.stripe_payment_intent_id = session_data.get("payment_intent")
+                ticket.save(update_fields=["status", "purchased_at", "stripe_payment_intent_id"])
                 Activity.objects.filter(pk=ticket.activity_id).update(
                     tickets_sold=F("tickets_sold") + 1
                 )
@@ -270,8 +282,8 @@ class ValidateTicketView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [TicketThrottle]
 
-    def post(self, request):
-        if not settings.ENABLE_TICKETING:
+    def post(self, request, ticket_id):
+        if not ticketing_enabled(request):
             return Response(
                 {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
@@ -285,6 +297,11 @@ class ValidateTicketView(APIView):
         except (BadSignature, ValueError):
             return Response(
                 {"message": "Invalid ticket token."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if str(ticket_uuid) != str(ticket_id):
+            return Response(
+                {"message": "Ticket identifier mismatch."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         ticket = get_object_or_404(Ticket, ticket_id=ticket_uuid, activity_id=activity_id)

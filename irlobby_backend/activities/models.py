@@ -2,8 +2,9 @@ import uuid
 
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
-from django.core.signing import Signer
+from django.core import signing
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 from users.models import User
 
 
@@ -97,6 +98,9 @@ class Ticket(models.Model):
     ticket_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     stripe_session_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_payment_intent_id = models.CharField(
+        max_length=255, blank=True, null=True, db_index=True
+    )
     qr_code_data_url = models.TextField(blank=True, default="")
     purchased_at = models.DateTimeField(null=True, blank=True)
     redeemed_at = models.DateTimeField(null=True, blank=True)
@@ -104,21 +108,31 @@ class Ticket(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["buyer"]),
+            models.Index(fields=["activity", "status"]),
+            models.Index(fields=["stripe_payment_intent_id"]),
+        ]
 
     def __str__(self):
         return f"Ticket({self.ticket_id}) for {self.activity}"
 
+    @property
+    def is_redeemable(self):
+        return self.status == "paid"
+
     def get_qr_token(self):
-        signer = Signer(salt="activity-ticket")
-        payload = f"{self.ticket_id}:{self.activity_id}"
-        return signer.sign(payload)
+        payload = {
+            "ticket_id": str(self.ticket_id),
+            "activity_id": self.activity_id,
+            "issued_at": timezone.now().isoformat(),
+        }
+        return signing.dumps(payload, salt="activity-ticket")
 
     @staticmethod
     def parse_qr_token(token):
-        signer = Signer(salt="activity-ticket")
-        unsigned = signer.unsign(token)
-        ticket_uuid, activity_id = unsigned.split(":")
-        return uuid.UUID(ticket_uuid), int(activity_id)
+        payload = signing.loads(token, salt="activity-ticket")
+        return uuid.UUID(payload["ticket_id"]), int(payload["activity_id"])
 
 
 class TicketRedemptionLog(models.Model):

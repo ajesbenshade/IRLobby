@@ -28,13 +28,14 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install JS dependencies
         run: npm ci
@@ -43,7 +44,7 @@ jobs:
         run: npm --prefix apps/mobile run typecheck
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 

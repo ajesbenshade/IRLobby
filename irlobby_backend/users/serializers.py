@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
+from utils.sanitize import strip_html
 
 from .models import Invite, PushDeviceToken, User
 
@@ -134,6 +135,9 @@ class UserOnboardingSerializer(serializers.Serializer):
     terms_accepted = serializers.BooleanField(required=False)
     privacy_accepted = serializers.BooleanField(required=False)
     onboarding_completed = serializers.BooleanField(required=False)
+
+    def validate_bio(self, value):
+        return strip_html(value)
 
     def to_internal_value(self, data):
         normalized_data = dict(data)

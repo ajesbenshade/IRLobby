@@ -3,6 +3,7 @@ from django.db.models import Q
 from matches.models import Match
 from rest_framework import serializers
 from users.models import User
+from utils.sanitize import strip_html
 
 from .models import Review
 
@@ -25,6 +26,9 @@ class ReviewSerializer(serializers.ModelSerializer):
     revieweePk = serializers.IntegerField(source="reviewee.id", read_only=True)
     activityPk = serializers.IntegerField(source="activity.id", read_only=True)
     comment = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_comment(self, value):
+        return strip_html(value)
 
     class Meta:
         model = Review

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from utils.sanitize import strip_html
 
 from .models import Activity, ActivityParticipant, Ticket
 
@@ -144,6 +145,9 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     def get_participant_count(self, obj):
         return obj.participants.filter(status="confirmed").count()
+
+    def validate_description(self, value):
+        return strip_html(value)
 
 
 class ActivityParticipantSerializer(serializers.ModelSerializer):

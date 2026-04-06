@@ -2,6 +2,7 @@ from activities.models import Activity
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from matches.models import Match
+from moderation.models import BlockedUser
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -32,6 +33,15 @@ def swipe_activity(request, pk):
 
     if direction not in ["left", "right"]:
         return Response({"error": "Invalid direction"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Prevent swiping on activities from/by blocked users
+    if (
+        BlockedUser.objects.filter(blocker=user, blocked=activity.host).exists()
+        or BlockedUser.objects.filter(blocker=activity.host, blocked=user).exists()
+    ):
+        return Response(
+            {"error": "Cannot interact with this user"}, status=status.HTTP_403_FORBIDDEN
+        )
 
     # Check if user already swiped on this activity
     existing_swipe = Swipe.objects.filter(user=user, activity=activity).first()

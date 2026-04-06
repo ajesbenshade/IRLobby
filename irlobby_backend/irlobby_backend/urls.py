@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+import logging
+
 from django.contrib import admin
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -38,8 +40,37 @@ def react_app(request):
     return render(request, "index.html")
 
 
+logger = logging.getLogger(__name__)
+
+
 def health_check(request):
-    return JsonResponse({"status": "ok"})
+    checks = {"status": "ok", "database": "ok", "redis": "ok"}
+
+    try:
+        from django.db import connection
+
+        connection.ensure_connection()
+    except Exception as exc:
+        logger.error("Health check database failure: %s", exc)
+        checks["database"] = "error"
+        checks["status"] = "degraded"
+        return JsonResponse(checks, status=503)
+
+    try:
+        import redis as redis_lib
+        from django.conf import settings
+
+        redis_conn = redis_lib.Redis.from_url(
+            getattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+        )
+        redis_conn.ping()
+    except Exception as exc:
+        logger.error("Health check redis failure: %s", exc)
+        checks["redis"] = "error"
+        checks["status"] = "degraded"
+        return JsonResponse(checks, status=503)
+
+    return JsonResponse(checks)
 
 
 urlpatterns = [
@@ -59,5 +90,6 @@ urlpatterns = [
     path("api/matches/", include("matches.urls")),
     path("api/messages/", include("chat.urls")),
     path("api/reviews/", include("reviews.urls")),
+    path("api/moderation/", include("moderation.urls")),
     re_path(r"^(?!api|admin).*$", react_app),  # Serve React for non-API routes
 ]

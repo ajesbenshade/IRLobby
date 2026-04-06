@@ -33,6 +33,7 @@ pycparser==2.22
 pyOpenSSL==25.1.0
 PyJWT==2.10.1
 pytest==8.3.2
+pytest-asyncio==0.23.8
 pytest-cov==5.0.0
 pytest-django==4.8.0
 redis==5.0.7

@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "channels",
     "users",
     "activities",
+    "moderation",
     "swipes",
     "matches",
     "chat",
@@ -74,7 +75,7 @@ AUTH_USER_MODEL = "users.User"
 
 # Django AllAuth settings
 SITE_ID = 1
-ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
@@ -98,6 +99,8 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_RATES": {
         "auth_anon": "10/min",
         "auth_user": "30/min",
@@ -335,14 +338,24 @@ if SENTRY_DSN:
         environment=config("SENTRY_ENVIRONMENT", default="production"),
     )
 
-# Email logging
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
     "loggers": {
         "django.core.mail": {

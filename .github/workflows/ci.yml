@@ -43,6 +43,9 @@ jobs:
       - name: Check mobile client
         run: npm --prefix apps/mobile run typecheck
 
+      - name: Run mobile tests
+        run: npm --prefix apps/mobile test -- --ci --passWithNoTests
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -87,7 +90,7 @@ jobs:
       - name: Run tests (pytest)
         working-directory: irlobby_backend
         run: |
-          pytest
+          pytest --cov-report=xml
 
       - name: Lint Python (optional)
         working-directory: irlobby_backend

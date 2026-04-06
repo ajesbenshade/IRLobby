@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from matches.models import Match
+from moderation.models import BlockedUser
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -36,9 +37,19 @@ class ActivityListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Activity.objects.filter(
-            Q(is_approved=True) | Q(host=self.request.user)
-        ).distinct()
+        blocked_ids = BlockedUser.objects.filter(blocker=self.request.user).values_list(
+            "blocked_id", flat=True
+        )
+        blocked_by_ids = BlockedUser.objects.filter(blocked=self.request.user).values_list(
+            "blocker_id", flat=True
+        )
+        exclude_ids = set(blocked_ids) | set(blocked_by_ids)
+
+        queryset = (
+            Activity.objects.filter(Q(is_approved=True) | Q(host=self.request.user))
+            .exclude(host_id__in=exclude_ids)
+            .distinct()
+        )
 
         if self.request.user.is_staff:
             queryset = Activity.objects.all()

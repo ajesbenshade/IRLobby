@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from utils.sanitize import strip_html
 
 from .models import Conversation, Message
 
@@ -13,6 +14,9 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = ("id", "userId", "user", "message", "createdAt")
         read_only_fields = ("id", "createdAt", "userId", "user")
+
+    def validate_message(self, value):
+        return strip_html(value)
 
     def get_userId(self, obj):
         return obj.sender.id

@@ -1,4 +1,6 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from moderation.models import BlockedUser
 from rest_framework import generics, serializers
 from rest_framework.permissions import IsAuthenticated
 from users.push_notifications import send_new_message_notification
@@ -13,8 +15,16 @@ class ConversationListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Conversation.objects.filter(match__user_a=user) | Conversation.objects.filter(
-            match__user_b=user
+        blocked_ids = BlockedUser.objects.filter(blocker=user).values_list("blocked_id", flat=True)
+        blocked_by_ids = BlockedUser.objects.filter(blocked=user).values_list(
+            "blocker_id", flat=True
+        )
+        exclude_ids = set(blocked_ids) | set(blocked_by_ids)
+
+        return (
+            Conversation.objects.filter(Q(match__user_a=user) | Q(match__user_b=user))
+            .exclude(match__user_a_id__in=exclude_ids)
+            .exclude(match__user_b_id__in=exclude_ids)
         )
 
 

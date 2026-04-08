@@ -63,7 +63,8 @@ Follow the Expo CLI instructions to open the app in a simulator or on device.
 Production iOS builds can be triggered automatically from GitHub Actions via `.github/workflows/mobile-eas-build.yml` once:
 
 1. the `EXPO_TOKEN` repository secret is configured, and
-2. one successful manual `eas build -p ios --profile production` has been completed so EAS has the required iOS credentials.
+2. one successful manual `eas build -p ios --profile production` has been completed so EAS has the required iOS build credentials, and
+3. one successful manual `eas submit -p ios --profile production` has been completed, or an App Store Connect API key has been configured in Expo, so CI can submit non-interactively.
 
 See `apps/mobile/APP_STORE_RELEASE.md` for the current release process.
 

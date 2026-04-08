@@ -1,6 +1,6 @@
 # iOS App Store Release Checklist (IRLobby Mobile)
 
-Use this checklist to publish `irlobby_mobile` with your Apple Developer account.
+Use this checklist to publish `apps/mobile` with your Apple Developer account.
 
 > `apps/web` is archived in this repository and is no longer a supported deployment target. Mobile is the only actively released client.
 
@@ -19,12 +19,13 @@ Required one-time setup:
 
 1. Create an Expo access token from your Expo account.
 2. Add it to GitHub repository secrets as `EXPO_TOKEN`.
-3. Run one successful `eas build -p ios --profile production` manually on a trusted machine and complete any Apple credential prompts so EAS stores the required iOS credentials remotely.
+3. Run one successful `eas build -p ios --profile production` manually on a trusted machine and complete any Apple credential prompts so EAS stores the required iOS build credentials remotely.
+4. Run one successful `eas submit -p ios --profile production` manually on a trusted machine, or configure an App Store Connect API key in Expo, so non-interactive submissions can complete from CI.
 
 Notes:
 - Automatic builds use `.github/workflows/mobile-eas-build.yml`.
-- The workflow triggers `eas build --platform ios --profile production --non-interactive --no-wait`.
-- If EAS still needs missing Apple credentials, the GitHub workflow will fail until the one-time manual credential setup is finished.
+- The workflow triggers `eas build --platform ios --profile production --auto-submit --non-interactive --no-wait`.
+- If EAS still needs missing Apple build or App Store Connect submit credentials, the GitHub workflow will fail until the one-time manual setup is finished.
 
 ## 2) Configure production environment values
 
@@ -67,7 +68,7 @@ Make sure this matches the App ID in Apple Developer + App Store Connect.
 
 ## 4) Build production iOS binary
 
-From `irlobby_mobile`:
+From `apps/mobile`:
 
 ```bash
 npm install
@@ -85,6 +86,8 @@ npm run submit:ios
 ```
 
 This runs `eas submit -p ios --profile production`.
+
+If you rely on GitHub Actions, the same submit step now runs automatically after a successful production iOS build because the workflow uses EAS auto-submit.
 
 ## 6) App Store Connect metadata
 

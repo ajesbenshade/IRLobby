@@ -80,4 +80,4 @@ jobs:
         run: npm run typecheck
 
       - name: Trigger iOS production build
-        run: eas build --platform ios --profile production --non-interactive --no-wait
+        run: eas build --platform ios --profile production --auto-submit --non-interactive --no-wait

@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: appColors.card,
     borderWidth: 1,
-    borderColor: '#f3dfe8',
+    borderColor: appColors.line,
     ...shadows.card,
   },
   panelAccent: {

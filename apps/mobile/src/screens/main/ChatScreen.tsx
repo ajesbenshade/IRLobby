@@ -229,23 +229,23 @@ export const ChatScreen = () => {
       }
     >
       <PageHeader
-        eyebrow="Sparks"
-        title="Keep the momentum warm"
-        subtitle="Fresh sparks, active chats, and the people most likely to turn into an actual plan all live here."
+        eyebrow="Chat"
+        title="Your conversations"
+        subtitle="New matches and active chats live here."
       />
 
       <PanelCard style={styles.summaryCard} tone="warm">
         <View style={styles.summaryTopRow}>
-          <AccentPill tone="secondary">{sparkCount} sparks</AccentPill>
-          <AccentPill tone="neutral">{activeThreads} active chats</AccentPill>
+          <AccentPill tone="secondary">{sparkCount} new</AccentPill>
+          <AccentPill tone="neutral">{activeThreads} active</AccentPill>
         </View>
         <Text variant="titleMedium" style={styles.summaryTitle}>
           {freshSparkCount > 0
-            ? `${freshSparkCount} new spark${freshSparkCount === 1 ? '' : 's'} landed in the last day.`
-            : 'Your next spark is one good swipe away.'}
+            ? `${freshSparkCount} new match${freshSparkCount === 1 ? '' : 'es'} today.`
+            : 'Match with someone to start a chat.'}
         </Text>
         <Text style={styles.summaryText}>
-          Open the chats that already have energy, or head back to Discover when you want to find someone new to talk to.
+          Reply to the chats with momentum, or head back to Discover.
         </Text>
       </PanelCard>
 
@@ -264,15 +264,15 @@ export const ChatScreen = () => {
         </View>
       )}
 
-      {conversationsLoading && <Text style={styles.loadingText}>Loading your sparks...</Text>}
+      {conversationsLoading && <Text style={styles.loadingText}>Loading your chats…</Text>}
 
       {!conversationsLoading && conversations.length === 0 ? (
         <EmptyStatePanel
-          title="No active sparks yet"
-          description="Once you match and someone sends the first message, this turns into your running list of people and plans with momentum."
+          title="No chats yet"
+          description="Match with someone or join a plan to start chatting."
           action={
             <Button mode="contained" buttonColor={appColors.primary} onPress={() => queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] })}>
-              Check for fresh energy
+              Find someone to chat
             </Button>
           }
         />

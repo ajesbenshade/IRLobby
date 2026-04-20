@@ -4,7 +4,8 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, HelperText, Modal, Portal, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, Text } from 'react-native-paper';
+import * as Haptics from 'expo-haptics';
 
 import {
   AccentPill,
@@ -13,9 +14,10 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { MatchCelebration } from '@components/MatchCelebration';
+import { Skeleton } from '@components/Skeleton';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
-import { HomeOverviewContent } from '@screens/main/HomeScreen';
 import type { MainStackParamList } from '@navigation/types';
 import {
   fetchActivities,
@@ -35,7 +37,6 @@ export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
   const pan = useRef(new Animated.ValueXY()).current;
-  const [activeSegment, setActiveSegment] = useState<'discover' | 'home'>('discover');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -52,8 +53,6 @@ export const DiscoverScreen = () => {
   const [priceMaxFilter, setPriceMaxFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
-  const matchCardOpacity = useRef(new Animated.Value(0)).current;
-  const matchCardLift = useRef(new Animated.Value(16)).current;
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -120,7 +119,8 @@ export const DiscoverScreen = () => {
       swipeActivity(activityId, direction),
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
-        setMatchMessage('New spark unlocked. Your match is waiting in chat.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setMatchMessage('It’s a match. Say hi in chat.');
       } else {
         setMatchMessage(null);
       }
@@ -193,6 +193,12 @@ export const DiscoverScreen = () => {
       if (!currentActivity || isBusy) {
         return;
       }
+
+      void Haptics.impactAsync(
+        direction === 'right'
+          ? Haptics.ImpactFeedbackStyle.Medium
+          : Haptics.ImpactFeedbackStyle.Light,
+      );
 
       animateSwipe(direction, () => {
         swipeMutation.mutate({
@@ -278,77 +284,24 @@ export const DiscoverScreen = () => {
     ? new Date(currentActivity.time).toLocaleString()
     : 'Time TBD';
 
-  useEffect(() => {
-    if (!matchMessage) {
-      matchCardOpacity.setValue(0);
-      matchCardLift.setValue(16);
-      return;
-    }
-
-    Animated.parallel([
-      Animated.timing(matchCardOpacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.spring(matchCardLift, {
-        toValue: 0,
-        friction: 8,
-        tension: 120,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [matchCardLift, matchCardOpacity, matchMessage]);
-
   return (
+    <>
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <PageHeader
-        eyebrow={activeSegment === 'discover' ? 'For you' : 'Quick pulse'}
-        title={activeSegment === 'discover' ? 'Find the plan worth leaving for' : 'A fast read on your scene'}
-        subtitle={
-          activeSegment === 'discover'
-            ? 'Scroll the live deck first, then flip over to Home whenever you want the quick version of what you are hosting.'
-            : 'Check your counts, latest hosted plans, and jump back into discovery without adding another tab.'
-        }
+        eyebrow="For you"
+        title="Plans worth leaving for"
+        subtitle="Swipe through what's happening near you tonight."
         rightContent={
-          activeSegment === 'discover' ? (
-            <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
-              Pings
-            </Button>
-          ) : null
+          <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
+            Pings
+          </Button>
         }
       />
 
-      <PanelCard style={styles.segmentShell} tone={activeSegment === 'discover' ? 'default' : 'warm'}>
-        <View style={styles.segmentShellHeader}>
-          <AccentPill tone={activeSegment === 'discover' ? 'secondary' : 'neutral'}>
-            {activeSegment === 'discover' ? 'Swipe mode' : 'Pulse mode'}
-          </AccentPill>
-          <Text style={styles.segmentShellCopy}>
-            {activeSegment === 'discover'
-              ? 'Discover stays front and center. Home is still one tap away when you want the quick version.'
-              : 'Home stays compact here so the swipe deck keeps the spotlight.'}
-          </Text>
-        </View>
-        <SegmentedButtons
-          value={activeSegment}
-          onValueChange={(value) => setActiveSegment(value as 'discover' | 'home')}
-          buttons={[
-            { value: 'discover', label: 'Discover' },
-            { value: 'home', label: 'Home' },
-          ]}
-          style={styles.segmentedControl}
-        />
-      </PanelCard>
-
-      {activeSegment === 'home' ? (
-        <HomeOverviewContent compact onOpenDiscover={() => setActiveSegment('discover')} />
-      ) : (
-        <>
-          <View style={styles.toolbar}>
+      <View style={styles.toolbar}>
             <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
               {showFilters ? 'Hide vibe filters' : `Vibe filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
             </Button>
@@ -465,7 +418,17 @@ export const DiscoverScreen = () => {
             </PanelCard>
           ) : null}
 
-          {isLoading ? <Text style={styles.loadingText}>Pulling in fresh plans...</Text> : null}
+          {isLoading ? (
+            <PanelCard style={styles.skeletonCard}>
+              <Skeleton width={120} height={20} />
+              <View style={{ height: 12 }} />
+              <Skeleton height={220} radius={20} />
+              <View style={{ height: 12 }} />
+              <Skeleton width="70%" height={16} />
+              <View style={{ height: 8 }} />
+              <Skeleton width="50%" height={14} />
+            </PanelCard>
+          ) : null}
 
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>
@@ -482,22 +445,6 @@ export const DiscoverScreen = () => {
             <HelperText type="error" visible>
               {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
             </HelperText>
-          ) : null}
-
-          {matchMessage ? (
-            <AnimatedView
-              style={{
-                opacity: matchCardOpacity,
-                transform: [{ translateY: matchCardLift }],
-              }}
-            >
-              <PanelCard style={styles.matchCard} tone="accent">
-                <AccentPill tone="secondary">New spark</AccentPill>
-                <Text variant="titleMedium" style={styles.matchTitle}>
-                  {matchMessage}
-                </Text>
-              </PanelCard>
-            </AnimatedView>
           ) : null}
 
           {!isLoading && activities.length === 0 ? (
@@ -654,31 +601,19 @@ export const DiscoverScreen = () => {
               ) : null}
             </Modal>
           </Portal>
-        </>
-      )}
     </AppScrollView>
+    <MatchCelebration
+      visible={!!matchMessage}
+      message={matchMessage ?? undefined}
+      onDismiss={() => setMatchMessage(null)}
+    />
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     gap: 16,
-  },
-  segmentShell: {
-    gap: 12,
-    paddingVertical: 14,
-    backgroundColor: '#fff1f6',
-    borderColor: '#ffd2e0',
-  },
-  segmentShellHeader: {
-    gap: 8,
-  },
-  segmentShellCopy: {
-    color: appColors.mutedInk,
-    lineHeight: 20,
-  },
-  segmentedControl: {
-    marginBottom: 0,
   },
   toolbar: {
     flexDirection: 'row',
@@ -688,6 +623,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: appColors.mutedInk,
+  },
+  skeletonCard: {
+    gap: 0,
   },
   filterCard: {
     gap: 8,
@@ -735,14 +673,6 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     gap: 8,
-  },
-  matchCard: {
-    gap: 10,
-    borderColor: '#b5f1e5',
-  },
-  matchTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
   },
   animatedCard: {
     width: '100%',

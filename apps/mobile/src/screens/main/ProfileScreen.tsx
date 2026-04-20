@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
@@ -11,10 +12,11 @@ import { API_ROUTES } from '@shared/schema';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
 import { Image, Text as NativeText, View } from '@components/RNCompat';
+import { ProfileCompletionRing } from '@components/ProfileCompletionRing';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { updateOnboarding } from '@services/authService';
-import { appColors, appTypography } from '@theme/index';
+import { appColors, appTypography, palette, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { MainStackParamList } from '@navigation/types';
@@ -181,36 +183,52 @@ export const ProfileScreen = () => {
         subtitle="Shape the profile people scan before they join your plan, match with you, or open the chat."
       />
 
-      <PanelCard style={styles.heroCard} tone="accent">
-        <View style={styles.heroTopRow}>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarFallbackText}>{(firstName || user?.email || 'U').charAt(0).toUpperCase()}</Text>
+      <ProfileCompletionRing />
+
+      <View style={styles.heroShell}>
+        <LinearGradient
+          colors={[palette.primary, palette.primaryDeep]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroGradient}
+        />
+        <View style={styles.heroContent}>
+          <View style={styles.heroTopRow}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>{(firstName || user?.email || 'U').charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.heroCopy}>
+              <NativeText style={styles.heroBadge}>Public vibe</NativeText>
+              <Text variant="titleLarge" style={styles.heroName}>
+                {[firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Your profile'}
+              </Text>
+              <Text style={styles.heroEmail}>{user?.email ?? 'Not signed in'}</Text>
+              <Text style={styles.heroSubline}>
+                {bio?.trim() || 'Add a quick line so people know what kind of energy you bring.'}
+              </Text>
             </View>
-          )}
-          <View style={styles.heroCopy}>
-            <AccentPill>Public vibe</AccentPill>
-            <Text variant="titleLarge" style={styles.heroName}>
-              {[firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Your profile'}
-            </Text>
-            <Text style={styles.heroEmail}>{user?.email ?? 'Not signed in'}</Text>
-            <Text style={styles.heroSubline}>
-              {bio?.trim() || 'Add a quick line so people know what kind of energy you bring.'}
-            </Text>
           </View>
+          <Button
+            mode="contained"
+            onPress={pickAvatarFromLibrary}
+            style={styles.inlineButton}
+            buttonColor="rgba(255,255,255,0.18)"
+            textColor={appColors.white}
+          >
+            Update avatar
+          </Button>
         </View>
-        <Button mode="outlined" onPress={pickAvatarFromLibrary} style={styles.inlineButton}>
-          Update avatar
-        </Button>
-      </PanelCard>
+      </View>
 
       <PanelCard>
         <SectionIntro
           eyebrow="Intro"
           title="Give people the quick read"
-          subtitle="This is the identity layer people see across plans, sparks, and chat."
+          subtitle="How you show up across plans and chats."
         />
         <View style={styles.row}>
           <TextInput label="First name" value={firstName} onChangeText={setFirstName} mode="outlined" style={[styles.input, styles.half]} />
@@ -367,6 +385,26 @@ const styles = StyleSheet.create({
     gap: 12,
     borderColor: '#bff0e6',
   },
+  heroShell: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroContent: {
+    gap: 16,
+    padding: 24,
+  },
+  heroBadge: {
+    color: appColors.white,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    opacity: 0.85,
+  },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,15 +415,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   heroName: {
-    color: appColors.ink,
+    color: appColors.white,
     fontFamily: appTypography.headingDisplay,
     letterSpacing: -0.8,
   },
   heroEmail: {
-    color: appColors.mutedInk,
+    color: 'rgba(255,255,255,0.75)',
   },
   heroSubline: {
-    color: appColors.mutedInk,
+    color: 'rgba(255,255,255,0.92)',
     lineHeight: 20,
   },
   input: {

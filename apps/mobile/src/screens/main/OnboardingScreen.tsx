@@ -1,10 +1,9 @@
-import * as Contacts from 'expo-contacts';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Share, StyleSheet } from 'react-native';
-import { Button, HelperText, RadioButton, Switch, Text } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Button, HelperText, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -18,10 +17,9 @@ import {
 } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
 import { Image, View } from '@components/RNCompat';
-import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
-import { createInvite, updateOnboarding } from '@services/authService';
+import { updateOnboarding } from '@services/authService';
 import {
   deactivatePushTokens,
   registerCurrentDevicePushToken,
@@ -31,18 +29,11 @@ import { getErrorMessage } from '@utils/error';
 
 const MAX_INTERESTS = 20;
 const MAX_PHOTOS = 12;
-const TERMS_URL = 'https://liyf.app/terms-of-service';
-const PRIVACY_URL = 'https://liyf.app/privacy-policy';
 
-const STEP_ORDER = [
-  'welcome',
-  'basics',
-  'photo',
-  'preferences',
-  'legal',
-  'notifications',
-  'invites',
-] as const;
+// Onboarding ships in 3 steps (photo, vibe, notifications). Bio, detailed
+// preferences, and invites moved out: legal lives on the Register screen,
+// the rest are surfaced via the Profile completion ring.
+const STEP_ORDER = ['photo', 'preferences', 'notifications'] as const;
 
 type OnboardingStepKey = (typeof STEP_ORDER)[number];
 
@@ -54,47 +45,20 @@ const STEP_COPY: Record<
     subtitle: string;
   }
 > = {
-  welcome: {
-    eyebrow: 'First-time setup',
-    title: 'Set up your account with less friction',
-    subtitle:
-      'Get into discovery fast. Only the essentials block entry, and the rest can wait until you have context.',
-  },
-  basics: {
-    eyebrow: 'Step 1',
-    title: 'Start with the profile basics',
-    subtitle:
-      'A short bio and your city give people enough context to understand who you are before they match or chat.',
-  },
   photo: {
-    eyebrow: 'Step 2',
-    title: 'Add a recognizable profile photo',
-    subtitle:
-      'One clear photo is the minimum trust signal. Your album can stay light and you can add more later.',
+    eyebrow: 'Step 1 of 3',
+    title: 'Add a photo',
+    subtitle: 'Show up as you. Real photo, real plans.',
   },
   preferences: {
-    eyebrow: 'Step 3',
-    title: 'Tell the app what you want to do',
-    subtitle:
-      'Add interests or a few activity preferences so recommendations and introductions feel intentional from day one.',
-  },
-  legal: {
-    eyebrow: 'Step 4',
-    title: 'Review the policies that matter',
-    subtitle:
-      'Terms and privacy acceptance are required before the account can fully enter the app.',
+    eyebrow: 'Step 2 of 3',
+    title: 'Pick your vibe',
+    subtitle: 'What are you up for? Pick a few.',
   },
   notifications: {
-    eyebrow: 'Optional',
-    title: 'Decide whether IRLobby can notify you',
-    subtitle:
-      'This is optional. Turn it on now if you want match, chat, and invite activity to reach you on device.',
-  },
-  invites: {
-    eyebrow: 'Optional',
-    title: 'Invite a few people to make the app feel alive',
-    subtitle:
-      'You can skip this and enter the app now, or send a couple of invites so your first matches do not depend only on discovery.',
+    eyebrow: 'Step 3 of 3',
+    title: 'Stay in the loop',
+    subtitle: 'Get matches and plan updates without keeping the app open.',
   },
 };
 
@@ -124,11 +88,9 @@ const hasTruthyPreference = (preferences: Record<string, unknown> | undefined) =
 
 export const OnboardingScreen = () => {
   const { user, refreshProfile, signOut } = useAuth();
-  const [currentStep, setCurrentStep] = useState<OnboardingStepKey>('welcome');
+  const [currentStep, setCurrentStep] = useState<OnboardingStepKey>('photo');
   const [stepError, setStepError] = useState<string | null>(null);
 
-  const [bio, setBio] = useState('');
-  const [city, setCity] = useState('');
   const [interestsInput, setInterestsInput] = useState('');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [photoAlbum, setPhotoAlbum] = useState<string[]>([]);
@@ -136,13 +98,7 @@ export const OnboardingScreen = () => {
   const [outdoor, setOutdoor] = useState(false);
   const [smallGroups, setSmallGroups] = useState(false);
   const [weekendPreferred, setWeekendPreferred] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [enableNotifications, setEnableNotifications] = useState(false);
-
-  const [inviteName, setInviteName] = useState('');
-  const [inviteContact, setInviteContact] = useState('');
-  const [inviteChannel, setInviteChannel] = useState<'sms' | 'email'>('sms');
 
   const interests = useMemo(
     () =>
@@ -159,23 +115,7 @@ export const OnboardingScreen = () => {
 
   const resolveInitialStep = (nextUser: typeof user): OnboardingStepKey => {
     if (!nextUser) {
-      return 'welcome';
-    }
-
-    const hasStarted = Boolean(
-      nextUser.bio?.trim() ||
-        nextUser.city?.trim() ||
-        nextUser.avatarUrl?.trim() ||
-        nextUser.interests?.length ||
-        hasTruthyPreference(nextUser.activityPreferences),
-    );
-
-    if (!hasStarted && !nextUser.legalAccepted) {
-      return 'welcome';
-    }
-
-    if (!nextUser.bio?.trim() || !nextUser.city?.trim()) {
-      return 'basics';
+      return 'photo';
     }
 
     if (!nextUser.avatarUrl?.trim()) {
@@ -186,16 +126,10 @@ export const OnboardingScreen = () => {
       return 'preferences';
     }
 
-    if (!nextUser.legalAccepted) {
-      return 'legal';
-    }
-
     return 'notifications';
   };
 
   useEffect(() => {
-    setBio(user?.bio ?? '');
-    setCity(user?.city ?? '');
     setInterestsInput((user?.interests ?? []).join(', '));
     setProfilePhotoUrl(user?.avatarUrl ?? '');
     setPhotoAlbum(user?.photoAlbum ?? []);
@@ -205,15 +139,17 @@ export const OnboardingScreen = () => {
     setOutdoor(Boolean(activityPreferences.outdoor));
     setSmallGroups(Boolean(activityPreferences.smallGroups ?? activityPreferences.group_size === 'small'));
     setWeekendPreferred(Boolean(activityPreferences.weekendPreferred));
-    setAcceptTerms(Boolean(user?.termsAccepted));
-    setAcceptPrivacy(Boolean(user?.privacyAccepted));
     setEnableNotifications(Boolean(user?.pushNotificationsEnabled));
 
     const nextStep = resolveInitialStep(user);
     setCurrentStep((previous) => {
+      // Only advance forward; never bounce a user back to an earlier step.
       const previousIndex = STEP_ORDER.indexOf(previous);
       const nextIndex = STEP_ORDER.indexOf(nextStep);
-      return previous === 'welcome' || nextIndex > previousIndex ? nextStep : previous;
+      if (previousIndex < 0 || nextIndex > previousIndex) {
+        return nextStep;
+      }
+      return previous;
     });
   }, [user]);
 
@@ -222,10 +158,6 @@ export const OnboardingScreen = () => {
     onSuccess: async () => {
       await refreshProfile();
     },
-  });
-
-  const inviteMutation = useMutation({
-    mutationFn: createInvite,
   });
 
   const notificationsMutation = useMutation({
@@ -277,78 +209,6 @@ export const OnboardingScreen = () => {
       }
     } catch (error) {
       setStepError(getErrorMessage(error, 'Unable to save this step right now.'));
-    }
-  };
-
-  const sendManualInvite = async () => {
-    if (!inviteContact.trim()) {
-      return;
-    }
-
-    try {
-      const invite = await inviteMutation.mutateAsync({
-        contact_name: inviteName,
-        contact_value: inviteContact.trim(),
-        channel: inviteChannel,
-      });
-
-      const inviteLink = `${config.apiBaseUrl.replace('/api', '')}/invite/${invite.token}`;
-      await Share.share({
-        message: `Join me on IRLobby: ${inviteLink}`,
-      });
-
-      setInviteName('');
-      setInviteContact('');
-    } catch (error) {
-      setStepError(getErrorMessage(error, 'Unable to create invite.'));
-    }
-  };
-
-  const importContactsAndInvite = async () => {
-    try {
-      const permission = await Contacts.requestPermissionsAsync();
-      if (permission.status !== 'granted') {
-        setStepError('Contacts permission was not granted. You can still invite by email or phone number.');
-        return;
-      }
-
-      const result = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
-        pageSize: 200,
-      });
-
-      const firstInvitable = result.data.find(
-        (contact) =>
-          (contact.phoneNumbers && contact.phoneNumbers.length > 0) ||
-          (contact.emails && contact.emails.length > 0),
-      );
-
-      if (!firstInvitable) {
-        setStepError('No invitable contacts were found on this device.');
-        return;
-      }
-
-      const contactValue =
-        firstInvitable.phoneNumbers?.[0]?.number ?? firstInvitable.emails?.[0]?.email ?? '';
-
-      if (!contactValue) {
-        setStepError('The selected contact does not have a phone number or email address.');
-        return;
-      }
-
-      const invite = await inviteMutation.mutateAsync({
-        contact_name: firstInvitable.name,
-        contact_value: contactValue,
-        channel: firstInvitable.phoneNumbers?.length ? 'sms' : 'email',
-      });
-
-      const inviteLink = `${config.apiBaseUrl.replace('/api', '')}/invite/${invite.token}`;
-      await Share.share({
-        message: `Join me on IRLobby: ${inviteLink}`,
-      });
-      setStepError(null);
-    } catch (error) {
-      setStepError(getErrorMessage(error, 'Unable to import contacts right now.'));
     }
   };
 
@@ -406,26 +266,6 @@ export const OnboardingScreen = () => {
     setPhotoAlbum((previous) => previous.filter((_, currentIndex) => currentIndex !== index));
   };
 
-  const handleWelcomeContinue = () => {
-    setStepError(null);
-    setCurrentStep('basics');
-  };
-
-  const handleBasicsContinue = async () => {
-    if (!bio.trim() || !city.trim()) {
-      setStepError('Add a short bio and your city to continue.');
-      return;
-    }
-
-    await saveOnboardingStep(
-      {
-        bio: bio.trim(),
-        city: city.trim(),
-      },
-      'photo',
-    );
-  };
-
   const handlePhotoContinue = async () => {
     if (!profilePhotoUrl.trim()) {
       setStepError('Choose one profile photo before continuing.');
@@ -443,7 +283,7 @@ export const OnboardingScreen = () => {
 
   const handlePreferencesContinue = async () => {
     if (interests.length === 0 && selectedPreferenceCount === 0) {
-      setStepError('Add at least one interest or turn on one activity preference to continue.');
+      setStepError('Pick at least one vibe to continue.');
       return;
     }
 
@@ -458,21 +298,6 @@ export const OnboardingScreen = () => {
           weekendPreferred,
         },
       },
-      'legal',
-    );
-  };
-
-  const handleLegalContinue = async () => {
-    if (!acceptTerms || !acceptPrivacy) {
-      setStepError('Accept both the terms of service and privacy policy to continue.');
-      return;
-    }
-
-    await saveOnboardingStep(
-      {
-        terms_accepted: true,
-        privacy_accepted: true,
-      },
       'notifications',
     );
   };
@@ -483,106 +308,12 @@ export const OnboardingScreen = () => {
 
     try {
       await notificationsMutation.mutateAsync(enableNotifications);
-      setCurrentStep('invites');
+      // Notifications is the last step — finish onboarding immediately.
+      await saveOnboardingStep({ onboarding_completed: true });
     } catch (error) {
       setStepError(getErrorMessage(error, 'Unable to update notification access right now.'));
     }
   };
-
-  const handleFinish = async () => {
-    await saveOnboardingStep(
-      {
-        onboarding_completed: true,
-      },
-    );
-  };
-
-  const openLegalUrl = async (url: string) => {
-    try {
-      await Linking.openURL(url);
-    } catch (error) {
-      setStepError(getErrorMessage(error, 'Unable to open that link right now.'));
-    }
-  };
-
-  const renderWelcomeStep = () => (
-    <>
-      <PanelCard tone="accent" style={styles.heroCard}>
-        <AccentPill>Fast path</AccentPill>
-        <Text variant="headlineSmall" style={styles.heroTitle}>
-          The app only needs the essentials before you can start exploring.
-        </Text>
-        <Text style={styles.heroSubtitle}>
-          We will guide you through the minimum setup that makes your account feel real, then give
-          you a clean chance to enable notifications and invite people without forcing either one.
-        </Text>
-        <View style={styles.heroStatsRow}>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatValue}>4</Text>
-            <Text style={styles.heroStatLabel}>Required steps</Text>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatValue}>2</Text>
-            <Text style={styles.heroStatLabel}>Optional steps</Text>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatValue}>1</Text>
-            <Text style={styles.heroStatLabel}>Photo required</Text>
-          </View>
-        </View>
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="What this unlocks"
-          title="Enough context to make discovery useful"
-          subtitle="The goal is not to create a perfect profile in one sitting. The goal is to avoid an empty account shell."
-        />
-        <DetailRow
-          title="Profile basics"
-          subtitle="Bio and city give people a quick read on who you are and where you show up."
-        />
-        <DetailRow
-          title="A recognizable photo"
-          subtitle="One clear image raises trust far more than a long text profile."
-        />
-        <DetailRow
-          title="Interests or activity preferences"
-          subtitle="The app needs at least one signal to personalize recommendations."
-        />
-        <DetailRow
-          title="Policy acceptance"
-          subtitle="Terms and privacy need to be accepted before onboarding can complete."
-        />
-      </PanelCard>
-    </>
-  );
-
-  const renderBasicsStep = () => (
-    <PanelCard>
-      <SectionIntro
-        eyebrow="Profile basics"
-        title="Tell people what kind of energy you bring"
-        subtitle="Keep this concise and human. You can refine it later once you know how you want to use the app."
-      />
-      <TextInput
-        label="Short bio"
-        value={bio}
-        onChangeText={setBio}
-        multiline
-        mode="outlined"
-        style={styles.input}
-      />
-      <TextInput
-        label="City"
-        value={city}
-        onChangeText={setCity}
-        mode="outlined"
-        style={styles.input}
-      />
-      <Text style={styles.helperCopy}>Your name already comes from account creation. This step only needs the context that helps people place you.</Text>
-    </PanelCard>
-  );
 
   const renderPhotoStep = () => (
     <>
@@ -711,48 +442,6 @@ export const OnboardingScreen = () => {
     </>
   );
 
-  const renderLegalStep = () => (
-    <PanelCard>
-      <SectionIntro
-        eyebrow="Required acceptance"
-        title="Review the terms and privacy policy"
-        subtitle="Both need to be accepted before onboarding can finish. Each link opens the current hosted policy."
-      />
-      <View style={styles.legalCardWrap}>
-        <View style={styles.legalCard}>
-          <View style={styles.legalCopy}>
-            <Text style={styles.legalTitle}>Terms of Service</Text>
-            <Text style={styles.legalSubtitle}>Read the rules that govern account use, participation, and platform behavior.</Text>
-          </View>
-          <Button mode="text" onPress={() => void openLegalUrl(TERMS_URL)}>
-            Open
-          </Button>
-        </View>
-        <DetailRow
-          title="I accept the terms of service"
-          subtitle="Required before your account can finish onboarding."
-          accessory={<Switch value={acceptTerms} onValueChange={setAcceptTerms} />}
-        />
-      </View>
-      <View style={styles.legalCardWrap}>
-        <View style={styles.legalCard}>
-          <View style={styles.legalCopy}>
-            <Text style={styles.legalTitle}>Privacy Policy</Text>
-            <Text style={styles.legalSubtitle}>Review how the app stores profile data, preferences, and account information.</Text>
-          </View>
-          <Button mode="text" onPress={() => void openLegalUrl(PRIVACY_URL)}>
-            Open
-          </Button>
-        </View>
-        <DetailRow
-          title="I accept the privacy policy"
-          subtitle="Required before your account can finish onboarding."
-          accessory={<Switch value={acceptPrivacy} onValueChange={setAcceptPrivacy} />}
-        />
-      </View>
-    </PanelCard>
-  );
-
   const renderNotificationsStep = () => (
     <PanelCard>
       <SectionIntro
@@ -771,118 +460,31 @@ export const OnboardingScreen = () => {
     </PanelCard>
   );
 
-  const renderInvitesStep = () => (
-    <PanelCard>
-      <SectionIntro
-        eyebrow="Optional"
-        title="Invite people now or skip and enter the app"
-        subtitle="A couple of invites can make your first sessions feel less empty, but this is intentionally not a hard gate."
-      />
-      <RadioButton.Group value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
-        <View style={styles.channelWrap}>
-          <View style={[styles.channelCard, inviteChannel === 'sms' ? styles.channelCardActive : null]}>
-            <RadioButton value="sms" />
-            <Text style={styles.channelTitle}>SMS</Text>
-          </View>
-          <View style={[styles.channelCard, inviteChannel === 'email' ? styles.channelCardActive : null]}>
-            <RadioButton value="email" />
-            <Text style={styles.channelTitle}>Email</Text>
-          </View>
-        </View>
-      </RadioButton.Group>
-      <TextInput
-        label="Friend name"
-        placeholder="Optional"
-        value={inviteName}
-        onChangeText={setInviteName}
-        mode="outlined"
-        style={styles.input}
-      />
-      <TextInput
-        label={inviteChannel === 'sms' ? 'Phone number' : 'Email address'}
-        value={inviteContact}
-        onChangeText={setInviteContact}
-        mode="outlined"
-        style={styles.input}
-      />
-      {inviteMutation.error ? (
-        <HelperText type="error" visible>
-          {getErrorMessage(inviteMutation.error, 'Unable to create invite.')}
-        </HelperText>
-      ) : null}
-      <View style={styles.inviteActions}>
-        <Button
-          mode="outlined"
-          onPress={() => void sendManualInvite()}
-          loading={inviteMutation.isPending}
-          disabled={!inviteContact.trim() || inviteMutation.isPending}
-        >
-          Create invite link
-        </Button>
-        <Button mode="contained-tonal" onPress={() => void importContactsAndInvite()} loading={inviteMutation.isPending}>
-          Import contacts and invite
-        </Button>
-      </View>
-    </PanelCard>
-  );
-
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 'welcome':
-        return renderWelcomeStep();
-      case 'basics':
-        return renderBasicsStep();
       case 'photo':
         return renderPhotoStep();
       case 'preferences':
         return renderPreferencesStep();
-      case 'legal':
-        return renderLegalStep();
       case 'notifications':
         return renderNotificationsStep();
-      case 'invites':
-        return renderInvitesStep();
       default:
         return null;
     }
   };
 
   const renderFooter = () => {
-    if (currentStep === 'welcome') {
-      return (
-        <PanelCard tone="dark" style={styles.footerCard}>
-          <Text variant="titleLarge" style={styles.footerTitle}>
-            Start with the essentials.
-          </Text>
-          <Text style={styles.footerSubtitle}>
-            You can refine photos, interests, and settings later from your profile.
-          </Text>
-          {stepError ? (
-            <HelperText type="error" visible style={styles.footerError}>
-              {stepError}
-            </HelperText>
-          ) : null}
-          <View style={styles.footerActions}>
-            <Button mode="text" textColor={appColors.white} onPress={() => void signOut()}>
-              Sign out
-            </Button>
-            <Button mode="contained" onPress={handleWelcomeContinue}>
-              Start setup
-            </Button>
-          </View>
-        </PanelCard>
-      );
-    }
-
     const isSaving = onboardingMutation.isPending || notificationsMutation.isPending;
 
-    let primaryLabel = 'Continue';
-    let primaryAction = handleBasicsContinue;
-    let secondaryLabel = previousStep ? 'Back' : 'Cancel';
-    let secondaryAction = () => {
+    let primaryLabel = 'Next';
+    let primaryAction: () => Promise<void> | void = handlePhotoContinue;
+    const secondaryLabel = previousStep ? 'Back' : 'Sign out';
+    const secondaryAction = () => {
       if (previousStep) {
         setStepError(null);
         setCurrentStep(previousStep);
+      } else {
+        void signOut();
       }
     };
 
@@ -890,27 +492,18 @@ export const OnboardingScreen = () => {
       primaryAction = handlePhotoContinue;
     } else if (currentStep === 'preferences') {
       primaryAction = handlePreferencesContinue;
-    } else if (currentStep === 'legal') {
-      primaryAction = handleLegalContinue;
     } else if (currentStep === 'notifications') {
-      primaryLabel = enableNotifications ? 'Continue and ask permission' : 'Skip for now';
+      primaryLabel = enableNotifications ? "You're in" : 'Skip & enter app';
       primaryAction = handleNotificationsContinue;
-    } else if (currentStep === 'invites') {
-      primaryLabel = 'Finish setup';
-      primaryAction = handleFinish;
-      secondaryLabel = 'Skip and enter app';
-      secondaryAction = handleFinish;
     }
 
     return (
       <PanelCard tone="dark" style={styles.footerCard}>
         <Text variant="titleLarge" style={styles.footerTitle}>
-          {currentStep === 'invites' ? 'You are one tap away from the app.' : 'Keep the setup moving.'}
+          {currentStep === 'notifications' ? 'Almost there.' : 'Two minutes. Then you’re in.'}
         </Text>
         <Text style={styles.footerSubtitle}>
-          {currentStep === 'invites'
-            ? 'Send invites if you want, or finish now and do the rest later from your profile and settings.'
-            : 'Each required step is saved as you go so the flow can recover if you leave and come back.'}
+          You can polish the rest from your profile any time.
         </Text>
         {stepError ? (
           <HelperText type="error" visible style={styles.footerError}>
@@ -953,45 +546,6 @@ export const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
-  },
-  heroCard: {
-    gap: spacing.md,
-  },
-  heroTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-    letterSpacing: -0.7,
-  },
-  heroSubtitle: {
-    color: appColors.mutedInk,
-    lineHeight: 22,
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  heroStatCard: {
-    flexGrow: 1,
-    minWidth: 96,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: '#ffffffc7',
-    borderWidth: 1,
-    borderColor: '#e2ecf2',
-  },
-  heroStatValue: {
-    color: appColors.ink,
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: -0.6,
-  },
-  heroStatLabel: {
-    color: appColors.mutedInk,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
   },
   input: {
     backgroundColor: 'transparent',
@@ -1080,58 +634,6 @@ const styles = StyleSheet.create({
   interestChipText: {
     color: appColors.primaryDeep,
     fontWeight: '700',
-  },
-  legalCardWrap: {
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  legalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: '#f7f9fe',
-    padding: spacing.md,
-  },
-  legalCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  legalTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-  },
-  legalSubtitle: {
-    color: appColors.mutedInk,
-    lineHeight: 20,
-  },
-  channelWrap: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  channelCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d8deeb',
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  channelCardActive: {
-    borderColor: appColors.primary,
-    backgroundColor: '#eef2ff',
-  },
-  channelTitle: {
-    color: appColors.ink,
-    fontWeight: '700',
-  },
-  inviteActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
   },
   footerCard: {
     gap: spacing.sm,

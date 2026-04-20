@@ -56,12 +56,12 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
     <>
       {compact ? (
         <PanelCard style={styles.snapshotCard}>
-          <Text style={styles.snapshotEyebrow}>Quick pulse</Text>
+          <Text style={styles.snapshotEyebrow}>Tonight</Text>
           <Text variant="titleLarge" style={styles.snapshotTitle}>
             Hey, {firstName}
           </Text>
           <Text style={styles.snapshotSubtitle}>
-            Your latest momentum stays lightweight here so the swipe deck can keep center stage.
+            What are you up to tonight?
           </Text>
         </PanelCard>
       ) : null}
@@ -70,31 +70,31 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
         <StatCard
           label="Hosting"
           value={hostedLoading ? '...' : String(hosted.length)}
-          detail="Plans you already put into the group chat universe."
+          detail="Plans you’re running."
         />
         <StatCard
-          label="Open now"
+          label="Nearby"
           value={discoverLoading ? '...' : String(discover.length)}
-          detail="Fresh options you can jump into next."
+          detail="Open plans you can jump into."
           tone="secondary"
         />
       </View>
 
       <PanelCard style={styles.ctaCard}>
         <Text variant="titleLarge" style={styles.ctaTitle}>
-          {compact ? 'Start something or jump back into the deck.' : 'Turn scrolling into an actual plan.'}
+          {compact ? 'Start something or jump back in.' : 'Turn scrolling into a plan.'}
         </Text>
         <Text style={styles.ctaSubtitle}>
           {compact
-            ? 'This compact view keeps your counts, latest hosted plans, and a fast path back to discovery in one place.'
-            : 'Host a hang, check what is buzzing nearby, and keep momentum moving while people are still down.'}
+            ? 'Quick view of what you’re running and a fast way back to Discover.'
+            : 'Host a hang or hop into the deck.'}
         </Text>
         <View style={styles.ctaActions}>
           <Button mode="contained" onPress={() => navigation.navigate('Create')} buttonColor={appColors.primary}>
             Host something
           </Button>
           <Button mode="outlined" onPress={handleOpenDiscover}>
-            {compact ? 'Open swipe deck' : 'Explore now'}
+            {compact ? 'Open deck' : 'Explore plans'}
           </Button>
         </View>
       </PanelCard>
@@ -108,9 +108,9 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
       <PanelCard>
         <View style={styles.sectionHeader}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
-            Latest plans
+            Your latest plans
           </Text>
-          <Text style={styles.sectionMeta}>{compact ? 'A quick look at what you are hosting' : 'Your freshest plan updates'}</Text>
+          <Text style={styles.sectionMeta}>{compact ? 'What you’re hosting right now.' : 'Your freshest plan updates.'}</Text>
         </View>
 
         <View style={styles.listContent}>
@@ -123,14 +123,14 @@ export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOve
                 <Text variant="titleSmall" style={styles.activityTitle}>
                   {activity.title}
                 </Text>
-                <Text style={styles.activitySubtitle}>Hosted by you and ready to rally the crew.</Text>
+                <Text style={styles.activitySubtitle}>Hosted by you.</Text>
               </View>
             </View>
           ))}
           {!hostedLoading && latestHosted.length === 0 && (
             <EmptyStatePanel
-              title="No hosted plans yet"
-              description="Once you post your first hang, it will land here for quick edits and updates."
+              title="No plans yet"
+              description="Post your first hang and people can join."
               action={
                 <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Create')}>
                   Host your first plan
@@ -151,9 +151,9 @@ export const HomeScreen = () => {
   return (
     <AppScrollView contentContainerStyle={styles.container}>
       <PageHeader
-        eyebrow="Your scene"
-        title={`Welcome back, ${firstName}`}
-        subtitle="See what you’re hosting, what is nearby, and where tonight’s momentum is picking up."
+        eyebrow="Tonight"
+        title={`Hey ${firstName}.`}
+        subtitle="What are you up to tonight?"
       />
 
       <HomeOverviewContent />
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   },
   ctaCard: {
     gap: 12,
-    backgroundColor: '#fff0f5',
-    borderColor: '#ffd2e0',
+    backgroundColor: appColors.primarySoft,
+    borderColor: appColors.primarySoft,
   },
   ctaTitle: {
     color: appColors.ink,

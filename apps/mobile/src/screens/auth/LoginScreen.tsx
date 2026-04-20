@@ -13,6 +13,7 @@ import { AccentPill, AuthShell } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
 import { config } from '@constants/config';
+import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -61,21 +62,20 @@ export const LoginScreen = ({ navigation }: Props) => {
 
   return (
     <AuthShell
-      eyebrow="IRLobby"
-      title="Find your people fast."
-      subtitle="Sign in to spot nearby plans, keep the group chat warm, and turn a maybe into an actual night out."
+      eyebrow={authCopy.login.eyebrow}
+      title={authCopy.login.title}
+      subtitle={authCopy.login.subtitle}
       footer={
         <View style={styles.footer}>
-          <Text variant="bodyMedium" style={styles.footerText}>New here?</Text>
+          <Text variant="bodyMedium" style={styles.footerText}>{authCopy.login.footerPrompt}</Text>
           <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy} compact>
-            Create an account
+            {authCopy.login.footerCta}
           </Button>
         </View>
       }
     >
       <View style={styles.heroRow}>
-        <AccentPill>Good plans only</AccentPill>
-        <Text style={styles.heroMetric}>Nearby hangs, better group chats, and fewer "we should do something" texts.</Text>
+        <AccentPill>{authCopy.login.pillText}</AccentPill>
       </View>
 
       <View style={styles.form}>
@@ -119,7 +119,7 @@ export const LoginScreen = ({ navigation }: Props) => {
             contentStyle={styles.submitButtonContent}
             buttonColor={appColors.primary}
           >
-            Sign in
+            {authCopy.login.primaryCta}
           </Button>
 
           <View style={styles.oauthSection}>
@@ -131,7 +131,7 @@ export const LoginScreen = ({ navigation }: Props) => {
               loading={isTwitterPending}
               style={styles.oauthButton}
             >
-              Continue with X
+              {authCopy.login.twitterCta}
             </Button>
           </View>
 
@@ -141,7 +141,7 @@ export const LoginScreen = ({ navigation }: Props) => {
             disabled={isBusy}
             style={styles.linkButton}
           >
-            Forgot password?
+            {authCopy.login.forgotPassword}
           </Button>
       </View>
     </AuthShell>

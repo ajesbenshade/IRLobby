@@ -5,10 +5,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'IRLobby',
   slug: 'irlobby',
   version: '1.0.0',
+  description: 'IRLobby — Get out. Get together. Real plans nearby.',
   orientation: 'portrait',
   icon: './assets/icon.png',
   scheme: 'irlobby',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
+  primaryColor: '#FF2E63',
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#FF2E63',
+    dark: {
+      image: './assets/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#0B0B14',
+    },
+  },
   updates: {
     url: process.env.EAS_UPDATE_URL,
   },
@@ -53,7 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#FF2E63',
     },
   },
   plugins: [
@@ -61,7 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/icon.png',
-        color: '#2c7ef8',
+        color: '#FF2E63',
       },
     ],
     'expo-font',

@@ -188,6 +188,11 @@ DATABASES = {
     )
 }
 
+if _IS_TESTING:
+    # Server-side cursors interact badly with pytest-django transaction
+    # wrapping (cursor handle becomes invalid across transactions).
+    DATABASES["default"].setdefault("DISABLE_SERVER_SIDE_CURSORS", True)
+
 # CORS settings
 # Read allowed origins from environment to support dynamic deploy domains.
 raw_cors_origins = config(

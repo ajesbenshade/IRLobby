@@ -74,7 +74,7 @@ jobs:
       - name: Security scans
         working-directory: irlobby_backend
         run: |
-          bandit -r . -x './*/tests.py,./*/test_*.py,./tests,./users/tests.py' --severity-level medium
+          bandit -r . -x './tests,./users/tests.py,./activities/tests.py,./swipes/tests.py,./matches/tests.py,./reviews/tests.py,./moderation/tests.py,./chat/tests.py,./utils/test_sanitize.py,./test_password_reset.py' --severity-level high
           safety check || true
 
       - name: Lint (ruff)

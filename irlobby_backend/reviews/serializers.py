@@ -73,4 +73,14 @@ class ReviewSerializer(serializers.ModelSerializer):
                     "You can only review users you matched with for this activity."
                 )
 
+            if (
+                self.instance is None
+                and Review.objects.filter(
+                    reviewer=reviewer, reviewee=reviewee, activity=activity
+                ).exists()
+            ):
+                raise serializers.ValidationError(
+                    "You have already reviewed this user for this activity."
+                )
+
         return attrs

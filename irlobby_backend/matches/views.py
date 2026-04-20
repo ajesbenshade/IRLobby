@@ -1,7 +1,8 @@
 from django.db.models import Q
-from moderation.models import BlockedUser
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+
+from moderation.models import BlockedUser
 
 from .models import Match
 from .serializers import MatchSerializer

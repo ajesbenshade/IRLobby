@@ -1,5 +1,6 @@
-from activities.models import Activity
 from django.db import models
+
+from activities.models import Activity
 from users.models import User
 
 

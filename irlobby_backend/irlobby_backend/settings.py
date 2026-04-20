@@ -183,8 +183,8 @@ DATABASES = {
     "default": dj_database_url.config(
         default=config("DATABASE_URL", default="sqlite:///db.sqlite3"),
         engine="django.contrib.gis.db.backends.postgis",
-        conn_max_age=0 if _IS_TESTING else 600,
-        conn_health_checks=not _IS_TESTING,
+        conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 
@@ -192,8 +192,6 @@ if _IS_TESTING:
     # Server-side cursors interact badly with pytest-django transaction
     # wrapping (cursor handle becomes invalid across transactions).
     DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
-    DATABASES["default"]["CONN_MAX_AGE"] = 0
-    DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
     options = DATABASES["default"].setdefault("OPTIONS", {})
     options["application_name"] = "pytest"
 
@@ -294,6 +292,10 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+if _IS_TESTING:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
 CELERY_BEAT_SCHEDULE = {
     "run-matchmaking": {
         "task": "matches.tasks.run_matchmaking",

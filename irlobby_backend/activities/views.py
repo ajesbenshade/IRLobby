@@ -8,6 +8,8 @@ from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from matches.models import Match
+from moderation.models import BlockedUser
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,9 +17,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from waffle import flag_is_active
-
-from matches.models import Match
-from moderation.models import BlockedUser
 
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly

@@ -5,9 +5,9 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+from users.models import User
 
 from activities.models import Activity, ActivityParticipant, Ticket
-from users.models import User
 
 
 class ActivityPermissionsTests(APITestCase):
@@ -110,7 +110,12 @@ class ActivityApprovalWorkflowTests(APITestCase):
         list_response = self.client.get(reverse("activity-list"))
         detail_response = self.client.get(reverse("activity-detail", args=[activity.id]))
 
-        ids = [item["id"] for item in list_response.data]
+        items = (
+            list_response.data
+            if isinstance(list_response.data, list)
+            else list_response.data.get("results", [])
+        )
+        ids = [item["id"] for item in items]
         self.assertNotIn(activity.id, ids)
         self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -298,8 +303,11 @@ class TicketingTests(APITestCase):
         response = self.client.get(reverse("ticket-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["activityId"], self.activity.id)
+        results = (
+            response.data if isinstance(response.data, list) else response.data.get("results", [])
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["activityId"], self.activity.id)
 
     def test_validate_ticket_marks_used_and_reports_attendee(self):
         ticket = Ticket.objects.create(

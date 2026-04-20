@@ -24,7 +24,6 @@ from django.urls import include, path, re_path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
-
 from users.views import (
     CookieTokenRefreshView,
     logout_view,

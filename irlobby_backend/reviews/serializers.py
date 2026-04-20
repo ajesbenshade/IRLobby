@@ -1,8 +1,7 @@
-from django.db.models import Q
-from rest_framework import serializers
-
 from activities.models import Activity
+from django.db.models import Q
 from matches.models import Match
+from rest_framework import serializers
 from users.models import User
 from utils.sanitize import strip_html
 

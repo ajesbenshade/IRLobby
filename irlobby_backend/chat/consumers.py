@@ -1,13 +1,12 @@
 import json
 
+from activities.models import Activity, ActivityParticipant
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from redis.asyncio import Redis
-
-from activities.models import Activity, ActivityParticipant
 from matches.models import Match
+from redis.asyncio import Redis
 
 from .models import Conversation, Message
 

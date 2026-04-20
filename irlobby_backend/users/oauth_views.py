@@ -10,7 +10,7 @@ from decouple import config as env_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.shortcuts import redirect
+from django.http import HttpResponseRedirect
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -22,6 +22,12 @@ from .serializers import UserSerializer
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+class _MobileAppRedirect(HttpResponseRedirect):
+    """HttpResponseRedirect that permits the mobile app's custom URL scheme."""
+
+    allowed_schemes = HttpResponseRedirect.allowed_schemes + ["irlobby"]
 
 
 def get_twitter_credentials():
@@ -365,7 +371,7 @@ def twitter_oauth_callback(request):
                     "created": "true" if created else "false",
                 }
             )
-            return redirect(f"{mobile_redirect_uri}?{callback_query}")
+            return _MobileAppRedirect(f"{mobile_redirect_uri}?{callback_query}")
 
         return Response(
             {

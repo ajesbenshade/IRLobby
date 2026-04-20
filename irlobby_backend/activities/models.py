@@ -5,7 +5,6 @@ from django.contrib.gis.geos import Point
 from django.core import signing
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
-
 from users.models import User
 
 

@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from utils.sanitize import strip_html
 
 from .models import Conversation, Message
@@ -9,7 +8,7 @@ class MessageSerializer(serializers.ModelSerializer):
     userId = serializers.SerializerMethodField()
     user = serializers.SerializerMethodField()
     message = serializers.CharField(source="text")
-    createdAt = serializers.DateTimeField(source="created_at")
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
 
     class Meta:
         model = Message

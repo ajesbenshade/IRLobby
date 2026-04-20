@@ -7,9 +7,8 @@ Run database queries against the database configured by DATABASE_URL.
 import os
 
 import django
-from django.db.models import Count
-
 from activities.models import Activity, ActivityParticipant
+from django.db.models import Count
 from users.models import User
 
 # Set up Django

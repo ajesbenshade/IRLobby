@@ -5,7 +5,6 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import UntypedToken
-
 from users.models import User
 
 

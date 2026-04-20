@@ -1,12 +1,11 @@
 from datetime import timedelta
 
+from activities.models import Activity
 from django.urls import reverse
 from django.utils import timezone
+from moderation.models import BlockedUser
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from activities.models import Activity
-from moderation.models import BlockedUser
 from users.models import User
 
 from .models import Match

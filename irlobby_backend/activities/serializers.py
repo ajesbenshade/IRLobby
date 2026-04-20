@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from utils.sanitize import strip_html
 
 from .models import Activity, ActivityParticipant, Ticket
@@ -18,12 +17,14 @@ class ActivitySerializer(serializers.ModelSerializer):
     equipmentProvided = serializers.BooleanField(source="equipment_provided", read_only=True)
     equipmentRequired = serializers.CharField(source="equipment_required", read_only=True)
     weatherDependent = serializers.BooleanField(source="weather_dependent", read_only=True)
-    isTicketed = serializers.BooleanField(source="is_ticketed")
-    ticketPrice = serializers.DecimalField(source="ticket_price", max_digits=10, decimal_places=2)
-    maxTickets = serializers.IntegerField(source="max_tickets")
+    isTicketed = serializers.BooleanField(source="is_ticketed", required=False)
+    ticketPrice = serializers.DecimalField(
+        source="ticket_price", max_digits=10, decimal_places=2, required=False
+    )
+    maxTickets = serializers.IntegerField(source="max_tickets", required=False)
     ticketsSold = serializers.IntegerField(source="tickets_sold", read_only=True)
     platformFeePercent = serializers.DecimalField(
-        source="platform_fee_percent", max_digits=5, decimal_places=2
+        source="platform_fee_percent", max_digits=5, decimal_places=2, required=False
     )
     ticketsAvailable = serializers.SerializerMethodField()
     isSoldOut = serializers.SerializerMethodField()

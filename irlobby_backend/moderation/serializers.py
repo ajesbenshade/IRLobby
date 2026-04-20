@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from utils.sanitize import strip_html
 
 from .models import AbuseReport, BlockedUser

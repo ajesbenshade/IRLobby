@@ -17,6 +17,7 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+src = ["irlobby_backend"]
 extend-exclude = [
   "apps",
   "packages",
@@ -27,6 +28,20 @@ extend-exclude = [
 ]
 select = ["E", "F", "I"]
 ignore = ["E501"]
+
+[tool.ruff.isort]
+known-first-party = [
+  "activities",
+  "chat",
+  "irlobby_backend",
+  "matches",
+  "messages",
+  "moderation",
+  "reviews",
+  "swipes",
+  "users",
+  "utils",
+]
 
 [tool.mypy]
 python_version = "3.12"

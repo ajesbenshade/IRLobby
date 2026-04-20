@@ -78,14 +78,12 @@ jobs:
           safety check || true
 
       - name: Lint (ruff)
-        working-directory: irlobby_backend
         run: |
-          ruff check . --config ../pyproject.toml
+          ruff check . --config pyproject.toml
 
       - name: Format check (black)
-        working-directory: irlobby_backend
         run: |
-          black --check . --config ../pyproject.toml
+          black --check . --config pyproject.toml
 
       - name: Type check (mypy)
         working-directory: irlobby_backend

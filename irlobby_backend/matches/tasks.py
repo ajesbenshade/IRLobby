@@ -1,8 +1,9 @@
 import logging
 
-from activities.models import ActivityParticipant
 from celery import shared_task
 from django.db import transaction
+
+from activities.models import ActivityParticipant
 
 from .models import Match
 

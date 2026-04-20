@@ -5,9 +5,9 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-from users.models import User
 
 from activities.models import Activity, ActivityParticipant, Ticket
+from users.models import User
 
 
 class ActivityPermissionsTests(APITestCase):

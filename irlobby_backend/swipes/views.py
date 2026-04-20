@@ -1,12 +1,13 @@
-from activities.models import Activity
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from matches.models import Match
-from moderation.models import BlockedUser
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from activities.models import Activity
+from matches.models import Match
+from moderation.models import BlockedUser
 from users.push_notifications import send_new_match_notifications
 
 from .models import Swipe

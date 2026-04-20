@@ -14,6 +14,7 @@ Django>=4.2,<5      # compatible with local Python 3.9 LTS
 django-cors-headers==4.4.0
 django-waffle==5.0.0
 django-environ==0.11.2
+python-decouple==3.8
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 django-allauth==65.4.1

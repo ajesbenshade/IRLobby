@@ -1,4 +1,4 @@
-const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000';
+const DEFAULT_DEV_API_BASE_URL = '';
 const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');

@@ -53,10 +53,14 @@ function buildEndpointCandidates(rawEndpoint) {
   }
 
   const variants = [relative];
-  if (relative.includes('${')) {
-    variants.push(relative.replace(/\$\{[^}]+\}/g, '1'));
-    variants.push(relative.replace(/\$\{[^}]+\}/g, 'sample'));
-    variants.push(relative.replace(/\$\{[^}]+\}/g, '00000000-0000-0000-0000-000000000000'));
+  if (relative.includes('${') || /\{[^}]+\}/.test(relative)) {
+    variants.push(relative.replace(/\$\{[^}]+\}/g, '1').replace(/\{[^}]+\}/g, '1'));
+    variants.push(relative.replace(/\$\{[^}]+\}/g, 'sample').replace(/\{[^}]+\}/g, 'sample'));
+    variants.push(
+      relative
+        .replace(/\$\{[^}]+\}/g, '00000000-0000-0000-0000-000000000000')
+        .replace(/\{[^}]+\}/g, '00000000-0000-0000-0000-000000000000'),
+    );
   }
 
   const deduped = new Set();

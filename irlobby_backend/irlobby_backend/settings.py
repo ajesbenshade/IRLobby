@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -170,12 +171,20 @@ CHANNEL_LAYERS = {
 
 # dj_database_url imported earlier to avoid module-level import error
 
+# Disable persistent DB connections during test runs to avoid stale-cursor
+# errors with pytest-django + postgis (cursor reused across transactions).
+_IS_TESTING = (
+    "pytest" in sys.modules
+    or "test" in sys.argv
+    or os.environ.get("PYTEST_CURRENT_TEST") is not None
+)
+
 DATABASES = {
     "default": dj_database_url.config(
         default=config("DATABASE_URL", default="sqlite:///db.sqlite3"),
         engine="django.contrib.gis.db.backends.postgis",
-        conn_max_age=600,
-        conn_health_checks=True,
+        conn_max_age=0 if _IS_TESTING else 600,
+        conn_health_checks=not _IS_TESTING,
     )
 }
 

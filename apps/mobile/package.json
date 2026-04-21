@@ -11,6 +11,7 @@
     "bundle:ios": "expo export --platform ios",
     "build:ios": "eas build -p ios --profile production",
     "submit:ios": "eas submit -p ios --profile production",
+    "presubmit": "bash scripts/pre-submit-check.sh",
     "test": "jest --passWithNoTests"
   },
   "dependencies": {

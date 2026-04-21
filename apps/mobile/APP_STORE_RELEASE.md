@@ -98,6 +98,22 @@ Complete before submitting for review:
 - Screenshots for required iPhone sizes
 - App privacy questionnaire answers
 
+> Copy-ready metadata lives in [`store/metadata/`](./store/metadata/).
+> Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./store/metadata/privacy-questionnaire.md).
+> Privacy Policy + Support pages are committed at `apps/web/public/privacy.html` and `apps/web/public/support.html` — host them at `https://irlobby.app/privacy` and `https://irlobby.app/support`.
+> Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
+
+### Pre-submission sanity check
+
+Run before every release build:
+
+```bash
+cd apps/mobile
+npm run presubmit
+```
+
+This validates the icon, runs typecheck + tests, scans for debug logs, and verifies metadata length limits.
+
 ## 7) Backend production requirements
 
 Ensure backend env/config is production-ready:

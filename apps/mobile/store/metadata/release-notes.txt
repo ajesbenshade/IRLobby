@@ -1,0 +1,7 @@
+Welcome to IRLobby!
+
+• Vibe quiz onboarding — find your activity match in 60 seconds
+• Swipe on activities happening near you
+• Match celebrations with confetti when interest is mutual
+• Real-time chat to coordinate plans
+• Offline support — your last results stay available without a connection

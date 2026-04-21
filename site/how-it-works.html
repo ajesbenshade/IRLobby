@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How it works — IRLobby</title>
+    <meta name="description" content="From vibe quiz to real-world plans in three steps. See how IRLobby turns swipes into actual hangouts." />
+    <meta name="theme-color" content="#FF2E63" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {
+        colors: { brand: { DEFAULT: '#FF2E63', dark: '#E01F52', soft: '#FFB6CC' }, ink: '#0B0B14' },
+        fontFamily: { display: ['Outfit', 'system-ui', 'sans-serif'] },
+      }}};
+    </script>
+    <style>
+      html, body { font-family: 'Outfit', system-ui, sans-serif; }
+      .gradient-text { background: linear-gradient(135deg, #FF2E63 0%, #FF6B9A 50%, #FFB6CC 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .page-bg { background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 46, 99, 0.18) 0%, transparent 50%), #0B0B14; }
+      .glass { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+  </head>
+  <body class="bg-ink text-white antialiased">
+
+    <nav class="fixed top-0 inset-x-0 z-50 glass">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
+          <span class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+        </a>
+        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
+          <a href="/how-it-works" class="text-white">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+        <a href="/download" class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30">Get the app</a>
+      </div>
+    </nav>
+
+    <section class="page-bg pt-32 pb-16">
+      <div class="max-w-4xl mx-auto px-6 text-center">
+        <p class="text-brand font-semibold uppercase tracking-wider text-sm">How it works</p>
+        <h1 class="font-display font-black text-5xl sm:text-6xl mt-3 leading-tight">
+          From scroll-paralysis to <span class="gradient-text">actual plans.</span>
+        </h1>
+        <p class="mt-6 text-lg text-white/70 max-w-2xl mx-auto">
+          IRLobby cuts the back-and-forth. You answer a few quick questions, swipe on stuff that's actually happening near you, and chat the moment someone matches.
+        </p>
+      </div>
+    </section>
+
+    <!-- Step 1 -->
+    <section class="py-20">
+      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <div class="inline-flex items-center gap-3 mb-6">
+            <span class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl">1</span>
+            <span class="text-brand font-semibold uppercase tracking-wider text-sm">Vibe Quiz</span>
+          </div>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl">Tell us your vibe in 60 seconds.</h2>
+          <p class="mt-4 text-lg text-white/70 leading-relaxed">
+            Five fast cards, no boring forms. Are you in the mood for chaos or chill? Solo recharge or full-blown party? Your answers tune the activities you'll see — and they're saved for next time.
+          </p>
+          <ul class="mt-6 space-y-3 text-white/70">
+            <li class="flex gap-3"><span class="text-brand">●</span> Swipeable card UX, not a survey</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Skip and edit any answer later</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Results work offline</li>
+          </ul>
+        </div>
+        <div class="glass rounded-3xl p-8 aspect-square grid place-items-center">
+          <div class="text-9xl">⚡</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="py-20 bg-gradient-to-b from-transparent via-brand/5 to-transparent">
+      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+        <div class="md:order-2">
+          <div class="inline-flex items-center gap-3 mb-6">
+            <span class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl">2</span>
+            <span class="text-brand font-semibold uppercase tracking-wider text-sm">Discover</span>
+          </div>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl">Swipe on plans, not selfies.</h2>
+          <p class="mt-4 text-lg text-white/70 leading-relaxed">
+            Every card is a real activity — tonight's open mic, tomorrow's hike, Friday's game night. You see what it is, who's hosting, where, and how soon. Swipe right if you're in.
+          </p>
+          <ul class="mt-6 space-y-3 text-white/70">
+            <li class="flex gap-3"><span class="text-brand">●</span> Filter by distance + time</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Tags for vibe at a glance</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Or host your own activity in seconds</li>
+          </ul>
+        </div>
+        <div class="glass rounded-3xl p-8 aspect-square grid place-items-center md:order-1">
+          <div class="text-9xl">🎯</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="py-20">
+      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <div class="inline-flex items-center gap-3 mb-6">
+            <span class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl">3</span>
+            <span class="text-brand font-semibold uppercase tracking-wider text-sm">Match & Meet</span>
+          </div>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl">Mutual swipe = instant chat.</h2>
+          <p class="mt-4 text-lg text-white/70 leading-relaxed">
+            When someone else swipes your activity, confetti drops and chat unlocks. Coordinate where to meet, what to bring, when to bail if it rains. Then actually show up.
+          </p>
+          <ul class="mt-6 space-y-3 text-white/70">
+            <li class="flex gap-3"><span class="text-brand">●</span> Real-time messaging</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Activity context built into every chat</li>
+            <li class="flex gap-3"><span class="text-brand">●</span> Block + report if anyone's off</li>
+          </ul>
+        </div>
+        <div class="glass rounded-3xl p-8 aspect-square grid place-items-center">
+          <div class="text-9xl">🎉</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20">
+      <div class="max-w-3xl mx-auto px-6 text-center">
+        <h2 class="font-display font-black text-4xl sm:text-5xl">Ready to actually go do something?</h2>
+        <p class="mt-4 text-lg text-white/70">Free on the App Store. Android coming soon.</p>
+        <a href="/download" class="inline-flex items-center justify-center gap-2 mt-8 px-8 py-4 rounded-full bg-brand hover:bg-brand-dark text-white font-bold transition shadow-xl shadow-brand/40 hover:scale-105 active:scale-95">
+          Get IRLobby
+        </a>
+      </div>
+    </section>
+
+    <footer class="border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2 font-display font-bold">
+          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white/60">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/privacy" class="hover:text-white transition">Privacy</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Features — IRLobby</title>
+    <meta name="description" content="Everything in IRLobby — vibe quiz, activity-first swipes, instant match chat, hyper-local discovery, offline mode." />
+    <meta name="theme-color" content="#FF2E63" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {
+        colors: { brand: { DEFAULT: '#FF2E63', dark: '#E01F52', soft: '#FFB6CC' }, ink: '#0B0B14' },
+        fontFamily: { display: ['Outfit', 'system-ui', 'sans-serif'] },
+      }}};
+    </script>
+    <style>
+      html, body { font-family: 'Outfit', system-ui, sans-serif; }
+      .gradient-text { background: linear-gradient(135deg, #FF2E63 0%, #FF6B9A 50%, #FFB6CC 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .page-bg { background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 46, 99, 0.18) 0%, transparent 50%), #0B0B14; }
+      .glass { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+  </head>
+  <body class="bg-ink text-white antialiased">
+
+    <nav class="fixed top-0 inset-x-0 z-50 glass">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
+          <span class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+        </a>
+        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="text-white">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+        <a href="/download" class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30">Get the app</a>
+      </div>
+    </nav>
+
+    <section class="page-bg pt-32 pb-16">
+      <div class="max-w-4xl mx-auto px-6 text-center">
+        <p class="text-brand font-semibold uppercase tracking-wider text-sm">Features</p>
+        <h1 class="font-display font-black text-5xl sm:text-6xl mt-3 leading-tight">
+          Every detail tuned for <span class="gradient-text">getting out the door.</span>
+        </h1>
+        <p class="mt-6 text-lg text-white/70 max-w-2xl mx-auto">
+          No endless feeds, no algorithm rabbit holes. Just a tight loop: discover something fun, match, meet up.
+        </p>
+      </div>
+    </section>
+
+    <!-- Big features grid -->
+    <section class="pb-12">
+      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-6">
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">⚡</div>
+          <h3 class="font-display font-bold text-2xl">Vibe Quiz</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">5 swipeable cards in 60 seconds. The quiz tunes your discover feed and persists offline so you don't have to redo it on every cold start.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">🎯</div>
+          <h3 class="font-display font-bold text-2xl">Activity-first discover</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Cards are real plans, not profiles. See what it is, when, where, and how far. Swipe right to express interest.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">🎉</div>
+          <h3 class="font-display font-bold text-2xl">Match celebration</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Mutual swipe triggers confetti, haptics, and a heart pulse — with reduced-motion respected for accessibility.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">💬</div>
+          <h3 class="font-display font-bold text-2xl">Real-time chat</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">WebSocket-backed messaging with the activity context attached, so the conversation never loses what you're meeting up for.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">📍</div>
+          <h3 class="font-display font-bold text-2xl">Hyper-local</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Distance-aware ranking with Mapbox tiles. You only see things you can actually get to in time.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">🛜</div>
+          <h3 class="font-display font-bold text-2xl">Offline-ready</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Last quiz results and recent matches stay available with no signal. Syncs back up automatically when you're connected.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">🛡️</div>
+          <h3 class="font-display font-bold text-2xl">Safety baked in</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Block and report from any profile or chat. Email-verified accounts. Optional phone verification for extra signal.</p>
+        </div>
+        <div class="glass rounded-3xl p-10 hover:bg-white/5 transition">
+          <div class="text-5xl mb-5">🌗</div>
+          <h3 class="font-display font-bold text-2xl">Looks great in dark mode</h3>
+          <p class="mt-3 text-white/70 leading-relaxed">Designed for OLED first. Auto-follows your system theme, with an explicit override in settings.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-20">
+      <div class="max-w-3xl mx-auto px-6 text-center">
+        <h2 class="font-display font-black text-4xl sm:text-5xl">See it in action.</h2>
+        <a href="/download" class="inline-flex items-center justify-center gap-2 mt-8 px-8 py-4 rounded-full bg-brand hover:bg-brand-dark text-white font-bold transition shadow-xl shadow-brand/40 hover:scale-105 active:scale-95">
+          Get IRLobby
+        </a>
+      </div>
+    </section>
+
+    <footer class="border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2 font-display font-bold">
+          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white/60">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/privacy" class="hover:text-white transition">Privacy</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

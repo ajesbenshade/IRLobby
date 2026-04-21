@@ -4,62 +4,115 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Privacy Policy — IRLobby</title>
+    <meta name="description" content="IRLobby's privacy policy — what we collect, how we use it, and your choices." />
+    <meta name="theme-color" content="#FF2E63" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {
+        colors: { brand: { DEFAULT: '#FF2E63', dark: '#E01F52' }, ink: '#0B0B14' },
+        fontFamily: { display: ['Outfit', 'system-ui', 'sans-serif'] },
+      }}};
+    </script>
     <style>
-      :root { color-scheme: light dark; }
-      body { font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #111; background: #fff; }
-      @media (prefers-color-scheme: dark) { body { color: #eee; background: #0b0b14; } a { color: #ff6b9a; } }
-      h1, h2 { line-height: 1.2; }
-      h1 { margin-bottom: 0.25rem; }
-      .muted { color: #666; font-size: 0.9rem; }
-      ul { padding-left: 1.25rem; }
+      html, body { font-family: 'Outfit', system-ui, sans-serif; }
+      .glass { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+      .prose h2 { font-weight: 700; font-size: 1.5rem; margin-top: 2rem; margin-bottom: 0.75rem; color: #fff; }
+      .prose p, .prose li { color: rgba(255,255,255,0.7); line-height: 1.7; }
+      .prose ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+      .prose a { color: #FF6B9A; }
+      .prose a:hover { text-decoration: underline; }
+      .page-bg { background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 46, 99, 0.18) 0%, transparent 50%), #0B0B14; }
     </style>
   </head>
-  <body>
-    <h1>Privacy Policy</h1>
-    <p class="muted">Last updated: April 20, 2026</p>
+  <body class="bg-ink text-white antialiased min-h-screen flex flex-col">
 
-    <p>
-      IRLobby ("we", "us", "our") respects your privacy. This policy explains what
-      we collect when you use the IRLobby mobile app and website, how we use it,
-      and the choices you have.
-    </p>
+    <nav class="fixed top-0 inset-x-0 z-50 glass">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
+          <span class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+        </a>
+        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+        <a href="/download" class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30">Get the app</a>
+      </div>
+    </nav>
 
-    <h2>Information we collect</h2>
-    <ul>
-      <li><strong>Account info:</strong> email address, display name, profile photo.</li>
-      <li><strong>Activity content:</strong> activities you create or join, vibe-quiz answers, messages.</li>
-      <li><strong>Location:</strong> coarse location while the app is in use, used to surface nearby activities.</li>
-      <li><strong>Diagnostics:</strong> crash and performance data via Sentry. No advertising identifiers.</li>
-    </ul>
+    <section class="page-bg pt-32 pb-12">
+      <div class="max-w-3xl mx-auto px-6">
+        <p class="text-brand font-semibold uppercase tracking-wider text-sm">Legal</p>
+        <h1 class="font-display font-black text-5xl mt-3">Privacy Policy</h1>
+        <p class="mt-3 text-white/50 text-sm">Last updated: April 20, 2026</p>
+      </div>
+    </section>
 
-    <h2>How we use it</h2>
-    <ul>
-      <li>To operate core features (matching, chat, activity discovery).</li>
-      <li>To prevent abuse and keep the community safe.</li>
-      <li>To debug crashes and improve performance.</li>
-    </ul>
+    <section class="pb-20 flex-1">
+      <article class="max-w-3xl mx-auto px-6 prose">
+        <p>IRLobby ("we", "us", "our") respects your privacy. This policy explains what we collect when you use the IRLobby mobile app and website, how we use it, and the choices you have.</p>
 
-    <h2>Sharing</h2>
-    <p>
-      We do not sell personal data. We share data only with service providers
-      necessary to run the app (hosting, crash reporting, map tiles) under
-      contractual confidentiality.
-    </p>
+        <h2>Information we collect</h2>
+        <ul>
+          <li><strong class="text-white">Account info:</strong> email address, display name, profile photo.</li>
+          <li><strong class="text-white">Activity content:</strong> activities you create or join, vibe-quiz answers, messages.</li>
+          <li><strong class="text-white">Location:</strong> coarse location while the app is in use, used to surface nearby activities.</li>
+          <li><strong class="text-white">Diagnostics:</strong> crash and performance data via Sentry. No advertising identifiers.</li>
+        </ul>
 
-    <h2>Your choices</h2>
-    <ul>
-      <li>You can delete your account from the app at any time, which removes your profile, matches, and messages.</li>
-      <li>You can disable location access in iOS / Android settings — discovery quality will degrade.</li>
-      <li>You can request a copy of your data by emailing the address below.</li>
-    </ul>
+        <h2>How we use it</h2>
+        <ul>
+          <li>To operate core features (matching, chat, activity discovery).</li>
+          <li>To prevent abuse and keep the community safe.</li>
+          <li>To debug crashes and improve performance.</li>
+        </ul>
 
-    <h2>Children</h2>
-    <p>IRLobby is not directed to children under 17 and we do not knowingly collect data from them.</p>
+        <h2>Sharing</h2>
+        <p>We do not sell personal data. We share data only with service providers necessary to run the app (hosting, crash reporting, map tiles) under contractual confidentiality.</p>
 
-    <h2>Changes</h2>
-    <p>We will update the date above when this policy changes. Material changes will be surfaced in-app.</p>
+        <h2>Your choices</h2>
+        <ul>
+          <li>You can delete your account from the app at any time, which removes your profile, matches, and messages.</li>
+          <li>You can disable location access in iOS / Android settings — discovery quality will degrade.</li>
+          <li>You can request a copy of your data by emailing the address below.</li>
+        </ul>
 
-    <h2>Contact</h2>
-      <p>Questions? Email <a href="mailto:support@irlobby.com">support@irlobby.com</a>.</p>
+        <h2>Children</h2>
+        <p>IRLobby is not directed to children under 17 and we do not knowingly collect data from them.</p>
+
+        <h2>Changes</h2>
+        <p>We will update the date above when this policy changes. Material changes will be surfaced in-app.</p>
+
+        <h2>Contact</h2>
+        <p>Questions? Email <a href="mailto:support@irlobby.com">support@irlobby.com</a>.</p>
+      </article>
+    </section>
+
+    <footer class="border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2 font-display font-bold">
+          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white/60">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/privacy" class="hover:text-white transition">Privacy</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

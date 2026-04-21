@@ -1,34 +1,159 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Support — IRLobby</title>
+    <meta name="description" content="Get help with IRLobby — common questions, account deletion, and how to reach the team." />
+    <meta name="theme-color" content="#FF2E63" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {
+        colors: { brand: { DEFAULT: '#FF2E63', dark: '#E01F52', soft: '#FFB6CC' }, ink: '#0B0B14' },
+        fontFamily: { display: ['Outfit', 'system-ui', 'sans-serif'] },
+      }}};
+    </script>
     <style>
-      :root { color-scheme: light dark; }
-      body { font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #111; background: #fff; }
-      @media (prefers-color-scheme: dark) { body { color: #eee; background: #0b0b14; } a { color: #ff6b9a; } }
-      h1 { margin-bottom: 0.25rem; }
-      .muted { color: #666; font-size: 0.9rem; }
-      ul { padding-left: 1.25rem; }
+      html, body { font-family: 'Outfit', system-ui, sans-serif; }
+      .gradient-text { background: linear-gradient(135deg, #FF2E63 0%, #FF6B9A 50%, #FFB6CC 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .page-bg { background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 46, 99, 0.18) 0%, transparent 50%), #0B0B14; }
+      .glass { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+      details[open] summary svg { transform: rotate(45deg); }
+      summary { list-style: none; cursor: pointer; }
+      summary::-webkit-details-marker { display: none; }
     </style>
   </head>
-  <body>
-    <h1>IRLobby Support</h1>
-    <p class="muted">We read every message.</p>
+  <body class="bg-ink text-white antialiased min-h-screen flex flex-col">
 
-    <h2>Common questions</h2>
-    <ul>
-      <li><strong>I didn't get a verification email.</strong> Check spam/junk. Re-request from the sign-in screen.</li>
-      <li><strong>I want to delete my account.</strong> Go to Profile → Settings → Delete account. This permanently removes your profile, matches, and messages.</li>
-      <li><strong>Activities aren't showing up.</strong> Make sure location access is enabled in iOS / Android settings.</li>
-      <li><strong>Reporting a person or activity.</strong> Tap the ⋯ menu on any profile or activity card.</li>
-    </ul>
+    <nav class="fixed top-0 inset-x-0 z-50 glass">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
+          <span class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+        </a>
+        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/support" class="text-white">Support</a>
+        </div>
+        <a href="/download" class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30">Get the app</a>
+      </div>
+    </nav>
 
-    <h2>Contact</h2>
-    <p>Email <a href="mailto:support@irlobby.com">support@irlobby.com</a> and we'll get back to you within 2 business days.</p>
+    <section class="page-bg pt-32 pb-16">
+      <div class="max-w-3xl mx-auto px-6 text-center">
+        <p class="text-brand font-semibold uppercase tracking-wider text-sm">Support</p>
+        <h1 class="font-display font-black text-5xl sm:text-6xl mt-3 leading-tight">
+          We <span class="gradient-text">read every message.</span>
+        </h1>
+        <p class="mt-6 text-lg text-white/70 max-w-xl mx-auto">
+          Stuck on something? Most answers are below. If not, email us — we usually respond within 2 business days.
+        </p>
+      </div>
+    </section>
 
-    <h2>Privacy</h2>
-    <p>See our <a href="/privacy">Privacy Policy</a>.</p>
+    <section class="pb-12">
+      <div class="max-w-3xl mx-auto px-6 space-y-3">
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            I didn't get a verification email.
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">Check your spam / junk folder first. If it's not there, re-request from the sign-in screen and double-check the email is typed correctly. Still nothing? Email us.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            How do I delete my account?
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">In the app: Profile → Settings → Delete account. This permanently removes your profile, matches, messages, and quiz results. The action can't be undone.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            No activities are showing up.
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">Make sure location access is enabled in iOS Settings → Privacy → Location Services → IRLobby. If you're new to the area or it's quiet, try expanding your distance filter or hosting your own activity.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            How do I report a person or activity?
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">Tap the ⋯ menu on any profile, activity card, or chat thread. You can block, report, or both. Reports go to our moderation team and are reviewed within 24 hours.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            Can I use IRLobby without sharing my location?
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">You can — but discovery quality drops sharply since we can't surface nearby activities. We only use location while the app is in use, never in the background.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            When is Android coming?
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">It's on the roadmap but no firm date yet. Email <a href="mailto:hello@irlobby.com?subject=Android%20waitlist" class="text-brand hover:underline">hello@irlobby.com</a> with subject "Android waitlist" and we'll notify you when it lands.</p>
+        </details>
+
+        <details class="glass rounded-2xl p-6 group">
+          <summary class="flex items-center justify-between gap-4 font-semibold text-lg">
+            How do I change or retake the vibe quiz?
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand transition-transform"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </summary>
+          <p class="mt-4 text-white/70 leading-relaxed">Profile → Vibe quiz → Retake. Your previous answers stay saved until you finish a new run.</p>
+        </details>
+
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section class="pb-24">
+      <div class="max-w-2xl mx-auto px-6">
+        <div class="glass rounded-3xl p-10 text-center">
+          <h2 class="font-display font-bold text-3xl">Still stuck?</h2>
+          <p class="mt-3 text-white/70">Email us and we'll get back within 2 business days.</p>
+          <a href="mailto:support@irlobby.com" class="inline-flex items-center justify-center gap-2 mt-6 px-7 py-3 rounded-full bg-brand hover:bg-brand-dark text-white font-bold transition shadow-lg shadow-brand/30 hover:scale-105 active:scale-95">
+            support@irlobby.com
+          </a>
+          <p class="mt-6 text-sm text-white/50">
+            See also our <a href="/privacy" class="text-brand hover:underline">Privacy Policy</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2 font-display font-bold">
+          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white/60">
+          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
+          <a href="/features" class="hover:text-white transition">Features</a>
+          <a href="/download" class="hover:text-white transition">Download</a>
+          <a href="/privacy" class="hover:text-white transition">Privacy</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { Pressable, Share, StyleSheet } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -11,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { Text } from 'react-native-paper';
 
@@ -31,6 +33,8 @@ type MatchCelebrationProps = {
   onPrimaryAction?: () => void;
   /** Label for the primary CTA when `onPrimaryAction` is provided. */
   primaryActionLabel?: string;
+  /** When true, skip confetti + the looping heart pulse (entrance + haptics still play). */
+  reducedMotion?: boolean;
 };
 
 const BACKDROP_GRADIENT: readonly [string, string, string] = [
@@ -62,13 +66,23 @@ export const MatchCelebration = ({
   activityTitle,
   onPrimaryAction,
   primaryActionLabel = 'Start chatting',
+  reducedMotion = false,
 }: MatchCelebrationProps) => {
   const opacity = useSharedValue(0);
   const cardScale = useSharedValue(0.6);
   const heartScale = useSharedValue(0);
 
+  // Tune the confetti volume on older devices to keep the animation buttery.
+  // `Device.deviceYearClass` is `null` on web/simulators — coalesce to a modern
+  // year so unknown devices keep the rich experience instead of dropping confetti.
+  const confettiPieces = useMemo(() => {
+    const yearClass = Device.deviceYearClass ?? 2020;
+    return yearClass <= 2018 ? 45 : 75;
+  }, []);
+
   useEffect(() => {
     if (!visible) {
+      cancelAnimation(heartScale);
       opacity.value = 0;
       cardScale.value = 0.6;
       heartScale.value = 0;
@@ -93,27 +107,30 @@ export const MatchCelebration = ({
       withSpring(1, { damping: 10, stiffness: 120 }),
     );
 
-    // Heart pops in slightly later, then idle-pulses forever (looks alive).
+    // Heart pops in slightly later. Skip the perpetual pulse when reduced motion
+    // is requested so we don't run a looping animation on low-end / a11y users.
     heartScale.value = withDelay(
       300,
-      withSequence(
-        withSpring(1.2, { damping: 5, stiffness: 160 }),
-        withRepeat(
-          withSequence(
-            withTiming(0.92, { duration: 700, easing: Easing.inOut(Easing.quad) }),
-            withTiming(1.05, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+      reducedMotion
+        ? withSpring(1, { damping: 8, stiffness: 140 })
+        : withSequence(
+            withSpring(1.2, { damping: 5, stiffness: 160 }),
+            withRepeat(
+              withSequence(
+                withTiming(0.92, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+                withTiming(1.05, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+              ),
+              -1,
+              true,
+            ),
           ),
-          -1,
-          true,
-        ),
-      ),
     );
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [cardScale, heartScale, opacity, visible]);
+  }, [cardScale, heartScale, opacity, reducedMotion, visible]);
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
@@ -136,6 +153,20 @@ export const MatchCelebration = ({
     onDismiss();
   };
 
+  const canShare = Boolean(matchName);
+  const handleShare = async () => {
+    if (!canShare) return;
+    try {
+      void Haptics.selectionAsync();
+      const tail = activityTitle ? ` for ${activityTitle}` : '';
+      await Share.share({
+        message: `Just matched with ${matchName} on IRLobby${tail}! 🎉`,
+      });
+    } catch {
+      /* user cancelled or share unavailable — ignore */
+    }
+  };
+
   return (
     <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="auto">
       <LinearGradient
@@ -145,16 +176,28 @@ export const MatchCelebration = ({
         style={styles.gradient}
       >
         {/* Confetti sits behind the card so it doesn't intercept taps. */}
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <ConfettiBurst visible pieces={90} />
-        </View>
+        {reducedMotion ? null : (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <ConfettiBurst visible pieces={confettiPieces} />
+          </View>
+        )}
 
         {/* Tap-to-dismiss backdrop — wraps the card so any outside tap closes. */}
         <Pressable style={styles.backdropPressable} onPress={onDismiss}>
           <Animated.View style={[styles.card, cardStyle]}>
             <Animated.Text style={[styles.heart, heartStyle]}>❤️</Animated.Text>
 
-            <Text variant="displaySmall" style={styles.headline}>
+            <Text
+              variant="displaySmall"
+              style={styles.headline}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={
+                matchName
+                  ? `${message ?? "It's a match"} with ${matchName}`
+                  : message ?? "It's a match!"
+              }
+            >
               {message ?? "It's a match!"}
             </Text>
 
@@ -182,6 +225,16 @@ export const MatchCelebration = ({
                 <Pressable onPress={onDismiss} style={styles.secondaryBtn}>
                   <NativeText style={styles.secondaryLabel}>Maybe later</NativeText>
                 </Pressable>
+                {canShare ? (
+                  <Pressable
+                    onPress={() => void handleShare()}
+                    style={styles.secondaryBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share this match"
+                  >
+                    <NativeText style={styles.secondaryLabel}>📤 Share</NativeText>
+                  </Pressable>
+                ) : null}
               </View>
             ) : (
               <NativeText style={styles.tap}>Tap anywhere to continue</NativeText>

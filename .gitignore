@@ -76,6 +76,8 @@ eggs/
 lib/
 !apps/web/src/lib/
 !apps/web/src/lib/**
+!apps/mobile/src/lib/
+!apps/mobile/src/lib/**
 lib64/
 parts/
 sdist/

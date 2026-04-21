@@ -17,6 +17,7 @@ import { ProfileScreen } from '@screens/main/ProfileScreen';
 import { ReviewsScreen } from '@screens/main/ReviewsScreen';
 import { SettingsScreen } from '@screens/main/SettingsScreen';
 import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
+import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
 import { WebContentScreen } from '@screens/main/WebContentScreen';
 import { appColors } from '@theme/index';
 
@@ -193,6 +194,11 @@ export const MainNavigator = () => (
       name="VibeQuizModal"
       component={VibeQuizModalScreen}
       options={{ presentation: 'modal', title: 'Vibe Quiz' }}
+    />
+    <Stack.Screen
+      name="VibeQuizResults"
+      component={VibeQuizResultsScreen}
+      options={{ title: 'Your Vibe' }}
     />
   </Stack.Navigator>
 );

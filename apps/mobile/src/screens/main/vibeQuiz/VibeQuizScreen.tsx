@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
   Easing,
@@ -12,15 +12,12 @@ import { Button, HelperText, Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import {
-  VIBE_PROFILE_LABELS,
   type VibeAnswers,
   type VibeQuizResult,
   type VibeTag,
 } from '@shared/schema';
 
-import { PanelCard } from '@components/AppChrome';
 import { Text as NativeText, View } from '@components/RNCompat';
-import { fetchActivities } from '@services/activityService';
 import { updateOnboarding } from '@services/authService';
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -33,6 +30,8 @@ import {
 import { ConfettiBurst } from './ConfettiBurst';
 import { VIBE_QUESTIONS, type VibeQuestion } from './questions';
 import { VibeOptionCard, VibeProgressBar } from './VibeQuestionCard';
+import { useVibeQuizPersistence } from './useVibeQuizPersistence';
+import { VibeQuizResultsView } from './VibeQuizResultsView';
 
 type Phase = 'intro' | 'question' | 'results';
 
@@ -72,6 +71,25 @@ export const VibeQuizScreen = ({
   const [answers, setAnswers] = useState<VibeAnswers>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confettiVisible, setConfettiVisible] = useState(false);
+  const [resumePromptVisible, setResumePromptVisible] = useState(false);
+
+  const { loaded, saveProgress, clearProgress, saveResult } = useVibeQuizPersistence();
+
+  // Show the resume prompt once the persisted state has loaded and contains
+  // partial progress (at least one answer recorded on the question phase).
+  useEffect(() => {
+    if (loaded.status !== 'loaded' || !loaded.state) return;
+    const hasPartial =
+      loaded.state.phase === 'question' && Object.keys(loaded.state.answers ?? {}).length > 0;
+    if (hasPartial) setResumePromptVisible(true);
+  }, [loaded]);
+
+  // Persist progress whenever the user makes meaningful state changes while in
+  // the question phase. We intentionally skip persistence on intro/results.
+  useEffect(() => {
+    if (phase !== 'question') return;
+    saveProgress({ phase, currentIndex, answers });
+  }, [phase, currentIndex, answers, saveProgress]);
 
   const slide = useSharedValue(0);
 
@@ -101,13 +119,6 @@ export const VibeQuizScreen = ({
     if (!allAnswered) return null;
     return scoreVibe(answers);
   }, [allAnswered, answers]);
-
-  const matchCountQuery = useQuery({
-    queryKey: ['vibe-quiz-match-count', result?.discoverTags ?? []],
-    queryFn: () => fetchActivities({ tags: result?.discoverTags ?? [] }),
-    enabled: phase === 'results' && Boolean(result?.discoverTags?.length),
-    staleTime: 60_000,
-  });
 
   const saveMutation = useMutation({
     mutationFn: async (quizResult: VibeQuizResult) => {
@@ -165,8 +176,26 @@ export const VibeQuizScreen = ({
 
   const startQuiz = () => {
     setErrorMessage(null);
+    setResumePromptVisible(false);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPhase('question');
+  };
+
+  const resumeQuiz = () => {
+    if (!loaded.state) return;
+    setErrorMessage(null);
+    setResumePromptVisible(false);
+    setAnswers(loaded.state.answers ?? {});
+    setCurrentIndex(Math.min(loaded.state.currentIndex ?? 0, VIBE_QUESTIONS.length - 1));
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPhase('question');
+  };
+
+  const startOver = () => {
+    setResumePromptVisible(false);
+    setAnswers({});
+    setCurrentIndex(0);
+    void clearProgress();
   };
 
   const handleSkip = async () => {
@@ -175,6 +204,7 @@ export const VibeQuizScreen = ({
       if (persistOnComplete) {
         await skipMutation.mutateAsync();
       }
+      await clearProgress();
       await onSkip();
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Unable to skip the quiz right now.'));
@@ -182,6 +212,7 @@ export const VibeQuizScreen = ({
   };
 
   const selectAnswer = (questionId: VibeQuestion['id'], value: string) => {
+    if (resumePromptVisible) setResumePromptVisible(false);
     setAnswers((previous) => {
       const question = VIBE_QUESTIONS.find((entry) => entry.id === questionId);
       if (!question) return previous;
@@ -229,6 +260,8 @@ export const VibeQuizScreen = ({
       if (persistOnComplete) {
         await saveMutation.mutateAsync(result);
       }
+      await saveResult(result);
+      await clearProgress();
       await onComplete(result);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not save your vibe just yet — try again.'));
@@ -249,6 +282,40 @@ export const VibeQuizScreen = ({
         <Text style={styles.introSubtitle}>
           5 quick questions → instant personalized IRL hangouts.
         </Text>
+        {resumePromptVisible ? (
+          <View style={styles.resumeCard}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss resume prompt"
+              onPress={() => setResumePromptVisible(false)}
+              style={styles.resumeDismiss}
+              hitSlop={12}
+            >
+              <NativeText style={styles.resumeDismissText}>×</NativeText>
+            </Pressable>
+            <NativeText style={styles.resumeTitle}>Pick up where you left off?</NativeText>
+            <NativeText style={styles.resumeBody}>
+              You started this quiz earlier. Resume or start fresh.
+            </NativeText>
+            <View style={styles.resumeActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Resume the vibe quiz"
+                onPress={resumeQuiz}
+                style={({ pressed }) => [styles.resumeButton, pressed && styles.resumeButtonPressed]}
+              >
+                <NativeText style={styles.resumeButtonText}>Resume</NativeText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Start the vibe quiz over"
+                onPress={startOver}
+              >
+                <NativeText style={styles.resumeStartOver}>Start over</NativeText>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Start the vibe quiz"
@@ -277,58 +344,18 @@ export const VibeQuizScreen = ({
   }
 
   if (phase === 'results' && result) {
-    const profile = VIBE_PROFILE_LABELS[result.vibeProfile];
-    const matchCount = matchCountQuery.data?.length ?? 0;
     return (
       <View style={styles.resultsContainer}>
         <ConfettiBurst visible={confettiVisible} />
-        <PanelCard tone="dark" style={styles.resultsCard}>
-          <NativeText style={styles.badgeEmoji}>{profile.emoji}</NativeText>
-          <Text variant="titleSmall" style={styles.badgeEyebrow}>
-            Your vibe is
-          </Text>
-          <Text variant="headlineSmall" style={styles.badgeName}>
-            {profile.name}
-          </Text>
-          <Text style={styles.badgeTagline}>{profile.tagline}</Text>
-        </PanelCard>
-        <PanelCard>
-          <Text variant="titleMedium" style={styles.matchCountTitle}>
-            {matchCountQuery.isLoading
-              ? 'Counting your matches…'
-              : `We found ${matchCount} ${matchCount === 1 ? 'activity' : 'activities'} that match your energy!`}
-          </Text>
-          <View style={styles.tagRow}>
-            {result.vibeTags.map((tag) => (
-              <View key={tag} style={styles.tagChip}>
-                <NativeText style={styles.tagChipText}>{tag.replace(/_/g, ' ')}</NativeText>
-              </View>
-            ))}
-          </View>
-        </PanelCard>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={resultsCtaLabel}
-          onPress={() => void handleResultsCta()}
-          disabled={saveMutation.isPending}
-          style={({ pressed }) => [styles.primaryButtonWrap, pressed ? styles.primaryButtonPressed : null]}
-        >
-          <LinearGradient
-            colors={FOOTER_GRADIENT}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.primaryButton}
-          >
-            <NativeText style={styles.primaryButtonText}>
-              {saveMutation.isPending ? 'Saving your vibe…' : resultsCtaLabel}
-            </NativeText>
-          </LinearGradient>
-        </Pressable>
-        {errorMessage ? (
-          <HelperText type="error" visible style={styles.error}>
-            {errorMessage}
-          </HelperText>
-        ) : null}
+        <VibeQuizResultsView
+          vibeProfile={result.vibeProfile}
+          vibeTags={result.vibeTags}
+          discoverTags={result.discoverTags}
+          ctaLabel={resultsCtaLabel}
+          onCta={() => void handleResultsCta()}
+          isCtaPending={saveMutation.isPending}
+          errorMessage={errorMessage}
+        />
       </View>
     );
   }
@@ -392,6 +419,65 @@ const styles = StyleSheet.create({
   },
   heroEmojiSmall: {
     fontSize: 40,
+  },
+  resumeCard: {
+    position: 'relative',
+    width: '100%',
+    backgroundColor: appColors.cardStrong,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  resumeDismiss: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resumeDismissText: {
+    color: appColors.mutedInk,
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  resumeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: appColors.ink,
+    textAlign: 'center',
+  },
+  resumeBody: {
+    fontSize: 13,
+    color: appColors.mutedInk,
+    textAlign: 'center',
+  },
+  resumeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  resumeButton: {
+    backgroundColor: appColors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+  },
+  resumeButtonPressed: {
+    opacity: 0.85,
+  },
+  resumeButtonText: {
+    color: appColors.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  resumeStartOver: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
   introTitle: {
     color: appColors.ink,
@@ -466,53 +552,5 @@ const styles = StyleSheet.create({
   resultsContainer: {
     gap: spacing.lg,
     alignItems: 'stretch',
-  },
-  resultsCard: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xl,
-  },
-  badgeEmoji: {
-    fontSize: 64,
-  },
-  badgeEyebrow: {
-    color: '#cbd5ff',
-    textTransform: 'uppercase',
-    letterSpacing: 1.4,
-    fontWeight: '700',
-  },
-  badgeName: {
-    color: appColors.white,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  badgeTagline: {
-    color: '#dbe1ff',
-    textAlign: 'center',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.xs,
-  },
-  matchCountTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  tagChip: {
-    borderRadius: radii.pill,
-    backgroundColor: appColors.primarySoft,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  tagChipText: {
-    color: appColors.primaryDeep,
-    fontWeight: '700',
-    fontSize: 13,
-    textTransform: 'capitalize',
   },
 });

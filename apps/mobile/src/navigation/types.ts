@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { VibeProfile, VibeTag } from '@shared/schema';
 
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
@@ -32,5 +33,10 @@ export type MainStackParamList = {
   PrivacyPolicy: { title: string; url: string } | undefined;
   TermsOfService: { title: string; url: string } | undefined;
   WebContent: { title: string; url: string };
+  VibeQuizResults: {
+    vibeProfile: VibeProfile;
+    vibeTags: VibeTag[];
+    discoverTags: string[];
+  };
   VibeQuizModal: undefined;
 };

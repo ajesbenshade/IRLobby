@@ -13,6 +13,7 @@ import {
 import { authStorage } from '@services/authStorage';
 
 import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
+import { clearUser as clearMonitoringUser, setUser as setMonitoringUser } from '../lib/monitoring';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -66,6 +67,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
     };
   }, []);
+
+  // Tag/untag the Sentry user whenever auth state flips. Safe no-op when Sentry
+  // isn't initialized (DSN missing or SDK not installed yet).
+  useEffect(() => {
+    if (user) {
+      setMonitoringUser({ id: String(user.id), email: user.email });
+    } else {
+      clearMonitoringUser();
+    }
+  }, [user]);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     const { user: nextUser } = await login(payload);

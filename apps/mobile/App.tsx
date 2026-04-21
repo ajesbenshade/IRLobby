@@ -14,8 +14,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppNavigator } from '@navigation/AppNavigator';
 import { AuthProvider } from '@providers/AuthProvider';
+import { ErrorBoundary } from '@providers/ErrorBoundary';
 import { QueryProvider } from '@providers/queryClient';
 import { darkTheme, lightTheme, palette } from '@theme/index';
+import { initMonitoring } from './src/lib/monitoring';
+
+initMonitoring();
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -37,16 +41,18 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
-      <SafeAreaProvider>
-        <PaperProvider theme={theme}>
-          <QueryProvider>
-            <AuthProvider>
-              <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={backgroundColor} />
-              <AppNavigator />
-            </AuthProvider>
-          </QueryProvider>
-        </PaperProvider>
-      </SafeAreaProvider>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <PaperProvider theme={theme}>
+            <QueryProvider>
+              <AuthProvider>
+                <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={backgroundColor} />
+                <AppNavigator />
+              </AuthProvider>
+            </QueryProvider>
+          </PaperProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

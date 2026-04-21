@@ -1,5 +1,5 @@
 {
-  "name": "irlobby_mobile",
+  "name": "irlobby",
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
@@ -11,8 +11,10 @@
     "bundle:ios": "expo export --platform ios",
     "build:ios": "eas build -p ios --profile production",
     "submit:ios": "eas submit -p ios --profile production",
+    "build:android": "eas build -p android --profile production",
+    "submit:android": "eas submit -p android --profile production",
     "presubmit": "bash scripts/pre-submit-check.sh",
-    "test": "jest --passWithNoTests"
+    "test": "jest"
   },
   "dependencies": {
     "@expo-google-fonts/outfit": "^0.4.3",
@@ -29,6 +31,7 @@
     "axios": "^1.12.2",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.10",
+    "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.9",
     "expo-contacts": "^15.0.11",
     "expo-dev-client": "~6.0.20",

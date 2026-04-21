@@ -54,7 +54,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: 'com.irlobby.app',
-    versionCode: 1,
+    // versionCode is managed remotely by EAS (`appVersionSource: "remote"` in eas.json)
+    // with `autoIncrement: true` on the production build profile.
     permissions: [
       'CAMERA',
       'ACCESS_FINE_LOCATION',
@@ -80,5 +81,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-location',
     'expo-secure-store',
     'expo-web-browser',
+    [
+      // Required for Google Play targetSdkVersion 36 (Android 16) compliance.
+      // Enforcement deadline: 2026-08-31 for new app updates.
+      'expo-build-properties',
+      {
+        android: {
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          buildToolsVersion: '36.0.0',
+        },
+      },
+    ],
   ],
 });

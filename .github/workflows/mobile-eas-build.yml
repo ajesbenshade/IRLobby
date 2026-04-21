@@ -81,3 +81,71 @@ jobs:
 
       - name: Trigger iOS production build
         run: eas build --platform ios --profile production --auto-submit --non-interactive --no-wait
+
+  build-android:
+    name: Trigger Android production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ env.EXPO_TOKEN }}
+
+      - name: Verify EXPO_TOKEN
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is not configured for this repository."
+            exit 1
+          fi
+
+      - name: Verify mobile build keys
+        run: |
+          if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ] || \
+             [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
+            echo "Missing required EXPO_PUBLIC_* repository variables (Twitter + Mapbox)."
+            exit 1
+          fi
+
+      - name: Materialize Google Play service account
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret is not configured."
+            echo "Generate a service account JSON in Google Cloud, grant it Play Console release access,"
+            echo "and add it under Settings > Secrets and variables > Actions > Secrets."
+            exit 1
+          fi
+          mkdir -p credentials
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > credentials/play-service-account.json
+          chmod 600 credentials/play-service-account.json
+
+      - name: Validate mobile TypeScript
+        run: npm run typecheck
+
+      - name: Trigger Android production build
+        run: eas build --platform android --profile production --auto-submit --non-interactive --no-wait

@@ -16,6 +16,9 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://liyf.app",
         "EXPO_PUBLIC_WEBSOCKET_URL": "wss://liyf.app"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
@@ -23,6 +26,12 @@
     "production": {
       "ios": {
         "ascAppId": "6759202702"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": false
       }
     }
   }

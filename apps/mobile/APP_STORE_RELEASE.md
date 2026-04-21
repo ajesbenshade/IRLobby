@@ -37,6 +37,8 @@ EXPO_PUBLIC_WEBSOCKET_URL=wss://your-backend-domain.com
 EXPO_PUBLIC_TWITTER_CLIENT_ID=...
 EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter
 EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN=...
+# Optional but recommended for production: enables Sentry crash + perf reporting.
+EXPO_PUBLIC_SENTRY_DSN=...
 ```
 
 Notes:
@@ -100,7 +102,8 @@ Complete before submitting for review:
 
 > Copy-ready metadata lives in [`store/metadata/`](./store/metadata/).
 > Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./store/metadata/privacy-questionnaire.md).
-> Privacy Policy + Support pages are committed at `apps/web/public/privacy.html` and `apps/web/public/support.html` — host them at `https://irlobby.app/privacy` and `https://irlobby.app/support`.
+> Reviewer demo account (App Privacy → Sign-In Information): [`store/metadata/reviewer-demo-account.md`](./store/metadata/reviewer-demo-account.md).
+> Privacy Policy + Support pages are committed at `site/privacy.html` and `site/support.html` — host them at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
 > Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
 
 ### Pre-submission sanity check

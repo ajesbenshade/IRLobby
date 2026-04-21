@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://irlobby.com/sitemap.xml

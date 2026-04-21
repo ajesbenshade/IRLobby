@@ -12,6 +12,4 @@ deployment:
   tasks:
     - export DEPLOYPATH=$HOME/public_html
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -f apps/web/public/privacy.html $DEPLOYPATH/privacy.html
-    - /bin/cp -f apps/web/public/support.html $DEPLOYPATH/support.html
-    - /bin/cp -f apps/web/public/.htaccess $DEPLOYPATH/.htaccess
+    - /bin/cp -rf site/. $DEPLOYPATH/

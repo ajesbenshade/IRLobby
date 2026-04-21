@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IRLobby — Tinder for real IRL hangouts</title>
+    <meta name="description" content="Swipe on real activities near you. Mutual swipe = instant match and chat to actually make plans. Find your vibe in 60 seconds." />
+    <meta name="theme-color" content="#FF2E63" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="IRLobby — Tinder for real IRL hangouts" />
+    <meta property="og:description" content="Swipe on real activities near you. Find your vibe in 60 seconds." />
+    <meta property="og:image" content="https://irlobby.com/og-image.png" />
+    <meta property="og:url" content="https://irlobby.com" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                DEFAULT: '#FF2E63',
+                dark: '#E01F52',
+                soft: '#FFB6CC',
+              },
+              ink: '#0B0B14',
+            },
+            fontFamily: {
+              display: ['Outfit', 'system-ui', 'sans-serif'],
+            },
+            animation: {
+              'float': 'float 6s ease-in-out infinite',
+              'float-slow': 'float 8s ease-in-out infinite',
+              'pulse-soft': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0px) rotate(-2deg)' },
+                '50%': { transform: 'translateY(-12px) rotate(2deg)' },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      html, body { font-family: 'Outfit', system-ui, sans-serif; }
+      .gradient-text {
+        background: linear-gradient(135deg, #FF2E63 0%, #FF6B9A 50%, #FFB6CC 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero-bg {
+        background:
+          radial-gradient(ellipse 80% 50% at 20% 0%, rgba(255, 46, 99, 0.25) 0%, transparent 50%),
+          radial-gradient(ellipse 60% 50% at 80% 30%, rgba(255, 107, 154, 0.18) 0%, transparent 50%),
+          radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 182, 204, 0.15) 0%, transparent 50%),
+          #0B0B14;
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .card-tilt {
+        transform: perspective(1000px) rotateY(-8deg) rotateX(4deg);
+        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .card-tilt:hover {
+        transform: perspective(1000px) rotateY(0deg) rotateX(0deg) scale(1.02);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-float, .animate-float-slow, .animate-pulse-soft { animation: none !important; }
+      }
+    </style>
+  </head>
+
+  <body class="bg-ink text-white antialiased">
+
+    <!-- Nav -->
+    <nav class="fixed top-0 inset-x-0 z-50 glass">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
+          <span class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+        </a>
+        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
+          <a href="#how" class="hover:text-white transition">How it works</a>
+          <a href="#features" class="hover:text-white transition">Features</a>
+          <a href="#download" class="hover:text-white transition">Download</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+        </div>
+        <a href="#download" class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30">
+          Get the app
+        </a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero-bg pt-32 pb-24 sm:pt-40 sm:pb-32 relative overflow-hidden">
+      <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/70 mb-6">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            Now on the App Store
+          </div>
+          <h1 class="font-display font-black text-5xl sm:text-6xl lg:text-7xl leading-[1.05] tracking-tight">
+            Get out.<br/>
+            Get together.<br/>
+            <span class="gradient-text">For real.</span>
+          </h1>
+          <p class="mt-6 text-lg sm:text-xl text-white/70 max-w-xl leading-relaxed">
+            Swipe on actual activities happening near you — rooftop hangs, game nights, hikes, deep convos.
+            When someone else swipes too, you instantly match and chat to make it happen.
+          </p>
+          <div class="mt-8 flex flex-col sm:flex-row gap-4">
+            <a href="#download" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-brand hover:bg-brand-dark text-white font-bold transition shadow-xl shadow-brand/40 hover:scale-105 active:scale-95">
+              <svg viewBox="0 0 384 512" class="w-5 h-5 fill-current"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+              Download for iOS
+            </a>
+            <a href="#how" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold transition">
+              See how it works
+            </a>
+          </div>
+          <p class="mt-6 text-sm text-white/50">
+            Free · iPhone · Built for Gen Z & young adults
+          </p>
+        </div>
+
+        <!-- Phone mockup -->
+        <div class="relative h-[600px] hidden lg:block">
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[600px] card-tilt">
+            <div class="absolute inset-0 rounded-[48px] bg-gradient-to-br from-brand to-brand-dark shadow-2xl shadow-brand/50"></div>
+            <div class="absolute inset-2 rounded-[44px] bg-ink overflow-hidden">
+              <!-- Notch -->
+              <div class="absolute top-2 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-10"></div>
+
+              <!-- Screen content -->
+              <div class="pt-12 px-5 h-full flex flex-col">
+                <div class="flex items-center justify-between text-white/60 text-xs">
+                  <span>9:41</span>
+                  <span>●●● 100%</span>
+                </div>
+
+                <div class="mt-6">
+                  <p class="text-xs text-white/50 uppercase tracking-wider">Tonight near you</p>
+                  <h3 class="font-bold text-2xl mt-1">Rooftop sunset hang</h3>
+                </div>
+
+                <div class="mt-4 flex-1 rounded-2xl bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 relative overflow-hidden shadow-xl">
+                  <div class="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <div class="flex items-center gap-2 text-white text-sm">
+                      <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>
+                      Mission Dolores · 0.8 mi
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                      <span class="px-2 py-1 rounded-full bg-white/20 text-white text-xs backdrop-blur">chill</span>
+                      <span class="px-2 py-1 rounded-full bg-white/20 text-white text-xs backdrop-blur">outdoors</span>
+                      <span class="px-2 py-1 rounded-full bg-white/20 text-white text-xs backdrop-blur">tonight</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 flex gap-3 justify-center pb-8">
+                  <button class="w-14 h-14 rounded-full bg-white/10 grid place-items-center text-white/50 text-2xl">✕</button>
+                  <button class="w-14 h-14 rounded-full bg-brand grid place-items-center shadow-lg shadow-brand/50 animate-pulse-soft">
+                    <svg viewBox="0 0 24 24" class="w-7 h-7 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating badges -->
+          <div class="absolute top-12 right-0 glass rounded-2xl px-4 py-3 animate-float">
+            <div class="text-2xl">🎉</div>
+            <p class="text-xs text-white/70 mt-1">It's a match!</p>
+          </div>
+          <div class="absolute bottom-20 left-0 glass rounded-2xl px-4 py-3 animate-float-slow">
+            <div class="text-2xl">🔥</div>
+            <p class="text-xs text-white/70 mt-1">3 nearby vibes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="py-24 bg-ink">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+          <p class="text-brand font-semibold uppercase tracking-wider text-sm">How it works</p>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl mt-3">From quiz to plans, in minutes.</h2>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="glass rounded-3xl p-8">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl mb-6">1</div>
+            <h3 class="font-display font-bold text-2xl">Take the vibe quiz</h3>
+            <p class="mt-3 text-white/60 leading-relaxed">5 fun questions tune what shows up. Takes about 60 seconds.</p>
+          </div>
+          <div class="glass rounded-3xl p-8">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl mb-6">2</div>
+            <h3 class="font-display font-bold text-2xl">Swipe activities</h3>
+            <p class="mt-3 text-white/60 leading-relaxed">Real things happening near you — not just profiles. Pick what sounds fun.</p>
+          </div>
+          <div class="glass rounded-3xl p-8">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 grid place-items-center text-brand font-bold text-xl mb-6">3</div>
+            <h3 class="font-display font-bold text-2xl">Match & meet</h3>
+            <p class="mt-3 text-white/60 leading-relaxed">Mutual swipe unlocks chat instantly. Coordinate. Show up. Done.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-24 relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-b from-ink via-brand/5 to-ink"></div>
+      <div class="max-w-7xl mx-auto px-6 relative">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+          <p class="text-brand font-semibold uppercase tracking-wider text-sm">Why people use it</p>
+          <h2 class="font-display font-bold text-4xl sm:text-5xl mt-3">Built to actually get you out the door.</h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">⚡</div>
+            <h3 class="font-display font-bold text-xl">Vibe quiz</h3>
+            <p class="mt-2 text-white/60">Five questions that actually move the needle on what shows up.</p>
+          </div>
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">🎯</div>
+            <h3 class="font-display font-bold text-xl">Activity-first</h3>
+            <p class="mt-2 text-white/60">Swipe on plans, not selfies. Tonight's open mic. Tomorrow's hike.</p>
+          </div>
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">💬</div>
+            <h3 class="font-display font-bold text-xl">Real-time chat</h3>
+            <p class="mt-2 text-white/60">Match unlocks chat. Coordinate the meetup without leaving the app.</p>
+          </div>
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">🎉</div>
+            <h3 class="font-display font-bold text-xl">Match celebration</h3>
+            <p class="mt-2 text-white/60">Confetti and haptics when interest is mutual. Because it should feel good.</p>
+          </div>
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">📍</div>
+            <h3 class="font-display font-bold text-xl">Hyper-local</h3>
+            <p class="mt-2 text-white/60">Distance-aware so you only see things you can actually get to.</p>
+          </div>
+          <div class="glass rounded-3xl p-8 hover:bg-white/5 transition">
+            <div class="text-4xl mb-4">🛜</div>
+            <h3 class="font-display font-bold text-xl">Works offline</h3>
+            <p class="mt-2 text-white/60">Your last results stay available. Syncs back up when you've got bars.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download CTA -->
+    <section id="download" class="py-24">
+      <div class="max-w-4xl mx-auto px-6">
+        <div class="glass rounded-[2.5rem] p-12 text-center relative overflow-hidden">
+          <div class="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-brand/30 blur-3xl"></div>
+          <div class="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-brand/20 blur-3xl"></div>
+          <div class="relative">
+            <h2 class="font-display font-black text-4xl sm:text-5xl">
+              Stop scrolling.<br/>
+              <span class="gradient-text">Start showing up.</span>
+            </h2>
+            <p class="mt-6 text-lg text-white/70 max-w-xl mx-auto">
+              IRLobby is free on the App Store. Android coming soon.
+            </p>
+            <div class="mt-8 flex flex-wrap justify-center gap-4">
+              <a href="https://apps.apple.com/app/id6759202702" class="inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white text-ink hover:scale-105 active:scale-95 transition font-semibold shadow-2xl">
+                <svg viewBox="0 0 384 512" class="w-7 h-7"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                <div class="text-left leading-tight">
+                  <div class="text-xs text-ink/60">Download on the</div>
+                  <div class="text-lg font-bold">App Store</div>
+                </div>
+              </a>
+              <button disabled class="inline-flex items-center gap-3 px-7 py-4 rounded-2xl bg-white/5 border border-white/10 text-white/40 font-semibold cursor-not-allowed">
+                <svg viewBox="0 0 24 24" class="w-7 h-7 fill-current"><path d="M3 20.5V3.5c0-.39.21-.74.55-.93l13.41 9.43-13.41 9.43c-.34-.19-.55-.54-.55-.93zM16.95 12 5.36 4l11.59 8zm0 0L5.36 20l11.59-8z"/></svg>
+                <div class="text-left leading-tight">
+                  <div class="text-xs">Coming to</div>
+                  <div class="text-lg font-bold">Google Play</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2 font-display font-bold">
+          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"/></svg>
+          </span>
+          IRLobby
+          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white/60">
+          <a href="/privacy" class="hover:text-white transition">Privacy</a>
+          <a href="/support" class="hover:text-white transition">Support</a>
+          <a href="mailto:hello@irlobby.com" class="hover:text-white transition">hello@irlobby.com</a>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>

@@ -1,6 +1,6 @@
-Support URL: https://irlobby.app/support
-Marketing URL: https://irlobby.app
-Privacy Policy URL: https://irlobby.app/privacy
+Support URL: https://irlobby.com/support
+Marketing URL: https://irlobby.com
+Privacy Policy URL: https://irlobby.com/privacy
 Age Rating: 17+
 Primary Category: Social Networking
 Secondary Category: Lifestyle

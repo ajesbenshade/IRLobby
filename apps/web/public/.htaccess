@@ -1,0 +1,26 @@
+# Apache config for irlobby.com static legal pages.
+# Lets /privacy and /support resolve without the .html extension.
+
+Options -Indexes
+DirectorySlash Off
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # If the request is missing .html and a matching .html exists, serve it.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+  RewriteRule ^([^.]+)$ /$1.html [L]
+
+  # If someone hits the .html version directly, redirect to the clean URL.
+  RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.html [NC]
+  RewriteRule ^ /%1 [R=301,L]
+</IfModule>
+
+# Sensible caching for static pages.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "public, max-age=300"
+  </FilesMatch>
+</IfModule>

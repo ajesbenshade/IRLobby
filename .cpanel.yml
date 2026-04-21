@@ -1,0 +1,17 @@
+# cPanel Git Version Control deployment manifest.
+# Triggered by clicking "Update from Remote" + "Deploy HEAD Commit"
+# in cPanel → Git Version Control, OR via the cpanel-deploy webhook
+# if you wire it up. The deploy key labelled "Web Server" lets cPanel
+# pull from GitHub over SSH.
+#
+# Today this only ships the static legal pages required by App Store
+# review (privacy + support). Expand the tasks list if you ever
+# resurrect the archived Vite web app.
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/public_html
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -f apps/web/public/privacy.html $DEPLOYPATH/privacy.html
+    - /bin/cp -f apps/web/public/support.html $DEPLOYPATH/support.html
+    - /bin/cp -f apps/web/public/.htaccess $DEPLOYPATH/.htaccess

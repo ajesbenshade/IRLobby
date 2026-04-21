@@ -5,6 +5,7 @@ import { Button, HelperText, Text } from 'react-native-paper';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
 import { RefreshControl, View } from '@components/RNCompat';
+import { MatchCardSkeleton } from '@components/skeletons';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchMatches } from '@services/matchService';
 import { appColors } from '@theme/index';
@@ -30,7 +31,13 @@ export const MatchesScreen = () => {
         subtitle="A cleaner view of the people and activities where interest lined up on both sides."
       />
 
-      {isLoading && <Text style={styles.loadingText}>Loading matches...</Text>}
+      {isLoading && (
+        <>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <MatchCardSkeleton key={`match-skeleton-${index}`} />
+          ))}
+        </>
+      )}
 
       {error && (
         <View style={styles.errorContainer}>

@@ -15,7 +15,7 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { MatchCelebration } from '@components/MatchCelebration';
-import { Skeleton } from '@components/Skeleton';
+import { ActivityCardSkeleton } from '@components/skeletons';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
@@ -483,17 +483,7 @@ export const DiscoverScreen = () => {
             </PanelCard>
           ) : null}
 
-          {isLoading ? (
-            <PanelCard style={styles.skeletonCard}>
-              <Skeleton width={120} height={20} />
-              <View style={{ height: 12 }} />
-              <Skeleton height={220} radius={20} />
-              <View style={{ height: 12 }} />
-              <Skeleton width="70%" height={16} />
-              <View style={{ height: 8 }} />
-              <Skeleton width="50%" height={14} />
-            </PanelCard>
-          ) : null}
+          {isLoading ? <ActivityCardSkeleton /> : null}
 
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>

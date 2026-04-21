@@ -12,6 +12,7 @@ import {
   SectionIntro,
 } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { NotificationRowSkeleton } from '@components/skeletons';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { appColors, radii, spacing } from '@theme/index';
@@ -158,7 +159,11 @@ export const NotificationsScreen = () => {
 
       {isLoading ? (
         <PanelCard>
-          <Text style={styles.loadingText}>Loading your activity feed...</Text>
+          <View style={styles.listStack}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <NotificationRowSkeleton key={`notification-skeleton-${index}`} />
+            ))}
+          </View>
         </PanelCard>
       ) : null}
 

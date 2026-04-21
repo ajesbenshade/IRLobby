@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button, HelperText, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
@@ -9,13 +9,12 @@ import { API_ROUTES } from '@shared/schema';
 import {
   AccentPill,
   AppScrollView,
-  DetailRow,
   EmptyStatePanel,
   PageHeader,
   PanelCard,
   SectionIntro,
+  DetailRow,
 } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { Image, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
@@ -27,7 +26,8 @@ import {
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
-const MAX_INTERESTS = 20;
+import { VibeQuizScreen } from './vibeQuiz/VibeQuizScreen';
+
 const MAX_PHOTOS = 12;
 
 // Onboarding ships in 3 steps (photo, vibe, notifications). Bio, detailed
@@ -52,8 +52,8 @@ const STEP_COPY: Record<
   },
   preferences: {
     eyebrow: 'Step 2 of 3',
-    title: 'Pick your vibe',
-    subtitle: 'What are you up for? Pick a few.',
+    title: 'Find your vibe',
+    subtitle: '5 quick questions → instant personalized hangouts.',
   },
   notifications: {
     eyebrow: 'Step 3 of 3',
@@ -91,27 +91,9 @@ export const OnboardingScreen = () => {
   const [currentStep, setCurrentStep] = useState<OnboardingStepKey>('photo');
   const [stepError, setStepError] = useState<string | null>(null);
 
-  const [interestsInput, setInterestsInput] = useState('');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [photoAlbum, setPhotoAlbum] = useState<string[]>([]);
-  const [indoor, setIndoor] = useState(false);
-  const [outdoor, setOutdoor] = useState(false);
-  const [smallGroups, setSmallGroups] = useState(false);
-  const [weekendPreferred, setWeekendPreferred] = useState(false);
   const [enableNotifications, setEnableNotifications] = useState(false);
-
-  const interests = useMemo(
-    () =>
-      interestsInput
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .slice(0, MAX_INTERESTS),
-    [interestsInput],
-  );
-
-  const selectedPreferenceCount = [indoor, outdoor, smallGroups, weekendPreferred].filter(Boolean)
-    .length;
 
   const resolveInitialStep = (nextUser: typeof user): OnboardingStepKey => {
     if (!nextUser) {
@@ -130,15 +112,8 @@ export const OnboardingScreen = () => {
   };
 
   useEffect(() => {
-    setInterestsInput((user?.interests ?? []).join(', '));
     setProfilePhotoUrl(user?.avatarUrl ?? '');
     setPhotoAlbum(user?.photoAlbum ?? []);
-
-    const activityPreferences = user?.activityPreferences ?? {};
-    setIndoor(Boolean(activityPreferences.indoor));
-    setOutdoor(Boolean(activityPreferences.outdoor));
-    setSmallGroups(Boolean(activityPreferences.smallGroups ?? activityPreferences.group_size === 'small'));
-    setWeekendPreferred(Boolean(activityPreferences.weekendPreferred));
     setEnableNotifications(Boolean(user?.pushNotificationsEnabled));
 
     const nextStep = resolveInitialStep(user);
@@ -281,27 +256,6 @@ export const OnboardingScreen = () => {
     );
   };
 
-  const handlePreferencesContinue = async () => {
-    if (interests.length === 0 && selectedPreferenceCount === 0) {
-      setStepError('Pick at least one vibe to continue.');
-      return;
-    }
-
-    await saveOnboardingStep(
-      {
-        interests,
-        photo_album: photoAlbum,
-        activity_preferences: {
-          indoor,
-          outdoor,
-          smallGroups,
-          weekendPreferred,
-        },
-      },
-      'notifications',
-    );
-  };
-
   const handleNotificationsContinue = async () => {
     notificationsMutation.reset();
     setStepError(null);
@@ -384,62 +338,25 @@ export const OnboardingScreen = () => {
   );
 
   const renderPreferencesStep = () => (
-    <>
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Interests"
-          title="Add a few interests people can understand quickly"
-          subtitle="Use short comma-separated phrases. Keep them concrete so the app has useful matching signals."
-        />
-        <TextInput
-          label="Interests"
-          placeholder="Hiking, dinners, tennis, books"
-          value={interestsInput}
-          onChangeText={setInterestsInput}
-          mode="outlined"
-          style={styles.input}
-        />
-        {interests.length > 0 ? (
-          <View style={styles.interestsWrap}>
-            {interests.map((interest) => (
-              <View key={interest} style={styles.interestChip}>
-                <Text style={styles.interestChipText}>{interest}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.helperCopy}>No problem if you prefer toggles below. You only need at least one interest or one preference signal.</Text>
-        )}
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Activity preferences"
-          title="Flip the switches that feel true now"
-          subtitle="These are lightweight signals. You can evolve them later after you have used the app for a while."
-        />
-        <DetailRow
-          title="Indoor activities"
-          subtitle="Classes, dinners, workshops, game nights, and weather-proof plans."
-          accessory={<Switch value={indoor} onValueChange={setIndoor} />}
-        />
-        <DetailRow
-          title="Outdoor activities"
-          subtitle="Walks, hikes, beach plans, sports, and anything that needs open air."
-          accessory={<Switch value={outdoor} onValueChange={setOutdoor} />}
-        />
-        <DetailRow
-          title="Prefer small groups"
-          subtitle="Bias recommendations toward plans that feel easier to join socially."
-          accessory={<Switch value={smallGroups} onValueChange={setSmallGroups} />}
-        />
-        <DetailRow
-          title="Prefer weekends"
-          subtitle="Favor Friday through Sunday when the app prioritizes recommendations."
-          accessory={<Switch value={weekendPreferred} onValueChange={setWeekendPreferred} />}
-        />
-      </PanelCard>
-    </>
+    <PanelCard>
+      <VibeQuizScreen
+        existingActivityPreferences={user?.activityPreferences}
+        existingPhotoAlbum={photoAlbum}
+        existingInterests={user?.interests}
+        onComplete={async () => {
+          await refreshProfile();
+          setStepError(null);
+          setCurrentStep('notifications');
+        }}
+        onSkip={async () => {
+          await refreshProfile();
+          setStepError(null);
+          setCurrentStep('notifications');
+        }}
+        markSkippedOnSave={false}
+        persistOnComplete
+      />
+    </PanelCard>
   );
 
   const renderNotificationsStep = () => (
@@ -474,6 +391,12 @@ export const OnboardingScreen = () => {
   };
 
   const renderFooter = () => {
+    // The vibe quiz step renders its own intro/back/skip controls; suppress
+    // the standard onboarding footer so the user only sees one set of CTAs.
+    if (currentStep === 'preferences') {
+      return null;
+    }
+
     const isSaving = onboardingMutation.isPending || notificationsMutation.isPending;
 
     let primaryLabel = 'Next';
@@ -490,8 +413,6 @@ export const OnboardingScreen = () => {
 
     if (currentStep === 'photo') {
       primaryAction = handlePhotoContinue;
-    } else if (currentStep === 'preferences') {
-      primaryAction = handlePreferencesContinue;
     } else if (currentStep === 'notifications') {
       primaryLabel = enableNotifications ? "You're in" : 'Skip & enter app';
       primaryAction = handleNotificationsContinue;
@@ -546,9 +467,6 @@ export const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
-  },
-  input: {
-    backgroundColor: 'transparent',
   },
   helperCopy: {
     color: appColors.mutedInk,
@@ -619,21 +537,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: radii.md,
     backgroundColor: '#d9e5ff',
-  },
-  interestsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  interestChip: {
-    borderRadius: radii.pill,
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  interestChipText: {
-    color: appColors.primaryDeep,
-    fontWeight: '700',
   },
   footerCard: {
     gap: spacing.sm,

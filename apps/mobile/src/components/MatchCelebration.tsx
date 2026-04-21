@@ -1,64 +1,194 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Text } from 'react-native-paper';
 
 import { Text as NativeText, View } from '@components/RNCompat';
+import { ConfettiBurst } from '@screens/main/vibeQuiz/ConfettiBurst';
 import { appColors, palette, radii, spacing } from '@theme/index';
 
 type MatchCelebrationProps = {
   visible: boolean;
-  message?: string;
   onDismiss: () => void;
+  /** Headline copy override (defaults to "It's a match!"). */
+  message?: string;
+  /** Optional human name to personalize the subline ("You and {matchName}…"). */
+  matchName?: string;
+  /** Optional activity title shown beneath the headline. */
+  activityTitle?: string;
+  /** Optional callback wired to a primary CTA (e.g. open chat). */
+  onPrimaryAction?: () => void;
+  /** Label for the primary CTA when `onPrimaryAction` is provided. */
+  primaryActionLabel?: string;
 };
+
+const BACKDROP_GRADIENT: readonly [string, string, string] = [
+  palette.primary,
+  palette.primaryDeep,
+  palette.accent,
+];
+
+const CTA_GRADIENT: readonly [string, string] = [palette.primary, palette.primaryDeep];
 
 /**
  * Full-screen celebratory overlay shown when a swipe results in a match.
- * Uses a gradient backdrop, scaling sparkle text, and success haptic.
+ *
+ * Animation timeline (~600ms in, then idle pulse):
+ *   0ms    – Heavy haptic + confetti burst + backdrop fade in
+ *   ~150ms – Card spring overshoots to 1.15× then settles to 1×
+ *   ~180ms – Medium haptic
+ *   ~300ms – Heart emoji springs in and starts a slow pulse
+ *   ~420ms – Success notification haptic
+ *
+ * Pure Reanimated v4 + the existing `ConfettiBurst` (no new native deps).
+ * Backward compatible with callers that only pass `{ visible, message, onDismiss }`.
  */
-export const MatchCelebration = ({ visible, message, onDismiss }: MatchCelebrationProps) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.6)).current;
+export const MatchCelebration = ({
+  visible,
+  onDismiss,
+  message,
+  matchName,
+  activityTitle,
+  onPrimaryAction,
+  primaryActionLabel = 'Start chatting',
+}: MatchCelebrationProps) => {
+  const opacity = useSharedValue(0);
+  const cardScale = useSharedValue(0.6);
+  const heartScale = useSharedValue(0);
 
   useEffect(() => {
     if (!visible) {
-      opacity.setValue(0);
-      scale.setValue(0.6);
+      opacity.value = 0;
+      cardScale.value = 0.6;
+      heartScale.value = 0;
       return;
     }
 
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Multi-stage haptic sequence — feels physical without being obnoxious.
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const t1 = setTimeout(
+      () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+      180,
+    );
+    const t2 = setTimeout(
+      () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+      420,
+    );
 
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 5, tension: 120, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, scale, visible]);
+    // Backdrop + card entrance.
+    opacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
+    cardScale.value = withSequence(
+      withSpring(1.15, { damping: 6, stiffness: 140 }),
+      withSpring(1, { damping: 10, stiffness: 120 }),
+    );
+
+    // Heart pops in slightly later, then idle-pulses forever (looks alive).
+    heartScale.value = withDelay(
+      300,
+      withSequence(
+        withSpring(1.2, { damping: 5, stiffness: 160 }),
+        withRepeat(
+          withSequence(
+            withTiming(0.92, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+            withTiming(1.05, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+          ),
+          -1,
+          true,
+        ),
+      ),
+    );
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [cardScale, heartScale, opacity, visible]);
+
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: heartScale.value }] }));
 
   if (!visible) {
     return null;
   }
 
+  const subline = matchName
+    ? `You and ${matchName} both swiped right!`
+    : message ?? 'Say hi in chat.';
+
+  const handlePrimary = () => {
+    if (!onPrimaryAction) {
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPrimaryAction();
+    onDismiss();
+  };
+
   return (
-    <Animated.View style={[styles.overlay, { opacity }]} pointerEvents="auto">
-      <Pressable style={styles.backdropPressable} onPress={onDismiss}>
-        <LinearGradient
-          colors={[palette.primary, palette.primaryDeep, palette.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
-          <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
-            <NativeText style={styles.sparkle}>✨</NativeText>
+    <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="auto">
+      <LinearGradient
+        colors={BACKDROP_GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradient}
+      >
+        {/* Confetti sits behind the card so it doesn't intercept taps. */}
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <ConfettiBurst visible pieces={90} />
+        </View>
+
+        {/* Tap-to-dismiss backdrop — wraps the card so any outside tap closes. */}
+        <Pressable style={styles.backdropPressable} onPress={onDismiss}>
+          <Animated.View style={[styles.card, cardStyle]}>
+            <Animated.Text style={[styles.heart, heartStyle]}>❤️</Animated.Text>
+
             <Text variant="displaySmall" style={styles.headline}>
-              It’s a match!
+              {message ?? "It's a match!"}
             </Text>
-            <Text style={styles.subline}>{message ?? 'Say hi in chat.'}</Text>
-            <NativeText style={styles.tap}>Tap anywhere to continue</NativeText>
+
+            <Text style={styles.subline}>{subline}</Text>
+
+            {activityTitle ? (
+              <Text style={styles.activity}>
+                Ready for{' '}
+                <NativeText style={styles.activityHighlight}>{activityTitle}</NativeText>?
+              </Text>
+            ) : null}
+
+            {onPrimaryAction ? (
+              <View style={styles.actions}>
+                <Pressable style={styles.ctaWrap} onPress={handlePrimary}>
+                  <LinearGradient
+                    colors={CTA_GRADIENT}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.ctaGradient}
+                  >
+                    <NativeText style={styles.ctaLabel}>💬 {primaryActionLabel}</NativeText>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable onPress={onDismiss} style={styles.secondaryBtn}>
+                  <NativeText style={styles.secondaryLabel}>Maybe later</NativeText>
+                </Pressable>
+              </View>
+            ) : (
+              <NativeText style={styles.tap}>Tap anywhere to continue</NativeText>
+            )}
           </Animated.View>
-        </LinearGradient>
-      </Pressable>
+        </Pressable>
+      </LinearGradient>
     </Animated.View>
   );
 };
@@ -73,10 +203,10 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 999,
   },
-  backdropPressable: {
+  gradient: {
     flex: 1,
   },
-  gradient: {
+  backdropPressable: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -88,10 +218,15 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderRadius: radii.xl,
     backgroundColor: 'rgba(255,255,255,0.12)',
+    width: '100%',
+    maxWidth: 420,
   },
-  sparkle: {
-    fontSize: 64,
+  heart: {
+    fontSize: 96,
     marginBottom: spacing.xs,
+    textShadowColor: 'rgba(255, 90, 140, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 24,
   },
   headline: {
     color: appColors.white,
@@ -105,6 +240,54 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     opacity: 0.95,
+  },
+  activity: {
+    color: appColors.white,
+    fontSize: 15,
+    textAlign: 'center',
+    opacity: 0.92,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  activityHighlight: {
+    color: appColors.secondary,
+    fontWeight: '800',
+  },
+  actions: {
+    width: '100%',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  ctaWrap: {
+    width: '100%',
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+    shadowColor: palette.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaGradient: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaLabel: {
+    color: appColors.white,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  secondaryBtn: {
+    paddingVertical: spacing.sm,
+  },
+  secondaryLabel: {
+    color: appColors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.75,
   },
   tap: {
     color: appColors.white,

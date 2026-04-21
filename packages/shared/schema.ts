@@ -107,3 +107,81 @@ export interface TicketValidationResponse {
 	status: "pending" | "paid" | "used" | "cancelled";
 	redeemed_at?: string;
 }
+
+export type VibeProfile =
+	| "cozy_night_owl"
+	| "hype_energy_host"
+	| "creative_night_owl"
+	| "deep_connector"
+	| "adventure_seeker"
+	| "wellness_wanderer";
+
+export type VibeTag =
+	| "board_games"
+	| "live_music"
+	| "cooking"
+	| "outdoors"
+	| "art"
+	| "wellness"
+	| "deep_talks"
+	| "sports";
+
+export interface VibeAnswers {
+	q1?: string;
+	q2?: string;
+	q3?: VibeTag[];
+	q4?: string;
+	q5?: string;
+}
+
+export interface VibeQuizResult {
+	vibeProfile: VibeProfile;
+	vibeTags: VibeTag[];
+	discoverTags: string[];
+	answers: VibeAnswers;
+	completedAt: string;
+}
+
+export const VIBE_PROFILE_LABELS: Record<VibeProfile, { name: string; emoji: string; tagline: string }> = {
+	cozy_night_owl: {
+		name: "Cozy Night Owl",
+		emoji: "🌙🧘",
+		tagline: "Low-key plans, deep conversations, soft lighting.",
+	},
+	hype_energy_host: {
+		name: "Hype Energy Host",
+		emoji: "⚡🎉",
+		tagline: "Big rooms, bigger laughs, the dance floor is yours.",
+	},
+	creative_night_owl: {
+		name: "Creative Night Owl",
+		emoji: "🌙🎨",
+		tagline: "Late-night ideas, makers' hangs, magic under fairy lights.",
+	},
+	deep_connector: {
+		name: "Cozy Deep Diver",
+		emoji: "❤️💭",
+		tagline: "Trusted circles, real talk, leave-it-better energy.",
+	},
+	adventure_seeker: {
+		name: "Adventure Seeker",
+		emoji: "🏔️⚡",
+		tagline: "Outside, in motion, chasing the next story.",
+	},
+	wellness_wanderer: {
+		name: "Wellness Wanderer",
+		emoji: "🌿✨",
+		tagline: "Sun, breath, intention — recharged the natural way.",
+	},
+};
+
+export const VIBE_TAG_TO_DISCOVER: Record<VibeTag, string> = {
+	board_games: "board games",
+	live_music: "live music",
+	cooking: "cooking",
+	outdoors: "outdoors",
+	art: "art",
+	wellness: "wellness",
+	deep_talks: "deep talks",
+	sports: "sports",
+};

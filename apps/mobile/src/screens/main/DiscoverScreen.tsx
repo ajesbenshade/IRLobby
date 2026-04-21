@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, HelperText, Modal, Portal, Text } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, Snackbar, Text } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 
 import {
@@ -18,6 +18,7 @@ import { MatchCelebration } from '@components/MatchCelebration';
 import { Skeleton } from '@components/Skeleton';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
+import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import {
   fetchActivities,
@@ -36,9 +37,11 @@ const AnimatedView = Animated.View as unknown as ComponentType<any>;
 export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const pan = useRef(new Animated.ValueXY()).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
+  const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -120,9 +123,20 @@ export const DiscoverScreen = () => {
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setMatchMessage('It’s a match. Say hi in chat.');
+        const matchedActivity = activities[currentIndex];
+        const hostName =
+          matchedActivity == null
+            ? undefined
+            : typeof matchedActivity.host === 'string'
+              ? matchedActivity.host
+              : [matchedActivity.host.firstName, matchedActivity.host.lastName]
+                  .filter(Boolean)
+                  .join(' ') || matchedActivity.host.email || undefined;
+        setMatchContext({ name: hostName, title: matchedActivity?.title });
+        setMatchMessage("It's a match!");
       } else {
         setMatchMessage(null);
+        setMatchContext(null);
       }
 
       setCurrentIndex((previous) => previous + 1);
@@ -241,6 +255,7 @@ export const DiscoverScreen = () => {
   const resetDeck = useCallback(() => {
     setCurrentIndex(0);
     setMatchMessage(null);
+    setMatchContext(null);
     void refetch();
   }, [refetch]);
 
@@ -258,6 +273,33 @@ export const DiscoverScreen = () => {
     setDateToFilter('');
     setCurrentIndex(0);
   }, []);
+
+  // Vibe quiz integration -----------------------------------------------------
+  // Seed the tag filter from the user's vibe profile on first mount so the deck
+  // is personalized immediately. We only do this once per session and only when
+  // the user has not already typed something into the filter themselves.
+  const vibeDiscoverTags = user?.vibe?.vibeDiscoverTags ?? [];
+  const vibeQuizSkipped = Boolean(user?.vibe?.vibeQuizSkipped);
+  const hasVibeProfile = Boolean(user?.vibe?.vibeProfile);
+  const vibeSeededRef = useRef(false);
+  const [vibeToastVisible, setVibeToastVisible] = useState(false);
+  const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
+
+  useEffect(() => {
+    if (vibeSeededRef.current) {
+      return;
+    }
+    if (!hasVibeProfile || vibeDiscoverTags.length === 0) {
+      return;
+    }
+    if (tagFilter.trim().length > 0) {
+      vibeSeededRef.current = true;
+      return;
+    }
+    vibeSeededRef.current = true;
+    setTagFilter(vibeDiscoverTags.join(', '));
+    setVibeToastVisible(true);
+  }, [hasVibeProfile, vibeDiscoverTags, tagFilter]);
 
   const cardStyle = {
     transform: [
@@ -300,6 +342,29 @@ export const DiscoverScreen = () => {
           </Button>
         }
       />
+
+      {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
+        <PanelCard style={styles.vibeReminderCard}>
+          <Text variant="titleMedium" style={styles.vibeReminderTitle}>
+            Want a feed that actually fits?
+          </Text>
+          <Text style={styles.vibeReminderSubtitle}>
+            Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your energy.
+          </Text>
+          <View style={styles.vibeReminderActions}>
+            <Button mode="text" compact onPress={() => setVibeReminderDismissed(true)}>
+              Not now
+            </Button>
+            <Button
+              mode="contained"
+              compact
+              onPress={() => navigation.navigate('VibeQuizModal')}
+            >
+              Take the quiz
+            </Button>
+          </View>
+        </PanelCard>
+      ) : null}
 
       <View style={styles.toolbar}>
             <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
@@ -605,8 +670,26 @@ export const DiscoverScreen = () => {
     <MatchCelebration
       visible={!!matchMessage}
       message={matchMessage ?? undefined}
-      onDismiss={() => setMatchMessage(null)}
+      matchName={matchContext?.name}
+      activityTitle={matchContext?.title}
+      onPrimaryAction={() => {
+        // Jump to the Chat tab inside the parent tab navigator.
+        const parent = navigation.getParent();
+        parent?.navigate('Chat' as never);
+      }}
+      onDismiss={() => {
+        setMatchMessage(null);
+        setMatchContext(null);
+      }}
     />
+    <Snackbar
+      visible={vibeToastVisible}
+      onDismiss={() => setVibeToastVisible(false)}
+      duration={3500}
+      action={{ label: 'Got it', onPress: () => setVibeToastVisible(false) }}
+    >
+      Personalized feed unlocked! 🎉
+    </Snackbar>
     </>
   );
 };
@@ -614,6 +697,23 @@ export const DiscoverScreen = () => {
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+  },
+  vibeReminderCard: {
+    gap: 8,
+  },
+  vibeReminderTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
+  },
+  vibeReminderSubtitle: {
+    color: appColors.mutedInk,
+    lineHeight: 20,
+  },
+  vibeReminderActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
   },
   toolbar: {
     flexDirection: 'row',

@@ -6,6 +6,15 @@ export interface AuthTokens {
   expiresIn?: number;
 }
 
+export interface VibeUserPayload {
+  vibeProfile?: string;
+  vibeTags?: string[];
+  vibeDiscoverTags?: string[];
+  vibeAnswers?: Record<string, unknown>;
+  vibeCompletedAt?: string;
+  vibeQuizSkipped?: boolean;
+}
+
 export interface AuthUser {
   id: number | string;
   email: string;
@@ -28,6 +37,7 @@ export interface AuthUser {
   privacyAcceptedAt?: string | null;
   pushNotificationsEnabled?: boolean;
   isHost?: boolean;
+  vibe?: VibeUserPayload;
 }
 
 export interface LoginPayload {

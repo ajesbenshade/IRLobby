@@ -32,4 +32,5 @@ export type MainStackParamList = {
   PrivacyPolicy: { title: string; url: string } | undefined;
   TermsOfService: { title: string; url: string } | undefined;
   WebContent: { title: string; url: string };
+  VibeQuizModal: undefined;
 };

@@ -56,6 +56,34 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
       ? (preferences?.photo_album as unknown[])
       : [];
 
+  const vibeSource =
+    (activityPreferences?.vibe as Record<string, unknown> | undefined) ||
+    (preferences?.vibe as Record<string, unknown> | undefined) ||
+    null;
+  const vibe = vibeSource
+    ? {
+        vibeProfile:
+          typeof vibeSource.vibeProfile === 'string' ? (vibeSource.vibeProfile as string) : undefined,
+        vibeTags: Array.isArray(vibeSource.vibeTags)
+          ? (vibeSource.vibeTags as unknown[]).filter((tag): tag is string => typeof tag === 'string')
+          : undefined,
+        vibeDiscoverTags: Array.isArray(vibeSource.vibeDiscoverTags)
+          ? (vibeSource.vibeDiscoverTags as unknown[]).filter(
+              (tag): tag is string => typeof tag === 'string',
+            )
+          : undefined,
+        vibeAnswers:
+          vibeSource.vibeAnswers && typeof vibeSource.vibeAnswers === 'object'
+            ? (vibeSource.vibeAnswers as Record<string, unknown>)
+            : undefined,
+        vibeCompletedAt:
+          typeof vibeSource.vibeCompletedAt === 'string'
+            ? (vibeSource.vibeCompletedAt as string)
+            : undefined,
+        vibeQuizSkipped: Boolean(vibeSource.vibeQuizSkipped),
+      }
+    : undefined;
+
   return {
     id: user.id,
     email: userRecord.email as string,
@@ -78,6 +106,7 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
     privacyAcceptedAt: (userRecord.privacyAcceptedAt ?? userRecord.privacy_accepted_at ?? null) as string | null,
     pushNotificationsEnabled: Boolean(notificationPreferences.pushNotifications),
     isHost: Boolean(userRecord.isHost ?? userRecord.is_host ?? userRecord.host),
+    vibe,
   };
 };
 

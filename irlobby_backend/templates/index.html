@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0; url=https://irlobby.com{{ request.get_full_path }}" />
+  <title>IRLobby – Redirecting…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+           justify-content: center; min-height: 100vh; margin: 0; background: #0f172a; color: #fff; }
+    a { color: #6366f1; }
+  </style>
+</head>
+<body>
+  <p>Redirecting to <a href="https://irlobby.com{{ request.get_full_path }}">irlobby.com</a>…</p>
+  <script>
+    window.location.replace("https://irlobby.com" + window.location.pathname + window.location.search + window.location.hash);
+  </script>
+</body>
+</html>

@@ -157,7 +157,7 @@ export default function Onboarding() {
           : 'Your onboarding progress was saved.',
       });
 
-      navigate('/');
+      navigate('/app', { replace: true });
     } catch (error) {
       toast({
         title: 'Failed to save onboarding',

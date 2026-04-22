@@ -503,11 +503,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">
         <p>IRLobby - Where activities meet people</p>
         <div className="flex space-x-4">
-          <a href="/privacy-policy" className="hover:underline">
+          <a href="/privacy" className="hover:underline">
             Privacy Policy
           </a>
           <span aria-hidden="true">&bull;</span>
-          <a href="/terms-of-service" className="hover:underline">
+          <a href="/terms" className="hover:underline">
             Terms of Service
           </a>
         </div>

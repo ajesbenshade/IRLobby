@@ -10,7 +10,19 @@ import { queryClient } from '@/lib/queryClient';
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));
+const FeaturesPage = lazy(() => import('@/pages/features'));
+const HowItWorksPage = lazy(() => import('@/pages/how-it-works'));
+const DownloadPage = lazy(() => import('@/pages/download'));
+const SupportPage = lazy(() => import('@/pages/support'));
 const Home = lazy(() => import('@/pages/home'));
+const Discovery = lazy(() => import('@/pages/discovery'));
+const Matches = lazy(() => import('@/pages/matches'));
+const CreateActivity = lazy(() => import('@/pages/create-activity'));
+const Profile = lazy(() => import('@/pages/profile'));
+const Chat = lazy(() => import('@/pages/chat'));
+const Reviews = lazy(() => import('@/pages/reviews'));
+const Settings = lazy(() => import('@/pages/settings'));
+const HelpSupport = lazy(() => import('@/pages/help-support'));
 const Onboarding = lazy(() => import('@/pages/onboarding'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const ForgotPasswordPage = lazy(() => import('@/pages/forgot-password'));
@@ -42,12 +54,35 @@ function AppRoutes() {
         path="/"
         element={
           isAuthenticated ? (
-            user?.onboardingCompleted === false ? <Navigate to="/onboarding" replace /> : <Home />
+            user?.onboardingCompleted === false ? <Navigate to="/onboarding" replace /> : <Navigate to="/app" replace />
           ) : (
             <Landing />
           )
         }
       />
+      <Route
+        path="/app"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/" replace />
+          ) : user?.onboardingCompleted === false ? (
+            <Navigate to="/onboarding" replace />
+          ) : (
+            <Home />
+          )
+        }
+      >
+        <Route index element={<Navigate to="discovery" replace />} />
+        <Route path="discovery" element={<Discovery />} />
+        <Route path="matches" element={<Matches />} />
+        <Route path="matches/:matchId/chat" element={<Chat />} />
+        <Route path="create" element={<CreateActivity />} />
+        <Route path="activities" element={<Matches showUserActivities />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="reviews" element={<Reviews />} />
+        <Route path="help-support" element={<HelpSupport />} />
+      </Route>
       <Route
         path="/onboarding"
         element={
@@ -60,10 +95,16 @@ function AppRoutes() {
           )
         }
       />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
+      <Route path="/download" element={<DownloadPage />} />
+      <Route path="/support" element={<SupportPage />} />
       <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
       <Route path="/terms-of-service" element={<TermsOfService />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

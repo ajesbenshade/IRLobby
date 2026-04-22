@@ -7,11 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ArrowLeft, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-
-interface ChatProps {
-  matchId: number;
-  onBack: () => void;
-}
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface ConversationMessage {
   id: number;
@@ -34,7 +30,10 @@ interface ConversationItem {
   created_at: string;
 }
 
-export default function Chat({ matchId, onBack }: ChatProps) {
+export default function Chat() {
+  const navigate = useNavigate();
+  const params = useParams<{ matchId: string }>();
+  const matchId = Number(params.matchId);
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const websocketRef = useRef<WebSocket | null>(null);
@@ -195,7 +194,7 @@ export default function Chat({ matchId, onBack }: ChatProps) {
     return (
       <div className="flex flex-col h-screen bg-white">
         <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/app/matches')} className="p-2">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
@@ -221,7 +220,7 @@ export default function Chat({ matchId, onBack }: ChatProps) {
   return (
     <div className="flex flex-col h-screen bg-white">
       <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/app/matches')} className="p-2">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">

@@ -1,30 +1,22 @@
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import PublicMetadata from '@/components/public-metadata';
+import PublicSiteLayout, { PublicHeroHeader } from '@/components/public-site-layout';
 
 export default function PrivacyPolicy() {
-  const navigate = useNavigate();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary to-purple-700 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-6 text-white hover:bg-white/10"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+    <PublicSiteLayout activePath="/privacy">
+      <PublicMetadata
+        title="IRLobby Privacy Policy"
+        description="Read how IRLobby collects, uses, and protects your data, including account, location, and communication details."
+        canonicalPath="/privacy"
+      />
+      <PublicHeroHeader
+        eyebrow="Privacy"
+        title={<>Privacy Policy</>}
+        description="Last updated: September 8, 2025"
+      />
 
-        <Card className="bg-white/95 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-3xl text-center text-primary">Privacy Policy</CardTitle>
-            <p className="text-center text-muted-foreground">Last updated: September 8, 2025</p>
-          </CardHeader>
-          <CardContent className="prose prose-gray max-w-none">
+      <section className="px-6 pb-24">
+        <div className="prose prose-invert prose-headings:font-display prose-headings:text-white prose-p:text-white/75 prose-li:text-white/75 mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-white/95 p-8 text-slate-900 shadow-[0_25px_100px_rgba(0,0,0,0.22)] sm:p-10 prose-h2:text-slate-900 prose-h3:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900">
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">1. Introduction</h2>
               <p className="text-gray-700 leading-relaxed">
@@ -159,9 +151,8 @@ export default function PrivacyPolicy() {
                 </p>
               </div>
             </section>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        </div>
+      </section>
+    </PublicSiteLayout>
   );
 }

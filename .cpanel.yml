@@ -4,12 +4,14 @@
 # if you wire it up. The deploy key labelled "Web Server" lets cPanel
 # pull from GitHub over SSH.
 #
-# Today this only ships the static legal pages required by App Store
-# review (privacy + support). Expand the tasks list if you ever
-# resurrect the archived Vite web app.
+# This deploy now builds the React web app and ships apps/web/dist.
 ---
 deployment:
   tasks:
     - export DEPLOYPATH=$HOME/public_html
+    - export REPOPATH=$PWD
+    - /usr/bin/npm --prefix $REPOPATH ci
+    - /usr/bin/npm --prefix $REPOPATH/apps/web run build
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -rf site/. $DEPLOYPATH/
+    - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf {} +
+    - /bin/cp -rf $REPOPATH/apps/web/dist/. $DEPLOYPATH/

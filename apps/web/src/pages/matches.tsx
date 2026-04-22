@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { MessageCircle, Clock, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface MatchParticipant {
   id: string;
@@ -33,11 +34,11 @@ interface Match {
 }
 
 interface MatchesProps {
-  onOpenChat: (matchId: number) => void;
   showUserActivities?: boolean;
 }
 
-export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
+export default function Matches({ showUserActivities = false }: MatchesProps) {
+  const navigate = useNavigate();
   const { data: matches = [], isLoading } = useQuery<Match[]>({
     queryKey: [API_ROUTES.MATCHES],
     retry: 1,
@@ -161,7 +162,7 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
                     {match.status === 'approved' ? (
                       <Button
                         size="sm"
-                        onClick={() => onOpenChat(match.id)}
+                        onClick={() => navigate(`/app/matches/${match.id}/chat`)}
                         className="w-10 h-10 p-0 bg-primary rounded-full relative"
                       >
                         <MessageCircle className="w-5 h-5 text-white" />

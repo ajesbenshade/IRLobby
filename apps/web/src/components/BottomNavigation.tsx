@@ -7,42 +7,72 @@ import {
   Calendar,
   User
 } from "lucide-react";
+import { useLocation, useNavigate } from 'react-router-dom';
 
-interface BottomNavigationProps {
-  currentScreen: string;
-  onNavigate: (screen: string) => void;
-}
+export default function BottomNavigation() {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-export default function BottomNavigation({ currentScreen, onNavigate }: BottomNavigationProps) {
   const navItems = [
     {
       id: 'discovery',
+      route: '/app/discovery',
       label: 'Discover',
       icon: Search,
     },
     {
       id: 'matches',
+      route: '/app/matches',
       label: 'Matches',
       icon: MessageCircle,
       badge: 0,
     },
     {
       id: 'create',
+      route: '/app/create',
       label: 'Create',
       icon: Plus,
       isSpecial: true,
     },
     {
       id: 'activities',
+      route: '/app/activities',
       label: 'My Events',
       icon: Calendar,
     },
     {
       id: 'profile',
+      route: '/app/profile',
       label: 'Profile',
       icon: User,
     },
   ];
+
+  const getCurrentScreen = () => {
+    const path = location.pathname;
+
+    if (path.startsWith('/app/matches')) {
+      return 'matches';
+    }
+    if (path.startsWith('/app/create')) {
+      return 'create';
+    }
+    if (path.startsWith('/app/activities')) {
+      return 'activities';
+    }
+    if (
+      path.startsWith('/app/profile') ||
+      path.startsWith('/app/settings') ||
+      path.startsWith('/app/reviews') ||
+      path.startsWith('/app/help-support')
+    ) {
+      return 'profile';
+    }
+
+    return 'discovery';
+  };
+
+  const currentScreen = getCurrentScreen();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20">
@@ -56,7 +86,7 @@ export default function BottomNavigation({ currentScreen, onNavigate }: BottomNa
               key={item.id}
               variant="ghost"
               size="sm"
-              onClick={() => onNavigate(item.id)}
+              onClick={() => navigate(item.route)}
               className={`flex flex-col items-center justify-center p-2 relative min-h-[60px] flex-1 ${
                 isActive
                   ? 'text-primary'

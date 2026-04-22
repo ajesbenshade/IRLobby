@@ -30,6 +30,7 @@ import {
   User,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface NotificationSettings {
   pushNotifications: boolean;
@@ -68,7 +69,8 @@ interface UserProfileResponse {
   preferences?: UserPreferencesResponse;
 }
 
-export default function Settings({ onBack }: { onBack?: () => void }) {
+export default function Settings() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { setTheme } = useTheme();
@@ -274,8 +276,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
           description: 'Your account has been permanently deleted.',
         });
 
-        // Redirect to landing page
-        window.location.href = '/';
+        navigate('/', { replace: true });
       } catch (error) {
         console.error('Error deleting account:', error);
         const message =
@@ -307,8 +308,7 @@ export default function Settings({ onBack }: { onBack?: () => void }) {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
         <div className="flex items-center">
-          {' '}
-          <Button variant="ghost" size="sm" onClick={() => onBack && onBack()} className="mr-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/app/profile')} className="mr-4">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

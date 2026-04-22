@@ -1,20 +1,20 @@
 # IRLobby
 
-IRLobby is a mobile-first social activity matching application. The actively supported client is the Expo app in `apps/mobile`, backed by the Django API in `irlobby_backend` and shared types/utilities in `packages/shared`.
+IRLobby is a social activity matching platform with a React web app in `apps/web` and an Expo app in `apps/mobile`, backed by the Django API in `irlobby_backend` and shared types/utilities in `packages/shared`.
 
 ## Support status
 
 - `apps/mobile`: active and supported
+- `apps/web`: active and supported
 - `irlobby_backend`: active and supported
 - `packages/shared`: active and supported
-- `apps/web`: archived in-repo for reference only; not deployed, not release-gated, and not a supported client
 
 ## Repository layout
 
 - `apps/mobile` — React Native / Expo mobile app
+- `apps/web` — React + Vite web app (public site + authenticated app)
 - `irlobby_backend` — Django REST + WebSocket backend
 - `packages/shared` — shared schema and utility code
-- `apps/web` — archived web client kept temporarily for reference
 
 ## Quick start
 
@@ -54,9 +54,11 @@ Follow the Expo CLI instructions to open the app in a simulator or on device.
 
 - `npm run dev` — starts the mobile app
 - `npm run build` — builds the mobile app bundle
+- `npm run build:web` — builds the web app deployment bundle
 - `npm run check:api-contract` — validates frontend API path usage against Django routes
+- `npm run check:web` — runs web tests and web production build
 - `npm run check:mobile` — runs mobile typecheck and iOS bundle export
-- `npm run check:release` — runs the mobile release gate checks
+- `npm run check:release` — runs API contract, web, and mobile release gate checks
 
 ## Mobile builds
 
@@ -70,12 +72,11 @@ See `apps/mobile/APP_STORE_RELEASE.md` for the current release process.
 
 ## CI
 
-The active CI workflows validate the mobile app, shared API contract assumptions, and Django backend. Web is no longer part of the active CI or release path.
+The active CI workflows validate the web app, mobile app, shared API contract assumptions, and Django backend.
 
 ## Notes
 
-- `vercel.json` has been removed as part of the mobile-only deployment posture.
-- If a Vercel project is still linked in the Vercel dashboard, it must stay disabled or unlinked there as well.
+- `vercel.json` has been removed and deployment is currently managed through cPanel Git deployment.
 - The legacy `client/` folder has already been removed from the repository.
 
 ## Deployment notes

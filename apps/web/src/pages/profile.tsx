@@ -7,8 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
+export default function Profile() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -16,8 +18,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   const handleLogout = async () => {
     try {
       await logout();
-      // Force navigation to landing page after logout
-      window.location.href = '/';
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -139,7 +140,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('settings')}
+            onClick={() => navigate('/app/settings')}
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
@@ -148,7 +149,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('reviews')}
+            onClick={() => navigate('/app/reviews')}
           >
             <Star className="w-4 h-4 mr-2" />
             Reviews
@@ -157,7 +158,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('help-support')}
+            onClick={() => navigate('/app/help-support')}
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             Help & Support

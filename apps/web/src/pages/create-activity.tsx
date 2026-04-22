@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, MapPin, X } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 const MAX_EVENT_CAPACITY = 10;
@@ -65,10 +66,6 @@ const formSchema = insertActivitySchema.extend({
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-interface CreateActivityProps {
-  onActivityCreated: () => void;
-}
 
 const categories = [
   'Sports & Fitness',
@@ -132,7 +129,8 @@ function getBrowserCoordinates(): Promise<{ latitude: number; longitude: number 
   });
 }
 
-export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
+export default function CreateActivity() {
+  const navigate = useNavigate();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isResolvingCoords, setIsResolvingCoords] = useState(false);
@@ -260,7 +258,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       });
       await queryClient.invalidateQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
       await queryClient.refetchQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
-      onActivityCreated();
+      navigate('/app/discovery');
     },
     onError: (error: Error) => {
       toast({

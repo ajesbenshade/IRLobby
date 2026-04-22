@@ -10,8 +10,6 @@ deployment:
   tasks:
     - export DEPLOYPATH=$HOME/public_html
     - export REPOPATH=$PWD
-    - /usr/bin/npm --prefix $REPOPATH ci
-    - /usr/bin/npm --prefix $REPOPATH/apps/web run build
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf {} +
     - /bin/cp -rf $REPOPATH/apps/web/dist/. $DEPLOYPATH/

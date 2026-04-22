@@ -1,0 +1,20 @@
+RewriteEngine On
+
+# Preserve direct requests for real files/directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirect legacy .html URLs to clean route paths
+RewriteRule ^index\.html$ / [R=301,L]
+RewriteRule ^features\.html$ /features [R=301,L]
+RewriteRule ^how-it-works\.html$ /how-it-works [R=301,L]
+RewriteRule ^download\.html$ /download [R=301,L]
+RewriteRule ^support\.html$ /support [R=301,L]
+RewriteRule ^privacy\.html$ /privacy [R=301,L]
+RewriteRule ^privacy-policy\.html$ /privacy [R=301,L]
+RewriteRule ^terms\.html$ /terms [R=301,L]
+RewriteRule ^terms-of-service\.html$ /terms [R=301,L]
+
+# Client-side routing fallback for React Router
+RewriteRule ^ index.html [L]

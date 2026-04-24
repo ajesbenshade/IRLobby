@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npm run dev:mobile",
     "dev:web": "npm --prefix apps/web run dev",
-    "dev:web:online": "cd apps/web && VITE_DEV_PROXY_TARGET=https://liyf.app npx vite --host 0.0.0.0 --port 5173",
+    "dev:web:online": "cd apps/web && VITE_DEV_PROXY_TARGET=${VITE_DEV_PROXY_TARGET:-http://5.75.156.23} npx vite --host 0.0.0.0 --port 5173",
     "dev:mobile": "npm --prefix apps/mobile run start",
     "build": "npm run build:mobile",
     "build:web": "npm --prefix apps/web run build",

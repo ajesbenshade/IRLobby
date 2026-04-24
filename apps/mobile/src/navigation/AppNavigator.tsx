@@ -16,8 +16,8 @@ const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     Linking.createURL('/'),
     'irlobby://',
-    'https://liyf.app',
-    'https://www.liyf.app',
+    'https://irlobby.com',
+    'https://www.irlobby.com',
   ],
   config: {
     screens: {

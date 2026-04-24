@@ -11,7 +11,7 @@ It supports two database modes:
 1. Create an Oracle Cloud VM (Ubuntu 22.04) on shape `VM.Standard.A1.Flex`.
 2. Reserve a public IP for the instance.
 3. Open ingress rules on Security List / NSG for TCP `22`, `80`, and `443`.
-4. Point DNS `A` record (example: `liyf.app`) to the VM public IP.
+4. Point DNS `A` record (example: `your-domain.com`) to the VM public IP.
 
 ## 2) Prepare VM
 
@@ -76,7 +76,7 @@ If using managed PostgreSQL:
 On the VM host:
 
 ```bash
-sudo certbot certonly --standalone -d liyf.app -d www.liyf.app -m you@liyf.app --agree-tos --no-eff-email
+sudo certbot certonly --standalone -d your-domain.com -d www.your-domain.com -m you@your-domain.com --agree-tos --no-eff-email
 ```
 
 Test renewal:
@@ -101,7 +101,7 @@ Services started:
 ## 6) Verify
 
 ```bash
-curl -I https://liyf.app/api/health/
+curl -I https://your-domain.com/api/health/
 docker compose -f docker-compose.oracle.yml --env-file .env.production ps
 docker compose -f docker-compose.oracle.yml --env-file .env.production logs -f web
 ```
@@ -116,10 +116,10 @@ Expected health endpoint response: HTTP `200`.
 
 ## 7) Mobile/Web client updates
 
-- Mobile `EXPO_PUBLIC_API_BASE_URL`: `https://liyf.app`
-- Mobile `EXPO_PUBLIC_WEBSOCKET_URL`: `wss://liyf.app`
-- Web static hosting without a proxy `VITE_API_BASE_URL`: `https://liyf.app`
-- Vercel: set project root to repo root, keep `VITE_API_BASE_URL` empty so `/api/*` uses the `vercel.json` rewrite, and set `VITE_WEBSOCKET_BASE_URL` to `wss://liyf.app`.
+- Mobile `EXPO_PUBLIC_API_BASE_URL`: `https://your-domain.com`
+- Mobile `EXPO_PUBLIC_WEBSOCKET_URL`: `wss://your-domain.com`
+- Web static hosting without a proxy `VITE_API_BASE_URL`: `https://your-domain.com`
+- Vercel: set project root to repo root, keep `VITE_API_BASE_URL` empty so `/api/*` uses the `vercel.json` rewrite, and set `VITE_WEBSOCKET_BASE_URL` to `wss://your-domain.com`.
 
 ## 8) Backups
 
@@ -179,5 +179,5 @@ DATABASE_URL=<same Neon URL as above>
 
 ```bash
 bash deploy/oracle/deploy.sh
-curl -I https://liyf.app/api/health/
+curl -I https://your-domain.com/api/health/
 ```

@@ -1,5 +1,4 @@
 const DEFAULT_DEV_API_BASE_URL = '';
-const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
@@ -17,7 +16,7 @@ const getDefaultApiBaseUrl = () => {
     return DEFAULT_DEV_API_BASE_URL;
   }
 
-  return DEFAULT_PROD_API_BASE_URL;
+  throw new Error('VITE_API_BASE_URL is not set');
 };
 
 const apiBaseUrl = configuredApiBaseUrl || getDefaultApiBaseUrl();
@@ -39,7 +38,7 @@ const deriveWebsocketUrl = (baseUrl: string) => {
     return `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
   }
 
-  return 'wss://liyf.app';
+  return `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 };
 
 const websocketUrl = configuredWebsocketUrl || deriveWebsocketUrl(apiBaseUrl);

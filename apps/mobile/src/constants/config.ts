@@ -9,13 +9,13 @@ const extra =
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000';
-const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const normalizeApiBaseUrl = (value: string | undefined) => {
   const cleanedValue = value?.trim();
 
   if (!cleanedValue) {
-    return __DEV__ ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+    if (__DEV__) return DEFAULT_DEV_API_BASE_URL;
+    throw new Error('EXPO_PUBLIC_API_BASE_URL is not set');
   }
 
   return removeTrailingSlash(cleanedValue);

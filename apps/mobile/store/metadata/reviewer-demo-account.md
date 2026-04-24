@@ -4,7 +4,7 @@ Used for both Apple App Review (App Store Connect → App Privacy → Sign-In In
 
 ## Credentials
 
-> **Action required:** Create this account on production (`https://liyf.app`) before submitting. Replace placeholders below.
+> **Action required:** Create this account on production (`https://irlobby.com`) before submitting. Replace placeholders below.
 
 - **Email**: `app-review@irlobby.com`
 - **Password**: `<set in 1Password / shared secret store; paste into ASC + Play Console only>`

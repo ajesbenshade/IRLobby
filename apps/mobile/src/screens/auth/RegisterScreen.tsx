@@ -15,8 +15,8 @@ import { getErrorMessage } from '@utils/error';
 
 import type { AuthStackParamList } from '@navigation/types';
 
-const TERMS_URL = 'https://liyf.app/terms-of-service';
-const PRIVACY_URL = 'https://liyf.app/privacy-policy';
+const TERMS_URL = 'https://irlobby.com/terms-of-service';
+const PRIVACY_URL = 'https://irlobby.com/privacy-policy';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 

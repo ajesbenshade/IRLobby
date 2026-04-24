@@ -12,6 +12,9 @@ RUN apt-get update \
         libpq-dev \
         netcat-traditional \
         curl \
+        gdal-bin \
+        libgdal-dev \
+        python3-gdal \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt

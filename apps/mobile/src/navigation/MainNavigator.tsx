@@ -170,19 +170,19 @@ export const MainNavigator = () => (
     <Stack.Screen
       name="HelpSupport"
       component={WebContentScreen}
-      initialParams={{ title: 'Help & Support', url: 'https://liyf.app/help-support' }}
+      initialParams={{ title: 'Help & Support', url: 'https://irlobby.com/help-support' }}
       options={{ title: 'Help & Support' }}
     />
     <Stack.Screen
       name="PrivacyPolicy"
       component={WebContentScreen}
-      initialParams={{ title: 'Privacy Policy', url: 'https://liyf.app/privacy-policy' }}
+      initialParams={{ title: 'Privacy Policy', url: 'https://irlobby.com/privacy-policy' }}
       options={{ title: 'Privacy Policy' }}
     />
     <Stack.Screen
       name="TermsOfService"
       component={WebContentScreen}
-      initialParams={{ title: 'Terms of Service', url: 'https://liyf.app/terms-of-service' }}
+      initialParams={{ title: 'Terms of Service', url: 'https://irlobby.com/terms-of-service' }}
       options={{ title: 'Terms of Service' }}
     />
     <Stack.Screen

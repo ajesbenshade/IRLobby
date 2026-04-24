@@ -1,9 +1,8 @@
-import BottomNavigation from '@/components/BottomNavigation';
+import AppShell from '@/components/layout/AppShell';
 import { useAuth } from '@/hooks/useAuth';
 import { Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
-// Loading component
 const ScreenLoader = () => (
   <div className="flex-1 flex items-center justify-center p-8">
     <div className="text-center">
@@ -15,19 +14,16 @@ const ScreenLoader = () => (
 
 export default function Home() {
   const { user } = useAuth();
-  const location = useLocation();
-  const hideBottomNav = location.pathname.includes('/chat/');
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <ScreenLoader />;
   }
 
   return (
-    <div className="w-full bg-white min-h-screen relative overflow-hidden md:max-w-md md:mx-auto md:shadow-xl">
+    <AppShell>
       <Suspense fallback={<ScreenLoader />}>
         <Outlet />
       </Suspense>
-      {!hideBottomNav && <BottomNavigation />}
-    </div>
+    </AppShell>
   );
 }

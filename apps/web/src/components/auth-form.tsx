@@ -68,15 +68,28 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     const checkTwitterOAuthStatus = async () => {
       try {
         const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_STATUS);
+        if (!response.ok) {
+          throw new Error(`Twitter status request failed (${response.status})`);
+        }
+
+        const contentType = response.headers.get('content-type') ?? '';
+        if (!contentType.toLowerCase().includes('application/json')) {
+          throw new Error('Twitter status response was not JSON');
+        }
+
         const data = (await response.json()) as { configured?: boolean };
-        if (isMounted) {
-          setIsTwitterAvailable(Boolean(data.configured));
+        if (!isMounted) {
+          return;
+        }
+
+        // Only disable when the API explicitly reports disabled.
+        if (typeof data.configured === 'boolean') {
+          setIsTwitterAvailable(data.configured);
         }
       } catch (error) {
         console.warn('Twitter OAuth status check failed:', error);
-        if (isMounted) {
-          setIsTwitterAvailable(false);
-        }
+        // Keep the button available so users can still attempt OAuth if
+        // status checks fail due to transient networking/proxy issues.
       }
     };
 

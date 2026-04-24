@@ -30,6 +30,13 @@ const ResetPasswordPage = lazy(() => import('@/pages/reset-password'));
 const PrivacyPolicy = lazy(() => import('@/pages/privacy-policy'));
 const TermsOfService = lazy(() => import('@/pages/terms-of-service'));
 const TwitterCallback = lazy(() => import('@/pages/twitter-callback'));
+const Dashboard = lazy(() => import('@/pages/dashboard'));
+const Connections = lazy(() => import('@/pages/connections'));
+const Notifications = lazy(() => import('@/pages/notifications'));
+const VibeQuiz = lazy(() => import('@/pages/vibe-quiz'));
+const Moderation = lazy(() => import('@/pages/moderation'));
+const ActivityDetail = lazy(() => import('@/pages/activity-detail'));
+const UserDetail = lazy(() => import('@/pages/user-detail'));
 
 // Loading component for better UX
 const PageLoader = () => (
@@ -72,12 +79,18 @@ function AppRoutes() {
           )
         }
       >
-        <Route index element={<Navigate to="discovery" replace />} />
+        <Route index element={<Dashboard />} />
         <Route path="discovery" element={<Discovery />} />
         <Route path="matches" element={<Matches />} />
         <Route path="matches/:matchId/chat" element={<Chat />} />
         <Route path="create" element={<CreateActivity />} />
         <Route path="activities" element={<Matches showUserActivities />} />
+        <Route path="connections" element={<Connections />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="vibe-quiz" element={<VibeQuiz />} />
+        <Route path="moderation" element={<Moderation />} />
+        <Route path="activity/:activityId" element={<ActivityDetail />} />
+        <Route path="user/:userId" element={<UserDetail />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="reviews" element={<Reviews />} />

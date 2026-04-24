@@ -128,6 +128,30 @@ def resolve_frontend_origin(request):
         ):
             return request_origin
 
+    # Honor the request origin when it matches a trusted CSRF origin so that
+    # multiple deployed frontends (e.g. cPanel + direct backend host) can each
+    # complete the OAuth round-trip back to themselves.
+    trusted_origins = {
+        origin.rstrip("/")
+        for origin in getattr(settings, "CSRF_TRUSTED_ORIGINS", []) or []
+        if isinstance(origin, str)
+    }
+    if request_origin and request_origin in trusted_origins:
+        return request_origin
+
+    # Fall back to the request host when no explicit origin was sent (common
+    # for top-level navigations) so callbacks land on the site the user is on.
+    if not request_origin:
+        try:
+            host = request.get_host()
+        except Exception:
+            host = ""
+        if host:
+            scheme = "https" if request.is_secure() else "http"
+            host_origin = f"{scheme}://{host}".rstrip("/")
+            if not trusted_origins or host_origin in trusted_origins:
+                return host_origin
+
     frontend_base_url = getattr(settings, "FRONTEND_BASE_URL", None) or "http://localhost:5173"
     return frontend_base_url.rstrip("/")
 

@@ -14,8 +14,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://5.75.156.23",
-        "EXPO_PUBLIC_WEBSOCKET_URL": "ws://5.75.156.23"
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.irlobby.com",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://api.irlobby.com"
       },
       "android": {
         "buildType": "app-bundle"

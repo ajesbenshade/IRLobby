@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Activity } from '@/types/activity';
 import { format, isValid } from 'date-fns';
-import { MapPin, Clock, Users, Star } from 'lucide-react';
+import { ExternalLink, MapPin, Clock, Users, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface ActivityDetailsModalProps {
   activity: Activity & {
@@ -173,6 +174,12 @@ export default function ActivityDetailsModal({
         <div className="flex space-x-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
+          </Button>
+          <Button asChild variant="outline" className="flex-1">
+            <Link to={`/app/activity/${activity.id}`} onClick={onClose}>
+              <ExternalLink className="mr-1 h-4 w-4" />
+              View page
+            </Link>
           </Button>
           <Button onClick={handleJoin} className="flex-1 bg-green-600 hover:bg-green-700">
             Join Event

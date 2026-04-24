@@ -138,6 +138,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./deploy/oracle/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./deploy/oracle/certbot-webroot:/var/www/certbot
+      - /opt/irlobby/web:/usr/share/nginx/html:ro
     depends_on:
       web:
         condition: service_healthy

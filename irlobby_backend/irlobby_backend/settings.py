@@ -238,11 +238,18 @@ CORS_ALLOW_METHODS = [
 WAFFLE_FLAG_DEFAULT = False
 
 if not DEBUG and not _IS_TESTING:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_SAMESITE = "None"
-    CSRF_COOKIE_SAMESITE = "None"
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+    SESSION_COOKIE_SECURE = config(
+        "SESSION_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool
+    )
+    CSRF_COOKIE_SECURE = config(
+        "CSRF_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool
+    )
+    default_samesite = "None" if SECURE_SSL_REDIRECT else "Lax"
+    SESSION_COOKIE_SAMESITE = config(
+        "SESSION_COOKIE_SAMESITE", default=default_samesite
+    )
+    CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default=default_samesite)
     SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
         "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool

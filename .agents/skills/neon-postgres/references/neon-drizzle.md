@@ -10,7 +10,7 @@ Drizzle ORM works with multiple Postgres drivers. See `connection-methods.md` fo
 
 | Platform                | TCP Support | Pooling             | Recommended Driver         |
 | ----------------------- | ----------- | ------------------- | -------------------------- |
-| Vercel (Fluid)          | Yes         | `@vercel/functions` | `pg` (node-postgres)       |
+| Fluid compute platforms | Yes         | Platform hooks      | `pg` (node-postgres)       |
 | Cloudflare (Hyperdrive) | Yes         | Hyperdrive          | `pg` (node-postgres)       |
 | Cloudflare Workers      | No          | No                  | `@neondatabase/serverless` |
 | Netlify Functions       | No          | No                  | `@neondatabase/serverless` |
@@ -37,22 +37,20 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool });
 ```
 
-### 2. Vercel Fluid Compute with Connection Pooling
+### 2. Fluid Compute with Connection Pooling
 
 ```bash
-npm install drizzle-orm pg @vercel/functions
+npm install drizzle-orm pg
 npm install -D drizzle-kit @types/pg
 ```
 
 ```typescript
 // src/db.ts
-import { attachDatabasePool } from "@vercel/functions";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-attachDatabasePool(pool);
 
 export const db = drizzle({ client: pool, schema });
 ```

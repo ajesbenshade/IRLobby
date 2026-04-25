@@ -38,7 +38,7 @@ Choose based on deployment platform. For detailed guidance, see `connection-meth
 
 | Environment              | Driver                     | Install                                |
 | ------------------------ | -------------------------- | -------------------------------------- |
-| Vercel (Edge/Serverless) | `@neondatabase/serverless` | `npm install @neondatabase/serverless` |
+| Edge/Serverless platforms | `@neondatabase/serverless` | `npm install @neondatabase/serverless` |
 | Cloudflare Workers       | `@neondatabase/serverless` | `npm install @neondatabase/serverless` |
 | AWS Lambda               | `@neondatabase/serverless` | `npm install @neondatabase/serverless` |
 | Traditional Node.js      | `pg`                       | `npm install pg`                       |

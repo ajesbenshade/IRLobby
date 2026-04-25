@@ -62,9 +62,9 @@ Recommended email values for password reset delivery:
 - `EMAIL_HOST_USER`
 - `EMAIL_HOST_PASSWORD`
 
-If web is hosted on Vercel, include your Vercel domain in:
-- `CSRF_TRUSTED_ORIGINS` (for example: `https://your-project.vercel.app`)
-- `CORS_ALLOWED_ORIGINS` (same Vercel origin)
+If web is hosted on cPanel (or any custom domain), include your public web origin in:
+- `CSRF_TRUSTED_ORIGINS` (for example: `https://your-domain.com`)
+- `CORS_ALLOWED_ORIGINS` (same web origin)
 - `FRONTEND_BASE_URL` (set to your primary web URL)
 
 If using local PostgreSQL on the VM (recommended for low-cost single-VM launch):

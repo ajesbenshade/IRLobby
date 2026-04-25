@@ -76,7 +76,7 @@ The active CI workflows validate the web app, mobile app, shared API contract as
 
 ## Notes
 
-- `vercel.json` has been removed and deployment is currently managed through cPanel Git deployment.
+- Legacy platform-specific frontend deployment config has been removed; deployment is currently managed through cPanel Git deployment.
 - The legacy `client/` folder has already been removed from the repository.
 
 ## Deployment notes

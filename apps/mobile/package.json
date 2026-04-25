@@ -13,7 +13,9 @@
     "submit:ios": "eas submit -p ios --profile production",
     "build:android": "eas build -p android --profile production",
     "submit:android": "eas submit -p android --profile production",
-    "capture:store-screenshots": "EXPO_PUBLIC_SCREENSHOT_MODE=1 expo start --web --port 19008",
+      "capture:store-screenshots": "EXPO_PUBLIC_SCREENSHOT_MODE=1 expo start --web --port 19008",
+      "capture:screenshots:ios": "node scripts/capture-store-screenshots.mjs ios",
+      "capture:screenshots:android": "node scripts/capture-store-screenshots.mjs android",
     "presubmit": "bash scripts/pre-submit-check.sh",
     "test": "jest"
   },

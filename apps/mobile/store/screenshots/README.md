@@ -10,6 +10,26 @@ Apple requires screenshots for the **iPhone 6.9-inch** display (1320 × 2868 por
 4. `04-chat.png` — Real-time chat with activity context
 5. `05-profile-or-results.png` — Profile or VibeQuizResults
 
+## Capture flow (automated)
+
+The repo includes a deterministic screenshot studio and capture script for the five required App Store images.
+
+1. Start the screenshot server:
+
+```bash
+cd apps/mobile
+npm run capture:store-screenshots
+```
+
+2. In a second terminal, generate the PNGs:
+
+```bash
+cd apps/mobile
+node scripts/capture-store-screenshots.mjs
+```
+
+This writes the five required files directly into `store/screenshots/` at 1320 × 2868.
+
 ## Capture flow (iOS Simulator)
 
 ```bash

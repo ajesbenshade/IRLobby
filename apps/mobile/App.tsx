@@ -12,11 +12,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AppNavigator } from '@navigation/AppNavigator';
-import { AuthProvider } from '@providers/AuthProvider';
 import { ErrorBoundary } from '@providers/ErrorBoundary';
-import { QueryProvider } from '@providers/queryClient';
 import { darkTheme, lightTheme, palette } from '@theme/index';
+import { StoreScreenshotStudio } from './src/screenshots/StoreScreenshotStudio';
 import { initMonitoring } from './src/lib/monitoring';
 
 initMonitoring();
@@ -34,6 +32,17 @@ export default function App() {
   const isDark = colorScheme === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
   const backgroundColor = isDark ? palette.darkBackground : palette.background;
+  const screenshotMode = process.env.EXPO_PUBLIC_SCREENSHOT_MODE === '1';
+
+  const AppNavigator = screenshotMode
+    ? null
+    : require('./src/navigation/AppNavigator').AppNavigator;
+  const AuthProvider = screenshotMode
+    ? null
+    : require('./src/providers/AuthProvider').AuthProvider;
+  const QueryProvider = screenshotMode
+    ? null
+    : require('./src/providers/queryClient').QueryProvider;
 
   if (!fontsLoaded) {
     return null;
@@ -44,12 +53,19 @@ export default function App() {
       <ErrorBoundary>
         <SafeAreaProvider>
           <PaperProvider theme={theme}>
-            <QueryProvider>
-              <AuthProvider>
-                <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={backgroundColor} />
-                <AppNavigator />
-              </AuthProvider>
-            </QueryProvider>
+            {screenshotMode ? (
+              <>
+                <StatusBar style="dark" backgroundColor={palette.background} />
+                <StoreScreenshotStudio />
+              </>
+            ) : (
+              <QueryProvider>
+                <AuthProvider>
+                  <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={backgroundColor} />
+                  <AppNavigator />
+                </AuthProvider>
+              </QueryProvider>
+            )}
           </PaperProvider>
         </SafeAreaProvider>
       </ErrorBoundary>

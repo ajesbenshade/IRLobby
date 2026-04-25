@@ -13,6 +13,7 @@
     "submit:ios": "eas submit -p ios --profile production",
     "build:android": "eas build -p android --profile production",
     "submit:android": "eas submit -p android --profile production",
+    "capture:store-screenshots": "EXPO_PUBLIC_SCREENSHOT_MODE=1 expo start --web --port 19008",
     "presubmit": "bash scripts/pre-submit-check.sh",
     "test": "jest"
   },
@@ -51,6 +52,7 @@
     "lottie-react-native": "~7.3.1",
     "nativewind": "^4.2.1",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-maps": "1.20.1",
@@ -61,6 +63,7 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-vector-icons": "^10.3.0",
+    "react-native-web": "^0.21.0",
     "react-native-webview": "13.16.0",
     "react-native-worklets": "0.6.1",
     "tailwindcss": "^3.4.19"
@@ -76,6 +79,7 @@
     "expo-module-scripts": "^5.0.8",
     "jest": "^29.7.0",
     "jest-expo": "~54.0.0",
+    "playwright": "^1.59.1",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
   },

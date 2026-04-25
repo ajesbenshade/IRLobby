@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { Button, HelperText, Modal, Portal, Snackbar, Text } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 
@@ -14,6 +13,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import MapView, { Marker } from '@components/MapViewCompat';
 import { MatchCelebration } from '@components/MatchCelebration';
 import { ActivityCardSkeleton } from '@components/skeletons';
 import { TextInput } from '@components/PaperCompat';

@@ -42,6 +42,25 @@ for f in app-name subtitle description keywords promotional-text release-notes; 
   if [ -s "$MOBILE/store/metadata/$f.txt" ]; then ok "$f.txt"; else bad "missing $f.txt"; fi
 done
 
+step "Release support docs"
+for f in support-info.txt privacy-questionnaire.md reviewer-demo-account.md; do
+  if [ -s "$MOBILE/store/metadata/$f" ]; then ok "$f"; else bad "missing $f"; fi
+done
+
+step "Required App Store screenshots"
+for f in \
+  01-vibe-quiz.png \
+  02-discover-swipe.png \
+  03-match-celebration.png \
+  04-chat.png \
+  05-profile-or-results.png; do
+  if [ -s "$MOBILE/store/screenshots/$f" ]; then
+    ok "$f"
+  else
+    bad "missing $f"
+  fi
+done
+
 step "Keywords ≤ 100 chars"
 kw=$(tr -d '\n' < "$MOBILE/store/metadata/keywords.txt" | wc -c | xargs)
 [ "$kw" -le 100 ] && ok "$kw chars" || bad "$kw chars (limit 100)"

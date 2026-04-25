@@ -117,6 +117,8 @@ npm run presubmit
 
 This validates the icon, runs typecheck + tests, scans for debug logs, and verifies metadata length limits.
 
+It also checks the required reviewer/privacy support files and the five required App Store screenshot filenames in `store/screenshots/`.
+
 ## 7) Backend production requirements
 
 Ensure backend env/config is production-ready:

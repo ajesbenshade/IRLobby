@@ -122,7 +122,7 @@ const MainTabs = () => (
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.1,
-        marginTop: 2,
+        marginTop: route.name === 'Create' ? 6 : 2,
       },
       tabBarItemStyle: {
         marginHorizontal: 2,
@@ -136,7 +136,7 @@ const MainTabs = () => (
           routeName={route.name as keyof MainTabParamList}
         />
       ),
-      tabBarIconStyle: route.name === 'Create' ? { marginTop: -18 } : undefined,
+      tabBarIconStyle: route.name === 'Create' ? { marginTop: -8 } : undefined,
       tabBarLabelPosition: 'below-icon',
     })}
   >

@@ -17,8 +17,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
 const FALLBACK_AVATAR_BASE_URL = 'https://api.dicebear.com/9.x/initials/svg';
@@ -153,7 +153,38 @@ export default function Onboarding() {
     setPhotoAlbum((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
+  const getCompletionIssues = () => {
+    const issues: string[] = [];
+
+    if (!bio.trim()) {
+      issues.push('about you');
+    }
+    if (!city.trim()) {
+      issues.push('city');
+    }
+    if (!interests.length && !Object.values(activityPreferences).some(Boolean)) {
+      issues.push('at least one interest or activity preference');
+    }
+    if (!termsAccepted || !privacyAccepted) {
+      issues.push('terms and privacy acceptance');
+    }
+
+    return issues;
+  };
+
   const saveOnboarding = async (markCompleted: boolean) => {
+    if (markCompleted) {
+      const issues = getCompletionIssues();
+      if (issues.length) {
+        toast({
+          title: 'Finish the required fields',
+          description: `Please add ${issues.join(', ')} before completing onboarding.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const persistedProfilePhotoUrl = isDataUrl(profilePhotoUrl)
@@ -311,7 +342,7 @@ export default function Onboarding() {
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="profile-photo">Profile photo</Label>
+              <Label htmlFor="profile-photo">Profile photo (optional)</Label>
               <input
                 id="profile-photo"
                 type="file"
@@ -402,12 +433,34 @@ export default function Onboarding() {
             <div className="space-y-3 rounded-md border p-4">
               <Label>Legal acceptance</Label>
               <PreferenceToggle
-                label="I accept the Terms of Service"
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      className="font-medium text-primary underline"
+                      to="/terms"
+                      target="_blank"
+                    >
+                      Terms of Service
+                    </Link>
+                  </>
+                }
                 checked={termsAccepted}
                 onChange={setTermsAccepted}
               />
               <PreferenceToggle
-                label="I accept the Privacy Policy"
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      className="font-medium text-primary underline"
+                      to="/privacy"
+                      target="_blank"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </>
+                }
                 checked={privacyAccepted}
                 onChange={setPrivacyAccepted}
               />
@@ -482,7 +535,7 @@ function PreferenceToggle({
   checked,
   onChange,
 }: {
-  label: string;
+  label: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {

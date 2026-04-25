@@ -165,9 +165,6 @@ class UserOnboardingSerializer(serializers.Serializer):
 
         bio = (attrs.get("bio", instance.bio if instance else "") or "").strip()
         city = (attrs.get("city", instance.location if instance else "") or "").strip()
-        avatar_url = (
-            attrs.get("avatar_url", instance.avatar_url if instance else "") or ""
-        ).strip()
         interests = attrs.get("interests", preferences.get("interests", []))
         activity_preferences = attrs.get(
             "activity_preferences", preferences.get("activity_preferences", {})
@@ -188,14 +185,14 @@ class UserOnboardingSerializer(serializers.Serializer):
             bool(value) for value in (activity_preferences or {}).values()
         )
 
-        if bio and city and avatar_url and has_preferences and terms_accepted and privacy_accepted:
+        if bio and city and has_preferences and terms_accepted and privacy_accepted:
             return attrs
 
         raise serializers.ValidationError(
             {
                 "detail": (
-                    "Complete your bio, city, profile photo, interests or activity preferences, "
-                    "and accept the terms and privacy policy before finishing onboarding."
+                    "Complete your bio, city, interests or activity preferences, and accept the "
+                    "terms and privacy policy before finishing onboarding."
                 )
             }
         )

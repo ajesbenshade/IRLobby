@@ -320,6 +320,27 @@ class OnboardingAndInviteTests(APITestCase):
         self.assertEqual(self.user.avatar_url, image_data_url)
         self.assertTrue(self.user.preferences.get("onboarding_completed"))
 
+    def test_onboarding_completion_allows_missing_profile_photo(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "bio": "Love hiking and board games",
+                "city": "Seattle",
+                "interests": ["hiking"],
+                "terms_accepted": True,
+                "privacy_accepted": True,
+                "onboarding_completed": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.avatar_url, "")
+        self.assertTrue(self.user.preferences.get("onboarding_completed"))
+
     def test_onboarding_patch_allows_partial_progress_without_completion(self):
         self.client.force_authenticate(self.user)
         response = self.client.patch(

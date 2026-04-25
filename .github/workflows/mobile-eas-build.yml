@@ -15,8 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  mobile-build-config-missing:
+    name: Mobile build config missing
+    if: ${{ secrets.EXPO_TOKEN == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skipped mobile builds
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository."
+          echo "Skipping iOS/Android EAS build jobs for this run."
+          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
+
   build-ios:
     name: Trigger iOS production build
+    if: ${{ secrets.EXPO_TOKEN != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -85,6 +97,7 @@ jobs:
 
   build-android:
     name: Trigger Android production build
+    if: ${{ secrets.EXPO_TOKEN != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -15,34 +15,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mobile-build-config-missing:
-    name: Mobile build config missing
-    if: ${{ secrets.EXPO_TOKEN == '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Explain skipped mobile builds
-        run: |
-          echo "EXPO_TOKEN is not configured for this repository."
-          echo "Skipping iOS/Android EAS build jobs for this run."
-          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
-
   build-ios:
     name: Trigger iOS production build
-    if: ${{ secrets.EXPO_TOKEN != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
     steps:
+      - name: Explain skipped iOS build
+        if: env.HAS_EXPO_TOKEN != 'true'
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository."
+          echo "Skipping iOS EAS build for this run."
+          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
+
       - name: Checkout
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/checkout@v5
 
       - name: Setup Node
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -50,25 +48,20 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm ci
         working-directory: .
 
       - name: Setup Expo and EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
 
-      - name: Verify EXPO_TOKEN
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "EXPO_TOKEN is not configured for this repository."
-            echo "Add the EXPO_TOKEN repository secret before relying on automatic mobile builds."
-            exit 1
-          fi
-
       - name: Verify mobile build keys
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: |
           if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ]; then
             echo "Twitter client ID is not configured in repository variables."
@@ -90,29 +83,40 @@ jobs:
           fi
 
       - name: Validate mobile TypeScript
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm run typecheck
 
       - name: Trigger iOS production build
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: eas build --platform ios --profile production --auto-submit --non-interactive --no-wait
 
   build-android:
     name: Trigger Android production build
-    if: ${{ secrets.EXPO_TOKEN != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
     steps:
+      - name: Explain skipped Android build
+        if: env.HAS_EXPO_TOKEN != 'true'
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository."
+          echo "Skipping Android EAS build for this run."
+          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
+
       - name: Checkout
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/checkout@v5
 
       - name: Setup Node
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -120,24 +124,20 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm ci
         working-directory: .
 
       - name: Setup Expo and EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
 
-      - name: Verify EXPO_TOKEN
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "EXPO_TOKEN is not configured for this repository."
-            exit 1
-          fi
-
       - name: Verify mobile build keys
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: |
           if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ] || \
              [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ] || \
@@ -148,6 +148,7 @@ jobs:
           fi
 
       - name: Materialize Google Play service account
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: |
           if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
             echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret is not configured."
@@ -160,6 +161,7 @@ jobs:
           chmod 600 credentials/play-service-account.json
 
       - name: Validate Google Play service account JSON
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: |
           node <<'EOF'
           const fs = require('fs');
@@ -192,9 +194,11 @@ jobs:
           EOF
 
       - name: Validate mobile TypeScript
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm run typecheck
 
       - name: Trigger Android production build
+        if: env.HAS_EXPO_TOKEN == 'true'
         env:
           EXPO_DEBUG: 1
         run: eas build --platform android --profile production --auto-submit --non-interactive --no-wait

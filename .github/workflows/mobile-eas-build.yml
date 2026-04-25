@@ -23,9 +23,9 @@ jobs:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
-      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -60,20 +60,20 @@ jobs:
         run: |
           if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ]; then
             echo "Twitter client ID is not configured in repository variables."
-            echo "Set EXPO_PUBLIC_TWITTER_CLIENT_ID or TWITTER_CLIENT_ID under Settings > Secrets and variables > Actions > Variables."
+            echo "Set TWITTER_CLIENT_ID (or EXPO_PUBLIC_TWITTER_CLIENT_ID) under Settings > Secrets and variables > Actions > Variables."
             exit 1
           fi
 
           if [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ]; then
             echo "Twitter redirect URI is not configured in repository variables."
-            echo "Set EXPO_PUBLIC_TWITTER_REDIRECT_URI or TWITTER_REDIRECT_URI under Settings > Secrets and variables > Actions > Variables."
+            echo "Set TWITTER_REDIRECT_URI (or EXPO_PUBLIC_TWITTER_REDIRECT_URI) under Settings > Secrets and variables > Actions > Variables."
             echo "Set it to irlobby://auth/twitter for standalone/TestFlight builds."
             exit 1
           fi
 
           if [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
             echo "Mapbox public token is not configured in repository variables."
-            echo "Set EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN or MAPBOX_PUBLIC_TOKEN under Settings > Secrets and variables > Actions > Variables."
+            echo "Set MAPBOX_PUBLIC_TOKEN (or EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN) under Settings > Secrets and variables > Actions > Variables."
             exit 1
           fi
 
@@ -91,9 +91,9 @@ jobs:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
-      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
     steps:
       - name: Checkout
@@ -130,7 +130,7 @@ jobs:
              [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ] || \
              [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
             echo "Missing required Twitter/Mapbox repository variables."
-            echo "Set either EXPO_PUBLIC_* names or fallback names: TWITTER_CLIENT_ID, TWITTER_REDIRECT_URI, MAPBOX_PUBLIC_TOKEN."
+            echo "Set TWITTER_CLIENT_ID, TWITTER_REDIRECT_URI, MAPBOX_PUBLIC_TOKEN (or EXPO_PUBLIC_* equivalents)."
             exit 1
           fi
 

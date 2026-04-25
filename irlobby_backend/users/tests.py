@@ -341,6 +341,28 @@ class OnboardingAndInviteTests(APITestCase):
         self.assertEqual(self.user.avatar_url, "")
         self.assertTrue(self.user.preferences.get("onboarding_completed"))
 
+    def test_mobile_onboarding_completion_allows_bio_and_city_later(self):
+        self.client.force_authenticate(self.user)
+        self.user.terms_accepted_at = timezone.now()
+        self.user.privacy_accepted_at = timezone.now()
+        self.user.save(update_fields=["terms_accepted_at", "privacy_accepted_at"])
+
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "avatar_url": "https://api.dicebear.com/9.x/adventurer/png?seed=IRLobby%20Spark",
+                "activity_preferences": {"low_key": True},
+                "onboarding_completed": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.bio, "")
+        self.assertEqual(self.user.location, "")
+        self.assertTrue(self.user.preferences.get("onboarding_completed"))
+
     def test_onboarding_patch_allows_partial_progress_without_completion(self):
         self.client.force_authenticate(self.user)
         response = self.client.patch(

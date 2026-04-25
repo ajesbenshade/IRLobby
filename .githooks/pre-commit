@@ -3,10 +3,11 @@ set -euo pipefail
 
 # Policy:
 # - Allow committed template/example files (e.g. .env.*.example, *.example)
+# - Allow generated web deploy artifacts in apps/web/dist
 # - Block likely secret-bearing file paths for non-example files
 BLOCKED_PATTERNS='(^|/)\.env($|\.)|secret|password|private.*key|api[_-]?key'
 
-staged_non_examples="$(git diff --cached --name-only --diff-filter=ACMR | grep -viE '\.example$' || true)"
+staged_non_examples="$(git diff --cached --name-only --diff-filter=ACMR | grep -viE '\.example$' | grep -vE '^apps/web/dist/' || true)"
 
 if [[ -n "${staged_non_examples}" ]] && grep -iE "${BLOCKED_PATTERNS}" <<< "${staged_non_examples}" > /dev/null; then
 	echo "Commit blocked: File appears to contain secrets or sensitive configuration."

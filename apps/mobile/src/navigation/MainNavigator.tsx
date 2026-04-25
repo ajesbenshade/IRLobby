@@ -122,7 +122,7 @@ const MainTabs = () => (
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.1,
-        marginTop: route.name === 'Create' ? 6 : 2,
+        marginTop: route.name === 'Create' ? 12 : 2,
       },
       tabBarItemStyle: {
         marginHorizontal: 2,

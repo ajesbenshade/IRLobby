@@ -297,6 +297,29 @@ class OnboardingAndInviteTests(APITestCase):
         self.assertIsNotNone(self.user.privacy_accepted_at)
         self.assertTrue(response.data["legalAccepted"])
 
+    def test_onboarding_patch_accepts_data_url_profile_photo(self):
+        self.client.force_authenticate(self.user)
+        image_data_url = "data:image/png;base64," + ("a" * 512)
+
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "bio": "Love hiking and board games",
+                "avatar_url": image_data_url,
+                "city": "Seattle",
+                "interests": ["hiking"],
+                "terms_accepted": True,
+                "privacy_accepted": True,
+                "onboarding_completed": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.avatar_url, image_data_url)
+        self.assertTrue(self.user.preferences.get("onboarding_completed"))
+
     def test_onboarding_patch_allows_partial_progress_without_completion(self):
         self.client.force_authenticate(self.user)
         response = self.client.patch(

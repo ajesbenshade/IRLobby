@@ -3,7 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +36,8 @@ export default function Onboarding() {
     smallGroups: true,
     weekendPreferred: true,
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const [inviteName, setInviteName] = useState('');
   const [inviteContact, setInviteContact] = useState('');
@@ -144,6 +152,8 @@ export default function Onboarding() {
         avatar_url: profilePhotoUrl,
         photo_album: photoAlbum,
         activity_preferences: activityPreferences,
+        terms_accepted: termsAccepted,
+        privacy_accepted: privacyAccepted,
         onboarding_completed: markCompleted,
       });
 
@@ -153,7 +163,7 @@ export default function Onboarding() {
       toast({
         title: markCompleted ? 'Onboarding complete' : 'Saved',
         description: markCompleted
-          ? 'Your profile is ready. Let\'s find your first activity.'
+          ? "Your profile is ready. Let's find your first activity."
           : 'Your onboarding progress was saved.',
       });
 
@@ -372,6 +382,20 @@ export default function Onboarding() {
                 />
               </div>
             </div>
+
+            <div className="space-y-3 rounded-md border p-4">
+              <Label>Legal acceptance</Label>
+              <PreferenceToggle
+                label="I accept the Terms of Service"
+                checked={termsAccepted}
+                onChange={setTermsAccepted}
+              />
+              <PreferenceToggle
+                label="I accept the Privacy Policy"
+                checked={privacyAccepted}
+                onChange={setPrivacyAccepted}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -400,7 +424,10 @@ export default function Onboarding() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="invite-channel">Invite channel</Label>
-              <Select value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
+              <Select
+                value={inviteChannel}
+                onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}
+              >
                 <SelectTrigger id="invite-channel" aria-label="Invite channel">
                   <SelectValue placeholder="Invite channel" />
                 </SelectTrigger>
@@ -417,7 +444,12 @@ export default function Onboarding() {
         </Card>
 
         <div className="flex gap-3 justify-end">
-          <Button type="button" variant="ghost" onClick={() => void saveOnboarding(true)} disabled={isSaving}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void saveOnboarding(false)}
+            disabled={isSaving}
+          >
             Skip for now
           </Button>
           <Button type="button" onClick={() => void saveOnboarding(true)} disabled={isSaving}>

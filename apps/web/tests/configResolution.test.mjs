@@ -46,6 +46,29 @@ test('falls back to relative API routes when production API base is absent', () 
   assert.equal(result.diagnostics.isProduction, true);
 });
 
+test('uses the production API domain on the public cPanel host', () => {
+  const result = resolveClientConfig(
+    { PROD: true, VITE_API_BASE_URL: '' },
+    { protocol: 'https:', host: 'irlobby.com' },
+  );
+
+  assert.equal(result.apiBaseUrl, 'https://api.irlobby.com');
+  assert.equal(result.websocketUrl, 'wss://api.irlobby.com');
+  assert.equal(result.diagnostics.apiBaseUrlSource, 'production-host');
+  assert.equal(result.diagnostics.usingRelativeApiBaseUrl, false);
+});
+
+test('uses the production API domain on the www cPanel host', () => {
+  const result = resolveClientConfig(
+    { PROD: true },
+    { protocol: 'https:', host: 'www.irlobby.com' },
+  );
+
+  assert.equal(result.apiBaseUrl, 'https://api.irlobby.com');
+  assert.equal(result.websocketUrl, 'wss://api.irlobby.com');
+  assert.equal(result.diagnostics.apiBaseUrlSource, 'production-host');
+});
+
 test('prefers explicit WebSocket URL over derived URL', () => {
   const result = resolveClientConfig({
     VITE_API_BASE_URL: 'http://api.example.com',

@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
-bash "${repo_root}/scripts/check-no-secrets.sh"
+# Policy:
+# - Allow committed template/example files (e.g. .env.*.example, *.example)
+# - Block likely secret-bearing file paths for non-example files
+BLOCKED_PATTERNS='(^|/)\.env($|\.)|secret|password|private.*key|api[_-]?key'
+
+staged_non_examples="$(git diff --cached --name-only --diff-filter=ACMR | grep -viE '\.example$' || true)"
+
+if [[ -n "${staged_non_examples}" ]] && grep -iE "${BLOCKED_PATTERNS}" <<< "${staged_non_examples}" > /dev/null; then
+	echo "Commit blocked: File appears to contain secrets or sensitive configuration."
+	echo "Allowed: *.example files (safe templates)"
+	echo "Blocked files:"
+	grep -iE "${BLOCKED_PATTERNS}" <<< "${staged_non_examples}"
+	exit 1
+fi
+
+echo "Pre-commit checks passed"

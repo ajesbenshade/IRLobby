@@ -21,6 +21,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
+const FALLBACK_AVATAR_BASE_URL = 'https://api.dicebear.com/9.x/initials/svg';
+
+const isDataUrl = (value: string) => value.startsWith('data:');
+
+const buildFallbackAvatarUrl = (seedParts: string[]) => {
+  const seed =
+    seedParts
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(' ') || 'IRLobby';
+  return `${FALLBACK_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed).slice(0, 80)}`;
+};
 
 export default function Onboarding() {
   const [bio, setBio] = useState('');
@@ -144,13 +156,17 @@ export default function Onboarding() {
   const saveOnboarding = async (markCompleted: boolean) => {
     setIsSaving(true);
     try {
+      const persistedProfilePhotoUrl = isDataUrl(profilePhotoUrl)
+        ? buildFallbackAvatarUrl([city, interests[0] ?? '', bio])
+        : profilePhotoUrl;
+
       await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, {
         bio,
         city,
         age_range: ageRange,
         interests,
-        avatar_url: profilePhotoUrl,
-        photo_album: photoAlbum,
+        avatar_url: persistedProfilePhotoUrl,
+        photo_album: photoAlbum.filter((photoUrl) => !isDataUrl(photoUrl)),
         activity_preferences: activityPreferences,
         terms_accepted: termsAccepted,
         privacy_accepted: privacyAccepted,

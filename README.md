@@ -83,6 +83,12 @@ The active CI workflows validate the web app, mobile app, shared API contract as
 
 Production deployments currently target the mobile app plus an Oracle VM backend using Docker Compose with a Neon PostgreSQL database. See `irlobby_backend/deploy/oracle/README.md` for the backend deployment runbook.
 
+### Production environment checklist
+
+Backend deployments should set `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, and the SMTP `EMAIL_*` values used for password reset delivery. After deploy, verify `https://<backend-domain>/api/health/` returns HTTP `200`.
+
+Web deployments should set `VITE_API_BASE_URL` when the frontend is hosted on a different origin from the backend. Same-origin or rewrite-based deployments may leave it empty, in which case the web app uses relative `/api` routes. Set `VITE_WEBSOCKET_BASE_URL` when WebSocket traffic is served from a different origin, and use `VITE_LOG_CONFIG=true` only while diagnosing startup config.
+
 
 ## Contributing
 

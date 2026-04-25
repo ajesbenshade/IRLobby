@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@shared/schema';
 import { useEffect, useState } from 'react';
 
 import { Button } from './ui/button';
@@ -5,8 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
-import { apiRequest } from '../lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
+import { apiRequest, extractApiErrorMessage } from '../lib/queryClient';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
@@ -271,15 +271,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const data = (await response.json()) as AuthResponsePayload;
 
       if (!response.ok) {
-        // Handle Django's error format
-        const errorMessage =
-          data.username?.[0] ||
-          data.email?.[0] ||
-          data.password?.[0] ||
-          data.detail ||
-          data.error ||
-          'Registration failed';
-        throw new Error(errorMessage);
+        throw new Error(extractApiErrorMessage(data, 'Registration failed'));
       }
 
       const { accessToken, refreshToken } = resolveAuthTokens(data);

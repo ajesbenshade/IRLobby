@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/useAuth';
 import { config } from '@/lib/config';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
@@ -39,6 +40,7 @@ export default function Chat() {
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<ConversationItem[]>({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
@@ -102,20 +104,10 @@ export default function Chat() {
 
   useEffect(() => {
     const conversationId = selectedConversation?.id;
-    const token = localStorage.getItem('authToken');
 
     if (!conversationId || !token) {
       return;
     }
-
-    const configuredWebSocketBase = (import.meta.env.VITE_WEBSOCKET_BASE_URL as string | undefined)?.trim();
-    const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const websocketBaseSource = configuredWebSocketBase || configuredApiBase;
-    const websocketBaseUrl = websocketBaseSource
-      ? websocketBaseSource
-          .replace(/^https?:\/\//, (prefix) => (prefix === 'https://' ? 'wss://' : 'ws://'))
-          .replace(/\/$/, '')
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
     let isCancelled = false;
 
@@ -124,7 +116,7 @@ export default function Chat() {
         return;
       }
 
-      const wsUrl = `${websocketBaseUrl}/ws/chat/${conversationId}/?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${config.websocketUrl}/ws/chat/${conversationId}/?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
 
@@ -167,7 +159,7 @@ export default function Chat() {
       websocketRef.current?.close();
       websocketRef.current = null;
     };
-  }, [queryClient, selectedConversation?.id]);
+  }, [queryClient, selectedConversation?.id, token]);
 
   const handleSendMessage = () => {
     if (message.trim()) {

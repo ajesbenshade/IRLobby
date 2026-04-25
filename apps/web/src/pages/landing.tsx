@@ -3,23 +3,14 @@ import PublicMetadata from '@/components/public-metadata';
 import { useAuth } from '@/hooks/useAuth';
 import { homepageFeatureHighlights, homepageSteps } from '@/lib/public-site-content';
 import { ArrowRight, Heart, MessageCircle, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export default function Landing() {
-  const { isAuthenticated, handleAuthentication } = useAuth();
-  const navigate = useNavigate();
+  const { handleAuthentication } = useAuth();
 
   // Create a wrapper function to handle authentication
   const handleAuth = async (token: string, userId: string) => {
     await handleAuthentication(token, userId);
   };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/app');
-    }
-  }, [isAuthenticated, navigate]);
 
   return (
     <div className="public-site-bg min-h-screen text-white">

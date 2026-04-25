@@ -6,13 +6,14 @@ import NotificationCenter from '@/components/NotificationCenter';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
-import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
+import { apiRequest, parseJsonResponse } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
+import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface SwipePayload {
   activityId: number;
@@ -35,12 +36,10 @@ export default function Discovery() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
-
-  // Get auth token from localStorage
-  const token = localStorage.getItem('authToken');
 
   // Use the token in the API request
   const {
@@ -56,29 +55,11 @@ export default function Discovery() {
       const endpoint = params ? API_ROUTE_BUILDERS.activitiesWithSearch(params) : API_ROUTES.ACTIVITIES;
 
       const response = await apiRequest('GET', endpoint);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error fetching activities:', errorText);
-        throw new Error('Failed to fetch activities');
-      }
-
-      return (await response.json()) as Activity[];
+      return parseJsonResponse<Activity[]>(response);
     },
     enabled: !!token, // Only run the query if we have a token
     retry: 1,
   });
-
-  // Debugging effect
-  useEffect(() => {
-    if (error) {
-      console.error('Activity fetch error:', error);
-    }
-
-    if (activities && activities.length === 0 && !isLoading) {
-      console.log('No activities found. Auth token present:', !!token);
-    }
-  }, [activities, error, isLoading, token]);
 
   const swipeMutation = useMutation<SwipeMutationResult, Error, SwipePayload>({
     mutationFn: async ({ activityId, swipeType }) => {
@@ -209,18 +190,14 @@ export default function Discovery() {
   return (
     <div
       ref={containerRef}
-      className="bg-gray-50 dark:bg-gray-900 min-h-screen relative overflow-hidden"
-      style={{ paddingBottom: 'calc(var(--bottom-nav-offset) + 0.5rem)' }}
+      className="bg-gray-50 dark:bg-gray-900 min-h-screen relative overflow-hidden pb-[calc(var(--bottom-nav-offset)+0.5rem)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Pull to refresh indicator */}
       {pullDistance > 0 && (
-        <div
-          className="absolute top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-transform duration-200"
-          style={{ transform: `translateY(${Math.max(-60, pullDistance - 60)}px)` }}
-        >
+        <div className="absolute top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-transform duration-200">
           <div className="flex items-center justify-center py-4">
             <RefreshCw
               className={`w-6 h-6 text-primary transition-transform duration-200 ${
@@ -235,12 +212,7 @@ export default function Discovery() {
       )}
 
       {/* Header with refresh indicator */}
-      <header
-        className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200"
-        style={{
-          transform: `translateY(${pullDistance > 0 ? Math.max(0, pullDistance - 20) : 0}px)`,
-        }}
-      >
+      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>
@@ -295,10 +267,9 @@ export default function Discovery() {
           .map((activity, index) => (
             <Card
               key={activity.id}
-              className={`absolute inset-x-4 top-4 bg-white rounded-2xl shadow-lg transform ${
+              className={`absolute inset-x-4 bg-white rounded-2xl shadow-lg transform ${
                 index === 0 ? 'scale-97 opacity-80 z-20' : 'scale-95 opacity-60 z-10'
-              }`}
-              style={{ top: `${16 + index * 8}px` }}
+              } ${index === 0 ? 'top-4' : 'top-6'}`}
             >
               <CardContent className="p-0">
                 <div className="w-full h-48 bg-gray-200 rounded-t-2xl"></div>
@@ -319,8 +290,7 @@ export default function Discovery() {
 
         {/* Action buttons - Fixed position to avoid cutoff */}
         <div
-          className="fixed inset-x-0 flex items-center justify-center gap-6 z-50 px-4"
-          style={{ bottom: 'calc(var(--bottom-nav-offset) + 0.75rem)' }}
+          className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-offset)+0.75rem)] flex items-center justify-center gap-6 z-50 px-4"
         >
           <Button
             variant="outline"

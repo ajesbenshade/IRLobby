@@ -29,10 +29,11 @@ export default function ActivityDetailsModal({
   onJoin,
 }: ActivityDetailsModalProps) {
   const safeTitle = activity.title || 'Untitled Activity';
-  const safeTags = Array.isArray(activity.tags)
-    ? activity.tags
-    : typeof activity.tags === 'string' && activity.tags.trim().length > 0
-      ? [activity.tags]
+  const rawTags = activity.tags as unknown;
+  const safeTags = Array.isArray(rawTags)
+    ? rawTags
+    : typeof rawTags === 'string' && rawTags.trim().length > 0
+      ? [rawTags]
       : [];
   const rawActivityTime =
     activity.time ||

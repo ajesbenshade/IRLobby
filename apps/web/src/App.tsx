@@ -2,11 +2,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
+import { getAuthRedirect } from '@/lib/authRouting';
 import { queryClient } from '@/lib/queryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Suspense, lazy, type ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));
@@ -49,7 +49,24 @@ const PageLoader = () => (
 );
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+
+  const authRouteState = { isAuthenticated, isLoading, needsOnboarding };
+
+  const PublicHomeRoute = ({ children }: { children: ReactNode }) => {
+    const redirectTo = getAuthRedirect('public-home', authRouteState);
+    return redirectTo ? <Navigate to={redirectTo} replace /> : <>{children}</>;
+  };
+
+  const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+    const redirectTo = getAuthRedirect('protected', authRouteState);
+    return redirectTo ? <Navigate to={redirectTo} replace /> : <>{children}</>;
+  };
+
+  const OnboardingRoute = ({ children }: { children: ReactNode }) => {
+    const redirectTo = getAuthRedirect('onboarding', authRouteState);
+    return redirectTo ? <Navigate to={redirectTo} replace /> : <>{children}</>;
+  };
 
   if (isLoading) {
     return <PageLoader />;
@@ -60,23 +77,17 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          isAuthenticated ? (
-            user?.onboardingCompleted === false ? <Navigate to="/onboarding" replace /> : <Navigate to="/app" replace />
-          ) : (
+          <PublicHomeRoute>
             <Landing />
-          )
+          </PublicHomeRoute>
         }
       />
       <Route
         path="/app"
         element={
-          !isAuthenticated ? (
-            <Navigate to="/" replace />
-          ) : user?.onboardingCompleted === false ? (
-            <Navigate to="/onboarding" replace />
-          ) : (
+          <ProtectedRoute>
             <Home />
-          )
+          </ProtectedRoute>
         }
       >
         <Route index element={<Dashboard />} />
@@ -99,13 +110,9 @@ function AppRoutes() {
       <Route
         path="/onboarding"
         element={
-          !isAuthenticated ? (
-            <Navigate to="/" replace />
-          ) : user?.onboardingCompleted === false ? (
+          <OnboardingRoute>
             <Onboarding />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          </OnboardingRoute>
         }
       />
       <Route path="/features" element={<FeaturesPage />} />

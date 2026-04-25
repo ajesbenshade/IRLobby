@@ -1,3 +1,7 @@
+const path = require('path');
+
+const typescriptImportResolver = require.resolve('eslint-import-resolver-typescript');
+
 module.exports = {
   root: true,
   env: {
@@ -18,8 +22,8 @@ module.exports = {
       version: 'detect',
     },
     'import/resolver': {
-      typescript: {
-        project: ['./tsconfig.json'],
+      [typescriptImportResolver]: {
+        project: [path.join(__dirname, 'tsconfig.json')],
       },
       node: {
         extensions: ['.js', '.jsx', '.ts', '.tsx'],

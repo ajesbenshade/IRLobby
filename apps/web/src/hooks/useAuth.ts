@@ -1,6 +1,6 @@
+import { API_ROUTES } from '@shared/schema';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
-import { API_ROUTES } from '@shared/schema';
 
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
@@ -115,8 +115,8 @@ export function useAuth() {
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       if (!token) {
         setAuthErrorMessage(null);
@@ -224,6 +224,7 @@ export function useAuth() {
     user,
     isAuthenticated: !!user,
     isLoading,
+    needsOnboarding: user?.onboardingCompleted === false,
     token,
     handleAuthentication,
     logout,

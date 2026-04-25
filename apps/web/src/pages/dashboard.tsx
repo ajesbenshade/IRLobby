@@ -14,21 +14,25 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+export function parseCountResponse(json: unknown) {
+  if (Array.isArray(json)) return json.length;
+  if (json && typeof json === 'object') {
+    const response = json as { count?: unknown; results?: unknown };
+    if (typeof response.count === 'number') return response.count;
+    if (Array.isArray(response.results)) return response.results.length;
+  }
+
+  throw new Error('Unexpected count response');
+}
+
 function useCount(route: string) {
   return useQuery<number>({
     queryKey: [route, 'count'],
     queryFn: async () => {
-      try {
-        const res = await apiRequest('GET', route);
-        const json = await res.json();
-        if (Array.isArray(json)) return json.length;
-        if (typeof json?.count === 'number') return json.count;
-        if (Array.isArray(json?.results)) return json.results.length;
-        return 0;
-      } catch {
-        return 0;
-      }
+      const res = await apiRequest('GET', route);
+      return parseCountResponse(await res.json());
     },
+    retry: 1,
   });
 }
 
@@ -46,9 +50,24 @@ export default function DashboardPage() {
   })();
 
   const stats = [
-    { label: 'Matches', value: matches.data ?? '—', icon: MessageCircle, to: '/app/matches' },
-    { label: 'Hosted', value: hosted.data ?? '—', icon: Calendar, to: '/app/activities' },
-    { label: 'Reviews', value: reviews.data ?? '—', icon: Star, to: '/app/reviews' },
+    {
+      label: 'Matches',
+      value: matches.isError ? '!' : (matches.data ?? '—'),
+      icon: MessageCircle,
+      to: '/app/matches',
+    },
+    {
+      label: 'Hosted',
+      value: hosted.isError ? '!' : (hosted.data ?? '—'),
+      icon: Calendar,
+      to: '/app/activities',
+    },
+    {
+      label: 'Reviews',
+      value: reviews.isError ? '!' : (reviews.data ?? '—'),
+      icon: Star,
+      to: '/app/reviews',
+    },
   ];
 
   return (
@@ -58,7 +77,7 @@ export default function DashboardPage() {
           {greeting}, {user?.firstName ?? 'there'} 👋
         </h1>
         <p className="text-sm text-muted-foreground">
-          Here's what's happening in your IRLobby world.
+          Here&apos;s what&apos;s happening in your IRLobby world.
         </p>
       </div>
 

@@ -49,9 +49,18 @@ Required values to set:
 - `SERVER_NAME`
 - `SECRET_KEY`
 - `DATABASE_URL`
+- `REDIS_URL`
 - `ALLOWED_HOSTS`
 - `CSRF_TRUSTED_ORIGINS`
 - `CORS_ALLOWED_ORIGINS`
+- `FRONTEND_BASE_URL`
+
+Recommended email values for password reset delivery:
+- `EMAIL_HOST`
+- `EMAIL_PORT`
+- `EMAIL_USE_TLS`
+- `EMAIL_HOST_USER`
+- `EMAIL_HOST_PASSWORD`
 
 If web is hosted on Vercel, include your Vercel domain in:
 - `CSRF_TRUSTED_ORIGINS` (for example: `https://your-project.vercel.app`)
@@ -119,7 +128,9 @@ Expected health endpoint response: HTTP `200`.
 - Mobile `EXPO_PUBLIC_API_BASE_URL`: `https://your-domain.com`
 - Mobile `EXPO_PUBLIC_WEBSOCKET_URL`: `wss://your-domain.com`
 - Web static hosting without a proxy `VITE_API_BASE_URL`: `https://your-domain.com`
-- Vercel: set project root to repo root, keep `VITE_API_BASE_URL` empty so `/api/*` uses the `vercel.json` rewrite, and set `VITE_WEBSOCKET_BASE_URL` to `wss://your-domain.com`.
+- Web `VITE_WEBSOCKET_BASE_URL`: `wss://your-domain.com`
+- Web same-origin/rewrite hosting: leave `VITE_API_BASE_URL` empty only when `/api/*` is guaranteed to proxy to this backend. The web app will use relative `/api` requests instead of failing at startup.
+- Set `VITE_LOG_CONFIG=true` temporarily if you need the web app to print non-secret config diagnostics during startup.
 
 ## 8) Backups
 

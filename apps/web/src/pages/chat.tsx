@@ -1,3 +1,4 @@
+import { ChatSkeleton, PageState } from '@/components/AppState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +7,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -42,7 +43,9 @@ export default function Chat() {
   const queryClient = useQueryClient();
   const { token } = useAuth();
 
-  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<ConversationItem[]>({
+  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<
+    ConversationItem[]
+  >({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
@@ -51,7 +54,9 @@ export default function Chat() {
     retry: 1,
   });
 
-  const selectedConversation = conversations.find((conversation) => conversation.matchId === matchId);
+  const selectedConversation = conversations.find(
+    (conversation) => conversation.matchId === matchId,
+  );
 
   const {
     data: messages = [],
@@ -116,7 +121,9 @@ export default function Chat() {
         return;
       }
 
-      const wsUrl = `${config.websocketUrl}/ws/chat/${conversationId}/?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${config.websocketUrl}/ws/chat/${conversationId}/?token=${encodeURIComponent(
+        token,
+      )}`;
       const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
 
@@ -174,57 +181,65 @@ export default function Chat() {
     }
   };
 
-  if (isLoadingConversations) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  const chatHeader = (
+    <header className="flex items-center space-x-3 border-b border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate('/app/matches')}
+        className="p-2"
+        aria-label="Back to matches"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </Button>
+      <div className="flex-1">
+        <h2 className="font-semibold text-gray-800 truncate dark:text-gray-100">
+          {selectedConversation?.match ?? 'Chat'}
+        </h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Live conversations and messaging.
+        </p>
       </div>
-    );
+    </header>
+  );
+
+  if (isLoadingConversations) {
+    return <ChatSkeleton header={chatHeader} />;
   }
 
   if (!selectedConversation) {
     return (
-      <div className="flex flex-col h-screen bg-white">
-        <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/app/matches')} className="p-2">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h2 className="font-semibold text-gray-800 truncate">Chat</h2>
-            <p className="text-xs text-gray-500">Live conversations and messaging.</p>
-          </div>
-        </header>
-        <div className="flex items-center justify-center flex-1 p-6 text-center">
-          <p className="text-gray-500">Conversation not found for this match.</p>
-        </div>
+      <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
+        {chatHeader}
+        <PageState
+          icon={MessageCircle}
+          title="Conversation not found"
+          description="This chat may still be getting created, or the match is no longer available."
+          actionLabel="Back to matches"
+          onAction={() => navigate('/app/matches')}
+          className="flex-1"
+        />
       </div>
     );
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <ChatSkeleton header={chatHeader} />;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <header className="bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/app/matches')} className="p-2">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h2 className="font-semibold text-gray-800 truncate">{selectedConversation.match}</h2>
-          <p className="text-xs text-gray-500">Live conversations and messaging.</p>
-        </div>
-      </header>
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-950">
+      {chatHeader}
 
       {error && (
         <div className="px-4 py-2 space-y-2">
-          <p className="text-sm text-red-600">Failed to load messages.</p>
-          <Button size="sm" variant="outline" onClick={() => void refetch()} disabled={isRefetching}>
+          <p className="text-sm text-red-600 dark:text-red-300">Failed to load messages.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void refetch()}
+            disabled={isRefetching}
+          >
             {isRefetching ? 'Retrying...' : 'Retry'}
           </Button>
         </div>
@@ -232,9 +247,12 @@ export default function Chat() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No messages yet.</p>
-          </div>
+          <PageState
+            icon={MessageCircle}
+            title="No messages yet"
+            description="Send a quick hello to start coordinating the plan."
+            className="min-h-[45vh]"
+          />
         ) : (
           messages.map((msg) => {
             const senderName = msg.user?.firstName || msg.user?.email?.split('@')[0] || 'User';
@@ -242,10 +260,10 @@ export default function Chat() {
             return (
               <div key={msg.id} className="flex justify-start">
                 <div className="flex items-end space-x-2 max-w-xs">
-                  <div className="rounded-2xl px-4 py-2 bg-gray-100 text-gray-800">
+                  <div className="rounded-2xl px-4 py-2 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
                     <p className="text-xs opacity-70 mb-1">{senderName}</p>
                     <p className="text-sm">{msg.message}</p>
-                    <p className="text-xs mt-1 text-gray-500">
+                    <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
                       {format(new Date(msg.createdAt), 'h:mm a')}
                     </p>
                   </div>
@@ -257,7 +275,7 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-200 p-4 dark:border-gray-800">
         <div className="flex items-center space-x-2">
           <Input
             value={message}
@@ -266,12 +284,14 @@ export default function Chat() {
             placeholder="Type a message..."
             className="flex-1"
             disabled={sendMessageMutation.isPending}
+            aria-label="Message text"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || sendMessageMutation.isPending}
             size="sm"
             className="px-3"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </Button>

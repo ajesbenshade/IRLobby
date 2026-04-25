@@ -1,4 +1,5 @@
 import ActivityDetailsModal from '@/components/ActivityDetailsModal';
+import { DiscoverySkeleton, PageState } from '@/components/AppState';
 import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
@@ -12,7 +13,7 @@ import { apiRequest, parseJsonResponse } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart } from 'lucide-react';
+import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 
 interface SwipePayload {
@@ -52,7 +53,9 @@ export default function Discovery() {
     queryFn: async ({ queryKey }) => {
       const [, activeFilters] = queryKey as [string, Partial<ActivityFilters>];
       const params = buildActivitySearchParams(activeFilters ?? {});
-      const endpoint = params ? API_ROUTE_BUILDERS.activitiesWithSearch(params) : API_ROUTES.ACTIVITIES;
+      const endpoint = params
+        ? API_ROUTE_BUILDERS.activitiesWithSearch(params)
+        : API_ROUTES.ACTIVITIES;
 
       const response = await apiRequest('GET', endpoint);
       return parseJsonResponse<Activity[]>(response);
@@ -144,46 +147,39 @@ export default function Discovery() {
   }, [refetch]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <DiscoverySkeleton />;
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
-        <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-          <X className="w-12 h-12 text-red-500" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Unable to load activities</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          {error instanceof Error ? error.message : 'Please try refreshing and check your connection.'}
-        </p>
-        <Button onClick={() => void handleRefresh()} disabled={isRefreshing} className="bg-primary text-white">
-          {isRefreshing ? 'Retrying...' : 'Retry'}
-        </Button>
-      </div>
+      <PageState
+        icon={WifiOff}
+        title="Unable to load activities"
+        description={
+          error instanceof Error
+            ? error.message
+            : 'Please try refreshing and check your connection.'
+        }
+        actionLabel="Retry"
+        onAction={() => void handleRefresh()}
+        isActionLoading={isRefreshing}
+        tone="danger"
+        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      />
     );
   }
 
   if (!activities.length || currentActivityIndex >= activities.length) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
-        <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-          <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-          No activities match your current filters
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Check back later for new events in your area.
-        </p>
-        <Button onClick={() => void handleRefresh()} disabled={isRefreshing} className="bg-primary text-white">
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
-      </div>
+      <PageState
+        icon={MapPin}
+        title="No activities match your filters"
+        description="Try widening the distance, clearing a filter, or checking back when new plans go live."
+        actionLabel="Refresh"
+        onAction={() => void handleRefresh()}
+        isActionLoading={isRefreshing}
+        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      />
     );
   }
 
@@ -223,6 +219,7 @@ export default function Discovery() {
             size="sm"
             className="w-10 h-10 p-0 relative"
             onClick={() => setShowNotifications(true)}
+            aria-label="Open notifications"
           >
             <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             {/* {unreadNotifications > 0 && (
@@ -236,6 +233,7 @@ export default function Discovery() {
             size="sm"
             className="w-10 h-10 p-0"
             onClick={() => setShowMapView(true)}
+            aria-label="Open map view"
           >
             <Map className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </Button>
@@ -244,6 +242,7 @@ export default function Discovery() {
             size="sm"
             className="w-10 h-10 p-0"
             onClick={() => setShowFilterModal(true)}
+            aria-label="Open discovery filters"
           >
             <Filter className="w-5 h-5 text-gray-600" />
           </Button>
@@ -253,6 +252,7 @@ export default function Discovery() {
             className="w-10 h-10 p-0"
             onClick={handleRefresh}
             disabled={isRefreshing}
+            aria-label="Refresh activities"
           >
             <RefreshCw className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -285,19 +285,19 @@ export default function Discovery() {
             onSwipeRight={handleJoin}
             onShowDetails={() => setShowDetailsModal(true)}
             className="absolute inset-x-4 top-0 z-30"
+            disabled={swipeMutation.isPending}
           />
         )}
 
         {/* Action buttons - Fixed position to avoid cutoff */}
-        <div
-          className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-offset)+0.75rem)] flex items-center justify-center gap-6 z-50 px-4"
-        >
+        <div className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-offset)+0.75rem)] flex items-center justify-center gap-6 z-50 px-4">
           <Button
             variant="outline"
             size="lg"
             onClick={handleReject}
             disabled={swipeMutation.isPending}
             className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-lg bg-white"
+            aria-label="Pass on this activity"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -307,6 +307,7 @@ export default function Discovery() {
             size="sm"
             onClick={() => setShowDetailsModal(true)}
             className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-50 shadow-lg bg-white"
+            aria-label="View activity details"
           >
             <Info className="h-4 w-4" />
           </Button>
@@ -317,6 +318,7 @@ export default function Discovery() {
             onClick={handleJoin}
             disabled={swipeMutation.isPending}
             className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 shadow-lg bg-white"
+            aria-label="Join this activity"
           >
             <Heart className="h-6 w-6" />
           </Button>

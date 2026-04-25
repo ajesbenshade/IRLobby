@@ -1,7 +1,7 @@
 // Service Worker for IRLobby PWA
-const CACHE_NAME = 'irlobby-v1';
-const STATIC_CACHE = 'irlobby-static-v1';
-const API_CACHE = 'irlobby-api-v1';
+const CACHE_NAME = 'irlobby-v2';
+const STATIC_CACHE = 'irlobby-static-v2';
+const API_CACHE = 'irlobby-api-v2';
 
 // Files to cache immediately
 const STATIC_FILES = [

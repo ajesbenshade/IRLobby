@@ -97,7 +97,7 @@ export default function UserDetailPage() {
         </Button>
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            We couldn't load this profile.
+            We couldn&apos;t load this profile.
           </CardContent>
         </Card>
       </div>
@@ -196,7 +196,9 @@ export default function UserDetailPage() {
       <div className="flex gap-2">
         <Button asChild variant="ghost" className="flex-1">
           <Link
-            to={`/app/moderation?userId=${encodeURIComponent(String(data.id))}&name=${encodeURIComponent(name)}`}
+            to={`/app/moderation?userId=${encodeURIComponent(
+              String(data.id),
+            )}&name=${encodeURIComponent(name)}`}
           >
             Report user
           </Link>

@@ -110,7 +110,10 @@ export default function Reviews() {
     );
 
     return matches
-      .filter((match) => Boolean(match.activity_id) && Boolean(match.user_a_id) && Boolean(match.user_b_id))
+      .filter(
+        (match) =>
+          Boolean(match.activity_id) && Boolean(match.user_a_id) && Boolean(match.user_b_id),
+      )
       .map((match) => {
         const isUserA = match.user_a_id === userId;
         return {
@@ -156,7 +159,9 @@ export default function Reviews() {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={`h-5 w-5 ${star <= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} ${interactive ? 'cursor-pointer' : ''}`}
+          className={`h-5 w-5 ${
+            star <= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+          } ${interactive ? 'cursor-pointer' : ''}`}
           onClick={interactive ? () => setRating(star) : undefined}
         />
       ))}
@@ -168,7 +173,9 @@ export default function Reviews() {
       <div className="max-w-3xl mx-auto space-y-6">
         <header>
           <h1 className="text-2xl font-bold">Reviews</h1>
-          <p className="text-sm text-muted-foreground">Rate your matched activities and participants.</p>
+          <p className="text-sm text-muted-foreground">
+            Rate your matched activities and participants.
+          </p>
         </header>
 
         <Card>
@@ -180,7 +187,10 @@ export default function Reviews() {
               <p className="text-sm text-muted-foreground">No pending reviews right now.</p>
             ) : (
               opportunities.map((item) => (
-                <div key={`${item.matchId}-${item.revieweeId}`} className="flex items-center justify-between rounded border p-3">
+                <div
+                  key={`${item.matchId}-${item.revieweeId}`}
+                  className="flex items-center justify-between rounded border p-3"
+                >
                   <div>
                     <p className="font-medium">{item.activity}</p>
                     <p className="text-sm text-muted-foreground">Review {item.revieweeName}</p>
@@ -209,7 +219,9 @@ export default function Reviews() {
                       <p className="font-medium">{review.activity}</p>
                       <p className="text-sm text-muted-foreground">For {review.reviewee}</p>
                     </div>
-                    <Badge variant="secondary">{format(new Date(review.created_at), 'MMM d, yyyy')}</Badge>
+                    <Badge variant="secondary">
+                      {format(new Date(review.created_at), 'MMM d, yyyy')}
+                    </Badge>
                   </div>
                   {renderStars(review.rating)}
                   {review.comment ? <p className="text-sm">{review.comment}</p> : null}
@@ -248,7 +260,11 @@ export default function Reviews() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setSelectedOpportunity(null)}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setSelectedOpportunity(null)}
+                >
                   Cancel
                 </Button>
                 <Button

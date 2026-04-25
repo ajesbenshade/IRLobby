@@ -37,9 +37,7 @@ export default function AppShell({ children }: AppShellProps) {
         <TopHeader onOpenCommandPalette={() => setPaletteOpen(true)} />
         <div className="flex flex-1 min-h-0">
           <main className="flex-1 min-w-0 overflow-y-auto">
-            <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-6">
-              {children}
-            </div>
+            <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-6">{children}</div>
           </main>
           <RightRail />
         </div>

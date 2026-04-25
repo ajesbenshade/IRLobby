@@ -8,6 +8,8 @@ declare namespace google {
   namespace maps {
     class Map {
       constructor(mapDiv: Element | null, opts?: MapOptions);
+      setCenter(latlng: LatLngLiteral): void;
+      setZoom(zoom: number): void;
     }
 
     class Marker {
@@ -33,9 +35,9 @@ declare namespace google {
 
     interface MarkerOptions {
       position?: LatLngLiteral;
-      map?: Map;
+      map?: Map | null;
       title?: string;
-      icon?: string | Icon | symbol;
+      icon?: string | Icon;
     }
 
     interface InfoWindowOptions {

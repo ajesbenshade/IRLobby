@@ -4,14 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Calendar,
-  Compass,
-  MessageCircle,
-  Plus,
-  Sparkles,
-  Star,
-} from 'lucide-react';
+import { Calendar, Compass, MessageCircle, Plus, Sparkles, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function parseCountResponse(json: unknown) {
@@ -52,19 +45,19 @@ export default function DashboardPage() {
   const stats = [
     {
       label: 'Matches',
-      value: matches.isError ? '!' : (matches.data ?? '—'),
+      value: matches.isError ? '!' : matches.data ?? '—',
       icon: MessageCircle,
       to: '/app/matches',
     },
     {
       label: 'Hosted',
-      value: hosted.isError ? '!' : (hosted.data ?? '—'),
+      value: hosted.isError ? '!' : hosted.data ?? '—',
       icon: Calendar,
       to: '/app/activities',
     },
     {
       label: 'Reviews',
-      value: reviews.isError ? '!' : (reviews.data ?? '—'),
+      value: reviews.isError ? '!' : reviews.data ?? '—',
       icon: Star,
       to: '/app/reviews',
     },

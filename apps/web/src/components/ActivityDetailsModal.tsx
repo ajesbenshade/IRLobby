@@ -33,8 +33,8 @@ export default function ActivityDetailsModal({
   const safeTags = Array.isArray(rawTags)
     ? rawTags
     : typeof rawTags === 'string' && rawTags.trim().length > 0
-      ? [rawTags]
-      : [];
+    ? [rawTags]
+    : [];
   const rawActivityTime =
     activity.time ||
     (activity as Activity & { dateTime?: string; date_time?: string }).dateTime ||
@@ -67,11 +67,7 @@ export default function ActivityDetailsModal({
         {/* Activity Image */}
         <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl mb-4 overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
-            <img
-              src={activity.images[0]}
-              alt={safeTitle}
-              className="w-full h-full object-cover"
-            />
+            <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
@@ -109,7 +105,9 @@ export default function ActivityDetailsModal({
                 : 'Date TBD'}
               {hasValidDate && parsedActivityDate && (
                 <>
-                  <span aria-hidden="true" className="mx-1">&bull;</span>
+                  <span aria-hidden="true" className="mx-1">
+                    &bull;
+                  </span>
                   {format(parsedActivityDate, 'h:mm a')}
                 </>
               )}

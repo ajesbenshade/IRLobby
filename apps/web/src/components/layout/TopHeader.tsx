@@ -1,9 +1,5 @@
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,8 +19,7 @@ export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
     navigate('/');
   };
 
-  const initials =
-    [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('') || 'U';
+  const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('') || 'U';
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -44,12 +39,7 @@ export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
       </button>
 
       <div className="ml-auto flex items-center gap-1">
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          aria-label="Notifications"
-        >
+        <Button asChild variant="ghost" size="icon" aria-label="Notifications">
           <Link to="/app/notifications">
             <Bell className="h-5 w-5" />
           </Link>
@@ -63,7 +53,6 @@ export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
               aria-label="Open user menu"
             >
               {user?.profileImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.profileImageUrl}
                   alt={user.firstName ?? 'You'}

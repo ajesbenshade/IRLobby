@@ -40,12 +40,14 @@ export const homepageFeatureHighlights = [
   {
     title: 'Real-time chat',
     emoji: '💬',
-    description: 'Every match carries its activity context into chat so coordination is frictionless.',
+    description:
+      'Every match carries its activity context into chat so coordination is frictionless.',
   },
   {
     title: 'Hyper-local discovery',
     emoji: '📍',
-    description: 'See things you can realistically get to, not generic events on the other side of town.',
+    description:
+      'See things you can realistically get to, not generic events on the other side of town.',
   },
   {
     title: 'Offline resilience',
@@ -117,7 +119,11 @@ export const howItWorksSteps = [
     title: 'Tell IRLobby your vibe in about a minute.',
     description:
       'Five quick cards replace a giant onboarding form. You can skip, revisit, and retune the signal later without starting over.',
-    bullets: ['Swipeable onboarding instead of a survey', 'Stored for repeat use', 'Designed to reduce cold-start friction'],
+    bullets: [
+      'Swipeable onboarding instead of a survey',
+      'Stored for repeat use',
+      'Designed to reduce cold-start friction',
+    ],
     emoji: '⚡',
   },
   {
@@ -126,7 +132,11 @@ export const howItWorksSteps = [
     title: 'Swipe on plans, not selfies.',
     description:
       'Every card is a real activity with time, place, and host context. You can filter what shows up and host your own activity when nothing fits.',
-    bullets: ['Distance and timing context up front', 'Tags for quick vibe scanning', 'Fast path to hosting your own event'],
+    bullets: [
+      'Distance and timing context up front',
+      'Tags for quick vibe scanning',
+      'Fast path to hosting your own event',
+    ],
     emoji: '🎯',
   },
   {
@@ -135,7 +145,11 @@ export const howItWorksSteps = [
     title: 'Mutual interest unlocks chat instantly.',
     description:
       'You do not need to force small talk before there is a reason to talk. Chat opens once the activity interest is mutual.',
-    bullets: ['Real-time messaging', 'Activity context persists into chat', 'Safety actions remain close at hand'],
+    bullets: [
+      'Real-time messaging',
+      'Activity context persists into chat',
+      'Safety actions remain close at hand',
+    ],
     emoji: '🎉',
   },
 ] as const;

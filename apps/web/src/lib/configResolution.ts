@@ -52,9 +52,7 @@ const resolveProductionApiBaseUrl = (env: ClientEnv, location?: BrowserLocationL
 const deriveWebsocketUrl = (baseUrl: string, location?: BrowserLocationLike) => {
   if (baseUrl) {
     return removeTrailingSlash(
-      baseUrl.replace(/^https?:\/\//, (prefix) =>
-        prefix === 'https://' ? 'wss://' : 'ws://',
-      ),
+      baseUrl.replace(/^https?:\/\//, (prefix) => (prefix === 'https://' ? 'wss://' : 'ws://')),
     );
   }
 
@@ -72,20 +70,24 @@ export function resolveClientConfig(
   const viteApiBaseUrl = normalizeValue(env.VITE_API_BASE_URL);
   const expoApiBaseUrl = normalizeValue(env.EXPO_PUBLIC_API_BASE_URL);
   const productionApiBaseUrl = resolveProductionApiBaseUrl(env, location);
-  const apiBaseUrl = viteApiBaseUrl ?? expoApiBaseUrl ?? productionApiBaseUrl ?? DEFAULT_API_BASE_URL;
+  const apiBaseUrl =
+    viteApiBaseUrl ?? expoApiBaseUrl ?? productionApiBaseUrl ?? DEFAULT_API_BASE_URL;
   const apiBaseUrlSource = viteApiBaseUrl
     ? 'vite'
     : expoApiBaseUrl
-      ? 'expo'
-      : productionApiBaseUrl
-        ? 'production-host'
-        : 'relative-fallback';
+    ? 'expo'
+    : productionApiBaseUrl
+    ? 'production-host'
+    : 'relative-fallback';
 
   const viteWebsocketBaseUrl = normalizeValue(env.VITE_WEBSOCKET_BASE_URL);
   const viteWebsocketUrl = normalizeValue(env.VITE_WEBSOCKET_URL);
   const expoWebsocketUrl = normalizeValue(env.EXPO_PUBLIC_WEBSOCKET_URL);
   const websocketUrl =
-    viteWebsocketBaseUrl ?? viteWebsocketUrl ?? expoWebsocketUrl ?? deriveWebsocketUrl(apiBaseUrl, location);
+    viteWebsocketBaseUrl ??
+    viteWebsocketUrl ??
+    expoWebsocketUrl ??
+    deriveWebsocketUrl(apiBaseUrl, location);
   const websocketUrlSource =
     viteWebsocketBaseUrl || viteWebsocketUrl ? 'vite' : expoWebsocketUrl ? 'expo' : 'derived';
 

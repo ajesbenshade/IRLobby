@@ -58,14 +58,11 @@ export default function VibeQuizPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              We'll use your answers to surface activities that match your energy.
+              We&apos;ll use your answers to surface activities that match your energy.
             </p>
             <div className="flex flex-wrap gap-2">
               {answers.map((a, i) => (
-                <span
-                  key={i}
-                  className="rounded-full border bg-muted px-3 py-1 text-xs"
-                >
+                <span key={i} className="rounded-full border bg-muted px-3 py-1 text-xs">
                   {a}
                 </span>
               ))}

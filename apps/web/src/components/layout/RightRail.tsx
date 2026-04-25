@@ -58,7 +58,7 @@ export default function RightRail() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Connect with people you've matched with — even outside an event.</p>
+          <p>Connect with people you&apos;ve matched with — even outside an event.</p>
           <Button asChild variant="outline" size="sm" className="w-full">
             <Link to="/app/connections">View connections</Link>
           </Button>

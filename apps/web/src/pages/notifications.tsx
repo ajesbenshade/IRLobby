@@ -89,7 +89,9 @@ export default function NotificationsPage() {
       id: `match-${match.id}`,
       type: 'match',
       title: 'New match confirmed',
-      body: `${match.user_a ?? 'Someone'} and ${match.user_b ?? 'someone'} matched${match.activity ? ` for ${match.activity}` : ''}.`,
+      body: `${match.user_a ?? 'Someone'} and ${match.user_b ?? 'someone'} matched${
+        match.activity ? ` for ${match.activity}` : ''
+      }.`,
       createdAt: match.created_at,
       href: '/app/connections',
     }));
@@ -116,8 +118,7 @@ export default function NotificationsPage() {
     });
 
     return [...messageItems, ...matchItems].sort(
-      (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     );
   }, [conversations, matches]);
 
@@ -148,9 +149,7 @@ export default function NotificationsPage() {
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2">
               <p className="font-medium">{latest.title}</p>
-              <Badge variant="secondary">
-                {latest.type === 'message' ? 'Message' : 'Match'}
-              </Badge>
+              <Badge variant="secondary">{latest.type === 'message' ? 'Message' : 'Match'}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{latest.body}</p>
             <div className="flex items-center justify-between gap-2">
@@ -208,8 +207,7 @@ export default function NotificationsPage() {
             <Bell className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium">No notifications yet</p>
             <p className="max-w-sm text-xs text-muted-foreground">
-              When a match lands or a conversation gets a new message, the update will
-              appear here.
+              When a match lands or a conversation gets a new message, the update will appear here.
             </p>
           </CardContent>
         </Card>
@@ -235,9 +233,7 @@ export default function NotificationsPage() {
                   <Badge variant="outline">Message</Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {relativeTime(item.createdAt)}
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">{relativeTime(item.createdAt)}</p>
               </Link>
             ))}
           </CardContent>
@@ -264,9 +260,7 @@ export default function NotificationsPage() {
                   <Badge variant="secondary">Match</Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {relativeTime(item.createdAt)}
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">{relativeTime(item.createdAt)}</p>
               </Link>
             ))}
           </CardContent>

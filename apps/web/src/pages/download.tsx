@@ -49,7 +49,8 @@ export default function DownloadPage() {
           <article className="public-glass rounded-[28px] p-8">
             <h2 className="font-display text-2xl font-bold text-white">📱 Scan to install</h2>
             <p className="mt-3 text-sm leading-relaxed text-white/65">
-              Point your iPhone camera at the App Store listing QR once it is live on the public website deployment.
+              Point your iPhone camera at the App Store listing QR once it is live on the public
+              website deployment.
             </p>
             <div className="mt-5 grid aspect-square place-items-center rounded-[24px] border border-white/8 bg-white/4 text-sm text-white/25">
               QR code
@@ -67,7 +68,8 @@ export default function DownloadPage() {
           <article className="public-glass rounded-[28px] p-8">
             <h2 className="font-display text-2xl font-bold text-white">🧰 Need help?</h2>
             <p className="mt-3 text-sm leading-relaxed text-white/65">
-              Having install trouble, login issues, or account access questions? The support team can help.
+              Having install trouble, login issues, or account access questions? The support team
+              can help.
             </p>
             <a
               href="/support"
@@ -79,7 +81,10 @@ export default function DownloadPage() {
         </div>
         <p className="mt-10 text-center text-sm text-white/55">
           Want Android? Email{' '}
-          <a href="mailto:hello@irlobby.com?subject=Android%20waitlist" className="text-[#ff6b9a] hover:underline">
+          <a
+            href="mailto:hello@irlobby.com?subject=Android%20waitlist"
+            className="text-[#ff6b9a] hover:underline"
+          >
             hello@irlobby.com
           </a>{' '}
           to join the waitlist.

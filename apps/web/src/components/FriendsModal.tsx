@@ -19,9 +19,14 @@ interface FriendsModalProps {
 }
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
-  const { data: matches = [], isLoading, isError, error, refetch, isRefetching } = useQuery<
-    MatchConnection[]
-  >({
+  const {
+    data: matches = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery<MatchConnection[]>({
     queryKey: [API_ROUTES.MATCHES],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MATCHES);
@@ -52,7 +57,12 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
             <p className="text-sm text-red-600 dark:text-red-400">
               {error instanceof Error ? error.message : 'Unable to load connections.'}
             </p>
-            <Button size="sm" variant="outline" onClick={() => void refetch()} disabled={isRefetching}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refetch()}
+              disabled={isRefetching}
+            >
               {isRefetching ? 'Retrying...' : 'Retry'}
             </Button>
           </div>

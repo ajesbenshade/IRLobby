@@ -38,7 +38,11 @@ function upsertCanonical(url: string) {
   tag.setAttribute('href', url);
 }
 
-export default function PublicMetadata({ title, description, canonicalPath = '/' }: PublicMetadataProps) {
+export default function PublicMetadata({
+  title,
+  description,
+  canonicalPath = '/',
+}: PublicMetadataProps) {
   useEffect(() => {
     const canonicalUrl = new URL(canonicalPath, window.location.origin).toString();
 

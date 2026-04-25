@@ -1,11 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { footerLinks, publicNavLinks } from '@/lib/public-site-content';
+import { cn } from '@/lib/utils';
 import { Heart } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-
-import { useAuth } from '@/hooks/useAuth';
 
 type PublicSiteLayoutProps = {
   children: ReactNode;

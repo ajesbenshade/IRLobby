@@ -31,15 +31,15 @@ const resolveAuthTokens = (data: AuthResponsePayload) => {
     typeof data.tokens?.access === 'string'
       ? data.tokens.access
       : typeof data.access === 'string'
-        ? data.access
-        : null;
+      ? data.access
+      : null;
 
   const refreshToken =
     typeof data.tokens?.refresh === 'string'
       ? data.tokens.refresh
       : typeof data.refresh === 'string'
-        ? data.refresh
-        : null;
+      ? data.refresh
+      : null;
 
   return { accessToken, refreshToken };
 };
@@ -212,11 +212,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (
-        typeof window !== 'undefined' &&
-        window.location.protocol !== 'https:' &&
-        refreshToken
-      ) {
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
 
@@ -281,11 +277,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (
-        typeof window !== 'undefined' &&
-        window.location.protocol !== 'https:' &&
-        refreshToken
-      ) {
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
 
@@ -499,8 +491,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
               {isLoading
                 ? 'Connecting...'
                 : isTwitterAvailable
-                  ? 'Continue with X (Twitter)'
-                  : 'X (Twitter) Login Unavailable'}
+                ? 'Continue with X (Twitter)'
+                : 'X (Twitter) Login Unavailable'}
             </Button>
           </div>
         </div>

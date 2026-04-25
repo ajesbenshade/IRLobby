@@ -84,8 +84,7 @@ export default function ModerationPage() {
     onError: (mutationError: unknown) => {
       toast({
         title: 'Unable to unblock user',
-        description:
-          mutationError instanceof Error ? mutationError.message : 'Please try again.',
+        description: mutationError instanceof Error ? mutationError.message : 'Please try again.',
         variant: 'destructive',
       });
     },
@@ -115,8 +114,7 @@ export default function ModerationPage() {
     onError: (mutationError: unknown) => {
       toast({
         title: 'Unable to submit report',
-        description:
-          mutationError instanceof Error ? mutationError.message : 'Please try again.',
+        description: mutationError instanceof Error ? mutationError.message : 'Please try again.',
         variant: 'destructive',
       });
     },
@@ -141,9 +139,7 @@ export default function ModerationPage() {
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           {error ? (
             <div className="space-y-3">
-              <p>
-                {error instanceof Error ? error.message : 'Unable to load blocked users.'}
-              </p>
+              <p>{error instanceof Error ? error.message : 'Unable to load blocked users.'}</p>
               <Button
                 size="sm"
                 variant="outline"
@@ -158,10 +154,10 @@ export default function ModerationPage() {
             <p>Loading blocked accounts...</p>
           ) : blockedUsers.length === 0 ? (
             <>
-              <p>You haven't blocked anyone yet.</p>
+              <p>You haven&apos;t blocked anyone yet.</p>
               <p>
-                From any profile, you can block someone to keep them out of discovery,
-                matches, and conversations.
+                From any profile, you can block someone to keep them out of discovery, matches, and
+                conversations.
               </p>
             </>
           ) : (

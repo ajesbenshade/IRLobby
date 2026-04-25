@@ -16,8 +16,9 @@
     "start": "echo \"Backend is Python; run 'cd irlobby_backend && python manage.py runserver'\"",
     "postinstall": "node scripts/fix-expo-module-scripts.mjs",
     "check:api-contract": "node scripts/check-api-contract.mjs",
-    "check:web:lint": "npm --prefix apps/web run lint",
-    "check:web": "npm --prefix apps/web run test && npm run build:web",
+    "check:web:lint": "npm --prefix apps/web run lint -- --max-warnings=0",
+    "check:web:format": "npm --prefix apps/web run format:check",
+    "check:web": "npm run check:web:lint && npm run check:web:format && npm --prefix apps/web run test && npm run build:web",
     "check:mobile": "npm --prefix apps/mobile run typecheck && npm --prefix apps/mobile run bundle:ios",
     "check:release": "npm run check:api-contract && npm run check:web && npm run check:mobile"
   }

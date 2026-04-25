@@ -23,10 +23,7 @@ export default function HowItWorksPage() {
       <section className="pb-20">
         <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6">
           {howItWorksSteps.map((step, index) => (
-            <article
-              key={step.step}
-              className="grid items-center gap-8 md:grid-cols-2 md:gap-12"
-            >
+            <article key={step.step} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
               <div className={index % 2 === 1 ? 'md:order-2' : undefined}>
                 <div className="inline-flex items-center gap-3">
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#ff2e63]/15 text-lg font-bold text-[#ff6b9a]">

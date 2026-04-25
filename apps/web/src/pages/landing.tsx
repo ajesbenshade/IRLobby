@@ -32,7 +32,8 @@ export default function Landing() {
               <span className="public-text-gradient">For real.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/72 sm:text-xl">
-              Swipe on actual activities happening near you. Mutual interest unlocks chat so plans stop dying in the group text.
+              Swipe on actual activities happening near you. Mutual interest unlocks chat so plans
+              stop dying in the group text.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -87,7 +88,9 @@ export default function Landing() {
               </div>
               <div className="mt-6">
                 <p className="text-xs uppercase tracking-[0.2em] text-white/40">Tonight near you</p>
-                <h2 className="mt-2 font-display text-2xl font-bold text-white">Rooftop sunset hang</h2>
+                <h2 className="mt-2 font-display text-2xl font-bold text-white">
+                  Rooftop sunset hang
+                </h2>
               </div>
               <div className="mt-4 flex-1 rounded-[28px] bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-700 p-4 shadow-xl">
                 <div className="flex h-full flex-col justify-end rounded-[22px] bg-gradient-to-t from-black/80 via-black/25 to-transparent p-4">
@@ -140,15 +143,23 @@ export default function Landing() {
                 Built to actually get you out the door.
               </h2>
               <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/70">
-                The product loop is simple: get a signal on your vibe, find something real nearby, and move straight into coordination.
+                The product loop is simple: get a signal on your vibe, find something real nearby,
+                and move straight into coordination.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {homepageFeatureHighlights.map((feature) => (
-                  <article key={feature.title} className="public-glass public-card-hover rounded-[24px] p-5">
+                  <article
+                    key={feature.title}
+                    className="public-glass public-card-hover rounded-[24px] p-5"
+                  >
                     <div className="text-3xl">{feature.emoji}</div>
-                    <h3 className="mt-3 font-display text-lg font-bold text-white">{feature.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/66">{feature.description}</p>
+                    <h3 className="mt-3 font-display text-lg font-bold text-white">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-white/66">
+                      {feature.description}
+                    </p>
                   </article>
                 ))}
               </div>
@@ -159,9 +170,12 @@ export default function Landing() {
                 <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ff6b9a]">
                   Join IRLobby
                 </p>
-                <h2 className="mt-3 font-display text-3xl font-black text-white">Create an account or jump back in.</h2>
+                <h2 className="mt-3 font-display text-3xl font-black text-white">
+                  Create an account or jump back in.
+                </h2>
                 <p className="mt-3 text-sm leading-relaxed text-white/65">
-                  The public website and the product shell now live in the same React app, so this is the fastest path from browse to join.
+                  The public website and the product shell now live in the same React app, so this
+                  is the fastest path from browse to join.
                 </p>
               </div>
               <AuthForm onAuthenticated={handleAuth} />

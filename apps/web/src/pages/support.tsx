@@ -24,7 +24,10 @@ export default function SupportPage() {
       <section className="px-6 pb-12">
         <div className="mx-auto max-w-3xl space-y-3">
           {supportFaqs.map((faq) => (
-            <details key={faq.question} className="public-glass rounded-[24px] p-6 text-white group">
+            <details
+              key={faq.question}
+              className="public-glass rounded-[24px] p-6 text-white group"
+            >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
                 {faq.question}
                 <Plus className="h-5 w-5 text-[#ff6b9a] transition group-open:rotate-45" />
@@ -38,7 +41,9 @@ export default function SupportPage() {
       <section className="px-6 pb-24">
         <div className="mx-auto max-w-2xl rounded-[32px] border border-white/8 bg-white/4 p-10 text-center text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
           <h2 className="font-display text-3xl font-bold">Still stuck?</h2>
-          <p className="mt-3 text-white/70">Email the team and expect a response inside two business days.</p>
+          <p className="mt-3 text-white/70">
+            Email the team and expect a response inside two business days.
+          </p>
           <a
             href="mailto:support@irlobby.com"
             className="mt-6 inline-flex items-center justify-center rounded-full bg-[#ff2e63] px-7 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#e01f52]"

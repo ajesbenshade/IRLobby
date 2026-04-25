@@ -20,8 +20,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { API_ROUTES } from '@shared/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, MapPin, X } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -45,9 +45,7 @@ const insertActivitySchema = z.object({
     .number()
     .min(1, 'At least 1 participant required')
     .max(MAX_EVENT_CAPACITY, `Maximum ${MAX_EVENT_CAPACITY} participants allowed`),
-  visibility: z
-    .array(z.enum(['friends', 'friendsOfFriends', 'everyone']))
-    .default(['everyone']),
+  visibility: z.array(z.enum(['friends', 'friendsOfFriends', 'everyone'])).default(['everyone']),
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).default([]),

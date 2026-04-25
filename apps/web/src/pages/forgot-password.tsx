@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@shared/schema';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -7,7 +8,6 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');

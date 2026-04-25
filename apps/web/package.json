@@ -2,7 +2,9 @@
   "name": "irlobby-client",
   "version": "1.0.0",
   "description": "IRLobby web client (public marketing site and authenticated app shell).",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +14,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
@@ -56,8 +59,8 @@
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "baseline-browser-mapping": "^2.9.19",
@@ -66,7 +69,6 @@
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsx-a11y": "^6.9.0",
-    "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "postcss": "^8.4.47",
@@ -74,8 +76,7 @@
     "tailwindcss": "^3.4.14",
     "terser": "^5.44.0",
     "typescript": "^5.6.3"
-  }
-  ,
+  },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.52.0"
   }

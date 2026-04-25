@@ -18,7 +18,8 @@ export default function NotFound() {
           </div>
           <h1 className="mt-6 font-display text-4xl font-black text-white">Page not found</h1>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70">
-            That URL does not exist in the latest IRLobby web app. Use one of the links below to get back on track.
+            That URL does not exist in the latest IRLobby web app. Use one of the links below to get
+            back on track.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

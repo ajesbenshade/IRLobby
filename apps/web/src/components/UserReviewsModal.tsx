@@ -25,11 +25,7 @@ interface UserReviewsModalProps {
   userName: string;
 }
 
-export default function UserReviewsModal({
-  isOpen,
-  onClose,
-  userName,
-}: UserReviewsModalProps) {
+export default function UserReviewsModal({ isOpen, onClose, userName }: UserReviewsModalProps) {
   const { data: reviews = [], isLoading } = useQuery<Review[]>({
     queryKey: [API_ROUTES.REVIEWS, userName],
     queryFn: async () => {

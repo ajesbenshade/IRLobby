@@ -308,7 +308,12 @@ export default function Settings() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
         <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/app/profile')} className="mr-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/app/profile')}
+            className="mr-4"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -427,7 +432,12 @@ export default function Settings() {
               </Label>
               <Select
                 value={settings.privacy.profileVisibility}
-                onValueChange={(value) => handlePrivacyChange('profileVisibility', value as 'public' | 'friends' | 'private')}
+                onValueChange={(value) =>
+                  handlePrivacyChange(
+                    'profileVisibility',
+                    value as 'public' | 'friends' | 'private',
+                  )
+                }
                 disabled={loading}
               >
                 <SelectTrigger className="mt-1">

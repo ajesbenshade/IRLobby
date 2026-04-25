@@ -7,7 +7,6 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { useEffect } from 'react';
 import {
   Bell,
   Calendar,
@@ -22,6 +21,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface CommandPaletteProps {

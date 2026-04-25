@@ -53,8 +53,8 @@ const normalizeUser = (profile: Record<string, unknown>): User => ({
     typeof profile.onboardingCompleted === 'boolean'
       ? profile.onboardingCompleted
       : typeof profile.onboarding_completed === 'boolean'
-        ? profile.onboarding_completed
-        : undefined,
+      ? profile.onboarding_completed
+      : undefined,
 });
 
 export function useAuth() {

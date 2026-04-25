@@ -178,8 +178,8 @@ export default memo(function SwipeCard({
   const safeTags = Array.isArray(rawTags)
     ? rawTags
     : typeof rawTags === 'string' && rawTags.trim().length > 0
-      ? [rawTags]
-      : [];
+    ? [rawTags]
+    : [];
 
   const rawActivityTime =
     activity.time ||

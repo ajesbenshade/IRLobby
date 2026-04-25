@@ -97,7 +97,7 @@ export default function ActivityDetailPage() {
         </Button>
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            We couldn't load this activity. It may have been removed.
+            We couldn&apos;t load this activity. It may have been removed.
           </CardContent>
         </Card>
       </div>
@@ -109,8 +109,8 @@ export default function ActivityDetailPage() {
   const safeTags = Array.isArray(a.tags)
     ? a.tags
     : typeof a.tags === 'string' && a.tags.trim().length > 0
-      ? [a.tags]
-      : [];
+    ? [a.tags]
+    : [];
   const rawTime = a.time || a.dateTime || a.date_time;
   const parsed = rawTime ? new Date(rawTime) : null;
   const validDate = Boolean(parsed && isValid(parsed));
@@ -120,8 +120,7 @@ export default function ActivityDetailPage() {
   const hostLast = pick(host?.lastName, host?.last_name) ?? '';
   const hostName = `${hostFirst} ${hostLast}`.trim() || 'Anonymous host';
   const hostAvatar = pick(host?.profileImageUrl, host?.profile_image_url);
-  const hostInitials =
-    (hostFirst[0] ?? 'H') + (hostLast[0] ?? '');
+  const hostInitials = (hostFirst[0] ?? 'H') + (hostLast[0] ?? '');
   const eventsHosted = pick(host?.eventsHosted, host?.events_hosted) ?? 0;
 
   return (
@@ -136,12 +135,7 @@ export default function ActivityDetailPage() {
       <div className="overflow-hidden rounded-xl">
         <div className="relative h-64 w-full bg-gradient-to-br from-primary/20 to-purple-600/20">
           {a.images && a.images.length > 0 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={a.images[0]}
-              alt={safeTitle}
-              className="h-full w-full object-cover"
-            />
+            <img src={a.images[0]} alt={safeTitle} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-4xl font-bold text-white/70">
               {safeTitle.charAt(0)}
@@ -186,9 +180,7 @@ export default function ActivityDetailPage() {
         <Card>
           <CardContent className="space-y-2 p-4">
             <h2 className="text-sm font-semibold">What to expect</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {a.description}
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{a.description}</p>
           </CardContent>
         </Card>
       )}
@@ -211,9 +203,7 @@ export default function ActivityDetailPage() {
           </Avatar>
           <div className="flex-1">
             <p className="text-sm font-medium">{hostName}</p>
-            <p className="text-xs text-muted-foreground">
-              {eventsHosted} events hosted
-            </p>
+            <p className="text-xs text-muted-foreground">{eventsHosted} events hosted</p>
           </div>
           {host?.rating ? (
             <div className="flex items-center gap-1 text-sm">

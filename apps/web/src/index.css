@@ -60,7 +60,9 @@
   }
 
   body {
-    font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
+      'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: hsl(var(--background));
@@ -70,25 +72,53 @@
 
 /* Custom animations */
 @keyframes swipeRight {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(100px) rotate(15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100px) rotate(15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes swipeLeft {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(-100px) rotate(-15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100px) rotate(-15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes bounceIn {
-  0% { transform: scale(0.3); opacity: 0; }
-  50% { transform: scale(1.05); }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-swipe-right {
@@ -130,17 +160,13 @@ html {
 }
 
 .public-site-bg {
-  background:
-    radial-gradient(circle at 16% 8%, rgba(255, 46, 99, 0.24), transparent 24%),
+  background: radial-gradient(circle at 16% 8%, rgba(255, 46, 99, 0.24), transparent 24%),
     radial-gradient(circle at 82% 18%, rgba(255, 107, 154, 0.16), transparent 28%),
-    radial-gradient(circle at 50% 96%, rgba(255, 182, 204, 0.12), transparent 26%),
-    #0b0b14;
+    radial-gradient(circle at 50% 96%, rgba(255, 182, 204, 0.12), transparent 26%), #0b0b14;
 }
 
 .public-page-bg {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 46, 99, 0.18), transparent 28%),
-    #0b0b14;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 46, 99, 0.18), transparent 28%), #0b0b14;
 }
 
 .public-glass {
@@ -158,10 +184,7 @@ html {
 }
 
 .public-card-hover {
-  transition:
-    transform 220ms ease,
-    background-color 220ms ease,
-    border-color 220ms ease,
+  transition: transform 220ms ease, background-color 220ms ease, border-color 220ms ease,
     box-shadow 220ms ease;
 }
 
@@ -181,7 +204,6 @@ html {
     transform: none;
   }
 }
-
 
 .pb-bottom-nav {
   padding-bottom: var(--bottom-nav-offset);
@@ -251,11 +273,11 @@ html {
   }
 
   /* Fix iOS Safari input zoom */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
     font-size: 16px !important;
@@ -263,7 +285,9 @@ html {
   }
 
   /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
+  input:focus,
+  textarea:focus,
+  select:focus {
     -webkit-user-select: text;
     user-select: text;
     -webkit-appearance: none;
@@ -274,11 +298,11 @@ html {
   }
 
   /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
     -webkit-text-size-adjust: 100%;
@@ -303,7 +327,7 @@ html {
   }
 
   /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
+  [role='dialog'],
   .modal-overlay {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -327,7 +351,9 @@ html {
   }
 
   /* Optimize animations for mobile performance */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.2s !important;
     animation-delay: 0s !important;
     transition-duration: 0.2s !important;
@@ -338,7 +364,9 @@ html {
 
 @supports (-webkit-touch-callout: none) {
   /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
+  input:focus,
+  textarea:focus,
+  select:focus {
     -webkit-user-select: text;
     user-select: text;
     -webkit-appearance: none;
@@ -349,11 +377,11 @@ html {
   }
 
   /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
     -webkit-text-size-adjust: 100%;
@@ -378,7 +406,7 @@ html {
   }
 
   /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
+  [role='dialog'],
   .modal-overlay {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -420,7 +448,7 @@ html {
   input,
   select,
   textarea,
-  [role="button"] {
+  [role='button'] {
     min-width: 44px;
     min-height: 44px;
   }

@@ -141,7 +141,6 @@ export default function AppSidebar() {
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
             {user?.profileImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.profileImageUrl}
                 alt={user.firstName ?? 'You'}
@@ -155,9 +154,7 @@ export default function AppSidebar() {
             <span className="truncate text-sm font-medium">
               {user?.firstName ?? 'Member'} {user?.lastName ?? ''}
             </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {user?.email ?? ''}
-            </span>
+            <span className="truncate text-xs text-muted-foreground">{user?.email ?? ''}</span>
           </div>
         </div>
       </SidebarFooter>

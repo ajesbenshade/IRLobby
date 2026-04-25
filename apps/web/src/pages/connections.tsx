@@ -58,7 +58,7 @@ export default function ConnectionsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Connections</h1>
         <p className="text-sm text-muted-foreground">
-          People you've matched with. Stay in touch even after the event ends.
+          People you&apos;ve matched with. Stay in touch even after the event ends.
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export default function ConnectionsPage() {
             <Users className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium">No connections yet</p>
             <p className="text-xs text-muted-foreground max-w-sm">
-              Match with people at activities and they'll appear here.
+              Match with people at activities and they&apos;ll appear here.
             </p>
             <Button asChild size="sm" className="mt-2">
               <Link to="/app/discovery">Browse activities</Link>
@@ -100,7 +100,6 @@ export default function ConnectionsPage() {
                 <CardContent className="flex items-center gap-3 p-4">
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
                     {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={img} alt={name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">

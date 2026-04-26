@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { footerLinks, publicNavLinks } from '@/lib/public-site-content';
 import { cn } from '@/lib/utils';
-import { Heart } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
@@ -14,11 +13,11 @@ type PublicSiteLayoutProps = {
 
 function PublicWordmark() {
   return (
-    <span className="flex items-center gap-3 font-display text-lg font-bold tracking-tight text-white">
-      <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[#ff2e63] text-white shadow-[0_14px_40px_rgba(255,46,99,0.35)]">
-        <Heart className="h-4 w-4 fill-current" />
+    <span className="flex items-center gap-3 font-display text-lg font-black tracking-tight text-white">
+      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(255,46,99,0.28)] ring-1 ring-white/12">
+        <img src="/app-icon.png" alt="" className="h-full w-full object-cover" />
       </span>
-      IRLobby
+      <span className="leading-none">IRLobby</span>
     </span>
   );
 }
@@ -27,7 +26,7 @@ function PublicNav({ activePath }: { activePath?: string }) {
   const { isAuthenticated } = useAuth();
 
   return (
-    <nav className="public-glass sticky top-0 z-40 border-b border-white/5">
+    <nav className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0b14]/76 backdrop-blur-2xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
         <Link to="/" className="shrink-0">
           <PublicWordmark />

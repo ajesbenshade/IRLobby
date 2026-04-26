@@ -6,49 +6,49 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 20 14.3% 4.1%;
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
+  --foreground: 240 29% 6%;
+  --muted: 240 24% 96%;
+  --muted-foreground: 240 8% 39%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover-foreground: 240 29% 6%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
-  --primary: 243 75% 59%; /* #6366F1 - Indigo */
-  --primary-foreground: 211 100% 99%;
-  --secondary: 38 95% 56%; /* #F59E0B - Amber */
-  --secondary-foreground: 24 9.8% 10%;
-  --accent: 157 65% 42%; /* #10B981 - Emerald */
-  --accent-foreground: 60 9.1% 97.8%;
+  --card-foreground: 240 29% 6%;
+  --border: 240 14% 94%;
+  --input: 240 14% 94%;
+  --primary: 344 100% 59%; /* #FF2E63 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 45 96% 65%; /* #FCD34D */
+  --secondary-foreground: 240 29% 6%;
+  --accent: 188 86% 53%; /* #22D3EE */
+  --accent-foreground: 240 29% 6%;
   --destructive: 0 84.2% 60.2%; /* #EF4444 - Red */
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 20 14.3% 4.1%;
+  --ring: 344 100% 59%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --popover: 240 10% 3.9%;
+  --background: 240 29% 6%;
+  --foreground: 240 24% 97%;
+  --muted: 240 18% 14%;
+  --muted-foreground: 240 11% 70%;
+  --popover: 240 18% 10%;
   --popover-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  --card: 240 18% 10%;
   --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --primary: 243 75% 59%;
-  --primary-foreground: 211 100% 99%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --border: 240 16% 20%;
+  --input: 240 16% 20%;
+  --primary: 344 100% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 45 96% 65%;
+  --secondary-foreground: 240 29% 6%;
+  --accent: 188 86% 53%;
+  --accent-foreground: 240 29% 6%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 240 4.9% 83.9%;
+  --ring: 344 100% 59%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
@@ -160,19 +160,21 @@ html {
 }
 
 .public-site-bg {
-  background: radial-gradient(circle at 16% 8%, rgba(255, 46, 99, 0.24), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(255, 107, 154, 0.16), transparent 28%),
-    radial-gradient(circle at 50% 96%, rgba(255, 182, 204, 0.12), transparent 26%), #0b0b14;
+  background: radial-gradient(circle at 12% 18%, rgba(255, 46, 99, 0.24), transparent 28%),
+    radial-gradient(circle at 78% 12%, rgba(34, 211, 238, 0.2), transparent 24%),
+    radial-gradient(circle at 78% 86%, rgba(252, 211, 77, 0.18), transparent 28%),
+    linear-gradient(180deg, #0b0b14 0%, #11111d 52%, #0b0b14 100%);
 }
 
 .public-page-bg {
-  background: radial-gradient(circle at 50% 0%, rgba(255, 46, 99, 0.18), transparent 28%), #0b0b14;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 46, 99, 0.2), transparent 30%),
+    radial-gradient(circle at 95% 20%, rgba(34, 211, 238, 0.12), transparent 22%), #0b0b14;
 }
 
 .public-glass {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -193,6 +195,11 @@ html {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 18px 50px rgba(255, 46, 99, 0.12);
+}
+
+.public-phone-shadow {
+  box-shadow: 0 38px 120px rgba(255, 46, 99, 0.22), 0 20px 70px rgba(34, 211, 238, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {

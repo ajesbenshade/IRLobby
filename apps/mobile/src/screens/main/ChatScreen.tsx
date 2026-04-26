@@ -18,6 +18,10 @@ import { getAccessToken } from '@services/authStorage';
 import { appColors, appTypography } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
+const getConversationMessages = (conversation: { messages?: unknown } | null | undefined) => (
+  Array.isArray(conversation?.messages) ? conversation.messages : []
+);
+
 export const ChatScreen = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -43,7 +47,7 @@ export const ChatScreen = () => {
   });
 
   const selectedConversation = useMemo(
-    () => conversations.find((item) => item.id === selectedConversationId),
+    () => (Array.isArray(conversations) ? conversations.find((item) => item.id === selectedConversationId) : undefined),
     [conversations, selectedConversationId],
   );
   const sparkCount = matches.length;
@@ -208,7 +212,7 @@ export const ChatScreen = () => {
           />
           <Button
             mode="contained"
-            onPress={() => sendMutation.mutate()}
+            onPress={() => void sendMutation.mutate()}
             loading={sendMutation.isPending}
             disabled={!draft.trim() || sendMutation.isPending}
             buttonColor={appColors.primary}
@@ -271,7 +275,7 @@ export const ChatScreen = () => {
           title="No chats yet"
           description="Match with someone or join a plan to start chatting."
           action={
-            <Button mode="contained" buttonColor={appColors.primary} onPress={() => queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] })}>
+            <Button mode="contained" buttonColor={appColors.primary} onPress={() => void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] })}>
               Find someone to chat
             </Button>
           }
@@ -279,7 +283,8 @@ export const ChatScreen = () => {
       ) : null}
 
       {conversations.map((item) => {
-        const lastMessage = item.messages[item.messages.length - 1];
+        const conversationMessages = getConversationMessages(item);
+        const lastMessage = conversationMessages[conversationMessages.length - 1];
         const matchedRecord = matches.find((match) => match.activity === item.match);
         const isFreshSpark = matchedRecord
           ? Date.now() - new Date(matchedRecord.created_at).getTime() < 1000 * 60 * 60 * 24

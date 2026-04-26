@@ -28,6 +28,10 @@ interface NotificationItem {
   type: NotificationType;
 }
 
+const getConversationMessages = (conversation: { messages?: unknown }) => (
+  Array.isArray(conversation.messages) ? conversation.messages : []
+);
+
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -75,7 +79,8 @@ export const NotificationsScreen = () => {
     }));
 
     const messageItems: NotificationItem[] = conversations.flatMap((conversation) => {
-      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      const messages = getConversationMessages(conversation);
+      const lastMessage = messages[messages.length - 1];
       if (!lastMessage) {
         return [];
       }

@@ -19,18 +19,24 @@ if not settings.configured:
 
 # Now safe to import Django components
 # Import routing after Django is set up
-from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import OriginValidator
 from django.core.asgi import get_asgi_application
 
 import chat.routing
 from chat.middleware import JwtAuthMiddleware
 
+websocket_application = JwtAuthMiddleware(URLRouter(chat.routing.websocket_urlpatterns))
+
+if getattr(settings, "WEBSOCKET_ALLOWED_ORIGINS", None):
+    websocket_application = OriginValidator(
+        websocket_application,
+        settings.WEBSOCKET_ALLOWED_ORIGINS,
+    )
+
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": JwtAuthMiddleware(
-            AuthMiddlewareStack(URLRouter(chat.routing.websocket_urlpatterns))
-        ),
+        "websocket": websocket_application,
     }
 )

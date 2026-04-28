@@ -14,10 +14,12 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 import dj_database_url
 import environ
 import sentry_sdk
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,6 +27,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 env.read_env(BASE_DIR / ".env")
 config = env
+
+
+def parse_origin_list(value):
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def validate_origin_list(setting_name, origins, *, require_https):
+    invalid_origins = []
+    placeholder_origins = []
+
+    for origin in origins:
+        parsed = urlparse(origin)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            invalid_origins.append(origin)
+            continue
+        if require_https and parsed.scheme != "https":
+            invalid_origins.append(origin)
+        if any(placeholder in origin for placeholder in ["your-domain.com", "your-frontend-domain.com"]):
+            placeholder_origins.append(origin)
+
+    if invalid_origins:
+        raise ImproperlyConfigured(
+            f"{setting_name} contains invalid production origins: {', '.join(invalid_origins)}"
+        )
+    if placeholder_origins:
+        raise ImproperlyConfigured(
+            f"{setting_name} contains placeholder production origins: {', '.join(placeholder_origins)}"
+        )
 
 
 # Quick-start development settings - unsuitable for production
@@ -106,6 +136,8 @@ REST_FRAMEWORK = {
         "auth_anon": "10/min",
         "auth_user": "30/min",
         "ticket_ops": "20/min",
+        "swipe_ops": config("SWIPE_THROTTLE_RATE", default="120/hour"),
+        "match_reads": config("MATCH_THROTTLE_RATE", default="240/hour"),
     },
 }
 
@@ -201,13 +233,16 @@ raw_cors_origins = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://127.0.0.1:3000,https://your-frontend-domain.com",
 )
-CORS_ALLOWED_ORIGINS = [s.strip() for s in raw_cors_origins.split(",") if s.strip()]
+CORS_ALLOWED_ORIGINS = parse_origin_list(raw_cors_origins)
 
 raw_csrf_origins = config(
     "CSRF_TRUSTED_ORIGINS",
     default="http://localhost:5173,http://127.0.0.1:5173,https://your-frontend-domain.com",
 )
-CSRF_TRUSTED_ORIGINS = [s.strip() for s in raw_csrf_origins.split(",") if s.strip()]
+CSRF_TRUSTED_ORIGINS = parse_origin_list(raw_csrf_origins)
+
+raw_websocket_origins = config("WEBSOCKET_ALLOWED_ORIGINS", default=raw_cors_origins)
+WEBSOCKET_ALLOWED_ORIGINS = parse_origin_list(raw_websocket_origins)
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Use CORS_ALLOWED_ORIGINS list in production
@@ -238,6 +273,15 @@ CORS_ALLOW_METHODS = [
 WAFFLE_FLAG_DEFAULT = False
 
 if not DEBUG and not _IS_TESTING:
+    if not CORS_ALLOWED_ORIGINS or not CSRF_TRUSTED_ORIGINS or not WEBSOCKET_ALLOWED_ORIGINS:
+        raise ImproperlyConfigured(
+            "CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS, and WEBSOCKET_ALLOWED_ORIGINS must be set in production."
+        )
+    validate_origin_list("CORS_ALLOWED_ORIGINS", CORS_ALLOWED_ORIGINS, require_https=True)
+    validate_origin_list("CSRF_TRUSTED_ORIGINS", CSRF_TRUSTED_ORIGINS, require_https=True)
+    validate_origin_list(
+        "WEBSOCKET_ALLOWED_ORIGINS", WEBSOCKET_ALLOWED_ORIGINS, require_https=True
+    )
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
     SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)
     CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)

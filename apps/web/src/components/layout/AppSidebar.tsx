@@ -59,7 +59,7 @@ export default function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="px-3 py-4">
         <Link to="/app" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600 text-white shadow-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-secondary text-white shadow-sm shadow-primary/20">
             <Sparkles className="h-4 w-4" />
           </div>
           <span className="text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
@@ -77,7 +77,7 @@ export default function AppSidebar() {
                   asChild
                   isActive={isActive(location.pathname, '/app/create')}
                   tooltip="Create activity"
-                  className="bg-gradient-to-r from-primary to-purple-600 text-white hover:from-primary/90 hover:to-purple-600/90 hover:text-white data-[active=true]:from-primary data-[active=true]:to-purple-600 data-[active=true]:text-white"
+                  className="bg-gradient-to-r from-primary to-secondary text-white shadow-sm shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 hover:text-white data-[active=true]:from-primary data-[active=true]:to-secondary data-[active=true]:text-white"
                 >
                   <Link to="/app/create">
                     <Plus className="h-4 w-4" />

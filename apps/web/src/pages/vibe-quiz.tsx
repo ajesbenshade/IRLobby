@@ -92,7 +92,7 @@ export default function VibeQuizPage() {
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className={`h-full bg-gradient-to-r from-primary to-purple-600 transition-all ${
+          className={`h-full bg-gradient-to-r from-primary to-secondary transition-all ${
             ['w-1/4', 'w-2/4', 'w-3/4', 'w-full'][step] ?? 'w-0'
           }`}
         />

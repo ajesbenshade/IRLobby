@@ -43,7 +43,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
 
   return (
     <Card className={`swipe-card overflow-hidden ${className}`} onClick={onClick}>
-      <div className="aspect-video bg-gradient-to-br from-primary to-purple-600 relative overflow-hidden">
+      <div className="aspect-video bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
         {activity.imageUrl ? (
           <img
             src={activity.imageUrl}
@@ -141,7 +141,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {activity.host.firstName?.charAt(0) || activity.host.email?.charAt(0) || 'H'}
                   </span>

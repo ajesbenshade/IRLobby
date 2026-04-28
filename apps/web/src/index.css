@@ -5,50 +5,76 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 29% 6%;
-  --muted: 240 24% 96%;
-  --muted-foreground: 240 8% 39%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 29% 6%;
+  --popover-foreground: 222 47% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 240 29% 6%;
-  --border: 240 14% 94%;
-  --input: 240 14% 94%;
-  --primary: 344 100% 59%; /* #FF2E63 */
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --primary: 262 83% 58%; /* #7C3AED */
   --primary-foreground: 0 0% 100%;
-  --secondary: 45 96% 65%; /* #FCD34D */
-  --secondary-foreground: 240 29% 6%;
+  --secondary: 330 81% 60%; /* #EC4899 */
+  --secondary-foreground: 0 0% 100%;
   --accent: 188 86% 53%; /* #22D3EE */
-  --accent-foreground: 240 29% 6%;
-  --destructive: 0 84.2% 60.2%; /* #EF4444 - Red */
-  --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 344 100% 59%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 350 89% 60%; /* #F43F5E */
+  --destructive-foreground: 0 0% 100%;
+  --ring: 262 83% 58%;
+  --chart-1: 262 83% 58%;
+  --chart-2: 330 81% 60%;
+  --chart-3: 188 86% 53%;
+  --chart-4: 84 81% 44%;
+  --chart-5: 38 92% 50%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: 262 83% 58%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 263 100% 95%;
+  --sidebar-accent-foreground: 262 83% 38%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 262 83% 58%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
-  --background: 240 29% 6%;
-  --foreground: 240 24% 97%;
-  --muted: 240 18% 14%;
-  --muted-foreground: 240 11% 70%;
-  --popover: 240 18% 10%;
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 75%;
+  --popover: 221 39% 11%;
   --popover-foreground: 0 0% 98%;
-  --card: 240 18% 10%;
+  --card: 221 39% 11%;
   --card-foreground: 0 0% 98%;
-  --border: 240 16% 20%;
-  --input: 240 16% 20%;
-  --primary: 344 100% 59%;
+  --border: 215 25% 27%;
+  --input: 215 25% 27%;
+  --primary: 258 90% 76%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 45 96% 65%;
-  --secondary-foreground: 240 29% 6%;
+  --secondary: 330 81% 60%;
+  --secondary-foreground: 0 0% 100%;
   --accent: 188 86% 53%;
-  --accent-foreground: 240 29% 6%;
-  --destructive: 0 62.8% 30.6%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 344 100% 59%;
+  --ring: 258 90% 76%;
+  --chart-1: 258 90% 76%;
+  --chart-2: 330 81% 60%;
+  --chart-3: 188 86% 53%;
+  --chart-4: 84 81% 44%;
+  --chart-5: 38 92% 50%;
+  --sidebar-background: 221 39% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 258 90% 76%;
+  --sidebar-primary-foreground: 222 47% 11%;
+  --sidebar-accent: 217 33% 17%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 215 25% 27%;
+  --sidebar-ring: 258 90% 76%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
@@ -160,26 +186,26 @@ html {
 }
 
 .public-site-bg {
-  background: radial-gradient(circle at 12% 18%, rgba(255, 46, 99, 0.24), transparent 28%),
-    radial-gradient(circle at 78% 12%, rgba(34, 211, 238, 0.2), transparent 24%),
-    radial-gradient(circle at 78% 86%, rgba(252, 211, 77, 0.18), transparent 28%),
-    linear-gradient(180deg, #0b0b14 0%, #11111d 52%, #0b0b14 100%);
+  background: radial-gradient(circle at 12% 18%, rgba(124, 58, 237, 0.26), transparent 28%),
+    radial-gradient(circle at 78% 12%, rgba(236, 72, 153, 0.24), transparent 24%),
+    radial-gradient(circle at 78% 86%, rgba(34, 211, 238, 0.18), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #111827 52%, #0f172a 100%);
 }
 
 .public-page-bg {
-  background: radial-gradient(circle at 50% 0%, rgba(255, 46, 99, 0.2), transparent 30%),
-    radial-gradient(circle at 95% 20%, rgba(34, 211, 238, 0.12), transparent 22%), #0b0b14;
+  background: radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.22), transparent 30%),
+    radial-gradient(circle at 95% 20%, rgba(236, 72, 153, 0.16), transparent 22%), #0f172a;
 }
 
 .public-glass {
   background: rgba(255, 255, 255, 0.055);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .public-text-gradient {
-  background: linear-gradient(135deg, #ff2e63 0%, #ff6b9a 50%, #ffb6cc 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 54%, #22d3ee 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -194,12 +220,12 @@ html {
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 18px 50px rgba(255, 46, 99, 0.12);
+  box-shadow: 0 18px 50px rgba(124, 58, 237, 0.16);
 }
 
 .public-phone-shadow {
-  box-shadow: 0 38px 120px rgba(255, 46, 99, 0.22), 0 20px 70px rgba(34, 211, 238, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 38px 120px rgba(124, 58, 237, 0.24), 0 20px 70px rgba(236, 72, 153, 0.18),
+    0 16px 60px rgba(34, 211, 238, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -223,7 +249,6 @@ html {
 /* Hide scrollbar but keep functionality */
 .hide-scrollbar {
   -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -265,18 +290,18 @@ html {
 @supports (-webkit-touch-callout: none) {
   /* Fix iOS Safari 100vh issue */
   .h-screen {
-    height: 100vh;
     height: -webkit-fill-available;
+    height: 100vh;
   }
 
   .min-h-screen {
-    min-height: 100vh;
     min-height: -webkit-fill-available;
+    min-height: 100vh;
   }
 
   /* Better scrolling on iOS */
   .overflow-auto {
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   /* Fix iOS Safari input zoom */
@@ -300,7 +325,7 @@ html {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #6366f1;
+    border: 2px solid #7c3aed;
     border-radius: 8px;
   }
 
@@ -312,7 +337,6 @@ html {
   input[type='number'],
   textarea,
   select {
-    -webkit-text-size-adjust: 100%;
     -webkit-appearance: none;
     appearance: none;
     border-radius: 8px;
@@ -320,7 +344,6 @@ html {
 
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
@@ -349,6 +372,7 @@ html {
   }
 
   .backdrop-blur {
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background-color: rgba(255, 255, 255, 0.8);
   }
@@ -379,7 +403,7 @@ html {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #6366f1;
+    border: 2px solid #7c3aed;
     border-radius: 8px;
   }
 
@@ -391,7 +415,6 @@ html {
   input[type='number'],
   textarea,
   select {
-    -webkit-text-size-adjust: 100%;
     -webkit-appearance: none;
     appearance: none;
     border-radius: 8px;
@@ -399,7 +422,6 @@ html {
 
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
@@ -426,6 +448,7 @@ html {
 @media (max-width: 768px) and (max-height: 1024px) {
   /* Disable expensive backdrop filters on low-end devices */
   .backdrop-blur {
+    -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background-color: rgba(255, 255, 255, 0.95);
   }

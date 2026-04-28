@@ -30,7 +30,7 @@ export default function SupportPage() {
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
                 {faq.question}
-                <Plus className="h-5 w-5 text-[#ff6b9a] transition group-open:rotate-45" />
+                <Plus className="h-5 w-5 text-[#ec4899] transition group-open:rotate-45" />
               </summary>
               <p className="mt-4 leading-relaxed text-white/70">{faq.answer}</p>
             </details>
@@ -46,13 +46,13 @@ export default function SupportPage() {
           </p>
           <a
             href="mailto:support@irlobby.com"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#ff2e63] px-7 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#e01f52]"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-7 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#6d28d9]"
           >
             support@irlobby.com
           </a>
           <p className="mt-6 text-sm text-white/50">
             For privacy questions, start with the{' '}
-            <a href="/privacy" className="text-[#ff6b9a] hover:underline">
+            <a href="/privacy" className="text-[#ec4899] hover:underline">
               Privacy Policy
             </a>
             .

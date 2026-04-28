@@ -13,7 +13,7 @@ export default function NotFound() {
       />
       <section className="px-6 py-28">
         <div className="public-glass mx-auto max-w-2xl rounded-[32px] p-10 text-center">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#ff2e63]/15 text-[#ff6b9a]">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#7c3aed]/15 text-[#ec4899]">
             <AlertCircle className="h-8 w-8" />
           </div>
           <h1 className="mt-6 font-display text-4xl font-black text-white">Page not found</h1>
@@ -25,7 +25,7 @@ export default function NotFound() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/"
-              className="rounded-full bg-[#ff2e63] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#e01f52]"
+              className="rounded-full bg-[#7c3aed] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#6d28d9]"
             >
               Go home
             </Link>

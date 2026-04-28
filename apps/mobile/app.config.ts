@@ -10,15 +10,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   scheme: 'irlobby',
   userInterfaceStyle: 'automatic',
-  primaryColor: '#FF2E63',
+  primaryColor: '#7C3AED',
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#FF2E63',
+    backgroundColor: '#7C3AED',
     dark: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#0B0B14',
+      backgroundColor: '#0F172A',
     },
   },
   updates: {
@@ -66,7 +66,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FF2E63',
+      backgroundColor: '#7C3AED',
     },
   },
   plugins: [
@@ -74,7 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/icon.png',
-        color: '#FF2E63',
+        color: '#7C3AED',
       },
     ],
     'expo-font',

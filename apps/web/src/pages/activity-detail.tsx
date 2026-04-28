@@ -133,7 +133,7 @@ export default function ActivityDetailPage() {
       </Button>
 
       <div className="overflow-hidden rounded-xl">
-        <div className="relative h-64 w-full bg-gradient-to-br from-primary/20 to-purple-600/20">
+        <div className="relative h-64 w-full bg-gradient-to-br from-primary/20 to-secondary/20">
           {a.images && a.images.length > 0 ? (
             <img src={a.images[0]} alt={safeTitle} className="h-full w-full object-cover" />
           ) : (

@@ -14,7 +14,7 @@ type PublicSiteLayoutProps = {
 function PublicWordmark() {
   return (
     <span className="flex items-center gap-3 font-display text-lg font-black tracking-tight text-white">
-      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(255,46,99,0.28)] ring-1 ring-white/12">
+      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(124,58,237,0.28)] ring-1 ring-white/12">
         <img src="/app-icon.png" alt="" className="h-full w-full object-cover" />
       </span>
       <span className="leading-none">IRLobby</span>
@@ -26,7 +26,7 @@ function PublicNav({ activePath }: { activePath?: string }) {
   const { isAuthenticated } = useAuth();
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0b14]/76 backdrop-blur-2xl">
+    <nav className="sticky top-0 z-40 border-b border-white/8 bg-[#0f172a]/76 backdrop-blur-2xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
         <Link to="/" className="shrink-0">
           <PublicWordmark />
@@ -53,14 +53,14 @@ function PublicNav({ activePath }: { activePath?: string }) {
           {isAuthenticated ? (
             <Button
               asChild
-              className="rounded-full bg-[#ff2e63] px-5 text-white hover:bg-[#e01f52]"
+              className="rounded-full bg-[#7c3aed] px-5 text-white hover:bg-[#6d28d9]"
             >
               <Link to="/app">Open app</Link>
             </Button>
           ) : (
             <Button
               asChild
-              className="rounded-full bg-[#ff2e63] px-5 text-white hover:bg-[#e01f52]"
+              className="rounded-full bg-[#7c3aed] px-5 text-white hover:bg-[#6d28d9]"
             >
               <a href="/#auth">Get started</a>
             </Button>
@@ -103,7 +103,7 @@ export function PublicHeroHeader({
   return (
     <section className="px-6 pb-16 pt-20 text-center sm:pt-24">
       <div className="mx-auto max-w-4xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ff6b9a]">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ec4899]">
           {eyebrow}
         </p>
         <h1 className="mt-4 font-display text-5xl font-black leading-[1.03] tracking-tight text-white sm:text-6xl md:text-7xl">

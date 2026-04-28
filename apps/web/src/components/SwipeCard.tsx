@@ -242,7 +242,7 @@ export default memo(function SwipeCard({
         </div>
 
         {/* Activity Image */}
-        <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 dark:from-primary/30 dark:to-purple-600/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
+        <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-secondary/20 dark:from-primary/30 dark:to-secondary/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
             <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
           ) : (

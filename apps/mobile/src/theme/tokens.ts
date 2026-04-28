@@ -1,10 +1,20 @@
+import {
+  brand as sharedBrand,
+  brandFontSize,
+  brandLineHeight,
+  brandMotion,
+  brandPalette,
+  brandRadii,
+  brandSpacing,
+  brandTypography,
+} from '@shared/design-tokens';
+
 /**
- * IRLobby design tokens — single source of truth.
+ * IRLobby mobile design tokens.
  * Tagline: "Get out. Get together."
  *
- * Both the React Native theme (theme/index.ts) and Tailwind
- * (tailwind.config.js) consume this file. Do not hard-code colors,
- * radii, or shadows elsewhere.
+ * Shared launch tokens live in packages/shared/design-tokens.ts. This file
+ * preserves the mobile theme exports consumed by React Native Paper and screens.
  */
 
 // ---------------------------------------------------------------------------
@@ -12,48 +22,48 @@
 // ---------------------------------------------------------------------------
 
 export const palette = {
-  // Brand — electric magenta
-  primary: '#FF2E63',
-  primaryDeep: '#D6004F',
-  primarySoft: '#FFE0EA',
-  primaryGlow: '#FF6F95',
+  // Brand - purple to pink launch gradient
+  primary: brandPalette.primary,
+  primaryDeep: brandPalette.primaryDeep,
+  primarySoft: brandPalette.primarySoft,
+  primaryGlow: brandPalette.primaryGlow,
 
-  // Secondary — confident sun-yellow
-  secondary: '#FCD34D',
-  secondaryDeep: '#E0A800',
-  secondarySoft: '#FFF4C2',
+  // Secondary - electric cyan for matches and notifications
+  secondary: brandPalette.secondary,
+  secondaryDeep: brandPalette.secondaryDeep,
+  secondarySoft: brandPalette.secondarySoft,
 
-  // Accent — electric cyan
-  accent: '#22D3EE',
-  accentDeep: '#0E9FB8',
-  accentSoft: '#CFF7FE',
+  // Accent - soft violet for hype moments and supporting surfaces
+  accent: brandPalette.accent,
+  accentDeep: brandPalette.accentDeep,
+  accentSoft: brandPalette.accentSoft,
 
   // Status
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
+  success: brandPalette.success,
+  warning: brandPalette.warning,
+  danger: brandPalette.danger,
 
   // Neutrals (light)
-  ink: '#0B0B14',
-  mutedInk: '#5B5B6B',
-  softInk: '#9A9AA8',
-  line: '#ECECF1',
-  lineStrong: '#DCDCE5',
-  surface: '#FFFFFF',
-  surfaceMuted: '#F2F2F7',
-  background: '#F7F7FA',
-  overlay: 'rgba(11,11,20,0.55)',
-  white: '#FFFFFF',
-  black: '#000000',
+  ink: brandPalette.ink,
+  mutedInk: brandPalette.mutedInk,
+  softInk: brandPalette.softInk,
+  line: brandPalette.line,
+  lineStrong: brandPalette.lineStrong,
+  surface: brandPalette.surface,
+  surfaceMuted: brandPalette.surfaceMuted,
+  background: brandPalette.background,
+  overlay: brandPalette.overlay,
+  white: brandPalette.white,
+  black: brandPalette.black,
 
   // Neutrals (dark)
-  darkBackground: '#0B0B14',
-  darkSurface: '#15151F',
-  darkSurfaceMuted: '#1E1E2B',
-  darkLine: '#2A2A3A',
-  darkInk: '#F7F7FA',
-  darkMutedInk: '#A8A8B8',
-  darkSoftInk: '#6E6E80',
+  darkBackground: brandPalette.darkBackground,
+  darkSurface: brandPalette.darkSurface,
+  darkSurfaceMuted: brandPalette.darkSurfaceMuted,
+  darkLine: brandPalette.darkLine,
+  darkInk: brandPalette.darkInk,
+  darkMutedInk: brandPalette.darkMutedInk,
+  darkSoftInk: brandPalette.darkSoftInk,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -61,12 +71,12 @@ export const palette = {
 // ---------------------------------------------------------------------------
 
 export const radii = {
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 20,
-  xl: 28,
-  pill: 999,
+  xs: brandRadii.xs,
+  sm: brandRadii.sm,
+  md: brandRadii.md,
+  lg: brandRadii.lg,
+  xl: brandRadii.xl,
+  pill: brandRadii.pill,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -74,14 +84,14 @@ export const radii = {
 // ---------------------------------------------------------------------------
 
 export const spacing = {
-  xxs: 4,
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  xxxl: 64,
+  xxs: brandSpacing.xxs,
+  xs: brandSpacing.xs,
+  sm: brandSpacing.sm,
+  md: brandSpacing.md,
+  lg: brandSpacing.lg,
+  xl: brandSpacing.xl,
+  xxl: brandSpacing.xxl,
+  xxxl: brandSpacing.xxxl,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -89,32 +99,28 @@ export const spacing = {
 // ---------------------------------------------------------------------------
 
 export const typography = {
-  // Sans (body + UI)
-  bodyRegular: 'Outfit_400Regular',
-  bodyMedium: 'Outfit_500Medium',
-  bodySemibold: 'Outfit_600SemiBold',
-  heading: 'Outfit_700Bold',
-  headingDisplay: 'Outfit_800ExtraBold',
-  // Display (used sparingly for hero moments). Currently aliased to
-  // Outfit ExtraBold; swap to a serif (e.g. Instrument Serif, Fraunces)
-  // once the font package is added to apps/mobile/package.json.
-  display: 'Outfit_800ExtraBold',
+  bodyRegular: brandTypography.bodyRegular,
+  bodyMedium: brandTypography.bodyMedium,
+  bodySemibold: brandTypography.bodySemibold,
+  heading: brandTypography.heading,
+  headingDisplay: brandTypography.headingDisplay,
+  display: brandTypography.display,
 } as const;
 
 export const fontSize = {
-  xs: 12,
-  sm: 14,
-  base: 16,
-  lg: 20,
-  xl: 28,
-  xxl: 36,
-  display: 48,
+  xs: brandFontSize.xs,
+  sm: brandFontSize.sm,
+  base: brandFontSize.base,
+  lg: brandFontSize.lg,
+  xl: brandFontSize.xl,
+  xxl: brandFontSize.xxl,
+  display: brandFontSize.display,
 } as const;
 
 export const lineHeight = {
-  tight: 1.15,
-  snug: 1.3,
-  normal: 1.5,
+  tight: brandLineHeight.tight,
+  snug: brandLineHeight.snug,
+  normal: brandLineHeight.normal,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -124,7 +130,7 @@ export const lineHeight = {
 export const shadows = {
   // Subtle — for content cards and inputs
   card: {
-    shadowColor: '#0B0B14',
+    shadowColor: brandPalette.ink,
     shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -132,16 +138,16 @@ export const shadows = {
   },
   // Stronger — for floating CTAs, tab bar, modals
   float: {
-    shadowColor: '#0B0B14',
-    shadowOpacity: 0.16,
+    shadowColor: brandPalette.primary,
+    shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
   // Tight, sharp — for raised buttons (FAB)
   pop: {
-    shadowColor: '#0B0B14',
-    shadowOpacity: 0.22,
+    shadowColor: brandPalette.primaryDeep,
+    shadowOpacity: 0.24,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
@@ -153,9 +159,9 @@ export const shadows = {
 // ---------------------------------------------------------------------------
 
 export const motion = {
-  fast: 150,
-  base: 250,
-  slow: 400,
+  fast: brandMotion.fast,
+  base: brandMotion.base,
+  slow: brandMotion.slow,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -163,6 +169,6 @@ export const motion = {
 // ---------------------------------------------------------------------------
 
 export const brand = {
-  name: 'IRLobby',
-  tagline: 'Get out. Get together.',
+  name: sharedBrand.name,
+  tagline: sharedBrand.tagline,
 } as const;

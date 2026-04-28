@@ -1,16 +1,22 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from asgiref.sync import async_to_sync
+from channels.testing import WebsocketCommunicator
+from django.test import TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from activities.models import Activity
+from irlobby_backend.asgi import application
 from matches.models import Match
 from moderation.models import BlockedUser
 from users.models import User
 
+from .middleware import JwtAuthMiddleware
 from .models import Conversation, Message
 
 
@@ -167,3 +173,62 @@ class MessageListTests(APITestCase):
         msg = Message.objects.filter(conversation=self.conversation).first()
         self.assertNotIn("<script>", msg.text)
         self.assertIn("Hello", msg.text)
+
+
+class JwtAuthMiddlewareTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="socket-user", email="socket@example.com", password="password123"
+        )
+        self.middleware = JwtAuthMiddleware(lambda scope, receive, send: None)
+
+    def test_extract_token_from_authorization_header(self):
+        token = str(AccessToken.for_user(self.user))
+        scope = {"headers": [(b"authorization", f"Bearer {token}".encode("utf-8"))]}
+
+        self.assertEqual(self.middleware._extract_token(scope), token)
+
+    def test_refresh_token_is_rejected_for_websocket_auth(self):
+        refresh_token = str(RefreshToken.for_user(self.user))
+
+        authenticated_user = async_to_sync(self.middleware._get_user_from_token)(refresh_token)
+
+        self.assertTrue(authenticated_user.is_anonymous)
+
+
+class WebSocketOriginSecurityTests(TransactionTestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="origin-user", email="origin@example.com", password="password123"
+        )
+
+    def test_disallowed_origin_is_rejected(self):
+        token = str(AccessToken.for_user(self.user))
+
+        async def run_test():
+            communicator = WebsocketCommunicator(
+                application,
+                f"/ws/?token={token}",
+                headers=[(b"origin", b"https://evil.example")],
+            )
+            connected, _ = await communicator.connect()
+            self.assertFalse(connected)
+
+        async_to_sync(run_test)()
+
+    @patch("chat.consumers.set_user_online")
+    def test_allowed_origin_and_access_token_can_connect(self, mock_set_user_online):
+        token = str(AccessToken.for_user(self.user))
+
+        async def run_test():
+            communicator = WebsocketCommunicator(
+                application,
+                f"/ws/?token={token}",
+                headers=[(b"origin", b"http://localhost:5173")],
+            )
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.disconnect()
+
+        async_to_sync(run_test)()
+        self.assertGreaterEqual(mock_set_user_online.await_count, 1)

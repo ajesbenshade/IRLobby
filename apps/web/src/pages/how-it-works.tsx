@@ -26,10 +26,10 @@ export default function HowItWorksPage() {
             <article key={step.step} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
               <div className={index % 2 === 1 ? 'md:order-2' : undefined}>
                 <div className="inline-flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#ff2e63]/15 text-lg font-bold text-[#ff6b9a]">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#7c3aed]/15 text-lg font-bold text-[#ec4899]">
                     {step.step}
                   </span>
-                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ff6b9a]">
+                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ec4899]">
                     {step.label}
                   </span>
                 </div>
@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
                 <ul className="mt-6 space-y-3 text-white/70">
                   {step.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-3">
-                      <span className="text-[#ff6b9a]">●</span>
+                      <span className="text-[#ec4899]">●</span>
                       <span>{bullet}</span>
                     </li>
                   ))}

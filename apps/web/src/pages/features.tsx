@@ -43,7 +43,7 @@ export default function FeaturesPage() {
           </h2>
           <a
             href="/download"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-[#ff2e63] px-8 py-4 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#e01f52]"
+            className="mt-8 inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-8 py-4 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#6d28d9]"
           >
             Get IRLobby
           </a>

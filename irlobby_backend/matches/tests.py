@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -130,3 +131,14 @@ class MatchListViewTests(APITestCase):
     def test_unauthenticated_cannot_list_matches(self):
         response = self.client.get(reverse("match-list"))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"match_reads": "1/min"}})
+    def test_match_list_is_rate_limited(self):
+        Match.objects.create(user_a=self.user, user_b=self.other, activity=self.activity)
+
+        self.client.force_authenticate(self.user)
+        first_response = self.client.get(reverse("match-list"))
+        second_response = self.client.get(reverse("match-list"))
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)

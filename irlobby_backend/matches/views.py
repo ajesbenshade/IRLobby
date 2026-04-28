@@ -6,11 +6,13 @@ from moderation.models import BlockedUser
 
 from .models import Match
 from .serializers import MatchSerializer
+from .throttles import MatchReadThrottle
 
 
 class MatchListView(generics.ListAPIView):
     serializer_class = MatchSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [MatchReadThrottle]
 
     def get_queryset(self):
         user = self.request.user

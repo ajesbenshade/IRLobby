@@ -88,7 +88,7 @@ export default function BottomNavigation() {
               }`}
             >
               {item.isSpecial ? (
-                <div className="w-8 h-8 bg-gradient-to-r from-primary to-purple-600 rounded-full flex items-center justify-center mb-1">
+                <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center mb-1 shadow-[0_8px_24px_hsl(var(--primary)/0.24)]">
                   <Icon className="w-4 h-4 text-white" />
                 </div>
               ) : (

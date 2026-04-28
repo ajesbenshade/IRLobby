@@ -24,11 +24,11 @@ export default function DownloadPage() {
         <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-4">
           <a
             href="https://apps.apple.com/app/id6759202702"
-            className="inline-flex items-center gap-4 rounded-[24px] bg-white px-7 py-4 text-left text-[#0b0b14] shadow-2xl transition hover:scale-[1.02]"
+            className="inline-flex items-center gap-4 rounded-[24px] bg-white px-7 py-4 text-left text-[#0f172a] shadow-2xl transition hover:scale-[1.02]"
           >
             <span className="text-3xl"></span>
             <span>
-              <span className="block text-xs font-medium uppercase tracking-wide text-[#0b0b14]/55">
+              <span className="block text-xs font-medium uppercase tracking-wide text-[#0f172a]/55">
                 Download on the
               </span>
               <span className="block text-xl font-bold">App Store</span>
@@ -83,7 +83,7 @@ export default function DownloadPage() {
           Want Android? Email{' '}
           <a
             href="mailto:hello@irlobby.com?subject=Android%20waitlist"
-            className="text-[#ff6b9a] hover:underline"
+            className="text-[#ec4899] hover:underline"
           >
             hello@irlobby.com
           </a>{' '}

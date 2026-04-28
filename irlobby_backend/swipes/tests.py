@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -137,3 +138,34 @@ class SwipeTests(APITestCase):
         response = self.client.post(url, {"direction": "right"}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"swipe_ops": "1/min"}})
+    def test_swipe_endpoint_is_rate_limited(self):
+        second_activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Second Activity",
+            description="Another test activity",
+            location="Test Location",
+            latitude=41.0,
+            longitude=-73.0,
+            time=timezone.now() + timedelta(days=2),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+
+        self.client.force_authenticate(self.user)
+        first_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "right"},
+            format="json",
+        )
+        second_response = self.client.post(
+            reverse("swipe-activity", args=[second_activity.pk]),
+            {"direction": "left"},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)

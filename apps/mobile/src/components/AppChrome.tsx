@@ -260,21 +260,21 @@ const styles = StyleSheet.create({
     height: 240,
     top: -70,
     right: -36,
-    backgroundColor: '#ffd5e4',
+    backgroundColor: appColors.primarySoft,
   },
   glowOrbWarm: {
     width: 168,
     height: 168,
     top: 168,
     left: -62,
-    backgroundColor: '#ffe39f',
+    backgroundColor: appColors.secondarySoft,
   },
   glowOrbSoft: {
     width: 220,
     height: 220,
     bottom: 98,
     right: -92,
-    backgroundColor: '#cbf7ee',
+    backgroundColor: appColors.accentSoft,
   },
   headerRow: {
     flexDirection: 'row',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     borderTopColor: appColors.line,
   },
   detailRowDanger: {
-    borderTopColor: '#f7c5d4',
+    borderTopColor: '#fecdd3',
   },
   detailTextBlock: {
     flex: 1,
@@ -372,16 +372,16 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   panelAccent: {
-    backgroundColor: '#ebfffa',
-    borderColor: '#c5f5ea',
+    backgroundColor: appColors.accentSoft,
+    borderColor: '#ddd6fe',
   },
   panelWarm: {
-    backgroundColor: '#fff7df',
-    borderColor: '#ffe3a1',
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa',
   },
   panelDark: {
     backgroundColor: appColors.ink,
-    borderColor: '#493c61',
+    borderColor: appColors.darkLine,
   },
   statCard: {
     minHeight: 152,
@@ -408,19 +408,19 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: 'flex-start',
     borderRadius: radii.pill,
-    backgroundColor: '#ffe2ec',
+    backgroundColor: appColors.primarySoft,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: '#ffc8d8',
+    borderColor: '#ddd6fe',
   },
   pillSecondary: {
-    backgroundColor: '#fff0cb',
-    borderColor: '#ffdd97',
+    backgroundColor: appColors.secondarySoft,
+    borderColor: '#a5f3fc',
   },
   pillNeutral: {
-    backgroundColor: '#f7ecf3',
-    borderColor: '#ecd7e4',
+    backgroundColor: appColors.cardStrong,
+    borderColor: appColors.line,
   },
   pillText: {
     color: appColors.primaryDeep,

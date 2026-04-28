@@ -27,7 +27,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      SECRET_KEY: ci-release-key
+      SECRET_KEY: ci-release-gate-only-not-a-real-secret-key-2026-04-28-IRLobby
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
       ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api.irlobby.com
       CORS_ALLOWED_ORIGINS: https://irlobby.com,https://www.irlobby.com

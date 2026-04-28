@@ -254,6 +254,13 @@ CSRF_TRUSTED_ORIGINS = parse_origin_list(raw_csrf_origins)
 
 raw_websocket_origins = config("WEBSOCKET_ALLOWED_ORIGINS", default=raw_cors_origins)
 WEBSOCKET_ALLOWED_ORIGINS = parse_origin_list(raw_websocket_origins)
+if _IS_TESTING:
+    # Release Gate validates production origins through env vars, but websocket
+    # tests still exercise localhost development origins. Keep production checks
+    # strict outside test runs while allowing the test communicator origin.
+    WEBSOCKET_ALLOWED_ORIGINS = sorted(
+        set(WEBSOCKET_ALLOWED_ORIGINS) | set(parse_origin_list(DEV_WEB_ORIGINS))
+    )
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Use CORS_ALLOWED_ORIGINS list in production

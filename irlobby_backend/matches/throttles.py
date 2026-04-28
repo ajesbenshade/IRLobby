@@ -1,5 +1,5 @@
-from rest_framework.throttling import UserRateThrottle
+from utils.throttles import DynamicUserRateThrottle
 
 
-class MatchReadThrottle(UserRateThrottle):
+class MatchReadThrottle(DynamicUserRateThrottle):
     scope = "match_reads"

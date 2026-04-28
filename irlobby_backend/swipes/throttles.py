@@ -1,5 +1,5 @@
-from rest_framework.throttling import UserRateThrottle
+from utils.throttles import DynamicUserRateThrottle
 
 
-class SwipeRateThrottle(UserRateThrottle):
+class SwipeRateThrottle(DynamicUserRateThrottle):
     scope = "swipe_ops"

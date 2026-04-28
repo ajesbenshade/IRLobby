@@ -216,8 +216,11 @@ class WebSocketOriginSecurityTests(TransactionTestCase):
 
         async_to_sync(run_test)()
 
+    @patch("chat.consumers.clear_user_online")
     @patch("chat.consumers.set_user_online")
-    def test_allowed_origin_and_access_token_can_connect(self, mock_set_user_online):
+    def test_allowed_origin_and_access_token_can_connect(
+        self, mock_set_user_online, mock_clear_user_online
+    ):
         token = str(AccessToken.for_user(self.user))
 
         async def run_test():
@@ -232,3 +235,4 @@ class WebSocketOriginSecurityTests(TransactionTestCase):
 
         async_to_sync(run_test)()
         self.assertGreaterEqual(mock_set_user_online.await_count, 1)
+        self.assertGreaterEqual(mock_clear_user_online.await_count, 1)

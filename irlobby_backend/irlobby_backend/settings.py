@@ -223,6 +223,15 @@ DATABASES = {
 }
 
 if _IS_TESTING:
+    # Unit tests run without a Redis service. Use Channels' in-memory layer so
+    # WebsocketCommunicator lifecycle tests can connect and disconnect without
+    # opening a localhost:6379 connection.
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
+
     # Server-side cursors interact badly with pytest-django transaction
     # wrapping (cursor handle becomes invalid across transactions).
     DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True

@@ -20,9 +20,7 @@ class DynamicThrottleRateMixin:
             )
             raise ImproperlyConfigured(msg)
 
-        throttle_rates = getattr(settings, "REST_FRAMEWORK", {}).get(
-            "DEFAULT_THROTTLE_RATES", {}
-        )
+        throttle_rates = getattr(settings, "REST_FRAMEWORK", {}).get("DEFAULT_THROTTLE_RATES", {})
         return throttle_rates.get(self.scope)
 
 

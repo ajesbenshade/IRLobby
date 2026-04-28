@@ -44,7 +44,9 @@ def validate_origin_list(setting_name, origins, *, require_https):
             continue
         if require_https and parsed.scheme != "https":
             invalid_origins.append(origin)
-        if any(placeholder in origin for placeholder in ["your-domain.com", "your-frontend-domain.com"]):
+        if any(
+            placeholder in origin for placeholder in ["your-domain.com", "your-frontend-domain.com"]
+        ):
             placeholder_origins.append(origin)
 
     if invalid_origins:
@@ -227,17 +229,26 @@ if _IS_TESTING:
     options = DATABASES["default"].setdefault("OPTIONS", {})
     options["application_name"] = "pytest"
 
+DEV_WEB_ORIGINS = (
+    "http://localhost:5173,"
+    "http://127.0.0.1:5173,"
+    "http://localhost:5174,"
+    "http://127.0.0.1:5174,"
+    "http://localhost:3000,"
+    "http://127.0.0.1:3000"
+)
+
 # CORS settings
 # Read allowed origins from environment to support dynamic deploy domains.
 raw_cors_origins = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://127.0.0.1:3000,https://your-frontend-domain.com",
+    default=DEV_WEB_ORIGINS if DEBUG else "",
 )
 CORS_ALLOWED_ORIGINS = parse_origin_list(raw_cors_origins)
 
 raw_csrf_origins = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:5173,http://127.0.0.1:5173,https://your-frontend-domain.com",
+    default=DEV_WEB_ORIGINS if DEBUG else "",
 )
 CSRF_TRUSTED_ORIGINS = parse_origin_list(raw_csrf_origins)
 
@@ -279,9 +290,7 @@ if not DEBUG and not _IS_TESTING:
         )
     validate_origin_list("CORS_ALLOWED_ORIGINS", CORS_ALLOWED_ORIGINS, require_https=True)
     validate_origin_list("CSRF_TRUSTED_ORIGINS", CSRF_TRUSTED_ORIGINS, require_https=True)
-    validate_origin_list(
-        "WEBSOCKET_ALLOWED_ORIGINS", WEBSOCKET_ALLOWED_ORIGINS, require_https=True
-    )
+    validate_origin_list("WEBSOCKET_ALLOWED_ORIGINS", WEBSOCKET_ALLOWED_ORIGINS, require_https=True)
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
     SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)
     CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)

@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'apps/mobile/**'
-      - 'package-lock.json'
-      - '.github/workflows/mobile-eas-build.yml'
+      - "apps/mobile/**"
+      - "package-lock.json"
+      - ".github/workflows/mobile-eas-build.yml"
   workflow_dispatch:
 
 concurrency:
@@ -88,6 +88,7 @@ jobs:
 
       - name: Trigger iOS production build
         if: env.HAS_EXPO_TOKEN == 'true'
+        continue-on-error: true
         run: eas build --platform ios --profile production --auto-submit --non-interactive --no-wait
 
   build-android:
@@ -103,6 +104,7 @@ jobs:
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - name: Explain skipped Android build
         if: env.HAS_EXPO_TOKEN != 'true'
@@ -148,20 +150,14 @@ jobs:
           fi
 
       - name: Materialize Google Play service account
-        if: env.HAS_EXPO_TOKEN == 'true'
+        if: env.HAS_EXPO_TOKEN == 'true' && env.HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON == 'true'
         run: |
-          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret is not configured."
-            echo "Generate a service account JSON in Google Cloud, grant it Play Console release access,"
-            echo "and add it under Settings > Secrets and variables > Actions > Secrets."
-            exit 1
-          fi
           mkdir -p credentials
           printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > credentials/play-service-account.json
           chmod 600 credentials/play-service-account.json
 
       - name: Validate Google Play service account JSON
-        if: env.HAS_EXPO_TOKEN == 'true'
+        if: env.HAS_EXPO_TOKEN == 'true' && env.HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON == 'true'
         run: |
           node <<'EOF'
           const fs = require('fs');
@@ -199,6 +195,14 @@ jobs:
 
       - name: Trigger Android production build
         if: env.HAS_EXPO_TOKEN == 'true'
+        continue-on-error: true
         env:
           EXPO_DEBUG: 1
-        run: eas build --platform android --profile production --auto-submit --non-interactive --no-wait
+        run: |
+          if [ "$HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" = "true" ]; then
+            eas build --platform android --profile production --auto-submit --non-interactive --no-wait
+          else
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not configured; triggering Android build without auto-submit."
+            echo "Add the secret to enable Play Console submission from CI."
+            eas build --platform android --profile production --non-interactive --no-wait
+          fi

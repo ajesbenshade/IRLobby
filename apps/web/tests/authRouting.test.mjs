@@ -76,6 +76,11 @@ test('builds a login redirect that preserves protected app links', () => {
     buildLoginRedirect('/app/moderation?userId=42&name=IRLobby%20Member'),
     '/?redirect=%2Fapp%2Fmoderation%3FuserId%3D42%26name%3DIRLobby%2520Member#auth',
   );
+
+  assert.equal(
+    buildLoginRedirect('/app/notifications'),
+    '/?redirect=%2Fapp%2Fnotifications#auth',
+  );
 });
 
 test('allows safe post-auth app redirects', () => {
@@ -83,6 +88,7 @@ test('allows safe post-auth app redirects', () => {
     getSafePostAuthRedirect('/app/moderation?userId=42#report'),
     '/app/moderation?userId=42#report',
   );
+  assert.equal(getSafePostAuthRedirect('/app/notifications'), '/app/notifications');
 });
 
 test('rejects unsafe or non-app post-auth redirects', () => {

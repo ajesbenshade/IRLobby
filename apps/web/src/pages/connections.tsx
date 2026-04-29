@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +20,10 @@ interface MatchUser {
 
 interface MatchItem {
   id: string | number;
+  user_a?: string;
+  user_b?: string;
+  user_a_id?: string | number;
+  user_b_id?: string | number;
   user?: MatchUser;
   matched_user?: MatchUser;
   conversation_id?: string | number;
@@ -37,21 +42,19 @@ function avatar(u?: MatchUser) {
 }
 
 export default function ConnectionsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user: currentUser } = useAuth();
 
-  const { data, isLoading } = useQuery<MatchItem[]>({
+  const { data, isLoading } = useQuery<MatchItem[] | PaginatedResponse<MatchItem>>({
     queryKey: [API_ROUTES.MATCHES],
     enabled: isAuthenticated,
     queryFn: async () => {
       const res = await apiRequest('GET', API_ROUTES.MATCHES);
-      const json = await res.json();
-      if (Array.isArray(json)) return json;
-      if (Array.isArray(json?.results)) return json.results;
-      return [];
+      return (await res.json()) as MatchItem[] | PaginatedResponse<MatchItem>;
     },
   });
 
-  const connections = data ?? [];
+  const connections = asArrayResponse(data);
+  const currentUserId = currentUser?.id != null ? String(currentUser.id) : null;
 
   return (
     <div className="space-y-4">
@@ -93,8 +96,14 @@ export default function ConnectionsPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {connections.map((m) => {
             const u = m.matched_user ?? m.user;
-            const name = displayName(u);
-            const img = avatar(u);
+            const fallbackName =
+              currentUserId && String(m.user_a_id) === currentUserId
+                ? m.user_b
+                : currentUserId && String(m.user_b_id) === currentUserId
+                ? m.user_a
+                : m.user_b ?? m.user_a ?? 'Member';
+            const name = u ? displayName(u) : fallbackName;
+            const img = u ? avatar(u) : '';
             return (
               <Card key={String(m.id)}>
                 <CardContent className="flex items-center gap-3 p-4">

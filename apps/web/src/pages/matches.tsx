@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -46,10 +47,12 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
     error,
     refetch,
     isRefetching,
-  } = useQuery<Match[]>({
+  } = useQuery<Match[] | PaginatedResponse<Match>>({
     queryKey: [API_ROUTES.MATCHES],
     retry: 1,
   });
+
+  const matchItems = asArrayResponse(matches);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -140,15 +143,15 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
             {showUserActivities ? "Activities you've joined" : 'People who matched with you'}
           </p>
         </div>
-        {matches.length > 0 && (
-          <Button onClick={() => openProfileModal(matches[0])} variant="outline">
+        {matchItems.length > 0 && (
+          <Button onClick={() => openProfileModal(matchItems[0])} variant="outline">
             View Group Profiles
           </Button>
         )}
       </header>
 
       <div className="p-4 space-y-4">
-        {matches.length === 0 ? (
+        {matchItems.length === 0 ? (
           <PageState
             icon={showUserActivities ? RefreshCw : MessageCircle}
             title={showUserActivities ? 'No joined activities yet' : 'No matches yet'}
@@ -162,7 +165,7 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
             className="min-h-[55vh]"
           />
         ) : (
-          matches.map((match) => (
+          matchItems.map((match) => (
             <Card
               key={match.id}
               className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-shadow"

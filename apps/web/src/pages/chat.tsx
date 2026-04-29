@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
 import { config } from '@/lib/config';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,17 +45,21 @@ export default function Chat() {
   const { token } = useAuth();
 
   const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<
-    ConversationItem[]
+    ConversationItem[] | PaginatedResponse<ConversationItem>
   >({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
-      return response.json();
+      return response.json() as Promise<
+        ConversationItem[] | PaginatedResponse<ConversationItem>
+      >;
     },
     retry: 1,
   });
 
-  const selectedConversation = conversations.find(
+  const conversationItems = asArrayResponse(conversations);
+
+  const selectedConversation = conversationItems.find(
     (conversation) => conversation.matchId === matchId,
   );
 
@@ -64,18 +69,22 @@ export default function Chat() {
     error,
     refetch,
     isRefetching,
-  } = useQuery<ConversationMessage[]>({
+  } = useQuery<ConversationMessage[] | PaginatedResponse<ConversationMessage>>({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, selectedConversation?.id, 'messages'],
     queryFn: async () => {
       const response = await apiRequest(
         'GET',
         API_ROUTE_BUILDERS.conversationMessages(selectedConversation?.id ?? 0),
       );
-      return response.json();
+      return response.json() as Promise<
+        ConversationMessage[] | PaginatedResponse<ConversationMessage>
+      >;
     },
     retry: 1,
     enabled: !!selectedConversation,
   });
+
+  const messageItems = asArrayResponse(messages);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageText: string) => {
@@ -105,7 +114,7 @@ export default function Chat() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messageItems]);
 
   useEffect(() => {
     const conversationId = selectedConversation?.id;
@@ -246,7 +255,7 @@ export default function Chat() {
       )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
+        {messageItems.length === 0 ? (
           <PageState
             icon={MessageCircle}
             title="No messages yet"
@@ -254,7 +263,7 @@ export default function Chat() {
             className="min-h-[45vh]"
           />
         ) : (
-          messages.map((msg) => {
+          messageItems.map((msg) => {
             const senderName = msg.user?.firstName || msg.user?.email?.split('@')[0] || 'User';
 
             return (

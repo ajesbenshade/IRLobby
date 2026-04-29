@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -60,11 +61,11 @@ export default function NotificationsPage() {
     error: matchesError,
     refetch: refetchMatches,
     isRefetching: matchesRefetching,
-  } = useQuery<MatchItem[]>({
+  } = useQuery<MatchItem[] | PaginatedResponse<MatchItem>>({
     queryKey: [API_ROUTES.MATCHES, 'notifications'],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MATCHES);
-      return (await response.json()) as MatchItem[];
+      return (await response.json()) as MatchItem[] | PaginatedResponse<MatchItem>;
     },
     retry: 1,
   });
@@ -75,17 +76,17 @@ export default function NotificationsPage() {
     error: conversationsError,
     refetch: refetchConversations,
     isRefetching: conversationsRefetching,
-  } = useQuery<ConversationItem[]>({
+  } = useQuery<ConversationItem[] | PaginatedResponse<ConversationItem>>({
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS, 'notifications'],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
-      return (await response.json()) as ConversationItem[];
+      return (await response.json()) as ConversationItem[] | PaginatedResponse<ConversationItem>;
     },
     retry: 1,
   });
 
   const notifications = useMemo<NotificationItem[]>(() => {
-    const matchItems = matches.map<NotificationItem>((match) => ({
+    const matchItems = asArrayResponse(matches).map<NotificationItem>((match) => ({
       id: `match-${match.id}`,
       type: 'match',
       title: 'New match confirmed',
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
       href: '/app/connections',
     }));
 
-    const messageItems = conversations.flatMap<NotificationItem>((conversation) => {
+    const messageItems = asArrayResponse(conversations).flatMap<NotificationItem>((conversation) => {
       const lastMessage = conversation.messages?.[conversation.messages.length - 1];
       if (!lastMessage) {
         return [];

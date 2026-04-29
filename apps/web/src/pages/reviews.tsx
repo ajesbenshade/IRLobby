@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -59,20 +60,20 @@ export default function Reviews() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  const { data: matches = [] } = useQuery<MatchItem[]>({
+  const { data: matches = [] } = useQuery<MatchItem[] | PaginatedResponse<MatchItem>>({
     queryKey: [API_ROUTES.MATCHES],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MATCHES);
-      return response.json();
+      return response.json() as Promise<MatchItem[] | PaginatedResponse<MatchItem>>;
     },
     enabled: !!user,
   });
 
-  const { data: reviews = [] } = useQuery<ReviewItem[]>({
+  const { data: reviews = [] } = useQuery<ReviewItem[] | PaginatedResponse<ReviewItem>>({
     queryKey: [API_ROUTES.REVIEWS],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.REVIEWS);
-      return response.json();
+      return response.json() as Promise<ReviewItem[] | PaginatedResponse<ReviewItem>>;
     },
     enabled: !!user,
   });
@@ -103,13 +104,15 @@ export default function Reviews() {
     }
 
     const userId = Number(user.id);
+    const reviewItems = asArrayResponse(reviews);
+    const matchItems = asArrayResponse(matches);
     const reviewedKeys = new Set(
-      reviews
+      reviewItems
         .filter((review) => review.reviewerId === userId)
         .map((review) => `${review.activityPk}:${review.revieweePk}`),
     );
 
-    return matches
+    return matchItems
       .filter(
         (match) =>
           Boolean(match.activity_id) && Boolean(match.user_a_id) && Boolean(match.user_b_id),
@@ -132,7 +135,7 @@ export default function Reviews() {
     if (!user) {
       return [];
     }
-    return reviews.filter((review) => review.reviewerId === Number(user.id));
+    return asArrayResponse(reviews).filter((review) => review.reviewerId === Number(user.id));
   }, [reviews, user]);
 
   const openReview = (item: ReviewOpportunity) => {

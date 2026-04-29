@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -64,14 +65,16 @@ export default function ModerationPage() {
     error,
     refetch,
     isRefetching,
-  } = useQuery<BlockedUserItem[]>({
+  } = useQuery<BlockedUserItem[] | PaginatedResponse<BlockedUserItem>>({
     queryKey: [API_ROUTES.MODERATION_BLOCKED],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MODERATION_BLOCKED);
-      return (await response.json()) as BlockedUserItem[];
+      return (await response.json()) as BlockedUserItem[] | PaginatedResponse<BlockedUserItem>;
     },
     retry: 1,
   });
+
+  const blockedUserItems = asArrayResponse(blockedUsers);
 
   const unblockMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -152,7 +155,7 @@ export default function ModerationPage() {
             </div>
           ) : isLoading ? (
             <p>Loading blocked accounts...</p>
-          ) : blockedUsers.length === 0 ? (
+          ) : blockedUserItems.length === 0 ? (
             <>
               <p>You haven&apos;t blocked anyone yet.</p>
               <p>
@@ -162,7 +165,7 @@ export default function ModerationPage() {
             </>
           ) : (
             <div className="space-y-3">
-              {blockedUsers.map((item) => (
+              {blockedUserItems.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between gap-3 rounded-lg border p-3"

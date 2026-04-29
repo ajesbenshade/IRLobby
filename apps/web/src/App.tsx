@@ -2,11 +2,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
-import { getAuthRedirect } from '@/lib/authRouting';
+import { buildLoginRedirect, getAuthRedirect, getSafePostAuthRedirect } from '@/lib/authRouting';
 import { queryClient } from '@/lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy, type ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));
@@ -50,17 +50,24 @@ const PageLoader = () => (
 
 function AppRoutes() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const location = useLocation();
 
   const authRouteState = { isAuthenticated, isLoading, needsOnboarding };
 
   const PublicHomeRoute = ({ children }: { children: ReactNode }) => {
     const redirectTo = getAuthRedirect('public-home', authRouteState);
-    return redirectTo ? <Navigate to={redirectTo} replace /> : <>{children}</>;
+    const postAuthRedirect = getSafePostAuthRedirect(
+      new URLSearchParams(location.search).get('redirect'),
+      redirectTo ?? undefined,
+    );
+    return redirectTo ? <Navigate to={postAuthRedirect} replace /> : <>{children}</>;
   };
 
   const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const redirectTo = getAuthRedirect('protected', authRouteState);
-    return redirectTo ? <Navigate to={redirectTo} replace /> : <>{children}</>;
+    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    const loginRedirect = redirectTo === '/' ? buildLoginRedirect(currentPath) : redirectTo;
+    return redirectTo ? <Navigate to={loginRedirect} replace /> : <>{children}</>;
   };
 
   const OnboardingRoute = ({ children }: { children: ReactNode }) => {

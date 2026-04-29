@@ -23,7 +23,7 @@ const exports = module.exports;
 const evaluator = new Function('exports', 'module', transpiled.outputText);
 evaluator(exports, module);
 
-const { getAuthRedirect } = module.exports;
+const { buildLoginRedirect, getAuthRedirect, getSafePostAuthRedirect } = module.exports;
 
 test('does not redirect while auth state is loading', () => {
   assert.equal(
@@ -69,4 +69,24 @@ test('keeps fully onboarded users in the app', () => {
   assert.equal(getAuthRedirect('protected', state), null);
   assert.equal(getAuthRedirect('public-home', state), '/app');
   assert.equal(getAuthRedirect('onboarding', state), '/app');
+});
+
+test('builds a login redirect that preserves protected app links', () => {
+  assert.equal(
+    buildLoginRedirect('/app/moderation?userId=42&name=IRLobby%20Member'),
+    '/?redirect=%2Fapp%2Fmoderation%3FuserId%3D42%26name%3DIRLobby%2520Member#auth',
+  );
+});
+
+test('allows safe post-auth app redirects', () => {
+  assert.equal(
+    getSafePostAuthRedirect('/app/moderation?userId=42#report'),
+    '/app/moderation?userId=42#report',
+  );
+});
+
+test('rejects unsafe or non-app post-auth redirects', () => {
+  assert.equal(getSafePostAuthRedirect('https://evil.example/app/moderation'), '/app');
+  assert.equal(getSafePostAuthRedirect('//evil.example/app/moderation'), '/app');
+  assert.equal(getSafePostAuthRedirect('/support'), '/app');
 });

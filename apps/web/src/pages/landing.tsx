@@ -1,6 +1,7 @@
 import AuthForm from '@/components/auth-form';
 import PublicMetadata from '@/components/public-metadata';
 import { useAuth } from '@/hooks/useAuth';
+import { getSafePostAuthRedirect } from '@/lib/authRouting';
 import {
   ArrowRight,
   CalendarDays,
@@ -11,7 +12,7 @@ import {
   UsersRound,
   Zap,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 const activityTags = ['tonight', 'low-key', '0.8 mi'];
 
@@ -149,9 +150,12 @@ function PhonePreview() {
 
 export default function Landing() {
   const { handleAuthentication } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleAuth = async (token: string, userId: string) => {
     await handleAuthentication(token, userId);
+    navigate(getSafePostAuthRedirect(searchParams.get('redirect')), { replace: true });
   };
 
   return (

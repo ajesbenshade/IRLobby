@@ -3,7 +3,7 @@
 [![CI](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml)
 [![Release Gate](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml)
 [![Mobile EAS Build](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml)
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![Python](https://img.shields.io/badge/python-3.12%20CI%20%7C%203.11.9%20runtime-blue)
 ![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)
 ![Expo](https://img.shields.io/badge/expo-54.0.34-000020?logo=expo&logoColor=white)
@@ -11,7 +11,7 @@
 
 **Activity-first social matching for real-life plans.** Swipe on what is happening near you, match with people who want the same night out, and move into a chat with the plan already attached.
 
-[Live app](https://irlobby.com) | [Download](https://irlobby.com/download) | [Quick start](#quick-start) | [Contribute](CONTRIBUTING.md)
+[Live app](https://irlobby.com) | [Download](https://irlobby.com/download) | [Quick start](#quick-start) | [License](LICENSE)
 
 <p align="center">
 	<img src="apps/mobile/store/screenshots/01-vibe-quiz.png" alt="IRLobby vibe quiz screen" width="155">
@@ -139,8 +139,8 @@ pytest
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), run the relevant checks before opening a pull request, and keep secrets out of commits.
+IRLobby is maintained as a closed-source project. Public pull requests are not currently accepted. For authorized contribution arrangements, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-IRLobby is released under the [MIT License](LICENSE).
+IRLobby is proprietary software. All rights reserved. See [LICENSE](LICENSE).

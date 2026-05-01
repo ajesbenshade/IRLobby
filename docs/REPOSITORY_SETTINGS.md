@@ -18,6 +18,14 @@ Use the live public app URL:
 https://irlobby.com
 ```
 
+## Visibility and access
+
+Recommended for strict closed-source operation:
+
+- Set repository visibility to private.
+- Restrict collaborator access to approved team members and contractors.
+- Disable forking if your plan supports it.
+
 ## Topics
 
 Recommended topics:
@@ -54,3 +62,11 @@ ajesbenshade/IRLobby
 ```
 
 If the repository moves, update the workflow badge URLs in [README.md](../README.md).
+
+## License display
+
+Set GitHub license labeling and repo messaging to proprietary terms:
+
+- Keep [LICENSE](../LICENSE) as proprietary all-rights-reserved text.
+- Ensure README badge and license section use "Proprietary" wording.
+- Remove any old references to MIT or open-source contribution language.

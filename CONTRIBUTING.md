@@ -1,11 +1,15 @@
 # Contributing to IRLobby
 
-Thanks for taking the time to improve IRLobby. The project is a monorepo with mobile, web, backend, and shared package work living side by side, so small, focused pull requests are easiest to review.
+IRLobby is maintained as proprietary software. This repository is closed source.
 
-## Before you start
+Contribution access is limited to internal team members and explicitly authorized contractors or partners working under a signed agreement.
+
+If you are not an authorized contributor, do not submit code changes or reuse project source. For commercial licensing or partnership inquiries, contact legal@irlobby.com.
+
+## Before you start (authorized contributors)
 
 1. Read the root [README](README.md) and run the relevant quick-start path for the area you plan to change.
-2. Create a branch from `main` with a short, descriptive name.
+2. Create a branch from `main` with a short, descriptive name in the approved internal workflow.
 3. Install the local secret guard before working with environment files:
 
 ```bash
@@ -49,6 +53,8 @@ For Python quality checks, CI also runs `ruff`, `black --check`, `mypy`, Bandit,
 - Include screenshots or short screen recordings for visible UI changes.
 - Mention any migrations, environment variables, or deployment steps reviewers need to know about.
 - Link related issues or release checklist items when applicable.
+
+All code submissions must be from authorized contributors under the project's proprietary terms.
 
 ## Release and deployment docs
 

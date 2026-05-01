@@ -1,13 +1,13 @@
 import logging
-from datetime import timedelta
 from urllib.parse import urljoin
 
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,6 +17,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .models import Invite, PushDeviceToken, User
+from .password_reset import (
+    generate_password_reset_token,
+    hash_password_reset_token,
+    password_reset_token_expired,
+    password_reset_token_matches,
+)
 from .serializers import (
     InviteCreateSerializer,
     InviteSerializer,
@@ -31,6 +37,30 @@ from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import clear_refresh_cookie, set_refresh_cookie
 
 logger = logging.getLogger(__name__)
+
+
+def _clear_password_reset_token(user):
+    user.password_reset_token = None
+    user.token_created_at = None
+    user.save(update_fields=["password_reset_token", "token_created_at"])
+
+
+def _get_user_for_password_reset_token(token):
+    token_hash = hash_password_reset_token(token)
+    users = list(User.objects.filter(password_reset_token=token_hash))
+    if len(users) != 1:
+        if len(users) > 1:
+            logger.warning("Multiple users share password reset token hash; clearing collisions.")
+            User.objects.filter(password_reset_token=token_hash).update(
+                password_reset_token=None,
+                token_created_at=None,
+            )
+        return None
+
+    user = users[0]
+    if not password_reset_token_matches(user.password_reset_token, token):
+        return None
+    return user
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -453,31 +483,13 @@ def password_reset_confirm(request):
         if not token:
             return _invalid_response("Token is required.")
 
-        try:
-            user = User.objects.get(password_reset_token=token)
-        except User.DoesNotExist:
-            return _invalid_response("Invalid or expired token.")
-        except User.MultipleObjectsReturned:
-            logger.warning(
-                "Multiple users share password reset token=%s; clearing collisions.", token
-            )
-            User.objects.filter(password_reset_token=token).update(
-                password_reset_token=None,
-                token_created_at=None,
-            )
+        user = _get_user_for_password_reset_token(token)
+        if not user:
             return _invalid_response("Invalid or expired token.")
 
-        if not user.token_created_at:
+        if password_reset_token_expired(user.token_created_at):
             logger.warning("Password reset token missing timestamp for user_id=%s", user.id)
-            user.password_reset_token = None
-            user.save(update_fields=["password_reset_token"])
-            return _invalid_response("Token has expired.")
-
-        token_age = timezone.now() - user.token_created_at
-        if token_age > timedelta(hours=2):
-            user.password_reset_token = None
-            user.token_created_at = None
-            user.save(update_fields=["password_reset_token", "token_created_at"])
+            _clear_password_reset_token(user)
             return _invalid_response("Token has expired.")
 
         frontend_base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
@@ -506,40 +518,24 @@ def password_reset_confirm(request):
     if not token or not new_password:
         return _invalid_response("Token and new password are required.")
 
-    try:
-        user = User.objects.get(password_reset_token=token)
-    except User.DoesNotExist:
-        return _invalid_response("Invalid or expired token.")
-    except User.MultipleObjectsReturned:
-        logger.warning("Multiple users share password reset token=%s; clearing collisions.", token)
-        User.objects.filter(password_reset_token=token).update(
-            password_reset_token=None,
-            token_created_at=None,
-        )
+    user = _get_user_for_password_reset_token(token)
+    if not user:
         return _invalid_response("Invalid or expired token.")
 
-    if not user.token_created_at:
+    if password_reset_token_expired(user.token_created_at):
         logger.warning("Password reset token missing timestamp for user_id=%s", user.id)
-        user.password_reset_token = None
-        user.save(update_fields=["password_reset_token"])
+        _clear_password_reset_token(user)
         return _invalid_response("Token has expired.")
 
-    token_age = timezone.now() - user.token_created_at
-    if token_age > timedelta(hours=2):
-        user.password_reset_token = None
-        user.token_created_at = None
-        user.save(update_fields=["password_reset_token", "token_created_at"])
-        return _invalid_response("Token has expired.")
-
-    # Validate password strength
-    if len(new_password) < 8:
-        return _invalid_response("Password must be at least 8 characters long.")
+    try:
+        validate_password(new_password, user)
+    except DjangoValidationError as exc:
+        return _invalid_response(" ".join(exc.messages))
 
     try:
         user.set_password(new_password)
-        user.password_reset_token = None
-        user.token_created_at = None
-        user.save(update_fields=["password", "password_reset_token", "token_created_at"])
+        _clear_password_reset_token(user)
+        user.save(update_fields=["password"])
 
         logger.info("Password reset successful for user_id=%s", user.id)
         response = Response(
@@ -581,8 +577,8 @@ def request_password_reset(request):
 
     if user:
         try:
-            token = get_random_string(length=32)
-            user.password_reset_token = token
+            token = generate_password_reset_token()
+            user.password_reset_token = hash_password_reset_token(token)
             user.token_created_at = timezone.now()
             user.save(update_fields=["password_reset_token", "token_created_at"])
 

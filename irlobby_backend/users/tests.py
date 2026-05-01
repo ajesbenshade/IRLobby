@@ -11,7 +11,14 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from users.models import PushDeviceToken, User
+from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
+
+
+def extract_reset_token(message_body):
+    marker = "reset-password/"
+    assert marker in message_body
+    return message_body.split(marker, 1)[1].split()[0]
 
 
 class PasswordResetRequestTests(APITestCase):
@@ -23,7 +30,7 @@ class PasswordResetRequestTests(APITestCase):
         )
         self.url = reverse("request-password-reset")
 
-    def test_request_sets_token_and_sends_email(self):
+    def test_request_sets_hashed_token_and_sends_email(self):
         mail.outbox = []  # ensure empty
 
         response = self.client.post(
@@ -43,7 +50,24 @@ class PasswordResetRequestTests(APITestCase):
         sent = mail.outbox[0]
         self.assertIn(self.user.email, sent.to)
         self.assertIn("Password Reset", sent.subject)
-        self.assertIn(self.user.password_reset_token, sent.body)
+        emailed_token = extract_reset_token(sent.body)
+        self.assertNotEqual(self.user.password_reset_token, emailed_token)
+        self.assertEqual(self.user.password_reset_token, hash_password_reset_token(emailed_token))
+
+    def test_new_request_invalidates_previous_reset_token(self):
+        mail.outbox = []
+
+        first_response = self.client.post(self.url, {"email": self.user.email}, format="json")
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        first_token = extract_reset_token(mail.outbox[-1].body)
+
+        second_response = self.client.post(self.url, {"email": self.user.email}, format="json")
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        second_token = extract_reset_token(mail.outbox[-1].body)
+
+        self.assertNotEqual(first_token, second_token)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.password_reset_token, hash_password_reset_token(second_token))
 
     def test_request_with_unknown_email_still_returns_200_but_no_mail(self):
         mail.outbox = []
@@ -179,7 +203,7 @@ class PasswordResetConfirmTests(APITestCase):
         self.url = reverse("password-reset-confirm")
 
     def _set_token(self, token="reset-token", created_at=None):
-        self.user.password_reset_token = token
+        self.user.password_reset_token = hash_password_reset_token(token)
         self.user.token_created_at = created_at or timezone.now()
         self.user.save(update_fields=["password_reset_token", "token_created_at"])
 
@@ -237,7 +261,7 @@ class PasswordResetConfirmTests(APITestCase):
             email="other@example.com",
             password="password123",
         )
-        other_user.password_reset_token = token_value
+        other_user.password_reset_token = hash_password_reset_token(token_value)
         other_user.token_created_at = timezone.now()
         other_user.save(update_fields=["password_reset_token", "token_created_at"])
 
@@ -252,6 +276,36 @@ class PasswordResetConfirmTests(APITestCase):
         other_user.refresh_from_db()
         self.assertIsNone(self.user.password_reset_token)
         self.assertIsNone(other_user.password_reset_token)
+
+    def test_password_reset_rejects_plaintext_legacy_token_storage(self):
+        User.objects.filter(id=self.user.id).update(
+            password_reset_token="legacy-plaintext-token",
+            token_created_at=timezone.now(),
+        )
+
+        response = self.client.post(
+            self.url,
+            {"token": "legacy-plaintext-token", "new_password": "newpass123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password("newpass123"))
+
+    def test_password_reset_uses_django_password_validators(self):
+        self._set_token()
+
+        response = self.client.post(
+            self.url,
+            {"token": "reset-token", "new_password": "12345678"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", response.data["error"].lower())
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password("12345678"))
 
 
 class OnboardingAndInviteTests(APITestCase):

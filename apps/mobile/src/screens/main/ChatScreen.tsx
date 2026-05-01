@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StyleSheet } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
@@ -22,13 +22,30 @@ const getConversationMessages = (conversation: { messages?: unknown } | null | u
   Array.isArray(conversation?.messages) ? conversation.messages : []
 );
 
+const TYPING_IDLE_MS = 1800;
+const TYPING_REFRESH_MS = 1200;
+
+type ChatSocketPayload = {
+  type?: string;
+  conversationId?: number;
+  userId?: number | string;
+  isOnline?: boolean;
+  isTyping?: boolean;
+  users?: Array<{ userId?: number | string; isOnline?: boolean }>;
+};
+
 export const ChatScreen = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(() => new Set());
+  const [typingUserIds, setTypingUserIds] = useState<Set<string>>(() => new Set());
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingExpiryTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const lastTypingSentAtRef = useRef(0);
 
   const {
     data: conversations = [],
@@ -52,6 +69,15 @@ export const ChatScreen = () => {
   );
   const sparkCount = matches.length;
   const activeThreads = conversations.length;
+  const currentUserId = user?.id == null ? null : String(user.id);
+  const otherOnlineCount = useMemo(
+    () => Array.from(onlineUserIds).filter((id) => id !== currentUserId).length,
+    [currentUserId, onlineUserIds],
+  );
+  const otherTypingCount = useMemo(
+    () => Array.from(typingUserIds).filter((id) => id !== currentUserId).length,
+    [currentUserId, typingUserIds],
+  );
   const freshSparkCount = useMemo(
     () =>
       matches.filter((match) => Date.now() - new Date(match.created_at).getTime() < 1000 * 60 * 60 * 24).length,
@@ -70,6 +96,20 @@ export const ChatScreen = () => {
     enabled: selectedConversationId !== null,
   });
 
+  const clearTypingExpiryTimers = useCallback(() => {
+    typingExpiryTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+    typingExpiryTimeoutsRef.current.clear();
+  }, []);
+
+  const sendTypingEvent = useCallback((isTyping: boolean) => {
+    const socket = websocketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    socket.send(JSON.stringify({ type: 'typing', isTyping }));
+  }, []);
+
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (selectedConversationId === null || !draft.trim()) {
@@ -78,11 +118,119 @@ export const ChatScreen = () => {
       return sendConversationMessage(selectedConversationId, draft.trim());
     },
     onSuccess: async () => {
+      sendTypingEvent(false);
+      lastTypingSentAtRef.current = 0;
       setDraft('');
       await queryClient.invalidateQueries({ queryKey: ['mobile-conversation-messages', selectedConversationId] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
     },
   });
+
+  const stopTypingSoon = useCallback(() => {
+    if (typingStopTimeoutRef.current) {
+      clearTimeout(typingStopTimeoutRef.current);
+    }
+
+    typingStopTimeoutRef.current = setTimeout(() => {
+      sendTypingEvent(false);
+    }, TYPING_IDLE_MS);
+  }, [sendTypingEvent]);
+
+  const handleDraftChange = useCallback(
+    (value: string) => {
+      setDraft(value);
+
+      if (!value.trim()) {
+        if (typingStopTimeoutRef.current) {
+          clearTimeout(typingStopTimeoutRef.current);
+        }
+        sendTypingEvent(false);
+        lastTypingSentAtRef.current = 0;
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastTypingSentAtRef.current > TYPING_REFRESH_MS) {
+        sendTypingEvent(true);
+        lastTypingSentAtRef.current = now;
+      }
+      stopTypingSoon();
+    },
+    [sendTypingEvent, stopTypingSoon],
+  );
+
+  const applyTypingUpdate = useCallback(
+    (userId: number | string | undefined, isTyping: boolean | undefined) => {
+      if (userId == null) {
+        return;
+      }
+
+      const id = String(userId);
+      if (id === currentUserId) {
+        return;
+      }
+
+      const existingTimeout = typingExpiryTimeoutsRef.current.get(id);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        typingExpiryTimeoutsRef.current.delete(id);
+      }
+
+      setTypingUserIds((previous) => {
+        const next = new Set(previous);
+        if (isTyping) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+
+      if (isTyping) {
+        const timeout = setTimeout(() => {
+          setTypingUserIds((previous) => {
+            const next = new Set(previous);
+            next.delete(id);
+            return next;
+          });
+          typingExpiryTimeoutsRef.current.delete(id);
+        }, TYPING_IDLE_MS + 1200);
+        typingExpiryTimeoutsRef.current.set(id, timeout);
+      }
+    },
+    [currentUserId],
+  );
+
+  const applyPresencePayload = useCallback(
+    (payload: ChatSocketPayload) => {
+      if (payload.type === 'chat.presence_snapshot') {
+        setOnlineUserIds(
+          new Set(
+            (payload.users ?? [])
+              .filter((item) => item.userId != null && item.isOnline)
+              .map((item) => String(item.userId)),
+          ),
+        );
+        return;
+      }
+
+      if (payload.userId == null) {
+        return;
+      }
+
+      setOnlineUserIds((previous) => {
+        const next = new Set(previous);
+        const id = String(payload.userId);
+        if (payload.isOnline) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     if (selectedConversationId === null) {
@@ -103,12 +251,27 @@ export const ChatScreen = () => {
 
       ws.onmessage = (event) => {
         try {
-          const payload = JSON.parse(event.data) as { type?: string; conversationId?: number };
+          const payload = JSON.parse(event.data) as ChatSocketPayload;
+          if (payload.conversationId != null && payload.conversationId !== selectedConversationId) {
+            return;
+          }
+
           if (payload.type === 'chat.message' && payload.conversationId === selectedConversationId) {
             void queryClient.invalidateQueries({
               queryKey: ['mobile-conversation-messages', selectedConversationId],
             });
             void queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+            applyTypingUpdate(payload.userId, false);
+            return;
+          }
+
+          if (payload.type === 'chat.presence' || payload.type === 'chat.presence_snapshot') {
+            applyPresencePayload(payload);
+            return;
+          }
+
+          if (payload.type === 'chat.typing') {
+            applyTypingUpdate(payload.userId, payload.isTyping);
           }
         } catch {
           // no-op: ignore malformed websocket payloads
@@ -133,10 +296,18 @@ export const ChatScreen = () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
+      if (typingStopTimeoutRef.current) {
+        clearTimeout(typingStopTimeoutRef.current);
+      }
+      sendTypingEvent(false);
+      lastTypingSentAtRef.current = 0;
+      clearTypingExpiryTimers();
       websocketRef.current?.close();
       websocketRef.current = null;
+      setOnlineUserIds(new Set());
+      setTypingUserIds(new Set());
     };
-  }, [queryClient, selectedConversationId]);
+  }, [applyPresencePayload, applyTypingUpdate, clearTypingExpiryTimers, queryClient, selectedConversationId, sendTypingEvent]);
 
   if (selectedConversationId !== null) {
     return (
@@ -150,10 +321,16 @@ export const ChatScreen = () => {
               {selectedConversation?.match ?? 'Your spark'}
             </Text>
             <Text variant="bodySmall" style={styles.subtitleText}>
-              Keep the energy moving while the plan is still warm.
+              {otherTypingCount > 0
+                ? 'Typing...'
+                : otherOnlineCount > 0
+                  ? 'Online now. Keep the plan moving while it is warm.'
+                  : 'Keep the energy moving while the plan is still warm.'}
             </Text>
           </View>
-          <AccentPill tone="secondary">Live now</AccentPill>
+          <AccentPill tone={otherOnlineCount > 0 ? 'secondary' : 'neutral'}>
+            {otherOnlineCount > 0 ? 'Live now' : 'Away'}
+          </AccentPill>
         </View>
 
         {messagesError && (
@@ -194,6 +371,13 @@ export const ChatScreen = () => {
           ListEmptyComponent={
             messagesLoading ? <Text style={styles.loadingText}>Loading messages...</Text> : <Text style={styles.loadingText}>No messages yet. Break the ice first.</Text>
           }
+          ListFooterComponent={
+            otherTypingCount > 0 ? (
+              <View style={styles.typingIndicator}>
+                <Text style={styles.typingIndicatorText}>Typing...</Text>
+              </View>
+            ) : null
+          }
         />
 
         {sendMutation.error && (
@@ -207,7 +391,7 @@ export const ChatScreen = () => {
             mode="outlined"
             placeholder="Keep it light. Make the plan."
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={handleDraftChange}
             style={styles.composeInput}
           />
           <Button
@@ -466,6 +650,20 @@ const styles = StyleSheet.create({
   },
   messageTimestampOwn: {
     color: '#6874d8',
+  },
+  typingIndicator: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#fff7df',
+    borderWidth: 1,
+    borderColor: '#ffe0a3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  typingIndicatorText: {
+    color: appColors.mutedInk,
+    fontSize: 12,
+    fontWeight: '700',
   },
   composeRow: {
     flexDirection: 'row',

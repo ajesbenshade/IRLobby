@@ -15,6 +15,16 @@ export interface VibeUserPayload {
   vibeQuizSkipped?: boolean;
 }
 
+export interface ReliabilitySummary {
+  score?: number | null;
+  label: string;
+  reviewCount: number;
+  averageRating?: number | null;
+  ticketValidationRate?: number | null;
+  successfulTicketValidations: number;
+  ticketValidationCount: number;
+}
+
 export interface AuthUser {
   id: number | string;
   email: string;
@@ -38,6 +48,7 @@ export interface AuthUser {
   pushNotificationsEnabled?: boolean;
   isHost?: boolean;
   vibe?: VibeUserPayload;
+  reliability?: ReliabilitySummary;
 }
 
 export interface LoginPayload {

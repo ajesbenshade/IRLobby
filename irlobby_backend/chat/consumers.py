@@ -35,6 +35,11 @@ async def clear_user_online(user_id):
     await redis.delete(f"user_online:{user_id}")
 
 
+async def is_user_online(user_id):
+    redis = await get_redis_client()
+    return bool(await redis.get(f"user_online:{user_id}"))
+
+
 class ActivityChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         # Check if user is authenticated
@@ -57,6 +62,7 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "presence_update",
                     "payload": {
+                        "type": "activity.presence",
                         "userId": self.user.id,
                         "isOnline": False,
                     },
@@ -124,6 +130,7 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "presence_update",
                 "payload": {
+                    "type": "activity.presence",
                     "userId": self.user.id,
                     "isOnline": True,
                 },
@@ -202,6 +209,7 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "typing_indicator",
                 "payload": {
+                    "type": "activity.typing",
                     "activityId": int(activity_id),
                     "userId": self.user.id,
                     "isTyping": is_typing,
@@ -225,6 +233,7 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "read_receipt",
                 "payload": {
+                    "type": "activity.read",
                     "activityId": int(activity_id),
                     "userId": self.user.id,
                     "messageId": int(message_id),
@@ -305,11 +314,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
         await set_user_online(user.id)
+        await self.send_presence_snapshot(user)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "presence_update",
                 "payload": {
+                    "type": "chat.presence",
                     "conversationId": int(self.conversation_id),
                     "userId": user.id,
                     "isOnline": True,
@@ -328,6 +339,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "presence_update",
                     "payload": {
+                        "type": "chat.presence",
                         "conversationId": int(self.conversation_id),
                         "userId": user.id,
                         "isOnline": False,
@@ -407,6 +419,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "typing_indicator",
                 "payload": {
+                    "type": "chat.typing",
                     "conversationId": int(self.conversation_id),
                     "userId": user.id,
                     "isTyping": is_typing,
@@ -429,6 +442,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "read_receipt",
                 "payload": {
+                    "type": "chat.read",
                     "conversationId": int(self.conversation_id),
                     "userId": user.id,
                     "messageId": int(message_id),
@@ -445,6 +459,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def presence_update(self, event):
         await self.send(text_data=json.dumps(event["payload"]))
 
+    async def send_presence_snapshot(self, user):
+        participant_ids = await self.get_conversation_participant_ids(self.conversation_id)
+        users = []
+        for participant_id in participant_ids:
+            users.append(
+                {
+                    "userId": participant_id,
+                    "isOnline": participant_id == user.id or await is_user_online(participant_id),
+                }
+            )
+
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "chat.presence_snapshot",
+                    "conversationId": int(self.conversation_id),
+                    "users": users,
+                }
+            )
+        )
+
     @database_sync_to_async
     def check_conversation_access(self, user, conversation_id):
         try:
@@ -452,6 +487,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return user in [conversation.match.user_a, conversation.match.user_b]
         except Conversation.DoesNotExist:
             return False
+
+    @database_sync_to_async
+    def get_conversation_participant_ids(self, conversation_id):
+        conversation = Conversation.objects.select_related("match").get(id=conversation_id)
+        return [conversation.match.user_a_id, conversation.match.user_b_id]
 
     @database_sync_to_async
     def save_message(self, user, conversation_id, message_text):

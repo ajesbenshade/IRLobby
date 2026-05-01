@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 
 from activities.models import Activity
@@ -62,6 +63,12 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot review yourself.")
 
         if reviewee and activity:
+            feedback_time = activity.end_time or activity.time
+            if feedback_time and feedback_time > timezone.now():
+                raise serializers.ValidationError(
+                    "Reviews open after the activity has happened."
+                )
+
             match_exists = (
                 Match.objects.filter(activity=activity)
                 .filter(Q(user_a=reviewer, user_b=reviewee) | Q(user_a=reviewee, user_b=reviewer))

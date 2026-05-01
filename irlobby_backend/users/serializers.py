@@ -5,6 +5,7 @@ from rest_framework import serializers
 from utils.sanitize import strip_html
 
 from .models import Invite, PushDeviceToken, User
+from .reliability import build_reliability_summary
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -22,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     legalAccepted = serializers.SerializerMethodField()
     termsAcceptedAt = serializers.DateTimeField(source="terms_accepted_at", read_only=True)
     privacyAcceptedAt = serializers.DateTimeField(source="privacy_accepted_at", read_only=True)
+    reliability = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -51,6 +53,7 @@ class UserSerializer(serializers.ModelSerializer):
             "privacyAcceptedAt",
             "latitude",
             "longitude",
+            "reliability",
         )
         read_only_fields = ("id",)
 
@@ -77,6 +80,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_legalAccepted(self, obj):
         return bool(obj.terms_accepted_at and obj.privacy_accepted_at)
+
+    def get_reliability(self, obj):
+        return build_reliability_summary(obj)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

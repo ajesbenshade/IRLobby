@@ -75,6 +75,8 @@ export const leaveActivity = async (activityId: number | string): Promise<{ mess
 export interface SwipeActivityResponse {
   message: string;
   matched: boolean;
+  matchId?: number;
+  conversationId?: number;
 }
 
 export const swipeActivity = async (

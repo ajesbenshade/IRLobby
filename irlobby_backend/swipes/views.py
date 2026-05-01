@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from activities.models import Activity
+from chat.models import Conversation
 from matches.models import Match
 from moderation.models import BlockedUser
 from users.push_notifications import send_new_match_notifications
@@ -58,6 +59,7 @@ def swipe_activity(request, pk):
         # Create the swipe
         _ = Swipe.objects.create(user=user, activity=activity, direction=direction)
         created_match = None
+        created_conversation = None
 
         matched = False
         # If it's a right swipe, check for matches
@@ -81,11 +83,20 @@ def swipe_activity(request, pk):
                     matched = created  # Only consider it a new match if it was just created
                     if created:
                         created_match = match_obj
+                        created_conversation, _ = Conversation.objects.get_or_create(
+                            match=match_obj
+                        )
                     break
 
     if created_match is not None:
         send_new_match_notifications(created_match)
 
+    response_payload = {"message": f"Swiped {direction}", "matched": matched}
+    if created_match is not None:
+        response_payload["matchId"] = created_match.id
+    if created_conversation is not None:
+        response_payload["conversationId"] = created_conversation.id
+
     return Response(
-        {"message": f"Swiped {direction}", "matched": matched}, status=status.HTTP_201_CREATED
+        response_payload, status=status.HTTP_201_CREATED
     )

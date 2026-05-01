@@ -10,6 +10,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from activities.models import Activity, Ticket, TicketRedemptionLog
+from reviews.models import Review
 from users.models import PushDeviceToken, User
 from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
@@ -78,6 +80,62 @@ class PasswordResetRequestTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 0)
+
+
+class ReliabilitySummaryTests(APITestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(
+            username="reliable-host", email="reliable@example.com", password="password123"
+        )
+        self.reviewer = User.objects.create_user(
+            username="reliability-reviewer",
+            email="reliability-reviewer@example.com",
+            password="password123",
+        )
+        self.activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Reliability Activity",
+            description="Test",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() - timedelta(hours=2),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+
+    def test_profile_includes_review_and_ticket_reliability(self):
+        Review.objects.create(
+            reviewer=self.reviewer,
+            reviewee=self.host,
+            activity=self.activity,
+            rating=5,
+        )
+        ticket = Ticket.objects.create(
+            buyer=self.reviewer,
+            activity=self.activity,
+            status="paid",
+        )
+        TicketRedemptionLog.objects.create(
+            ticket=ticket,
+            activity=self.activity,
+            host=self.host,
+            successful=True,
+            status="used",
+        )
+
+        self.client.force_authenticate(self.host)
+        response = self.client.get(reverse("user-profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        reliability = response.data["reliability"]
+        self.assertEqual(reliability["score"], 100)
+        self.assertEqual(reliability["label"], "Highly reliable")
+        self.assertEqual(reliability["reviewCount"], 1)
+        self.assertEqual(reliability["averageRating"], 5.0)
+        self.assertEqual(reliability["ticketValidationRate"], 100)
 
 
 class TwitterOAuthTests(APITestCase):

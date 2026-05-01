@@ -12,8 +12,41 @@ import type {
   AuthTokens,
   AuthUser,
   LoginPayload,
+  ReliabilitySummary,
   RegisterPayload,
 } from '../types/auth';
+
+const asNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const normalizeReliability = (value: unknown): ReliabilitySummary | undefined => {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const source = value as Record<string, unknown>;
+  return {
+    score: asNumberOrNull(source.score),
+    label: typeof source.label === 'string' ? source.label : 'New profile',
+    reviewCount: asNumberOrNull(source.reviewCount) ?? 0,
+    averageRating: asNumberOrNull(source.averageRating),
+    ticketValidationRate: asNumberOrNull(source.ticketValidationRate),
+    successfulTicketValidations: asNumberOrNull(source.successfulTicketValidations) ?? 0,
+    ticketValidationCount: asNumberOrNull(source.ticketValidationCount) ?? 0,
+  };
+};
 
 const normalizeTokens = (tokens: Partial<AuthTokens> | null | undefined): AuthTokens => {
   const accessToken =
@@ -107,6 +140,7 @@ const normalizeUser = (user: AuthUser | (AuthUser & Record<string, unknown>)): A
     pushNotificationsEnabled: Boolean(notificationPreferences.pushNotifications),
     isHost: Boolean(userRecord.isHost ?? userRecord.is_host ?? userRecord.host),
     vibe,
+    reliability: normalizeReliability(userRecord.reliability),
   };
 };
 

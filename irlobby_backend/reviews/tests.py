@@ -31,7 +31,7 @@ class ReviewTests(APITestCase):
             location="Location",
             latitude=40.0,
             longitude=-74.0,
-            time=timezone.now() + timedelta(days=1),
+            time=timezone.now() - timedelta(hours=1),
             capacity=10,
             tags=[],
             images=[],
@@ -65,6 +65,35 @@ class ReviewTests(APITestCase):
                 "revieweeId": self.reviewee.id,
                 "activityId": self.activity.id,
                 "rating": 4,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cannot_review_before_activity_happens(self):
+        future_activity = Activity.objects.create(
+            host=self.reviewee,
+            is_approved=True,
+            title="Future Review Activity",
+            description="Test",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+        Match.objects.create(user_a=self.reviewer, user_b=self.reviewee, activity=future_activity)
+
+        self.client.force_authenticate(self.reviewer)
+        response = self.client.post(
+            reverse("review-list"),
+            {
+                "revieweeId": self.reviewee.id,
+                "activityId": future_activity.id,
+                "rating": 5,
             },
             format="json",
         )

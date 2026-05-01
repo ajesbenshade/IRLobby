@@ -92,6 +92,22 @@ class MatchListViewTests(APITestCase):
             response.data if isinstance(response.data, list) else response.data.get("results", [])
         )
         self.assertEqual(len(results), 1)
+        self.assertIn("review_available", results[0])
+        self.assertIn("user_a_reliability", results[0])
+        self.assertFalse(results[0]["review_available"])
+
+    def test_match_list_marks_past_activity_review_available(self):
+        self.activity.time = timezone.now() - timedelta(hours=2)
+        self.activity.save(update_fields=["time", "location_point"])
+        Match.objects.create(user_a=self.user, user_b=self.other, activity=self.activity)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse("match-list"))
+
+        results = (
+            response.data if isinstance(response.data, list) else response.data.get("results", [])
+        )
+        self.assertTrue(results[0]["review_available"])
 
     def test_match_list_excludes_other_users_matches(self):
         Match.objects.create(user_a=self.other, user_b=self.third, activity=self.activity)

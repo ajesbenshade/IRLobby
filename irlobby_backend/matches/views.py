@@ -24,6 +24,7 @@ class MatchListView(generics.ListAPIView):
 
         return (
             Match.objects.filter(Q(user_a=user) | Q(user_b=user))
+            .select_related("activity", "user_a", "user_b")
             .exclude(user_a_id__in=exclude_ids)
             .exclude(user_b_id__in=exclude_ids)
             .order_by("-created_at")

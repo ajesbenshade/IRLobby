@@ -143,6 +143,9 @@ export const DiscoverScreen = () => {
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-matches'] });
+      if (data.conversationId != null) {
+        await queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+      }
     },
   });
 

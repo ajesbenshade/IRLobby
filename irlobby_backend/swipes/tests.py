@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from activities.models import Activity
+from chat.models import Conversation
 from matches.models import Match
 from moderation.models import BlockedUser
 from users.models import User
@@ -93,7 +94,10 @@ class SwipeTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["matched"])
+        self.assertIn("matchId", response.data)
+        self.assertIn("conversationId", response.data)
         self.assertTrue(Match.objects.filter(activity=self.activity).exists())
+        self.assertTrue(Conversation.objects.filter(match_id=response.data["matchId"]).exists())
 
     def test_swipe_list_returns_only_own_swipes(self):
         Swipe.objects.create(user=self.user, activity=self.activity, direction="right")

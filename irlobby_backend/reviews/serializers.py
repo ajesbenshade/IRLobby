@@ -65,9 +65,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         if reviewee and activity:
             feedback_time = activity.end_time or activity.time
             if feedback_time and feedback_time > timezone.now():
-                raise serializers.ValidationError(
-                    "Reviews open after the activity has happened."
-                )
+                raise serializers.ValidationError("Reviews open after the activity has happened.")
 
             match_exists = (
                 Match.objects.filter(activity=activity)

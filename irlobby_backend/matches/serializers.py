@@ -15,7 +15,9 @@ class MatchSerializer(serializers.ModelSerializer):
     user_b_reliability = serializers.SerializerMethodField()
     activity_id = serializers.IntegerField(source="activity.id", read_only=True, allow_null=True)
     activity = serializers.StringRelatedField()
-    activity_time = serializers.DateTimeField(source="activity.time", read_only=True, allow_null=True)
+    activity_time = serializers.DateTimeField(
+        source="activity.time", read_only=True, allow_null=True
+    )
     activity_end_time = serializers.DateTimeField(
         source="activity.end_time", read_only=True, allow_null=True
     )

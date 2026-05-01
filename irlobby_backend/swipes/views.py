@@ -97,6 +97,4 @@ def swipe_activity(request, pk):
     if created_conversation is not None:
         response_payload["conversationId"] = created_conversation.id
 
-    return Response(
-        response_payload, status=status.HTTP_201_CREATED
-    )
+    return Response(response_payload, status=status.HTTP_201_CREATED)

@@ -1,30 +1,94 @@
 # IRLobby
 
-IRLobby is a social activity matching platform with a React web app in `apps/web` and an Expo app in `apps/mobile`, backed by the Django API in `irlobby_backend` and shared types/utilities in `packages/shared`.
+[![CI](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml)
+[![Release Gate](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml)
+[![Mobile EAS Build](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12%20CI%20%7C%203.11.9%20runtime-blue)
+![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)
+![Expo](https://img.shields.io/badge/expo-54.0.34-000020?logo=expo&logoColor=white)
+![Django](https://img.shields.io/badge/django-4.x-092E20?logo=django&logoColor=white)
 
-## Support status
+**Activity-first social matching for real-life plans.** Swipe on what is happening near you, match with people who want the same night out, and move into a chat with the plan already attached.
 
-- `apps/mobile`: active and supported
-- `apps/web`: active and supported
-- `irlobby_backend`: active and supported
-- `packages/shared`: active and supported
+[Live app](https://irlobby.com) | [Download](https://irlobby.com/download) | [Quick start](#quick-start) | [Contribute](CONTRIBUTING.md)
+
+<p align="center">
+	<img src="apps/mobile/store/screenshots/01-vibe-quiz.png" alt="IRLobby vibe quiz screen" width="155">
+	<img src="apps/mobile/store/screenshots/02-discover-swipe.png" alt="IRLobby discover swipe screen" width="155">
+	<img src="apps/mobile/store/screenshots/03-match-celebration.png" alt="IRLobby match celebration screen" width="155">
+	<img src="apps/mobile/store/screenshots/04-chat.png" alt="IRLobby chat screen" width="155">
+	<img src="apps/mobile/store/screenshots/05-profile-or-results.png" alt="IRLobby profile and results screen" width="155">
+</p>
+
+## Why IRLobby?
+
+Most swipe apps start with profiles. IRLobby starts with the plan: the activity, time, place, and energy. When two people want the same real-world activity, the app turns that shared intent into a focused match and conversation.
+
+## Key features
+
+- Activity-first discovery with swipeable cards for nearby plans.
+- Vibe quiz personalization so the feed reflects how someone actually wants to spend time.
+- Match-to-chat flow with activity context carried into the conversation.
+- Web and mobile clients sharing API assumptions and release checks.
+- Safety, privacy, account deletion, blocking, reporting, and moderation surfaces.
+- Stripe-ready ticketing and QR redemption infrastructure for paid activities.
+- Production-minded Django backend with REST APIs, WebSockets, Celery, Redis, Postgres/PostGIS, and release gates.
+
+## Tech stack
+
+| Area | Stack |
+| --- | --- |
+| Mobile | Expo 54, React Native 0.81, React 19, NativeWind |
+| Web | React 18, Vite, TypeScript, Tailwind CSS |
+| Backend | Django 4.x, Django REST Framework, Channels, Celery |
+| Data | PostgreSQL/PostGIS in production, SQLite-friendly local defaults |
+| Integrations | Stripe, Expo push notifications, Sentry, SMTP, Twitter OAuth |
+| Tooling | GitHub Actions, EAS Build, Jest, pytest, ruff, black, mypy |
+
+## Architecture
+
+```mermaid
+flowchart LR
+	Web[React + Vite web] --> API[Django REST API]
+	Mobile[Expo mobile app] --> API
+	Mobile --> WS[Django Channels WebSockets]
+	Web --> WS
+	Shared[packages/shared] --> Web
+	Shared --> Mobile
+	API --> DB[(Postgres + PostGIS)]
+	API --> Redis[(Redis)]
+	Redis --> Celery[Celery workers]
+	API --> Stripe[Stripe]
+	API --> SMTP[SMTP email]
+```
 
 ## Repository layout
 
-- `apps/mobile` — React Native / Expo mobile app
-- `apps/web` — React + Vite web app (public site + authenticated app)
-- `irlobby_backend` — Django REST + WebSocket backend
-- `packages/shared` — shared schema and utility code
+All primary packages are active and supported.
+
+- `apps/mobile` - React Native / Expo mobile app.
+- `apps/web` - React + Vite public site and authenticated app shell.
+- `irlobby_backend` - Django REST, WebSocket, Celery, and deployment code.
+- `packages/shared` - shared schema and utility code.
+- `docs` - release, parity, deployment, email, and brand documentation.
+- `site` - static legal/support pages for hosted marketing surfaces.
 
 ## Quick start
 
 ### Prerequisites
 
-- Python 3.12 or later recommended
-- Node.js 20.x recommended
-- Git
+- Node.js 20.x.
+- Python 3.12 for local development and CI. Production deploys currently pin Python 3.11.9.
+- Git.
 
-### Backend
+### Install JavaScript workspaces
+
+```bash
+npm install
+```
+
+### Run the backend
 
 ```bash
 cd irlobby_backend
@@ -32,74 +96,51 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp ../.env.example .env
-# Add Stripe credentials before running the app
-# STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_SUCCESS_URL, STRIPE_CANCEL_URL, ENABLE_TICKETING
 python manage.py migrate
 python manage.py runserver
 ```
 
 The API is available at `http://localhost:8000`.
 
-### Mobile
+### Run the web app
 
 ```bash
-cd apps/mobile
-npm install
-npm run start
+npm run dev:web
+```
+
+### Run the mobile app
+
+```bash
+npm run dev:mobile
 ```
 
 Follow the Expo CLI instructions to open the app in a simulator or on device.
 
-## Root scripts
+## Development checks
 
-- `npm run dev` — starts the mobile app
-- `npm run build` — builds the mobile app bundle
-- `npm run build:web` — builds the web app deployment bundle
-- `npm run check:api-contract` — validates frontend API path usage against Django routes
-- `npm run check:web` — runs web tests and web production build
-- `npm run check:mobile` — runs mobile typecheck and iOS bundle export
-- `npm run check:release` — runs API contract, web, and mobile release gate checks
+- `npm run check:api-contract` - validates frontend API path usage against Django routes.
+- `npm run check:web` - runs web lint, format check, tests, and production build.
+- `npm run check:mobile` - runs mobile typecheck and iOS bundle export.
+- `npm run check:release` - runs the full frontend/mobile release gate.
 
-## Mobile builds
+Backend checks run from `irlobby_backend`:
 
-Production iOS builds can be triggered automatically from GitHub Actions via `.github/workflows/mobile-eas-build.yml` once:
+```bash
+python manage.py check
+pytest
+```
 
-1. the `EXPO_TOKEN` repository secret is configured, and
-2. one successful manual `eas build -p ios --profile production` has been completed so EAS has the required iOS build credentials, and
-3. one successful manual `eas submit -p ios --profile production` has been completed, or an App Store Connect API key has been configured in Expo, so CI can submit non-interactively.
+## Release and deployment
 
-See `apps/mobile/APP_STORE_RELEASE.md` for the current release process.
-
-## CI
-
-The active CI workflows validate the web app, mobile app, shared API contract assumptions, and Django backend.
-
-## Notes
-
-- Legacy platform-specific frontend deployment config has been removed; deployment is currently managed through cPanel Git deployment.
-- The legacy `client/` folder has already been removed from the repository.
-
-## Deployment notes
-
-Production deployments currently target the mobile app plus an Oracle VM backend using Docker Compose with a Neon PostgreSQL database. See `irlobby_backend/deploy/oracle/README.md` for the backend deployment runbook.
-
-### Production environment checklist
-
-Backend deployments should set `SECRET_KEY`, `DATABASE_URL`, `REDIS_PASSWORD`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, and the SMTP `EMAIL_*` values used for password reset delivery. Keep Redis private to Docker networking; never open TCP `6379` to the public internet. After deploy, verify `https://<backend-domain>/api/health/` returns HTTP `200` and an external connection to `<backend-ip>:6379` fails.
-
-Web deployments should set `VITE_API_BASE_URL` when the frontend is hosted on a different origin from the backend. Same-origin or rewrite-based deployments may leave it empty, in which case the web app uses relative `/api` routes. Set `VITE_WEBSOCKET_BASE_URL` when WebSocket traffic is served from a different origin, and use `VITE_LOG_CONFIG=true` only while diagnosing startup config.
-
+- [Deployment overview](docs/DEPLOYMENT.md) covers production environment variables, Redis hardening, health checks, and hosting notes.
+- [Oracle backend runbook](irlobby_backend/deploy/oracle/README.md) covers the Docker Compose backend deployment.
+- [App Store release](apps/mobile/APP_STORE_RELEASE.md), [launch checklist](LAUNCH_CHECKLIST.md), and [Play Store launch](PLAY_STORE_LAUNCH.md) cover mobile release flow.
+- [Repository settings checklist](docs/REPOSITORY_SETTINGS.md) lists the GitHub description, website, topics, and social preview recommendations.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly with the backend checks and the active mobile checks
-5. Submit a pull request
-
----
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), run the relevant checks before opening a pull request, and keep secrets out of commits.
 
 ## License
 
-MIT
+IRLobby is released under the [MIT License](LICENSE).

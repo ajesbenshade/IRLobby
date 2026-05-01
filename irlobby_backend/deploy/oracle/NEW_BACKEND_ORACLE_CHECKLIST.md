@@ -6,7 +6,7 @@ Use this checklist when provisioning a brand new IRLobby backend on Oracle Cloud
 
 - Create Ubuntu 22.04 VM on `VM.Standard.A1.Flex`.
 - Reserve static public IP.
-- Open inbound TCP ports `22`, `80`, `443` in NSG/Security List.
+- Open inbound TCP ports `22`, `80`, `443` in NSG/Security List only. Do not open Redis/TCP `6379`.
 - Point your API domain `A` record to the VM public IP.
 
 ## 2. VM Bootstrap
@@ -66,6 +66,7 @@ chmod 600 .env.production
 ```
 
 - Fill all required values for your domain, database, CORS/CSRF, email, and third-party integrations.
+- Confirm `REDIS_PASSWORD` is set. Leave `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` empty unless using an external Redis service; Compose derives authenticated internal URLs automatically.
 
 ## 5. HTTPS Certificate
 
@@ -91,7 +92,11 @@ bash deploy/oracle/deploy.sh
 curl -I https://api.yourdomain.com/api/health/
 docker compose -f docker-compose.oracle.yml --env-file .env.production ps
 docker compose -f docker-compose.oracle.yml --env-file .env.production logs -f web
+docker compose -f docker-compose.oracle.yml --env-file .env.production exec redis sh -lc 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
+nc -vz api.yourdomain.com 6379
 ```
+
+The Redis ping should return `PONG` from inside the container, and the external `6379` connection should fail.
 
 ## 8. Post-Deploy Tasks
 

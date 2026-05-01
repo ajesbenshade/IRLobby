@@ -10,7 +10,7 @@ It supports two database modes:
 
 1. Create an Oracle Cloud VM (Ubuntu 22.04) on shape `VM.Standard.A1.Flex`.
 2. Reserve a public IP for the instance.
-3. Open ingress rules on Security List / NSG for TCP `22`, `80`, and `443`.
+3. Open ingress rules on Security List / NSG for TCP `22`, `80`, and `443` only. Do not open Redis/TCP `6379`; Redis must remain private to Docker networking.
 4. Point DNS `A` record (example: `your-domain.com`) to the VM public IP.
 
 ## 2) Prepare VM
@@ -39,7 +39,7 @@ chmod +x deploy/oracle/generate-secrets.sh
 bash deploy/oracle/generate-secrets.sh
 ```
 
-To write generated `SECRET_KEY` and `POSTGRES_PASSWORD` directly into `.env.production`:
+To write generated `SECRET_KEY`, `POSTGRES_PASSWORD`, and `REDIS_PASSWORD` directly into `.env.production`:
 
 ```bash
 bash deploy/oracle/generate-secrets.sh --write
@@ -49,7 +49,7 @@ Required values to set:
 - `SERVER_NAME`
 - `SECRET_KEY`
 - `DATABASE_URL`
-- `REDIS_URL`
+- `REDIS_PASSWORD`
 - `ALLOWED_HOSTS`
 - `CSRF_TRUSTED_ORIGINS`
 - `CORS_ALLOWED_ORIGINS`
@@ -82,6 +82,8 @@ If using managed PostgreSQL:
 - Keep `USE_LOCAL_POSTGRES=false`
 - Set `DATABASE_URL` to your managed DB URL (often with `?sslmode=require`)
 
+Redis is provided by the Docker Compose `redis` service. Leave `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` empty unless you are intentionally using an external Redis service; Compose derives authenticated internal URLs from `REDIS_PASSWORD`.
+
 ## 4) Issue HTTPS certificate
 
 On the VM host:
@@ -105,6 +107,7 @@ bash deploy/oracle/deploy.sh
 
 Services started:
 - `postgres` (when `USE_LOCAL_POSTGRES=true`)
+- `redis` (private Docker-network service; no public `6379` listener)
 - `web` (Gunicorn on 8000)
 - `ws` (Daphne on 8001)
 - `nginx` (TLS reverse proxy on 443)
@@ -115,6 +118,7 @@ Services started:
 curl -I https://your-domain.com/api/health/
 docker compose -f docker-compose.oracle.yml --env-file .env.production ps
 docker compose -f docker-compose.oracle.yml --env-file .env.production logs -f web
+docker compose -f docker-compose.oracle.yml --env-file .env.production exec redis sh -lc 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
 ```
 
 If local PostgreSQL is enabled:
@@ -123,7 +127,15 @@ If local PostgreSQL is enabled:
 docker compose -f docker-compose.oracle.yml --env-file .env.production --profile localdb logs -f postgres
 ```
 
-Expected health endpoint response: HTTP `200`.
+Expected health endpoint response: HTTP `200`; expected Redis ping response: `PONG`.
+
+From outside the VM, verify Redis is not reachable:
+
+```bash
+nc -vz your-domain.com 6379
+```
+
+The command should fail, refuse, or time out. If it succeeds, close TCP `6379` in the cloud firewall/security list and on the host before continuing.
 
 ## 7) Mobile/Web client updates
 

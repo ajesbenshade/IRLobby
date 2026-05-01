@@ -97,26 +97,28 @@ export default function NotificationsPage() {
       href: '/app/connections',
     }));
 
-    const messageItems = asArrayResponse(conversations).flatMap<NotificationItem>((conversation) => {
-      const lastMessage = conversation.messages?.[conversation.messages.length - 1];
-      if (!lastMessage) {
-        return [];
-      }
+    const messageItems = asArrayResponse(conversations).flatMap<NotificationItem>(
+      (conversation) => {
+        const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+        if (!lastMessage) {
+          return [];
+        }
 
-      const sender =
-        lastMessage.user?.firstName || lastMessage.user?.email?.split('@')[0] || 'Someone';
+        const sender =
+          lastMessage.user?.firstName || lastMessage.user?.email?.split('@')[0] || 'Someone';
 
-      return [
-        {
-          id: `message-${conversation.id}-${lastMessage.id}`,
-          type: 'message',
-          title: `New message in ${conversation.match}`,
-          body: `${sender}: ${lastMessage.message}`,
-          createdAt: lastMessage.createdAt,
-          href: `/app/matches/${conversation.matchId}/chat`,
-        },
-      ];
-    });
+        return [
+          {
+            id: `message-${conversation.id}-${lastMessage.id}`,
+            type: 'message',
+            title: `New message in ${conversation.match}`,
+            body: `${sender}: ${lastMessage.message}`,
+            createdAt: lastMessage.createdAt,
+            href: `/app/matches/${conversation.matchId}/chat`,
+          },
+        ];
+      },
+    );
 
     return [...messageItems, ...matchItems].sort(
       (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),

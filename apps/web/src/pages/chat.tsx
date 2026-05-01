@@ -50,9 +50,7 @@ export default function Chat() {
     queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
-      return response.json() as Promise<
-        ConversationItem[] | PaginatedResponse<ConversationItem>
-      >;
+      return response.json() as Promise<ConversationItem[] | PaginatedResponse<ConversationItem>>;
     },
     retry: 1,
   });

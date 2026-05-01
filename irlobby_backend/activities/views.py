@@ -1,10 +1,14 @@
+import logging
+import time
+
 import stripe
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+from django.core.cache import cache
 from django.core.signing import BadSignature
-from django.db.models import F, Q
+from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -28,6 +32,8 @@ from .serializers import (
     TicketValidationSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def ticketing_enabled(request):
     return flag_is_active(request, "ticketed_events_enabled") or settings.ENABLE_TICKETING
@@ -38,6 +44,7 @@ class ActivityListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        started_at = time.monotonic()
         blocked_ids = BlockedUser.objects.filter(blocker=self.request.user).values_list(
             "blocked_id", flat=True
         )
@@ -71,12 +78,66 @@ class ActivityListCreateView(generics.ListCreateAPIView):
                 point = None
 
             if point and radius_km is not None:
-                queryset = queryset.filter(location_point__isnull=False)
-                queryset = queryset.annotate(distance=Distance("location_point", point))
-                queryset = queryset.filter(
-                    location_point__distance_lte=(point, D(km=radius_km))
-                ).order_by("distance", "-created_at")
+                cache_key = (
+                    "activities:nearby:v1:"
+                    f"user:{self.request.user.id}:staff:{int(self.request.user.is_staff)}:"
+                    f"lat:{point.y:.4f}:lon:{point.x:.4f}:radius:{radius_km:.1f}"
+                )
+                cache_hit = False
+                nearby_ids = None
+
+                try:
+                    nearby_ids = cache.get(cache_key)
+                    cache_hit = nearby_ids is not None
+                except Exception as exc:
+                    logger.warning(
+                        "activity.nearby_cache_read_failed",
+                        extra={"cache_key": cache_key, "error": str(exc)},
+                    )
+
+                if nearby_ids is None:
+                    nearby_queryset = (
+                        queryset.filter(location_point__isnull=False)
+                        .annotate(distance=Distance("location_point", point))
+                        .filter(location_point__distance_lte=(point, D(km=radius_km)))
+                        .order_by("distance", "-created_at")
+                    )
+                    nearby_ids = list(nearby_queryset.values_list("id", flat=True)[:250])
+                    try:
+                        cache.set(
+                            cache_key,
+                            nearby_ids,
+                            timeout=settings.ACTIVITY_NEARBY_CACHE_TTL_SECONDS,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "activity.nearby_cache_write_failed",
+                            extra={"cache_key": cache_key, "error": str(exc)},
+                        )
+
+                if nearby_ids:
+                    ordering = Case(
+                        *[
+                            When(id=activity_id, then=Value(index))
+                            for index, activity_id in enumerate(nearby_ids)
+                        ],
+                        output_field=IntegerField(),
+                    )
+                    queryset = queryset.filter(id__in=nearby_ids).order_by(ordering)
+                else:
+                    queryset = queryset.none()
                 ordered_by_distance = True
+
+                logger.info(
+                    "activity.nearby_query",
+                    extra={
+                        "user_id": self.request.user.id,
+                        "radius_km": radius_km,
+                        "result_count": len(nearby_ids),
+                        "cache_hit": cache_hit,
+                        "duration_ms": round((time.monotonic() - started_at) * 1000, 2),
+                    },
+                )
 
         category = self.request.query_params.get("category")
         if category:

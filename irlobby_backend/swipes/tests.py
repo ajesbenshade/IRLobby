@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import override_settings
 from django.urls import reverse
@@ -7,7 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from activities.models import Activity
-from chat.models import Conversation
+from chat.models import Conversation, Message
 from matches.models import Match
 from moderation.models import BlockedUser
 from users.models import User
@@ -98,6 +99,59 @@ class SwipeTests(APITestCase):
         self.assertIn("conversationId", response.data)
         self.assertTrue(Match.objects.filter(activity=self.activity).exists())
         self.assertTrue(Conversation.objects.filter(match_id=response.data["matchId"]).exists())
+
+    @patch("chat.views.send_new_message_notification")
+    def test_swipe_match_chat_flow_creates_conversation_and_allows_message(self, mock_push):
+        user_activity = Activity.objects.create(
+            host=self.user,
+            is_approved=True,
+            title="User Hosted Plan",
+            description="A reciprocal plan.",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+        Swipe.objects.create(user=self.host, activity=user_activity, direction="right")
+
+        self.client.force_authenticate(self.user)
+        swipe_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "right"},
+            format="json",
+        )
+
+        self.assertEqual(swipe_response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(swipe_response.data["matched"])
+        conversation_id = swipe_response.data["conversationId"]
+
+        conversations_response = self.client.get(reverse("conversation-list"))
+        self.assertEqual(conversations_response.status_code, status.HTTP_200_OK)
+        conversations = (
+            conversations_response.data
+            if isinstance(conversations_response.data, list)
+            else conversations_response.data.get("results", [])
+        )
+        self.assertEqual(conversations[0]["id"], conversation_id)
+
+        message_response = self.client.post(
+            reverse("message-list", args=[conversation_id]),
+            {"message": "Let us make this happen."},
+            format="json",
+        )
+
+        self.assertEqual(message_response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Message.objects.filter(
+                conversation_id=conversation_id,
+                sender=self.user,
+                text="Let us make this happen.",
+            ).exists()
+        )
+        mock_push.assert_called_once()
 
     def test_swipe_list_returns_only_own_swipes(self):
         Swipe.objects.create(user=self.user, activity=self.activity, direction="right")

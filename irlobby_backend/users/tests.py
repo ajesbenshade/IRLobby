@@ -2,19 +2,30 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlparse
 
+from django.conf import settings
 from django.core import mail
 from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import (
+    APIRequestFactory,
+    APITestCase,
+)
+from rest_framework.test import (
+    force_authenticate as force_request_authenticate,
+)
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from activities.models import Activity, Ticket, TicketRedemptionLog
+from activities.models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
+from matches.models import Match
 from reviews.models import Review
+from swipes.models import Swipe
 from users.models import PushDeviceToken, User
 from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
+from users.views import logout_view
 
 
 def extract_reset_token(message_body):
@@ -536,6 +547,162 @@ class OnboardingAndInviteTests(APITestCase):
         )
         self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
         self.assertEqual(accept_response.data["status"], "accepted")
+
+
+class UserAccountWorkflowTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            username="account-user",
+            email="account@example.com",
+            password="password123",
+        )
+        self.other = User.objects.create_user(
+            username="account-other",
+            email="account-other@example.com",
+            password="password123",
+        )
+
+    def _activity(self, host=None):
+        return Activity.objects.create(
+            host=host or self.user,
+            is_approved=True,
+            title="Account Activity",
+            description="A test activity for account data export.",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=10,
+            tags=["board games"],
+            images=[],
+        )
+
+    def test_register_login_auth_status_and_logout_flow(self):
+        register_response = self.client.post(
+            reverse("user-register"),
+            {
+                "username": "new-account",
+                "email": "new-account@example.com",
+                "password": "password123",
+                "password_confirm": "password123",
+            },
+            format="json",
+        )
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("tokens", register_response.data)
+
+        invalid_login = self.client.post(
+            reverse("user-login"),
+            {"email": self.user.email, "password": "wrong-password"},
+            format="json",
+        )
+        self.assertEqual(invalid_login.status_code, status.HTTP_400_BAD_REQUEST)
+
+        login_response = self.client.post(
+            reverse("user-login"),
+            {"email": self.user.email, "password": "password123"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+        unauthenticated_status = self.client.get(reverse("auth-status"))
+        self.assertEqual(unauthenticated_status.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(unauthenticated_status.data["authenticated"])
+
+        self.client.force_authenticate(self.user)
+        authenticated_status = self.client.get(reverse("auth-status"))
+        self.assertEqual(authenticated_status.status_code, status.HTTP_200_OK)
+        self.assertTrue(authenticated_status.data["authenticated"])
+
+    def test_logout_view_clears_refresh_cookie_with_invalid_token(self):
+        factory = APIRequestFactory()
+        request = factory.post(
+            reverse("token_logout"), {"refresh": "not-a-refresh-token"}, format="json"
+        )
+        force_request_authenticate(request, user=self.user)
+
+        response = logout_view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIn(settings.REFRESH_TOKEN_COOKIE_NAME, response.cookies)
+
+    def test_refresh_view_uses_refresh_cookie(self):
+        refresh = RefreshToken.for_user(self.user)
+        self.client.cookies[settings.REFRESH_TOKEN_COOKIE_NAME] = str(refresh)
+
+        response = self.client.post(reverse("token_refresh"), {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertIn(settings.REFRESH_TOKEN_COOKIE_NAME, response.cookies)
+
+    def test_push_token_register_and_deactivate(self):
+        self.client.force_authenticate(self.user)
+
+        register_response = self.client.post(
+            reverse("push-token-register"),
+            {
+                "token": "ExponentPushToken[account-flow]",
+                "platform": "ios",
+                "device_id": "device-1",
+            },
+            format="json",
+        )
+        self.assertEqual(register_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(PushDeviceToken.objects.filter(user=self.user, is_active=True).exists())
+
+        deactivate_response = self.client.delete(
+            reverse("push-token-deactivate"),
+            {"token": "ExponentPushToken[account-flow]"},
+            format="json",
+        )
+        self.assertEqual(deactivate_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(deactivate_response.data["deactivatedCount"], 1)
+
+    def test_export_user_data_includes_related_records(self):
+        hosted_activity = self._activity(host=self.user)
+        joined_activity = self._activity(host=self.other)
+        ActivityParticipant.objects.create(
+            activity=joined_activity,
+            user=self.user,
+            status="confirmed",
+        )
+        Swipe.objects.create(user=self.user, activity=joined_activity, direction="right")
+        Match.objects.create(user_a=self.user, user_b=self.other, activity=joined_activity)
+        Review.objects.create(
+            reviewer=self.user,
+            reviewee=self.other,
+            activity=joined_activity,
+            rating=4,
+            comment="Great plan.",
+        )
+        Review.objects.create(
+            reviewer=self.other,
+            reviewee=self.user,
+            activity=hosted_activity,
+            rating=5,
+            comment="Great host.",
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse("export-user-data"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["hosted_activities"][0]["title"], hosted_activity.title)
+        self.assertEqual(response.json()["activity_participations"][0]["status"], "confirmed")
+        self.assertEqual(response.json()["swipes"][0]["direction"], "right")
+        self.assertEqual(response.json()["matches"][0]["other_user"]["id"], self.other.id)
+        self.assertEqual(response.json()["reviews_given"][0]["rating"], 4)
+        self.assertEqual(response.json()["reviews_received"][0]["rating"], 5)
+
+    def test_delete_profile_removes_authenticated_user(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.delete(reverse("delete-profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
 
 
 class PushNotificationTests(APITestCase):

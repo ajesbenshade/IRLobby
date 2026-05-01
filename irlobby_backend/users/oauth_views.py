@@ -31,12 +31,17 @@ class _MobileAppRedirect(HttpResponseRedirect):
 
 
 def get_twitter_credentials():
+    configured_client_id = getattr(settings, "TWITTER_CLIENT_ID", None)
+    configured_client_secret = getattr(settings, "TWITTER_CLIENT_SECRET", None)
     client_id = (
-        getattr(settings, "TWITTER_CLIENT_ID", None) or env_config("TWITTER_CLIENT_ID", default="")
+        configured_client_id
+        if configured_client_id is not None
+        else env_config("TWITTER_CLIENT_ID", default="")
     ).strip()
     client_secret = (
-        getattr(settings, "TWITTER_CLIENT_SECRET", None)
-        or env_config("TWITTER_CLIENT_SECRET", default="")
+        configured_client_secret
+        if configured_client_secret is not None
+        else env_config("TWITTER_CLIENT_SECRET", default="")
     ).strip()
     return client_id, client_secret
 

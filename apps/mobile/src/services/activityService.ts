@@ -1,7 +1,11 @@
-import { api } from './apiClient';
-import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
+import { api } from "./apiClient";
+import {
+  API_ROUTES,
+  API_ROUTE_BUILDERS,
+  parseActivityListResponse,
+} from "@shared/schema";
 
-import type { Activity } from '../types/activity';
+import type { Activity } from "../types/activity";
 
 export interface ActivityFetchFilters {
   category?: string;
@@ -17,16 +21,18 @@ export interface ActivityFetchFilters {
   date_to?: string;
 }
 
-export const fetchActivities = async (filters?: ActivityFetchFilters): Promise<Activity[]> => {
+export const fetchActivities = async (
+  filters?: ActivityFetchFilters
+): Promise<Activity[]> => {
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES, {
     params: filters,
   });
-  return response.data;
+  return parseActivityListResponse(response.data) as Activity[];
 };
 
 export const fetchHostedActivities = async (): Promise<Activity[]> => {
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES_HOSTED);
-  return response.data;
+  return parseActivityListResponse(response.data) as Activity[];
 };
 
 export interface CreateActivityPayload {
@@ -53,7 +59,9 @@ export interface CreateActivityPayload {
   images?: string[];
 }
 
-export const createActivity = async (payload: CreateActivityPayload): Promise<Activity> => {
+export const createActivity = async (
+  payload: CreateActivityPayload
+): Promise<Activity> => {
   const response = await api.post<Activity>(API_ROUTES.ACTIVITIES, {
     ...payload,
     tags: payload.tags ?? [],
@@ -62,13 +70,21 @@ export const createActivity = async (payload: CreateActivityPayload): Promise<Ac
   return response.data;
 };
 
-export const joinActivity = async (activityId: number | string): Promise<{ message: string }> => {
-  const response = await api.post<{ message: string }>(API_ROUTE_BUILDERS.activityJoin(activityId));
+export const joinActivity = async (
+  activityId: number | string
+): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>(
+    API_ROUTE_BUILDERS.activityJoin(activityId)
+  );
   return response.data;
 };
 
-export const leaveActivity = async (activityId: number | string): Promise<{ message: string }> => {
-  const response = await api.post<{ message: string }>(API_ROUTE_BUILDERS.activityLeave(activityId));
+export const leaveActivity = async (
+  activityId: number | string
+): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>(
+    API_ROUTE_BUILDERS.activityLeave(activityId)
+  );
   return response.data;
 };
 
@@ -81,10 +97,13 @@ export interface SwipeActivityResponse {
 
 export const swipeActivity = async (
   activityId: number | string,
-  direction: 'left' | 'right',
+  direction: "left" | "right"
 ): Promise<SwipeActivityResponse> => {
-  const response = await api.post<SwipeActivityResponse>(API_ROUTE_BUILDERS.activitySwipe(activityId), {
-    direction,
-  });
+  const response = await api.post<SwipeActivityResponse>(
+    API_ROUTE_BUILDERS.activitySwipe(activityId),
+    {
+      direction,
+    }
+  );
   return response.data;
 };

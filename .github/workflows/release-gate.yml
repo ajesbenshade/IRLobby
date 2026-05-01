@@ -74,4 +74,7 @@ jobs:
         working-directory: irlobby_backend
         run: |
           python manage.py check --deploy
+
+      - name: Backend tests
+        run: |
           pytest

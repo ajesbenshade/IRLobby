@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 import logging
+from datetime import datetime, timezone
 
 from django.contrib import admin
 from django.http import JsonResponse
@@ -74,10 +75,60 @@ def health_check(request):
     return JsonResponse(checks)
 
 
+def health_dashboard(request):
+    checks = {"database": "ok", "redis": "ok", "cache": "ok"}
+    status_code = 200
+
+    try:
+        from django.db import connection
+
+        connection.ensure_connection()
+    except Exception as exc:
+        logger.error("Health dashboard database failure: %s", exc)
+        checks["database"] = "error"
+        status_code = 503
+
+    try:
+        import redis as redis_lib
+        from django.conf import settings
+
+        redis_conn = redis_lib.Redis.from_url(
+            getattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+        )
+        redis_conn.ping()
+    except Exception as exc:
+        logger.error("Health dashboard redis failure: %s", exc)
+        checks["redis"] = "error"
+        status_code = 503
+
+    try:
+        from django.core.cache import cache
+
+        cache.set("health-dashboard", "ok", timeout=5)
+        if cache.get("health-dashboard") != "ok":
+            raise RuntimeError("cache round-trip failed")
+    except Exception as exc:
+        logger.error("Health dashboard cache failure: %s", exc)
+        checks["cache"] = "error"
+        status_code = 503
+
+    payload = {
+        "status": "ok" if status_code == 200 else "degraded",
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "checks": checks,
+        "monitors": {
+            "nearby_activity_cache": "activities:nearby:v1",
+            "websocket_presence_ttl_seconds": 120,
+        },
+    }
+    return JsonResponse(payload, status=status_code)
+
+
 urlpatterns = [
     path("", home, name="home"),
     path("admin/", admin.site.urls),
     path("api/health/", health_check, name="health"),
+    path("api/health/dashboard/", health_dashboard, name="health-dashboard"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/logout/", logout_view, name="token_logout"),

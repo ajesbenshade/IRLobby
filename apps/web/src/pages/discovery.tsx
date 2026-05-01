@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
-import { apiRequest, parseJsonResponse } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
-import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
+import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
@@ -58,7 +58,7 @@ export default function Discovery() {
         : API_ROUTES.ACTIVITIES;
 
       const response = await apiRequest('GET', endpoint);
-      return parseJsonResponse<Activity[]>(response);
+      return parseActivityListResponse(await response.json()) as Activity[];
     },
     enabled: !!token, // Only run the query if we have a token
     retry: 1,

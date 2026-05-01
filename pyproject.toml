@@ -51,3 +51,36 @@ warn_redundant_casts = true
 warn_unused_configs = true
 exclude = "(^|/)(migrations|\\.agents)/"
 disable_error_code = ["import-untyped"]
+
+[tool.coverage.run]
+source = [
+  "activities",
+  "chat",
+  "irlobby_backend",
+  "matches",
+  "moderation",
+  "reviews",
+  "swipes",
+  "users",
+  "utils",
+]
+omit = [
+  "*/tests.py",
+  "*/test_*.py",
+  "*/migrations/*",
+  "*/admin.py",
+  "*/apps.py",
+  "*/asgi.py",
+  "*/wsgi.py",
+  "*/celery.py",
+  "*/settings.py",
+  "*/urls.py",
+  "*/routing.py",
+  "*/manage.py",
+  "*/query_db.py",
+  "*/management/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

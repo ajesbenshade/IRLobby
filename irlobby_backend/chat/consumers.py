@@ -1,4 +1,6 @@
 import json
+import logging
+import time
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -16,6 +18,7 @@ TYPING_TTL_SECONDS = 10
 READ_RECEIPT_TTL_SECONDS = 60 * 60 * 24 * 7
 
 _redis_client = None
+logger = logging.getLogger(__name__)
 
 
 async def get_redis_client():
@@ -294,18 +297,32 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        started_at = time.monotonic()
         self.conversation_id = self.scope["url_route"]["kwargs"]["conversation_id"]
         self.room_group_name = f"chat_{self.conversation_id}"
 
         # Check if user is authenticated and authorized
         user = self.scope.get("user", AnonymousUser())
         if user.is_anonymous:
+            logger.info(
+                "chat.websocket_connect_rejected",
+                extra={"conversation_id": self.conversation_id, "reason": "anonymous"},
+            )
             await self.close()
             return
 
         # Check if user is part of this conversation
         is_authorized = await self.check_conversation_access(user, self.conversation_id)
         if not is_authorized:
+            logger.info(
+                "chat.websocket_connect_rejected",
+                extra={
+                    "conversation_id": self.conversation_id,
+                    "user_id": user.id,
+                    "reason": "unauthorized",
+                    "duration_ms": round((time.monotonic() - started_at) * 1000, 2),
+                },
+            )
             await self.close()
             return
 
@@ -325,6 +342,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "userId": user.id,
                     "isOnline": True,
                 },
+            },
+        )
+        logger.info(
+            "chat.websocket_connected",
+            extra={
+                "conversation_id": self.conversation_id,
+                "user_id": user.id,
+                "duration_ms": round((time.monotonic() - started_at) * 1000, 2),
             },
         )
 

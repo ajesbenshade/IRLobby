@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/ci.yml)
 [![Release Gate](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/release-gate.yml)
+![Backend coverage gate](https://img.shields.io/badge/backend%20coverage-%E2%89%A580%25-brightgreen)
 [![Mobile EAS Build](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml/badge.svg)](https://github.com/ajesbenshade/IRLobby/actions/workflows/mobile-eas-build.yml)
 ![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![Python](https://img.shields.io/badge/python-3.12%20CI%20%7C%203.11.9%20runtime-blue)
@@ -37,14 +38,14 @@ Most swipe apps start with profiles. IRLobby starts with the plan: the activity,
 
 ## Tech stack
 
-| Area | Stack |
-| --- | --- |
-| Mobile | Expo 54, React Native 0.81, React 19, NativeWind |
-| Web | React 18, Vite, TypeScript, Tailwind CSS |
-| Backend | Django 4.x, Django REST Framework, Channels, Celery |
-| Data | PostgreSQL/PostGIS in production, SQLite-friendly local defaults |
-| Integrations | Stripe, Expo push notifications, Sentry, SMTP, Twitter OAuth |
-| Tooling | GitHub Actions, EAS Build, Jest, pytest, ruff, black, mypy |
+| Area         | Stack                                                            |
+| ------------ | ---------------------------------------------------------------- |
+| Mobile       | Expo 54, React Native 0.81, React 19, NativeWind                 |
+| Web          | React 18, Vite, TypeScript, Tailwind CSS                         |
+| Backend      | Django 4.x, Django REST Framework, Channels, Celery              |
+| Data         | PostgreSQL/PostGIS in production, SQLite-friendly local defaults |
+| Integrations | Stripe, Expo push notifications, Sentry, SMTP, Twitter OAuth     |
+| Tooling      | GitHub Actions, EAS Build, Jest, pytest, ruff, black, mypy       |
 
 ## Architecture
 

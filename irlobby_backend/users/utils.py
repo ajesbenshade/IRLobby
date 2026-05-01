@@ -50,9 +50,8 @@ def set_refresh_cookie(response, token: str) -> None:
 
 def clear_refresh_cookie(response) -> None:
     """Expire the refresh-token cookie on the client."""
-    secure, samesite, _ = _refresh_cookie_config()
+    _, samesite, _ = _refresh_cookie_config()
     response.delete_cookie(
         settings.REFRESH_TOKEN_COOKIE_NAME,
-        secure=secure,
         samesite=samesite,
     )

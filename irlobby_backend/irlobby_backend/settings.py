@@ -437,11 +437,14 @@ LOGGING = {
             "format": "{asctime} {levelname} {name} {message}",
             "style": "{",
         },
+        "json": {
+            "()": "utils.logging.JsonFormatter",
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": config("LOG_FORMAT", default="json" if not DEBUG else "verbose"),
         },
     },
     "root": {
@@ -455,6 +458,25 @@ LOGGING = {
         },
     },
 }
+
+if _IS_TESTING or (DEBUG and not config("CACHE_URL", default="")):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "irlobby-local-cache",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": config("CACHE_URL", default=REDIS_URL),
+        }
+    }
+
+ACTIVITY_NEARBY_CACHE_TTL_SECONDS = config(
+    "ACTIVITY_NEARBY_CACHE_TTL_SECONDS", default=60, cast=int
+)
 
 STRIPE_API_KEY = config("STRIPE_API_KEY", default="")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")

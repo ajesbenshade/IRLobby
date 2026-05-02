@@ -316,7 +316,8 @@ export function SwipeStack({
                       : undefined,
                   firstName:
                     typeof hostRecord.firstName === 'string' ? hostRecord.firstName : undefined,
-                  lastName: typeof hostRecord.lastName === 'string' ? hostRecord.lastName : undefined,
+                  lastName:
+                    typeof hostRecord.lastName === 'string' ? hostRecord.lastName : undefined,
                   email: typeof hostRecord.email === 'string' ? hostRecord.email : undefined,
                   rating: typeof hostRecord.rating === 'string' ? hostRecord.rating : undefined,
                 }

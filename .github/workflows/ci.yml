@@ -163,6 +163,10 @@ jobs:
       - name: Install JS dependencies
         run: npm ci
 
+      - name: Generate iOS project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --no-install
+
       - name: Install iOS pods
         working-directory: apps/mobile/ios
         run: pod install

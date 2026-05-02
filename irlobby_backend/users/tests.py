@@ -376,6 +376,19 @@ class PasswordResetConfirmTests(APITestCase):
         self.user.refresh_from_db()
         self.assertFalse(self.user.check_password("12345678"))
 
+    def test_password_reset_does_not_reflect_untrusted_cors_origin(self):
+        self._set_token()
+
+        response = self.client.post(
+            self.url,
+            {"token": "reset-token", "new_password": "newpass123"},
+            format="json",
+            HTTP_ORIGIN="https://evil.example",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.has_header("Access-Control-Allow-Origin"))
+
 
 class OnboardingAndInviteTests(APITestCase):
     def setUp(self):

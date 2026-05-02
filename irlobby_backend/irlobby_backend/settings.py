@@ -73,6 +73,9 @@ ALLOWED_HOSTS = env.list(
     default=["localhost", "127.0.0.1", "testserver"],
 )
 
+ADMIN_URL_PATH = config("ADMIN_URL_PATH", default="admin/")
+HEALTH_DASHBOARD_ALLOWED_IPS = env.list("HEALTH_DASHBOARD_ALLOWED_IPS", default=[])
+
 
 # Application definition
 

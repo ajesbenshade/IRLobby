@@ -113,25 +113,20 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
     try {
       setIsLoading(true);
-      console.log('Starting Twitter OAuth...');
 
       const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_URL);
-      console.log('OAuth URL response:', response.status, response);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OAuth URL error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('OAuth URL data:', data);
 
       const authUrl = data.auth_url;
       const stateToken = data.state ?? null;
 
       if (!authUrl || authUrl === '#' || authUrl.startsWith('#')) {
-        console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
 
@@ -141,7 +136,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         sessionStorage.removeItem('twitter_oauth_state');
       }
 
-      console.log('Redirecting to Twitter OAuth URL...');
       window.location.href = authUrl;
     } catch (error) {
       console.error('Twitter OAuth error:', error);
@@ -189,17 +183,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', formData.email);
-
       const response = await apiRequest('POST', API_ROUTES.USER_LOGIN, {
         email: formData.email,
         password: formData.password,
       });
 
-      console.log('Login response status:', response.status);
       const data = (await response.json()) as AuthResponsePayload;
-      console.log('Login response data:', data);
-      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || data.error || 'Login failed');
@@ -218,7 +207,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
       localStorage.setItem('authToken', accessToken);
       localStorage.setItem('userId', String(userId));
-      console.log('Login successful, token stored:', accessToken);
 
       await onAuthenticated(accessToken, String(userId));
 
@@ -283,7 +271,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
       localStorage.setItem('authToken', accessToken);
       localStorage.setItem('userId', String(userId));
-      console.log('Registration successful, token stored:', accessToken);
 
       await onAuthenticated(accessToken, String(userId));
 

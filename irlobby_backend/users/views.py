@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from urllib.parse import urljoin
 
@@ -37,6 +38,15 @@ from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import clear_refresh_cookie, set_refresh_cookie
 
 logger = logging.getLogger(__name__)
+
+
+def _email_log_hash(email):
+    if not email or not isinstance(email, str):
+        return None
+    normalized = email.strip().lower()
+    if not normalized:
+        return None
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
 
 
 def _clear_password_reset_token(user):
@@ -185,12 +195,12 @@ def register(request):
     )
 
     try:
-        logger.info(f"Registration attempt for email: {request.data.get('email')}")
+        logger.info("Registration attempt email_hash=%s", _email_log_hash(request.data.get("email")))
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             refresh = RefreshToken.for_user(user)
-            logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
+            logger.info("User registration succeeded for user_id=%s", user.id)
             response_payload = {
                 "user": UserSerializer(user).data,
                 "tokens": {
@@ -201,8 +211,8 @@ def register(request):
             return Response(response_payload, status=status.HTTP_201_CREATED)
 
         logger.warning(
-            "User registration failed for email=%s errors=%s",
-            request.data.get("email"),
+            "User registration failed email_hash=%s errors=%s",
+            _email_log_hash(request.data.get("email")),
             serializer.errors,
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -223,12 +233,12 @@ def login(request):
     )
 
     try:
-        logger.info(f"Login attempt for email: {request.data.get('email')}")
+        logger.info("Login attempt email_hash=%s", _email_log_hash(request.data.get("email")))
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
-            logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
+            logger.info("User login succeeded for user_id=%s", user.id)
             response_payload = {
                 "user": UserSerializer(user).data,
                 "tokens": {
@@ -239,7 +249,9 @@ def login(request):
             return Response(response_payload, status=status.HTTP_200_OK)
 
         logger.warning(
-            "User login failed for email=%s errors=%s", request.data.get("email"), serializer.errors
+            "User login failed email_hash=%s errors=%s",
+            _email_log_hash(request.data.get("email")),
+            serializer.errors,
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
@@ -458,18 +470,10 @@ def auth_status(request):
 def password_reset_confirm(request):
     """Handle password reset confirmations."""
     if request.method == "OPTIONS":
-        response = Response(status=status.HTTP_200_OK)
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response["Access-Control-Allow-Credentials"] = "true"
-        return response
+        return Response(status=status.HTTP_200_OK)
 
     def _invalid_response(message, status_code=status.HTTP_400_BAD_REQUEST):
-        error_response = Response({"error": message}, status=status_code)
-        error_response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        error_response["Access-Control-Allow-Credentials"] = "true"
-        return error_response
+        return Response({"error": message}, status=status_code)
 
     token = None
     if request.method == "GET":
@@ -498,15 +502,11 @@ def password_reset_confirm(request):
             redirect_url = urljoin(f"{frontend_base}/", reset_path)
             response = Response(status=status.HTTP_302_FOUND)
             response["Location"] = redirect_url
-            response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-            response["Access-Control-Allow-Credentials"] = "true"
             return response
 
         success_response = Response(
             {"detail": "Token is valid.", "token": token}, status=status.HTTP_200_OK
         )
-        success_response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        success_response["Access-Control-Allow-Credentials"] = "true"
         return success_response
 
     new_password = (
@@ -541,8 +541,6 @@ def password_reset_confirm(request):
         response = Response(
             {"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK
         )
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Credentials"] = "true"
         return response
     except Exception as e:
         logger.error("Password reset failed for user_id=%s: %s", user.id, str(e))
@@ -550,8 +548,6 @@ def password_reset_confirm(request):
             {"error": "Failed to reset password. Please try again."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Credentials"] = "true"
         return response
 
 

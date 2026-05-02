@@ -79,7 +79,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-font',
     'expo-location',
-    'expo-secure-store',
+    [
+      'expo-secure-store',
+      {
+        configureAndroidBackup: true,
+      },
+    ],
     'expo-web-browser',
     [
       // Required for Google Play targetSdkVersion 36 (Android 16) compliance.

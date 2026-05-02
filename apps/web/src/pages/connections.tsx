@@ -98,11 +98,11 @@ export default function ConnectionsPage() {
             const u = m.matched_user ?? m.user;
             const fallbackName =
               currentUserId && String(m.user_a_id) === currentUserId
-                ? m.user_b
+                ? m.user_b ?? 'Member'
                 : currentUserId && String(m.user_b_id) === currentUserId
-                ? m.user_a
+                ? m.user_a ?? 'Member'
                 : m.user_b ?? m.user_a ?? 'Member';
-            const name = u ? displayName(u) : fallbackName;
+            const name = (u ? displayName(u) : fallbackName) || 'Member';
             const img = u ? avatar(u) : '';
             return (
               <Card key={String(m.id)}>

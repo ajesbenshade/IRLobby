@@ -66,8 +66,11 @@ function AppRoutes() {
   const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const redirectTo = getAuthRedirect('protected', authRouteState);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
-    const loginRedirect = redirectTo === '/' ? buildLoginRedirect(currentPath) : redirectTo;
-    return redirectTo ? <Navigate to={loginRedirect} replace /> : <>{children}</>;
+    if (redirectTo) {
+      const loginRedirect = redirectTo === '/' ? buildLoginRedirect(currentPath) : redirectTo;
+      return <Navigate to={loginRedirect} replace />;
+    }
+    return <>{children}</>;
   };
 
   const OnboardingRoute = ({ children }: { children: ReactNode }) => {

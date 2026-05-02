@@ -300,11 +300,27 @@ export function SwipeStack({
             .filter(Boolean)
             .join(' ');
 
-          // Ensure location is a string to match ActivityCard's expected type
-          // Provide a default for maxParticipants so the resulting object matches the non-optional Activity type
-          // Provide a default for description so the object satisfies Activity's non-optional description field
+          const hostRecord =
+            typeof activity.host === 'object' && activity.host !== null
+              ? (activity.host as Record<string, unknown>)
+              : null;
+
           const activityWithLocation = {
             ...activity,
+            category: activity.category ?? 'Activity',
+            host: hostRecord
+              ? {
+                  profileImageUrl:
+                    typeof hostRecord.profileImageUrl === 'string'
+                      ? hostRecord.profileImageUrl
+                      : undefined,
+                  firstName:
+                    typeof hostRecord.firstName === 'string' ? hostRecord.firstName : undefined,
+                  lastName: typeof hostRecord.lastName === 'string' ? hostRecord.lastName : undefined,
+                  email: typeof hostRecord.email === 'string' ? hostRecord.email : undefined,
+                  rating: typeof hostRecord.rating === 'string' ? hostRecord.rating : undefined,
+                }
+              : undefined,
             location: activity.location || '',
             maxParticipants: activity.max_participants ?? 0,
             description: activity.description ?? '',

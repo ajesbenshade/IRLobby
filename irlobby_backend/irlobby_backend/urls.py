@@ -18,6 +18,7 @@ Including another URLconf
 import logging
 from datetime import datetime, timezone
 
+from django.conf import settings
 from django.contrib import admin
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -43,6 +44,26 @@ def react_app(request):
 
 
 logger = logging.getLogger(__name__)
+
+
+def _client_ip(request):
+    real_ip = request.META.get("HTTP_X_REAL_IP", "").strip()
+    if real_ip:
+        return real_ip
+
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[-1].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _can_view_health_dashboard(request):
+    user = getattr(request, "user", None)
+    if user and user.is_authenticated and user.is_staff:
+        return True
+
+    allowed_ips = set(getattr(settings, "HEALTH_DASHBOARD_ALLOWED_IPS", []) or [])
+    return bool(allowed_ips and _client_ip(request) in allowed_ips)
 
 
 def health_check(request):
@@ -76,6 +97,9 @@ def health_check(request):
 
 
 def health_dashboard(request):
+    if not _can_view_health_dashboard(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+
     checks = {"database": "ok", "redis": "ok", "cache": "ok"}
     status_code = 200
 
@@ -124,9 +148,11 @@ def health_dashboard(request):
     return JsonResponse(payload, status=status_code)
 
 
+admin_url_path = getattr(settings, "ADMIN_URL_PATH", "admin/").strip("/") or "admin"
+
 urlpatterns = [
     path("", home, name="home"),
-    path("admin/", admin.site.urls),
+    path(f"{admin_url_path}/", admin.site.urls),
     path("api/health/", health_check, name="health"),
     path("api/health/dashboard/", health_dashboard, name="health-dashboard"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),

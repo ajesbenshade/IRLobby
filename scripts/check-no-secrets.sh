@@ -4,13 +4,28 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "${repo_root}"
 
-staged_files="$(git diff --cached --name-only --diff-filter=ACMRTUXB)"
-if [[ -z "${staged_files}" ]]; then
+scan_all=false
+if [[ "${1:-}" == "--all" ]]; then
+  scan_all=true
+elif [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  echo "Usage: $0 [--all]"
+  echo "  default: scan staged files"
+  echo "  --all:   scan tracked files for CI/preflight use"
   exit 0
 fi
 
-blocked_path_regex='(^|/)(\.env(\..*)?$|\.env\.production$|\.pem$|\.key$|id_rsa$|id_ed25519$|service-account.*\.json$|credentials\.json$)'
-secret_value_regex='(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|BEGIN[[:space:]]+PRIVATE[[:space:]]+KEY|postgres(ql)?://[^[:space:]]+:[^[:space:]]+@|SECRET_KEY\s*=\s*[^[:space:]]+|EMAIL_HOST_PASSWORD\s*=\s*[^[:space:]]+|STRIPE_(API_KEY|WEBHOOK_SECRET)\s*=\s*[^[:space:]]+)'
+if [[ "${scan_all}" == "true" ]]; then
+  files_to_scan="$(git ls-files)"
+else
+  files_to_scan="$(git diff --cached --name-only --diff-filter=ACMRTUXB)"
+fi
+
+if [[ -z "${files_to_scan}" ]]; then
+  exit 0
+fi
+
+blocked_path_regex='(^|/)(\.env$|\.env\.local$|\.env\.production$|\.env\..*\.local$|\.pem$|\.key$|\.p8$|\.p12$|\.jks$|\.keystore$|id_rsa$|id_ed25519$|irlobby_deploy$|service-account.*\.json$|play-service-account\.json$|credentials\.json$)'
+secret_value_regex='(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|BEGIN[[:space:]]+((OPENSSH|RSA|DSA|EC)[[:space:]]+)?PRIVATE[[:space:]]+KEY|postgres(ql)?://[^[:space:]]+:[^[:space:]]+@|STRIPE_(API_KEY|WEBHOOK_SECRET)\s*=\s*(sk|whsec)_[^[:space:]]+)'
 
 blocked_files=()
 while IFS= read -r file; do
@@ -18,10 +33,14 @@ while IFS= read -r file; do
   if [[ "${file}" =~ ${blocked_path_regex} ]]; then
     blocked_files+=("${file}")
   fi
-done <<< "${staged_files}"
+done <<< "${files_to_scan}"
 
 if (( ${#blocked_files[@]} > 0 )); then
-  echo "Commit blocked: staged files include secret-bearing paths."
+  if [[ "${scan_all}" == "true" ]]; then
+    echo "Secret scan failed: tracked files include secret-bearing paths."
+  else
+    echo "Commit blocked: staged files include secret-bearing paths."
+  fi
   printf ' - %s\n' "${blocked_files[@]}"
   echo "Move secrets to local env files or your cloud secret manager, then unstage these files."
   echo "Hint: git restore --staged <file>"
@@ -29,6 +48,7 @@ if (( ${#blocked_files[@]} > 0 )); then
 fi
 
 matched_lines=""
+match_file="$(mktemp -t irlobby_secret_scan_match.XXXXXX)"
 while IFS= read -r file; do
   [[ -z "${file}" ]] && continue
   if [[ ! -f "${file}" ]]; then
@@ -40,18 +60,22 @@ while IFS= read -r file; do
     continue
   fi
 
-  if printf '%s\n' "${staged_content}" | rg --line-number --no-heading -E "${secret_value_regex}" >/tmp/irlobby_secret_scan_match.$$ 2>/dev/null; then
+  if printf '%s\n' "${staged_content}" | rg --line-number --no-heading -E "${secret_value_regex}" >"${match_file}" 2>/dev/null; then
     while IFS= read -r line; do
-      matched_lines+="${file}:${line}"$'\n'
-    done < /tmp/irlobby_secret_scan_match.$$
+      matched_lines+="${file}:${line%%:*}"$'\n'
+    done < "${match_file}"
   fi
-done <<< "${staged_files}"
+done <<< "${files_to_scan}"
 
-rm -f /tmp/irlobby_secret_scan_match.$$ || true
+rm -f "${match_file}" || true
 
 if [[ -n "${matched_lines}" ]]; then
-  echo "Commit blocked: potential secrets detected in staged content."
-  echo "Review these matches and move sensitive values to env vars or secret manager:"
+  if [[ "${scan_all}" == "true" ]]; then
+    echo "Secret scan failed: potential secrets detected in tracked content."
+  else
+    echo "Commit blocked: potential secrets detected in staged content."
+  fi
+  echo "Review these file/line locations and move sensitive values to env vars or secret manager:"
   printf '%s' "${matched_lines}"
   echo "If this is a false positive, update scripts/check-no-secrets.sh with a narrower pattern."
   exit 1

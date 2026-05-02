@@ -10,6 +10,19 @@ vite.config.ts.*
 .env.local
 .env.production
 
+# Private keys and credential bundles
+id_rsa
+id_ed25519
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+play-service-account.json
+
 # Logs
 logs
 *.log

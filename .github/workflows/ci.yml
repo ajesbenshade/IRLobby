@@ -173,7 +173,20 @@ jobs:
 
       - name: Install Maestro
         run: |
-          curl -Ls "https://get.maestro.mobile.dev" | bash
+          set -euo pipefail
+          install_script="$RUNNER_TEMP/install-maestro.sh"
+          for attempt in 1 2 3; do
+            curl --fail --show-error --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$install_script" "https://get.maestro.mobile.dev"
+            if [ -s "$install_script" ] && bash "$install_script" && [ -x "$HOME/.maestro/bin/maestro" ]; then
+              break
+            fi
+
+            rm -rf "$HOME/.maestro"
+            if [ "$attempt" -eq 3 ]; then
+              echo "Maestro installation failed after $attempt attempts."
+              exit 1
+            fi
+          done
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
           "$HOME/.maestro/bin/maestro" --version
 

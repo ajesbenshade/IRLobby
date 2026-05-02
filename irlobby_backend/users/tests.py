@@ -264,6 +264,7 @@ class TwitterOAuthTests(APITestCase):
 
 class PasswordResetConfirmTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="reset-user",
             email="reset@example.com",

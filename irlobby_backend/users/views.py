@@ -195,7 +195,9 @@ def register(request):
     )
 
     try:
-        logger.info("Registration attempt email_hash=%s", _email_log_hash(request.data.get("email")))
+        logger.info(
+            "Registration attempt email_hash=%s", _email_log_hash(request.data.get("email"))
+        )
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()

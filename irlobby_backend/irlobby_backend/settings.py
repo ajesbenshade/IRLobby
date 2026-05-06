@@ -158,9 +158,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AXES_FAILURE_LIMIT = config("AXES_FAILURE_LIMIT", default=5, cast=int)
-AXES_COOLOFF_TIME = timedelta(
-    minutes=config("AXES_COOLOFF_MINUTES", default=30, cast=int)
-)
+AXES_COOLOFF_TIME = timedelta(minutes=config("AXES_COOLOFF_MINUTES", default=30, cast=int))
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_USERNAME_FORM_FIELD = "email"
 AXES_PASSWORD_FORM_FIELD = "password"

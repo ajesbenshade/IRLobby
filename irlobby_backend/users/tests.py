@@ -23,6 +23,7 @@ from activities.models import Activity, ActivityParticipant, Ticket, TicketRedem
 from matches.models import Match
 from reviews.models import Review
 from swipes.models import Swipe
+from swipes.throttles import _swipe_daily_key
 from users.models import PushDeviceToken, SocialAuthIdentity, User
 from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
@@ -202,6 +203,74 @@ class ReliabilitySummaryTests(APITestCase):
         self.assertEqual(reliability["reviewCount"], 1)
         self.assertEqual(reliability["averageRating"], 5.0)
         self.assertEqual(reliability["ticketValidationRate"], 100)
+
+
+class ProfileSwipeQuotaTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            username="quota-user", email="quota@example.com", password="password123"
+        )
+        self.host = User.objects.create_user(
+            username="quota-host", email="quota-host@example.com", password="password123"
+        )
+        self.activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Quota Activity",
+            description="Test",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+
+    def get_profile(self):
+        self.client.force_authenticate(self.user)
+        return self.client.get(reverse("user-profile"))
+
+    @override_settings(SWIPE_DAILY_LIMIT=5)
+    def test_profile_includes_swipes_remaining_today(self):
+        response = self.get_profile()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["swipes_remaining_today"], 5)
+        self.assertEqual(response.data["swipesRemainingToday"], 5)
+
+    @override_settings(SWIPE_DAILY_LIMIT=5)
+    def test_profile_swipes_remaining_decreases_after_successful_swipe(self):
+        self.client.force_authenticate(self.user)
+        swipe_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "right"},
+            format="json",
+        )
+        profile_response = self.client.get(reverse("user-profile"))
+
+        self.assertEqual(swipe_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(profile_response.data["swipes_remaining_today"], 4)
+        self.assertEqual(profile_response.data["swipesRemainingToday"], 4)
+
+    @override_settings(SWIPE_DAILY_LIMIT=5)
+    def test_profile_swipes_remaining_does_not_go_negative(self):
+        cache.set(_swipe_daily_key(self.user), 9, timeout=60)
+
+        response = self.get_profile()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["swipes_remaining_today"], 0)
+        self.assertEqual(response.data["swipesRemainingToday"], 0)
+
+    @override_settings(SWIPE_DAILY_LIMIT=0)
+    def test_profile_swipes_remaining_is_null_when_unlimited(self):
+        response = self.get_profile()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["swipes_remaining_today"])
+        self.assertIsNone(response.data["swipesRemainingToday"])
 
 
 class TwitterOAuthTests(APITestCase):

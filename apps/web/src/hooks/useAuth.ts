@@ -27,7 +27,25 @@ interface User {
   totalRatings?: number;
   eventsHosted?: number;
   eventsAttended?: number;
+  swipesRemainingToday?: number | null;
 }
+
+const toOptionalNumber = (value: unknown): number | null | undefined => {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
 
 const normalizeUser = (profile: Record<string, unknown>): User => ({
   id: String(profile.id ?? ''),
@@ -55,6 +73,9 @@ const normalizeUser = (profile: Record<string, unknown>): User => ({
       : typeof profile.onboarding_completed === 'boolean'
       ? profile.onboarding_completed
       : undefined,
+  swipesRemainingToday: toOptionalNumber(
+    profile.swipesRemainingToday ?? profile.swipes_remaining_today,
+  ),
 });
 
 export function useAuth() {

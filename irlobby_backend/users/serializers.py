@@ -24,6 +24,8 @@ class UserSerializer(serializers.ModelSerializer):
     termsAcceptedAt = serializers.DateTimeField(source="terms_accepted_at", read_only=True)
     privacyAcceptedAt = serializers.DateTimeField(source="privacy_accepted_at", read_only=True)
     reliability = serializers.SerializerMethodField()
+    swipes_remaining_today = serializers.SerializerMethodField()
+    swipesRemainingToday = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -54,6 +56,8 @@ class UserSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "reliability",
+            "swipes_remaining_today",
+            "swipesRemainingToday",
         )
         read_only_fields = ("id",)
 
@@ -83,6 +87,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_reliability(self, obj):
         return build_reliability_summary(obj)
+
+    def get_swipes_remaining_today(self, obj):
+        from swipes.throttles import get_swipes_remaining_today
+
+        return get_swipes_remaining_today(obj)
+
+    def get_swipesRemainingToday(self, obj):
+        return self.get_swipes_remaining_today(obj)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

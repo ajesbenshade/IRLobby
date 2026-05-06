@@ -23,6 +23,18 @@ def _swipe_daily_key(user, now=None):
     return f"swipes:daily:{user.pk}:{now.date().isoformat()}"
 
 
+def get_swipes_remaining_today(user):
+    limit = getattr(settings, "SWIPE_DAILY_LIMIT", 500)
+    if limit <= 0:
+        return None
+
+    try:
+        used_count = int(cache.get(_swipe_daily_key(user), 0) or 0)
+    except (TypeError, ValueError):
+        used_count = 0
+    return max(0, limit - used_count)
+
+
 def check_swipe_daily_limit(user):
     limit = getattr(settings, "SWIPE_DAILY_LIMIT", 500)
     if limit <= 0:

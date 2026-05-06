@@ -176,6 +176,9 @@ const normalizeUser = (
     privacyAcceptedAt: (userRecord.privacyAcceptedAt ??
       userRecord.privacy_accepted_at ??
       null) as string | null,
+    swipesRemainingToday: asNumberOrNull(
+      userRecord.swipesRemainingToday ?? userRecord.swipes_remaining_today
+    ),
     pushNotificationsEnabled: Boolean(
       notificationPreferences.pushNotifications
     ),

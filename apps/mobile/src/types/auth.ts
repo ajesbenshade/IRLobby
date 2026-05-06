@@ -47,6 +47,7 @@ export interface AuthUser {
   privacyAcceptedAt?: string | null;
   pushNotificationsEnabled?: boolean;
   isHost?: boolean;
+  swipesRemainingToday?: number | null;
   vibe?: VibeUserPayload;
   reliability?: ReliabilitySummary;
 }

@@ -42,7 +42,7 @@ Most swipe apps start with profiles. IRLobby starts with the plan: the activity,
 | ------------ | ---------------------------------------------------------------- |
 | Mobile       | Expo 54, React Native 0.81, React 19, NativeWind                 |
 | Web          | React 18, Vite, TypeScript, Tailwind CSS                         |
-| Backend      | Django 4.x, Django REST Framework, Channels, Celery              |
+| Backend      | Django 4.2 LTS, Django REST Framework, Channels, Celery          |
 | Data         | PostgreSQL/PostGIS in production, SQLite-friendly local defaults |
 | Integrations | Stripe, Expo push notifications, Sentry, SMTP, Twitter OAuth     |
 | Tooling      | GitHub Actions, EAS Build, Jest, pytest, ruff, black, mypy       |

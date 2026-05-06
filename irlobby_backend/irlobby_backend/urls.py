@@ -2,7 +2,7 @@
 URL configuration for irlobby_backend project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+    https://docs.djangoproject.com/en/4.2/topics/http/urls/
 Examples:
 Function views
     1. Add an import:  from my_app import views
@@ -101,7 +101,7 @@ def health_dashboard(request):
     if not _can_view_health_dashboard(request):
         return JsonResponse({"detail": "Forbidden"}, status=403)
 
-    checks = {"database": "ok", "redis": "ok", "cache": "ok"}
+    checks = {"database": "ok", "redis": "ok", "cache": "ok", "celery": "ok"}
     status_code = 200
 
     try:
@@ -135,6 +135,21 @@ def health_dashboard(request):
     except Exception as exc:
         logger.error("Health dashboard cache failure: %s", exc)
         checks["cache"] = "error"
+        status_code = 503
+
+    try:
+        from django.conf import settings
+
+        from irlobby_backend.celery import app as celery_app
+
+        inspector = celery_app.control.inspect(
+            timeout=getattr(settings, "CELERY_HEALTHCHECK_TIMEOUT_SECONDS", 1.0)
+        )
+        if not inspector.ping():
+            raise RuntimeError("no Celery workers responded")
+    except Exception as exc:
+        logger.error("Health dashboard celery failure: %s", exc)
+        checks["celery"] = "error"
         status_code = 503
 
     payload = {

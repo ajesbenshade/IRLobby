@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlparse
 
+from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 from django.conf import settings
 from django.core import mail
 from django.core.cache import cache
@@ -33,6 +34,59 @@ def extract_reset_token(message_body):
     marker = "reset-password/"
     assert marker in message_body
     return message_body.split(marker, 1)[1].split()[0]
+
+
+@override_settings(
+    AXES_ENABLED=True,
+    AXES_FAILURE_LIMIT=2,
+    AXES_COOLOFF_TIME=timedelta(minutes=15),
+    AXES_LOCKOUT_PARAMETERS=[["username", "ip_address"]],
+    REST_FRAMEWORK={
+        "DEFAULT_THROTTLE_RATES": {
+            "auth_anon": "100/min",
+            "auth_user": "100/min",
+        }
+    },
+)
+class LoginAbusePreventionTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        AccessAttempt.objects.all().delete()
+        AccessFailureLog.objects.all().delete()
+        AccessLog.objects.all().delete()
+        self.user = User.objects.create_user(
+            username="login-abuse-user",
+            email="login-abuse@example.com",
+            password="password123",
+        )
+        self.url = reverse("user-login")
+
+    def post_login(self, password):
+        return self.client.post(
+            self.url,
+            {"email": self.user.email, "password": password},
+            format="json",
+            REMOTE_ADDR="203.0.113.55",
+            HTTP_USER_AGENT="IRLobby test client",
+        )
+
+    def test_repeated_failed_login_attempts_lock_out_endpoint(self):
+        first_response = self.post_login("wrong-password")
+        second_response = self.post_login("wrong-password")
+        locked_response = self.post_login("password123")
+
+        self.assertEqual(first_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(second_response.json()["error_code"], "login_locked")
+        self.assertEqual(locked_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_successful_login_resets_failed_attempts(self):
+        failed_response = self.post_login("wrong-password")
+        success_response = self.post_login("password123")
+
+        self.assertEqual(failed_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(success_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(AccessAttempt.objects.exists())
 
 
 class PasswordResetRequestTests(APITestCase):

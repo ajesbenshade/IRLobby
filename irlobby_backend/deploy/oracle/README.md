@@ -49,6 +49,9 @@ Required values to set:
 - `SERVER_NAME`
 - `SECRET_KEY`
 - `DATABASE_URL`
+- `SWIPE_DAILY_LIMIT`
+- `AXES_FAILURE_LIMIT`
+- `AXES_COOLOFF_MINUTES`
 - `REDIS_PASSWORD`
 - `ALLOWED_HOSTS`
 - `CSRF_TRUSTED_ORIGINS`
@@ -81,8 +84,22 @@ DATABASE_URL=postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@postgres:5432/<POS
 If using managed PostgreSQL:
 - Keep `USE_LOCAL_POSTGRES=false`
 - Set `DATABASE_URL` to your managed DB URL (often with `?sslmode=require`)
+- For launch, prefer a provider pooler URL when using Neon or Supabase. Neon pooled hosts include `-pooler` and Supabase pooler hosts usually use port `6543`. This gives Django and Celery safer connection behavior without adding PgBouncer to the VM.
+- Keep `conn_max_age` managed by Django; do not stack PgBouncer on the VM unless provider pooling is unavailable or production metrics show connection pressure.
 
 Redis is provided by the Docker Compose `redis` service. Leave `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` empty unless you are intentionally using an external Redis service; Compose derives authenticated internal URLs from `REDIS_PASSWORD`.
+
+Launch abuse-prevention defaults:
+- `SWIPE_THROTTLE_RATE=120/hour` controls burst swipe behavior.
+- `SWIPE_DAILY_LIMIT=500` caps successful swipes per user until midnight UTC.
+- `REVIEW_CREATE_THROTTLE_RATE=30/hour` applies to review creation only.
+- `AXES_FAILURE_LIMIT=5` and `AXES_COOLOFF_MINUTES=30` lock repeated failed password logins by account and client IP.
+
+Optional Sentry settings:
+- Set `SENTRY_DSN` only after creating the production project in Sentry.
+- Start with `SENTRY_TRACES_SAMPLE_RATE=0.1` for launch visibility.
+- Keep `SENTRY_PROFILES_SAMPLE_RATE=0.0` at launch unless profiling is explicitly needed; raise it temporarily during performance investigations.
+- Set `SENTRY_ENVIRONMENT=production` on the VM.
 
 ## 4) Issue HTTPS certificate
 

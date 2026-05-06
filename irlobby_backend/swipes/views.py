@@ -2,6 +2,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -13,7 +14,7 @@ from users.push_notifications import send_new_match_notifications
 
 from .models import Swipe
 from .serializers import SwipeSerializer
-from .throttles import SwipeRateThrottle
+from .throttles import SwipeRateThrottle, check_swipe_daily_limit
 
 
 class SwipeListView(generics.ListCreateAPIView):
@@ -25,6 +26,10 @@ class SwipeListView(generics.ListCreateAPIView):
         return Swipe.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        activity = serializer.validated_data.get("activity")
+        if Swipe.objects.filter(user=self.request.user, activity=activity).exists():
+            raise ValidationError({"activity": "Already swiped on this activity"})
+        check_swipe_daily_limit(self.request.user)
         serializer.save(user=self.request.user)
 
 
@@ -54,6 +59,8 @@ def swipe_activity(request, pk):
         return Response(
             {"error": "Already swiped on this activity"}, status=status.HTTP_400_BAD_REQUEST
         )
+
+    check_swipe_daily_limit(user)
 
     with transaction.atomic():
         # Create the swipe

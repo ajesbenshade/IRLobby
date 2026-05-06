@@ -111,12 +111,18 @@ class UserLoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        request = self.context.get("request")
+        auth_request = getattr(request, "_request", request)
 
         try:
             user_obj = User.objects.filter(email=email).first()
-            if not user_obj:
-                raise serializers.ValidationError("Invalid credentials")
-            user = authenticate(username=user_obj.username, password=password)
+            username = user_obj.username if user_obj else email
+            user = authenticate(
+                request=auth_request,
+                username=username,
+                password=password,
+                email=email,
+            )
         except Exception:
             raise serializers.ValidationError("Invalid credentials")
 

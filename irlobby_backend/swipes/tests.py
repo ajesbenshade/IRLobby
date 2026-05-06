@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -18,6 +19,7 @@ from .models import Swipe
 
 class SwipeTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="swiper", email="swiper@example.com", password="password123"
         )
@@ -227,3 +229,99 @@ class SwipeTests(APITestCase):
 
         self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @override_settings(SWIPE_DAILY_LIMIT=1)
+    def test_swipe_activity_enforces_daily_limit(self):
+        second_activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Daily Limit Activity",
+            description="Another test activity",
+            location="Test Location",
+            latitude=41.0,
+            longitude=-73.0,
+            time=timezone.now() + timedelta(days=2),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+
+        self.client.force_authenticate(self.user)
+        first_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "right"},
+            format="json",
+        )
+        second_response = self.client.post(
+            reverse("swipe-activity", args=[second_activity.pk]),
+            {"direction": "left"},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @override_settings(SWIPE_DAILY_LIMIT=1)
+    def test_invalid_swipe_does_not_consume_daily_limit(self):
+        self.client.force_authenticate(self.user)
+        invalid_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "up"},
+            format="json",
+        )
+        valid_response = self.client.post(
+            reverse("swipe-activity", args=[self.activity.pk]),
+            {"direction": "right"},
+            format="json",
+        )
+
+        self.assertEqual(invalid_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(valid_response.status_code, status.HTTP_201_CREATED)
+
+    @override_settings(SWIPE_DAILY_LIMIT=1)
+    def test_swipe_list_create_enforces_daily_limit(self):
+        second_activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="List Daily Limit Activity",
+            description="Another test activity",
+            location="Test Location",
+            latitude=42.0,
+            longitude=-72.0,
+            time=timezone.now() + timedelta(days=2),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+
+        self.client.force_authenticate(self.user)
+        first_response = self.client.post(
+            reverse("swipe-list"),
+            {"activity": self.activity.pk, "direction": "right"},
+            format="json",
+        )
+        second_response = self.client.post(
+            reverse("swipe-list"),
+            {"activity": second_activity.pk, "direction": "left"},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @override_settings(SWIPE_DAILY_LIMIT=1)
+    def test_duplicate_swipe_list_create_does_not_hit_daily_limit(self):
+        self.client.force_authenticate(self.user)
+        first_response = self.client.post(
+            reverse("swipe-list"),
+            {"activity": self.activity.pk, "direction": "right"},
+            format="json",
+        )
+        duplicate_response = self.client.post(
+            reverse("swipe-list"),
+            {"activity": self.activity.pk, "direction": "left"},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(duplicate_response.status_code, status.HTTP_400_BAD_REQUEST)

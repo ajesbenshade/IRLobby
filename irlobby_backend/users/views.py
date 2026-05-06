@@ -236,10 +236,18 @@ def login(request):
 
     try:
         logger.info("Login attempt email_hash=%s", _email_log_hash(request.data.get("email")))
-        serializer = UserLoginSerializer(data=request.data)
+        serializer = UserLoginSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
+            try:
+                from axes.handlers.proxy import AxesProxyHandler
+
+                axes_request = getattr(request, "_request", request)
+                AxesProxyHandler.user_logged_in(sender=login, request=axes_request, user=user)
+                AxesProxyHandler.reset_attempts(username=user.email)
+            except Exception as exc:
+                logger.warning("Login abuse tracking success reset failed: %s", exc)
             logger.info("User login succeeded for user_id=%s", user.id)
             response_payload = {
                 "user": UserSerializer(user).data,

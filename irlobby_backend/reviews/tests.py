@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -14,6 +16,7 @@ from .models import Review
 
 class ReviewTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.reviewer = User.objects.create_user(
             username="reviewer", email="reviewer@example.com", password="password123"
         )
@@ -38,6 +41,28 @@ class ReviewTests(APITestCase):
         )
         # Create a match so reviewer can review reviewee
         Match.objects.create(user_a=self.reviewer, user_b=self.reviewee, activity=self.activity)
+
+    def create_reviewable_match(self, suffix):
+        reviewee = User.objects.create_user(
+            username=f"reviewee-{suffix}",
+            email=f"reviewee-{suffix}@example.com",
+            password="password123",
+        )
+        activity = Activity.objects.create(
+            host=reviewee,
+            is_approved=True,
+            title=f"Review Activity {suffix}",
+            description="Test",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() - timedelta(hours=1),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+        Match.objects.create(user_a=self.reviewer, user_b=reviewee, activity=activity)
+        return reviewee, activity
 
     def test_create_review_with_match(self):
         self.client.force_authenticate(self.reviewer)
@@ -198,3 +223,46 @@ class ReviewTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"review_create": "1/min"}})
+    def test_review_create_is_rate_limited(self):
+        second_reviewee, second_activity = self.create_reviewable_match("rate-limit")
+
+        self.client.force_authenticate(self.reviewer)
+        first_response = self.client.post(
+            reverse("review-list"),
+            {
+                "revieweeId": self.reviewee.id,
+                "activityId": self.activity.id,
+                "rating": 5,
+            },
+            format="json",
+        )
+        second_response = self.client.post(
+            reverse("review-list"),
+            {
+                "revieweeId": second_reviewee.id,
+                "activityId": second_activity.id,
+                "rating": 4,
+            },
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"review_create": "1/min"}})
+    def test_review_reads_are_not_create_throttled(self):
+        Review.objects.create(
+            reviewer=self.reviewer,
+            reviewee=self.reviewee,
+            activity=self.activity,
+            rating=5,
+        )
+
+        self.client.force_authenticate(self.reviewer)
+        first_response = self.client.get(reverse("review-list"))
+        second_response = self.client.get(reverse("review-list"))
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)

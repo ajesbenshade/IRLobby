@@ -10,9 +10,11 @@ class HealthDashboardAccessTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     @override_settings(HEALTH_DASHBOARD_ALLOWED_IPS=["203.0.113.10"])
+    @patch("irlobby_backend.celery.app.control.inspect")
     @patch("redis.Redis.from_url")
-    def test_health_dashboard_allows_configured_ip(self, mock_from_url):
+    def test_health_dashboard_allows_configured_ip(self, mock_from_url, mock_inspect):
         mock_from_url.return_value = Mock(ping=Mock(return_value=True))
+        mock_inspect.return_value = Mock(ping=Mock(return_value={"worker": {"ok": "pong"}}))
 
         response = self.client.get(
             "/api/health/dashboard/",
@@ -22,6 +24,7 @@ class HealthDashboardAccessTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["checks"]["database"], "ok")
+        self.assertEqual(response.json()["checks"]["celery"], "ok")
 
     @override_settings(HEALTH_DASHBOARD_ALLOWED_IPS=["203.0.113.10"])
     def test_health_dashboard_rejects_spoofed_forwarded_for(self):
@@ -32,3 +35,23 @@ class HealthDashboardAccessTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    @override_settings(HEALTH_DASHBOARD_ALLOWED_IPS=["203.0.113.10"])
+    @patch("django.core.handlers.base.log_response")
+    @patch("irlobby_backend.celery.app.control.inspect")
+    @patch("redis.Redis.from_url")
+    def test_health_dashboard_reports_celery_failure(
+        self, mock_from_url, mock_inspect, _mock_log_response
+    ):
+        mock_from_url.return_value = Mock(ping=Mock(return_value=True))
+        mock_inspect.return_value = Mock(ping=Mock(return_value=None))
+
+        response = self.client.get(
+            "/api/health/dashboard/",
+            HTTP_X_REAL_IP="203.0.113.10",
+            REMOTE_ADDR="172.18.0.5",
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["status"], "degraded")
+        self.assertEqual(response.json()["checks"]["celery"], "error")

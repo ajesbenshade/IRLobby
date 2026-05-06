@@ -1,9 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { deactivatePushTokens } from '@services/pushNotificationService';
 import {
   fetchProfile,
   login,
+  loginWithAppleIdentityToken,
+  loginWithGoogleIdToken,
   loginWithTwitter,
   logout as logoutService,
   register,
@@ -13,7 +22,10 @@ import {
 import { authStorage } from '@services/authStorage';
 
 import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
-import { clearUser as clearMonitoringUser, setUser as setMonitoringUser } from '../lib/monitoring';
+import {
+  clearUser as clearMonitoringUser,
+  setUser as setMonitoringUser,
+} from '../lib/monitoring';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -21,6 +33,13 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
+  signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
+  signInWithAppleIdentityToken: (payload: {
+    identityToken: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<AuthUser | null>;
@@ -90,6 +109,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
+  const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
+    const { user: nextUser } = await loginWithGoogleIdToken(idToken);
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
+  const signInWithAppleIdentityToken = useCallback(
+    async (payload: {
+      identityToken: string;
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    }) => {
+      const { user: nextUser } = await loginWithAppleIdentityToken(payload);
+      setUser(nextUser);
+      return nextUser;
+    },
+    []
+  );
+
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const { user: nextUser } = await register(payload);
     setUser(nextUser);
@@ -117,9 +156,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await requestPasswordResetService(email);
   }, []);
 
-  const resetPassword = useCallback(async (token: string, newPassword: string) => {
-    await resetPasswordService(token, newPassword);
-  }, []);
+  const resetPassword = useCallback(
+    async (token: string, newPassword: string) => {
+      await resetPasswordService(token, newPassword);
+    },
+    []
+  );
 
   const value = useMemo(
     () => ({
@@ -128,6 +170,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAuthenticated: !!user,
       signIn,
       signInWithTwitter,
+      signInWithGoogleIdToken,
+      signInWithAppleIdentityToken,
       signUp,
       signOut,
       refreshProfile,
@@ -141,10 +185,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       resetPassword,
       signIn,
       signInWithTwitter,
+      signInWithGoogleIdToken,
+      signInWithAppleIdentityToken,
       signOut,
       signUp,
       user,
-    ],
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

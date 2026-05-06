@@ -12,6 +12,7 @@ module.exports = {
     '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
     '^@navigation/(.*)$': '<rootDir>/src/navigation/$1',
     '^@constants/(.*)$': '<rootDir>/src/constants/$1',
+    '^@lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@theme/(.*)$': '<rootDir>/src/theme/$1',
     '^@providers/(.*)$': '<rootDir>/src/providers/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',

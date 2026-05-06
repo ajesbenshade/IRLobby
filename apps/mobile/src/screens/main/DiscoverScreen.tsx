@@ -4,7 +4,6 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
 import { Button, HelperText, Modal, Portal, Snackbar, Text } from 'react-native-paper';
-import * as Haptics from 'expo-haptics';
 
 import {
   AccentPill,
@@ -13,6 +12,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
 import { MatchCelebration } from '@components/MatchCelebration';
 import { ActivityCardSkeleton } from '@components/skeletons';
@@ -122,7 +122,7 @@ export const DiscoverScreen = () => {
       swipeActivity(activityId, direction),
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void safeNotificationHaptic('success');
         const matchedActivity = activities[currentIndex];
         const hostName =
           matchedActivity == null
@@ -211,11 +211,7 @@ export const DiscoverScreen = () => {
         return;
       }
 
-      void Haptics.impactAsync(
-        direction === 'right'
-          ? Haptics.ImpactFeedbackStyle.Medium
-          : Haptics.ImpactFeedbackStyle.Light,
-      );
+      void safeImpactHaptic(direction === 'right' ? 'medium' : 'light');
 
       animateSwipe(direction, () => {
         swipeMutation.mutate({

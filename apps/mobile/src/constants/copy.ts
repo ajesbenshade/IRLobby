@@ -21,6 +21,8 @@ export const auth = {
     pillText: 'Real plans, real fast',
     primaryCta: 'Sign in',
     twitterCta: 'Continue with X',
+    googleCta: 'Continue with Google',
+    appleCta: 'Continue with Apple',
     forgotPassword: 'Forgot password?',
     footerPrompt: 'New here?',
     footerCta: 'Create account',

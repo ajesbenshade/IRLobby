@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Haptics from 'expo-haptics';
 
+import { safeNotificationHaptic } from '@lib/haptics';
 import { OfflineBanner } from '@components/OfflineBanner';
 import { Text as NativeText, View } from '@components/RNCompat';
 import { appColors, spacing } from '@theme/index';
@@ -21,7 +21,7 @@ export const VibeQuizResultsScreen = () => {
   const { vibeProfile, vibeTags, discoverTags } = route.params;
 
   useEffect(() => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void safeNotificationHaptic('success');
   }, []);
 
   const goToDiscover = () => {

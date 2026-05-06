@@ -8,6 +8,8 @@ export const API_ROUTES = {
   AUTH_REQUEST_PASSWORD_RESET: "/api/auth/request-password-reset/",
   AUTH_RESET_PASSWORD: "/api/auth/reset-password/",
   AUTH_PASSWORD_RESET_CONFIRM: "/api/auth/password-reset-confirm/",
+  AUTH_GOOGLE_MOBILE: "/api/auth/google/mobile/",
+  AUTH_APPLE_MOBILE: "/api/auth/apple/mobile/",
   AUTH_TWITTER_URL: "/api/auth/twitter/url/",
   AUTH_TWITTER_CALLBACK: "/api/auth/twitter/callback/",
   AUTH_TWITTER_STATUS: "/api/auth/twitter/status/",

@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+const legacyGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'IRLobby',
@@ -32,6 +34,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
     twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
+    googleExpoClientId:
+      process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID ?? legacyGoogleClientId,
+    googleIosClientId:
+      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? legacyGoogleClientId,
+    googleAndroidClientId:
+      process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? legacyGoogleClientId,
+    googleWebClientId:
+      process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? legacyGoogleClientId,
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
@@ -40,6 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.irlobby.app',
+    usesAppleSignIn: true,
     config: {
       usesNonExemptEncryption: false,
     },
@@ -86,6 +97,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-web-browser',
+    'expo-apple-authentication',
     [
       // Required for Google Play targetSdkVersion 36 (Android 16) compliance.
       // Enforcement deadline: 2026-08-31 for new app updates.

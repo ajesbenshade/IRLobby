@@ -12,6 +12,7 @@ const projectAliases = {
   '@services': './src/services',
   '@providers': './src/providers',
   '@constants': './src/constants',
+  '@lib': './src/lib',
   '@theme': './src/theme',
   '@utils': './src/utils',
 };

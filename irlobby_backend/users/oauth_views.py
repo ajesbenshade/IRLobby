@@ -8,20 +8,27 @@ from urllib.parse import quote, urlencode
 import requests
 from decouple import config as env_config
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.http import HttpResponseRedirect
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import UserSerializer
+from .social_auth import (
+    SocialAuthConflict,
+    build_auth_error,
+    build_auth_response,
+    is_apple_oauth_configured,
+    is_google_oauth_configured,
+    normalize_email,
+    resolve_or_create_social_user,
+    split_display_name,
+    verify_apple_identity_token,
+    verify_google_identity_token,
+)
 
 logger = logging.getLogger(__name__)
-
-User = get_user_model()
 
 
 class _MobileAppRedirect(HttpResponseRedirect):
@@ -365,54 +372,31 @@ def twitter_oauth_callback(request):
             )
 
         twitter_user = user_response.json()["data"]
-
-        # Create or get user
-        user, created = User.objects.get_or_create(
-            oauth_id=twitter_user["id"],
-            oauth_provider="twitter",
-            defaults={
-                "username": twitter_user["username"],
-                "email": f"{twitter_user['username']}@twitter.oauth.local",  # Use a more specific domain
-                "first_name": (
-                    twitter_user.get("name", "").split()[0] if twitter_user.get("name") else ""
-                ),
-                "last_name": (
-                    " ".join(twitter_user.get("name", "").split()[1:])
-                    if twitter_user.get("name") and len(twitter_user.get("name", "").split()) > 1
-                    else ""
-                ),
-            },
-        )
-
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
-        serialized_user = UserSerializer(user).data
+        first_name, last_name = split_display_name(twitter_user.get("name", ""))
+        try:
+            user, created = resolve_or_create_social_user(
+                provider="twitter",
+                provider_user_id=twitter_user["id"],
+                username=twitter_user.get("username"),
+                first_name=first_name,
+                last_name=last_name,
+            )
+        except SocialAuthConflict as error:
+            return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+        response_payload = build_auth_response(user, created=created)
 
         if mobile_redirect_uri:
             callback_query = urlencode(
                 {
-                    "access": access_token,
-                    "refresh": refresh_token,
-                    "user": json.dumps(serialized_user, separators=(",", ":")),
+                    "access": response_payload["tokens"]["access"],
+                    "refresh": response_payload["tokens"]["refresh"],
+                    "user": json.dumps(response_payload["user"], separators=(",", ":")),
                     "created": "true" if created else "false",
                 }
             )
             return _MobileAppRedirect(f"{mobile_redirect_uri}?{callback_query}")
 
-        return Response(
-            {
-                "user": serialized_user,
-                "tokens": {
-                    "refresh": refresh_token,
-                    "access": access_token,
-                },
-                "created": created,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(response_payload, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.error(f"Twitter OAuth callback failed: {str(e)}")
@@ -420,6 +404,80 @@ def twitter_oauth_callback(request):
             {"error": "Authentication failed. Please try again."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def google_mobile_login(request):
+    id_token_value = request.data.get("id_token") or request.data.get("idToken")
+    if not isinstance(id_token_value, str) or not id_token_value.strip():
+        return build_auth_error("Google identity token is required.")
+
+    if not is_google_oauth_configured():
+        return build_auth_error(
+            "Google OAuth is not configured.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payload = verify_google_identity_token(id_token_value)
+    except Exception as error:
+        logger.warning("Google mobile login failed: %s", error)
+        return build_auth_error("Google sign-in could not be verified.")
+
+    email = normalize_email(payload.get("email"))
+    if not email or not payload.get("email_verified"):
+        return build_auth_error("Google account email must be verified.")
+
+    try:
+        user, created = resolve_or_create_social_user(
+            provider="google",
+            provider_user_id=payload["sub"],
+            email=email,
+            username=email.split("@", 1)[0],
+            first_name=payload.get("given_name", "") or "",
+            last_name=payload.get("family_name", "") or "",
+        )
+    except SocialAuthConflict as error:
+        return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def apple_mobile_login(request):
+    identity_token = request.data.get("identity_token") or request.data.get("identityToken")
+    if not isinstance(identity_token, str) or not identity_token.strip():
+        return build_auth_error("Apple identity token is required.")
+
+    if not is_apple_oauth_configured():
+        return build_auth_error(
+            "Apple Sign In is not configured.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payload = verify_apple_identity_token(identity_token)
+    except Exception as error:
+        logger.warning("Apple mobile login failed: %s", error)
+        return build_auth_error("Apple sign-in could not be verified.")
+
+    first_name = (request.data.get("first_name") or request.data.get("firstName") or "").strip()
+    last_name = (request.data.get("last_name") or request.data.get("lastName") or "").strip()
+    email = normalize_email(payload.get("email") or request.data.get("email"))
+
+    try:
+        user, created = resolve_or_create_social_user(
+            provider="apple",
+            provider_user_id=payload["sub"],
+            email=email,
+            username=email.split("@", 1)[0] if email else None,
+            first_name=first_name,
+            last_name=last_name,
+        )
+    except SocialAuthConflict as error:
+        return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

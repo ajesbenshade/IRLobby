@@ -3,9 +3,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Animated, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
 
 import { View } from '@components/RNCompat';
+import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
 
 import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
@@ -140,11 +140,11 @@ const MainTabs = () => (
       tabBarLabelPosition: 'below-icon',
     })}
   >
-    <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void Haptics.selectionAsync(); } }} />
-    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Events' }} listeners={{ tabPress: () => { void Haptics.selectionAsync(); } }} />
-    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} listeners={{ tabPress: () => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } }} />
-    <Tab.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} listeners={{ tabPress: () => { void Haptics.selectionAsync(); } }} />
-    <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void Haptics.selectionAsync(); } }} />
+    <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Events' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} listeners={{ tabPress: () => { void safeImpactHaptic('medium'); } }} />
+    <Tab.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
 );
 

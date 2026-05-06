@@ -27,6 +27,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
 
+from users.oauth_views import apple_mobile_login, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
     logout_view,
@@ -161,6 +162,8 @@ urlpatterns = [
     path("api/auth/request-password-reset/", request_password_reset, name="request-password-reset"),
     path("api/auth/password-reset-confirm/", password_reset_confirm, name="password-reset-confirm"),
     path("api/auth/reset-password/", password_reset_confirm, name="reset-password"),
+    path("api/auth/google/mobile/", google_mobile_login, name="google_mobile_login"),
+    path("api/auth/apple/mobile/", apple_mobile_login, name="apple_mobile_login"),
     path("api/auth/twitter/", include("users.oauth_urls")),
     path("api/users/", include("users.urls")),
     path("api/activities/", include("activities.urls")),

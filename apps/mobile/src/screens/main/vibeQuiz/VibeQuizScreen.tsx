@@ -10,13 +10,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import {
   type VibeAnswers,
   type VibeQuizResult,
   type VibeTag,
 } from '@shared/schema';
 
+import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import { Text as NativeText, View } from '@components/RNCompat';
 import { updateOnboarding } from '@services/authService';
 import { appColors, radii, spacing } from '@theme/index';
@@ -177,7 +177,7 @@ export const VibeQuizScreen = ({
   const startQuiz = () => {
     setErrorMessage(null);
     setResumePromptVisible(false);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void safeImpactHaptic('medium');
     setPhase('question');
   };
 
@@ -187,7 +187,7 @@ export const VibeQuizScreen = ({
     setResumePromptVisible(false);
     setAnswers(loaded.state.answers ?? {});
     setCurrentIndex(Math.min(loaded.state.currentIndex ?? 0, VIBE_QUESTIONS.length - 1));
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void safeImpactHaptic('medium');
     setPhase('question');
   };
 
@@ -226,7 +226,7 @@ export const VibeQuizScreen = ({
       }
       const max = question.maxSelections ?? current.length + 1;
       if (current.length >= max) {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        void safeNotificationHaptic('warning');
         return previous;
       }
       return { ...previous, [questionId]: [...current, value as VibeTag] };
@@ -239,7 +239,7 @@ export const VibeQuizScreen = ({
       animateAdvance('forward', () => setCurrentIndex(currentIndex + 1));
       return;
     }
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    void safeImpactHaptic('heavy');
     setPhase('results');
   };
 
@@ -255,7 +255,7 @@ export const VibeQuizScreen = ({
     if (!result) return;
     setErrorMessage(null);
     setConfettiVisible(true);
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void safeNotificationHaptic('success');
     try {
       if (persistOnComplete) {
         await saveMutation.mutateAsync(result);

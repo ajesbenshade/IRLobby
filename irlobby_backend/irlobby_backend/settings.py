@@ -119,6 +119,8 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 # Twitter OAuth settings
 TWITTER_CLIENT_ID = config("TWITTER_CLIENT_ID", default="")
 TWITTER_CLIENT_SECRET = config("TWITTER_CLIENT_SECRET", default="")
+GOOGLE_OAUTH_CLIENT_IDS = env.list("GOOGLE_OAUTH_CLIENT_IDS", default=[])
+APPLE_OAUTH_AUDIENCES = env.list("APPLE_OAUTH_AUDIENCES", default=["com.irlobby.app"])
 
 # Social Account Providers
 SOCIALACCOUNT_PROVIDERS = {

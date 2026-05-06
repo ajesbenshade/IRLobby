@@ -13,9 +13,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Device from 'expo-device';
-import * as Haptics from 'expo-haptics';
 import { Text } from 'react-native-paper';
 
+import {
+  safeImpactHaptic,
+  safeNotificationHaptic,
+  safeSelectionHaptic,
+} from '@lib/haptics';
 import { Text as NativeText, View } from '@components/RNCompat';
 import { ConfettiBurst } from '@screens/main/vibeQuiz/ConfettiBurst';
 import { appColors, palette, radii, spacing } from '@theme/index';
@@ -90,13 +94,13 @@ export const MatchCelebration = ({
     }
 
     // Multi-stage haptic sequence — feels physical without being obnoxious.
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    void safeImpactHaptic('heavy');
     const t1 = setTimeout(
-      () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+      () => void safeImpactHaptic('medium'),
       180,
     );
     const t2 = setTimeout(
-      () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+      () => void safeNotificationHaptic('success'),
       420,
     );
 
@@ -148,7 +152,7 @@ export const MatchCelebration = ({
     if (!onPrimaryAction) {
       return;
     }
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void safeImpactHaptic('medium');
     onPrimaryAction();
     onDismiss();
   };
@@ -157,7 +161,7 @@ export const MatchCelebration = ({
   const handleShare = async () => {
     if (!canShare) return;
     try {
-      void Haptics.selectionAsync();
+      void safeSelectionHaptic();
       const tail = activityTitle ? ` for ${activityTitle}` : '';
       await Share.share({
         message: `Just matched with ${matchName} on IRLobby${tail}! 🎉`,

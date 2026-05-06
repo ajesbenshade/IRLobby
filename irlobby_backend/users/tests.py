@@ -22,9 +22,10 @@ from activities.models import Activity, ActivityParticipant, Ticket, TicketRedem
 from matches.models import Match
 from reviews.models import Review
 from swipes.models import Swipe
-from users.models import PushDeviceToken, User
+from users.models import PushDeviceToken, SocialAuthIdentity, User
 from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
+from users.social_auth import verify_apple_identity_token
 from users.views import logout_view
 
 
@@ -252,6 +253,70 @@ class TwitterOAuthTests(APITestCase):
         self.assertEqual(params["created"], ["true"])
         self.assertTrue(User.objects.filter(oauth_id="twitter-user-id").exists())
 
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="twitter-client-secret",
+    )
+    @patch("users.oauth_views.requests.get")
+    @patch("users.oauth_views.exchange_twitter_token")
+    def test_mobile_callback_handles_existing_username_collision(
+        self,
+        mock_exchange_twitter_token,
+        mock_requests_get,
+    ):
+        User.objects.create_user(
+            username="irlobbytester",
+            email="existing@example.com",
+            password="password123",
+        )
+        cache.set(
+            "twitter_oauth_collision-state",
+            {
+                "code_verifier": "test-verifier",
+                "redirect_uri": "http://testserver/api/auth/twitter/callback/",
+                "mobile_redirect_uri": "irlobby://auth/twitter",
+            },
+            timeout=600,
+        )
+
+        mock_exchange_twitter_token.return_value = Mock(
+            status_code=200,
+            json=Mock(return_value={"access_token": "twitter-access-token"}),
+            text='{"access_token":"twitter-access-token"}',
+            headers={"content-type": "application/json"},
+        )
+        mock_requests_get.return_value = Mock(
+            status_code=200,
+            json=Mock(
+                return_value={
+                    "data": {
+                        "id": "twitter-user-id-collision",
+                        "username": "irlobbytester",
+                        "name": "IR Lobby",
+                    }
+                }
+            ),
+        )
+
+        response = self.client.get(
+            self.callback_url,
+            {"code": "oauth-code", "state": "collision-state"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertTrue(
+            SocialAuthIdentity.objects.filter(
+                provider="twitter",
+                provider_user_id="twitter-user-id-collision",
+            ).exists()
+        )
+        created_user = SocialAuthIdentity.objects.get(
+            provider="twitter",
+            provider_user_id="twitter-user-id-collision",
+        ).user
+        self.assertNotEqual(created_user.email, "existing@example.com")
+        self.assertNotEqual(created_user.username, "irlobbytester")
+
     def test_callback_rejects_expired_state(self):
         response = self.client.get(
             self.callback_url,
@@ -260,6 +325,129 @@ class TwitterOAuthTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"], "Session expired or invalid state")
+
+
+class SocialMobileLoginTests(APITestCase):
+    def setUp(self):
+        self.google_url = reverse("google_mobile_login")
+        self.apple_url = reverse("apple_mobile_login")
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["google-client-id"])
+    @patch("users.oauth_views.verify_google_identity_token")
+    def test_google_mobile_login_links_existing_email(self, mock_verify_google_identity_token):
+        user = User.objects.create_user(
+            username="existing-user",
+            email="existing@example.com",
+            password="password123",
+        )
+        mock_verify_google_identity_token.return_value = {
+            "sub": "google-sub-123",
+            "email": "existing@example.com",
+            "email_verified": True,
+            "given_name": "Existing",
+            "family_name": "User",
+        }
+
+        response = self.client.post(self.google_url, {"id_token": "google-token"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["email"], user.email)
+        self.assertTrue(
+            SocialAuthIdentity.objects.filter(
+                provider="google",
+                provider_user_id="google-sub-123",
+                user=user,
+            ).exists()
+        )
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["", "   "], ALLOWED_HOSTS=["testserver"])
+    @patch("users.oauth_views.verify_google_identity_token")
+    def test_google_mobile_login_rejects_blank_config(self, mock_verify_google_identity_token):
+        with patch("django.core.handlers.base.log_response"):
+            response = self.client.post(
+                self.google_url, {"id_token": "google-token"}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["error"], "Google OAuth is not configured.")
+        mock_verify_google_identity_token.assert_not_called()
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["google-client-id"])
+    @patch("users.oauth_views.verify_google_identity_token")
+    def test_google_mobile_login_rejects_different_identity_for_same_user(
+        self,
+        mock_verify_google_identity_token,
+    ):
+        user = User.objects.create_user(
+            username="linked-user",
+            email="linked@example.com",
+            password="password123",
+        )
+        SocialAuthIdentity.objects.create(
+            user=user,
+            provider="google",
+            provider_user_id="existing-google-sub",
+            email=user.email,
+        )
+        mock_verify_google_identity_token.return_value = {
+            "sub": "new-google-sub",
+            "email": user.email,
+            "email_verified": True,
+        }
+
+        response = self.client.post(self.google_url, {"id_token": "google-token"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            response.data["error"],
+            "This account is already linked to a different google identity.",
+        )
+        self.assertFalse(
+            SocialAuthIdentity.objects.filter(
+                provider="google",
+                provider_user_id="new-google-sub",
+            ).exists()
+        )
+
+    @override_settings(APPLE_OAUTH_AUDIENCES=["com.irlobby.app"])
+    @patch("users.oauth_views.verify_apple_identity_token")
+    def test_apple_mobile_login_creates_user_without_email(self, mock_verify_apple_identity_token):
+        mock_verify_apple_identity_token.return_value = {
+            "sub": "apple-sub-123",
+        }
+
+        response = self.client.post(
+            self.apple_url,
+            {
+                "identity_token": "apple-token",
+                "first_name": "Apple",
+                "last_name": "User",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            SocialAuthIdentity.objects.filter(
+                provider="apple",
+                provider_user_id="apple-sub-123",
+            ).exists()
+        )
+        created_user = SocialAuthIdentity.objects.get(
+            provider="apple",
+            provider_user_id="apple-sub-123",
+        ).user
+        self.assertTrue(created_user.email.endswith("@apple.oauth.local"))
+        self.assertEqual(created_user.first_name, "Apple")
+        self.assertEqual(created_user.last_name, "User")
+
+    @override_settings(APPLE_OAUTH_AUDIENCES=["com.irlobby.app"])
+    @patch("users.social_auth.jwt.get_unverified_header")
+    def test_apple_identity_token_rejects_unexpected_algorithm(self, mock_get_unverified_header):
+        mock_get_unverified_header.return_value = {"kid": "apple-key", "alg": "HS256"}
+
+        with self.assertRaisesMessage(ValueError, "Unexpected Apple token algorithm"):
+            verify_apple_identity_token("apple-token")
 
 
 class PasswordResetConfirmTests(APITestCase):

@@ -9,8 +9,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 
+import { safeImpactHaptic } from '@lib/haptics';
 import { Text as NativeText, View } from '@components/RNCompat';
 import { appColors, radii, spacing } from '@theme/index';
 
@@ -50,9 +50,7 @@ export const VibeOptionCard = ({
 
   const handlePress = () => {
     if (disabled) return;
-    void Haptics.impactAsync(
-      selected ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
-    );
+    void safeImpactHaptic(selected ? 'light' : 'medium');
     scale.value = withSequence(
       withTiming(1.04, { duration: 100, easing: Easing.out(Easing.quad) }),
       withSpring(1, { damping: 14, stiffness: 220 }),

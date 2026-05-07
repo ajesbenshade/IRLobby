@@ -1,6 +1,29 @@
 from unittest.mock import Mock, patch
 
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
+
+from irlobby_backend.settings import validate_redis_url
+
+
+class RedisConfigurationTests(TestCase):
+    def test_validate_redis_url_accepts_authenticated_urls(self):
+        validate_redis_url("REDIS_URL", "redis://:password@redis:6379/0", require_auth=True)
+        validate_redis_url(
+            "REDIS_URL", "rediss://:password@redis.example.com:6379/0", require_auth=True
+        )
+
+    def test_validate_redis_url_rejects_unauthenticated_production_url(self):
+        with self.assertRaisesMessage(
+            ImproperlyConfigured, "REDIS_URL must include Redis authentication in production."
+        ):
+            validate_redis_url("REDIS_URL", "redis://redis:6379/0", require_auth=True)
+
+    def test_validate_redis_url_rejects_non_redis_url(self):
+        with self.assertRaisesMessage(
+            ImproperlyConfigured, "REDIS_URL must be a valid redis:// or rediss:// URL."
+        ):
+            validate_redis_url("REDIS_URL", "http://redis:6379/0", require_auth=True)
 
 
 class HealthDashboardAccessTests(TestCase):

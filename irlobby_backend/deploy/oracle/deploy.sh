@@ -79,6 +79,8 @@ if [[ -f "${ENV_FILE}" ]]; then
   fi
 fi
 
+bash "${ROOT_DIR}/deploy/oracle/validate-redis-ports.sh" "${COMPOSE_FILE}"
+
 cd "${ROOT_DIR}"
 
 DOCKER_CMD=(docker)

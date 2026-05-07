@@ -59,6 +59,16 @@ def validate_origin_list(setting_name, origins, *, require_https):
         )
 
 
+def validate_redis_url(setting_name, redis_url, *, require_auth):
+    parsed = urlparse(redis_url)
+    if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
+        raise ImproperlyConfigured(f"{setting_name} must be a valid redis:// or rediss:// URL.")
+    if require_auth and not parsed.password:
+        raise ImproperlyConfigured(
+            f"{setting_name} must include Redis authentication in production."
+        )
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -214,7 +224,18 @@ WSGI_APPLICATION = "irlobby_backend.wsgi.application"
 
 ASGI_APPLICATION = "irlobby_backend.asgi.application"
 
+# Disable persistent DB connections during test runs to avoid stale-cursor
+# errors with pytest-django + postgis (cursor reused across transactions).
+_IS_TESTING = (
+    "pytest" in sys.modules
+    or "test" in sys.argv
+    or os.environ.get("PYTEST_CURRENT_TEST") is not None
+)
+
 REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+
+if not DEBUG and not _IS_TESTING:
+    validate_redis_url("REDIS_URL", REDIS_URL, require_auth=True)
 
 CHANNEL_LAYERS = {
     "default": {
@@ -229,14 +250,6 @@ CHANNEL_LAYERS = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # dj_database_url imported earlier to avoid module-level import error
-
-# Disable persistent DB connections during test runs to avoid stale-cursor
-# errors with pytest-django + postgis (cursor reused across transactions).
-_IS_TESTING = (
-    "pytest" in sys.modules
-    or "test" in sys.argv
-    or os.environ.get("PYTEST_CURRENT_TEST") is not None
-)
 
 DATABASES = {
     "default": dj_database_url.config(
@@ -383,6 +396,9 @@ USE_TZ = True
 
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=REDIS_URL)
+if not DEBUG and not _IS_TESTING:
+    validate_redis_url("CELERY_BROKER_URL", CELERY_BROKER_URL, require_auth=True)
+    validate_redis_url("CELERY_RESULT_BACKEND", CELERY_RESULT_BACKEND, require_auth=True)
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -487,7 +503,8 @@ LOGGING = {
     },
 }
 
-if _IS_TESTING or (DEBUG and not config("CACHE_URL", default="")):
+explicit_cache_url = config("CACHE_URL", default="")
+if _IS_TESTING or (DEBUG and not explicit_cache_url):
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -495,10 +512,13 @@ if _IS_TESTING or (DEBUG and not config("CACHE_URL", default="")):
         }
     }
 else:
+    CACHE_URL = explicit_cache_url or REDIS_URL
+    if not DEBUG and not _IS_TESTING:
+        validate_redis_url("CACHE_URL", CACHE_URL, require_auth=True)
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": config("CACHE_URL", default=REDIS_URL),
+            "LOCATION": CACHE_URL,
         }
     }
 

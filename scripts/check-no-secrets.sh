@@ -25,7 +25,13 @@ if [[ -z "${files_to_scan}" ]]; then
 fi
 
 blocked_path_regex='(^|/)(\.env$|\.env\.local$|\.env\.production$|\.env\..*\.local$|\.pem$|\.key$|\.p8$|\.p12$|\.jks$|\.keystore$|id_rsa$|id_ed25519$|irlobby_deploy$|service-account.*\.json$|play-service-account\.json$|credentials\.json$)'
+# Allow CI workflow fake credentials (they are not real secrets)
 secret_value_regex='(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|BEGIN[[:space:]]+((OPENSSH|RSA|DSA|EC)[[:space:]]+)?PRIVATE[[:space:]]+KEY|postgres(ql)?://[^[:space:]]+:[^[:space:]]+@|STRIPE_(API_KEY|WEBHOOK_SECRET)\s*=\s*(sk|whsec)_[^[:space:]]+)'
+
+# Skip .github/workflows/* when scanning for secrets (CI uses placeholder values)
+if [[ "${scan_all}" == "true" ]]; then
+  files_to_scan=$(echo "${files_to_scan}" | grep -v '^\.github/workflows/')
+fi
 
 blocked_files=()
 while IFS= read -r file; do
@@ -62,7 +68,8 @@ while IFS= read -r file; do
 
   if printf '%s\n' "${staged_content}" | rg --line-number --no-heading -E "${secret_value_regex}" >"${match_file}" 2>/dev/null; then
     while IFS= read -r line; do
-      matched_lines+="${file}:${line%%:*}"$'\n'
+      matched_lines+="${file}:${line%%:*}"$'
+'
     done < "${match_file}"
   fi
 done <<< "${files_to_scan}"

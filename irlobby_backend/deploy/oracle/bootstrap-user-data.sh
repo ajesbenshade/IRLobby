@@ -52,10 +52,16 @@ retry apt-get install -y git curl unzip jq ca-certificates
 
 if [[ "${CONFIGURE_FIREWALL}" == "true" ]]; then
   retry apt-get install -y ufw
-  ufw allow OpenSSH || true
-  ufw allow 80/tcp || true
-  ufw allow 443/tcp || true
-  ufw --force enable || true
+  ufw allow OpenSSH
+  ufw default deny incoming
+  ufw default allow outgoing
+  ufw deny 6379/tcp
+  ufw allow 80/tcp
+  ufw allow 443/tcp
+  ufw --force enable
+  ufw status verbose
+else
+  echo "CONFIGURE_FIREWALL=false; host firewall setup was skipped. Ensure TCP 6379 is blocked in the provider firewall before deploying."
 fi
 
 # Create directory

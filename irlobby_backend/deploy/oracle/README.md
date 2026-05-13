@@ -146,6 +146,12 @@ docker compose -f docker-compose.oracle.yml --env-file .env.production --profile
 
 Expected health endpoint response: HTTP `200`; expected Redis ping response: `PONG`.
 
+The deploy script also runs a local Redis privacy check that verifies the Compose Redis service is not published on the host and that TCP `6379` is not listening on a non-loopback host address. You can run it manually with:
+
+```bash
+bash deploy/oracle/verify-redis-private.sh docker-compose.oracle.yml .env.production your-domain.com
+```
+
 From outside the VM, verify Redis is not reachable:
 
 ```bash
@@ -153,6 +159,20 @@ nc -vz your-domain.com 6379
 ```
 
 The command should fail, refuse, or time out. If it succeeds, close TCP `6379` in the cloud firewall/security list and on the host before continuing.
+
+For emergency host-side containment when TCP `6379` is already reachable publicly, first close the provider firewall rule, then SSH to the host and run:
+
+```bash
+sudo bash deploy/oracle/contain-redis-exposure.sh your-domain.com
+```
+
+This removes common UFW allow rules, adds host and Docker ingress drops for Redis on the default public interface, and prints the remaining listeners and Docker port mappings. It is a containment step, not the full fix; rotate `REDIS_PASSWORD`, remove the underlying public listener or published port, and redeploy afterward.
+
+To make the script perform the same network check, run it from a machine outside the VM or from a network path that does not bypass the provider firewall:
+
+```bash
+VERIFY_EXTERNAL_REDIS=true bash deploy/oracle/verify-redis-private.sh docker-compose.oracle.yml .env.production your-domain.com
+```
 
 ## 7) Mobile/Web client updates
 

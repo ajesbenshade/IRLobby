@@ -33,8 +33,11 @@ Redis should stay private to Docker networking in production.
 
 - Do not publish TCP port `6379` to the public internet.
 - Require `REDIS_PASSWORD` and authenticated Redis URLs for Django and Celery.
-- After deploy, verify the health endpoint responds and an external connection to Redis is refused.
+- After deploy, run `bash deploy/oracle/verify-redis-private.sh docker-compose.oracle.yml .env.production <public-host>` on the backend host.
+- From an external network, verify a connection to Redis/TCP `6379` is refused or times out.
 - Confirm worker and web containers can still reach Redis internally.
+
+If Redis/TCP `6379` is already reachable publicly, close the provider firewall rule first, then run `sudo bash deploy/oracle/contain-redis-exposure.sh <public-host>` on the backend host as an emergency containment step before rotating Redis credentials and redeploying.
 
 ## Web deployment notes
 

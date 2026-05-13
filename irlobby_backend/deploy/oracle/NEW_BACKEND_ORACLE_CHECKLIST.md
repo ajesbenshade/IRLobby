@@ -46,7 +46,7 @@ nano .env.production
 - If you are deploying by raw server IP first (no domain/cert yet), set:
 
 ```bash
-SERVER_NAME=5.75.156.23
+SERVER_NAME=203.0.113.10
 NGINX_TEMPLATE_PATH=./deploy/oracle/nginx/http-only.conf.template
 PUBLIC_SCHEME=http
 ```
@@ -93,10 +93,11 @@ curl -I https://api.yourdomain.com/api/health/
 docker compose -f docker-compose.oracle.yml --env-file .env.production ps
 docker compose -f docker-compose.oracle.yml --env-file .env.production logs -f web
 docker compose -f docker-compose.oracle.yml --env-file .env.production exec redis sh -lc 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
+bash deploy/oracle/verify-redis-private.sh docker-compose.oracle.yml .env.production api.yourdomain.com
 nc -vz api.yourdomain.com 6379
 ```
 
-The Redis ping should return `PONG` from inside the container, and the external `6379` connection should fail.
+The Redis ping should return `PONG` from inside the container, the privacy check should pass, and the external `6379` connection should fail.
 
 ## 8. Post-Deploy Tasks
 

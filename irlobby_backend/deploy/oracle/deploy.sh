@@ -100,5 +100,8 @@ echo "Building backend images..."
 echo "Starting services..."
 "${DOCKER_CMD[@]}" compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "${PROFILE_ARGS[@]}" up -d
 
+echo "Verifying Redis is private..."
+REQUIRE_DOCKER_REDIS_CHECKS=true bash "${ROOT_DIR}/deploy/oracle/verify-redis-private.sh" "${COMPOSE_FILE}" "${ENV_FILE}" "${SERVER_NAME}"
+
 echo "Deployment complete."
 echo "Health check: curl -I https://$(grep '^SERVER_NAME=' "${ENV_FILE}" | cut -d '=' -f2)/api/health/"

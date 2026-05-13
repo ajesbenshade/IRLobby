@@ -41,6 +41,9 @@ iptables -C FORWARD -j REJECT --reject-with icmp-host-prohibited >/dev/null 2>&1
   && iptables -D FORWARD -j REJECT --reject-with icmp-host-prohibited || true
 
 ufw allow OpenSSH
+ufw default deny incoming
+ufw default allow outgoing
+ufw deny 6379/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable

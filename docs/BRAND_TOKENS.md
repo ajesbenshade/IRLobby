@@ -1,34 +1,39 @@
-# IRLobby Launch Brand Tokens
+# IRLobby Brand Tokens — Electric Midnight
 
-IRLobby's launch palette is anchored on a purple-to-pink primary gradient with cyan for social feedback moments.
+Darker, richer, more premium direction ("Electric Midnight").
+
+Core gradient: deep indigo-violet → electric fuchsia with electric cyan for energy and warm gold for premium moments.
 
 ## Palette
 
 | Role | Hex | Usage |
 | --- | --- | --- |
-| Primary | `#7C3AED` | Main CTAs, active navigation, focus rings, core brand marks |
-| Primary deep / pink | `#EC4899` | Gradient end stop, hover accents, match celebration energy |
-| Primary soft | `#F1E8FF` | Soft selected states and subtle brand surfaces |
-| Primary glow | `#A78BFA` | Dark-mode highlights and elevated accents |
-| Secondary cyan | `#22D3EE` | Matches, notifications, live/social feedback |
-| Success | `#84CC16` | Positive state and completion feedback |
-| Warning | `#F59E0B` | Warnings, pending states, rating/star semantics |
-| Danger | `#F43F5E` | Errors, destructive actions, safety warnings |
-| Light background | `#F8FAFC` | App canvas and muted surfaces |
-| Dark background | `#0F172A` | Dark-mode app canvas and public-site base |
+| Primary | `#5B4BFF` | Main CTAs, active states, brand marks |
+| Primary Deep | `#C026D3` | Gradient end, high-energy, match moments |
+| Primary Glow | `#7C6CFF` | Accents and dark mode highlights |
+| Secondary / Cyan | `#1EE8FF` | Matches, notifications, live feedback |
+| Gold / Premium | `#E8C872` | VIP, paid activities, special moments (used sparingly) |
+| Success | `#22C55E` | Positive states |
+| Warning | `#F59E0B` | Warnings |
+| Danger | `#F43F5E` | Errors / destructive |
+| Background (dark) | `#0A0814` | Main dark canvas |
+| Surface | `#110D24` / `#161330` | Cards and elevated panels |
+| Ink | `#F4F3FA` | Primary text |
 
-## Gradient
+## Gradients
 
-Use `#7C3AED -> #EC4899` as the default brand gradient. Use `#7C3AED -> #EC4899 -> #22D3EE` for match, celebration, and high-energy moments.
+- `primary`: `#5B4BFF → #C026D3`
+- `match` / high-energy: `#5B4BFF → #C026D3 → #1EE8FF`
+- `premium`: `#C026D3 → #E8C872` (used sparingly for VIP moments)
 
 ## Source Of Truth
 
-Shared launch tokens live in `packages/shared/design-tokens.ts`.
+Shared tokens live in `packages/shared/design-tokens.ts`.
 
-Mobile consumes those through `apps/mobile/src/theme/tokens.ts` and maps them into React Native Paper in `apps/mobile/src/theme/index.ts`.
+Mobile pulls from there via `apps/mobile/src/theme/tokens.ts` + NativeWind config.
 
-Web consumes the same palette through CSS variables in `apps/web/src/index.css` and Tailwind semantic colors in `apps/web/tailwind.config.ts`.
+Web uses HSL CSS variables in `apps/web/src/index.css` + Tailwind.
 
-## Launch Guidance
+## Guidance
 
-Keep workflow surfaces dense and readable. Use the strongest gradients for primary CTAs, match moments, discovery cards, onboarding, and the Vibe Quiz. Keep settings, moderation, legal, and form-heavy screens calmer, using semantic tokens instead of decorative color.
+Dark-first, rich, premium feel. Strong use of the new gold accent for special moments. Keep the strongest gradients on discovery, matching, celebration, and onboarding. Use calmer surfaces for settings, forms, and moderation.

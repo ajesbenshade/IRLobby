@@ -13,8 +13,8 @@ import {
  * IRLobby mobile design tokens.
  * Tagline: "Get out. Get together."
  *
- * Shared launch tokens live in packages/shared/design-tokens.ts. This file
- * preserves the mobile theme exports consumed by React Native Paper and screens.
+ * New Electric Midnight direction (darker + premium).
+ * Shared source of truth: packages/shared/design-tokens.ts
  */
 
 // ---------------------------------------------------------------------------
@@ -22,18 +22,16 @@ import {
 // ---------------------------------------------------------------------------
 
 export const palette = {
-  // Brand - purple to pink launch gradient
+  // Electric Midnight — darker, richer, premium (gold accent added)
   primary: brandPalette.primary,
   primaryDeep: brandPalette.primaryDeep,
   primarySoft: brandPalette.primarySoft,
   primaryGlow: brandPalette.primaryGlow,
 
-  // Secondary - electric cyan for matches and notifications
   secondary: brandPalette.secondary,
   secondaryDeep: brandPalette.secondaryDeep,
   secondarySoft: brandPalette.secondarySoft,
 
-  // Accent - soft violet for hype moments and supporting surfaces
   accent: brandPalette.accent,
   accentDeep: brandPalette.accentDeep,
   accentSoft: brandPalette.accentSoft,

@@ -35,7 +35,7 @@ export const VibeQuizResultsScreen = () => {
       showsVerticalScrollIndicator={false}
     >
       <OfflineBanner />
-      <Text variant="headlineMedium" style={styles.title}>
+      <Text variant="titleMedium" style={styles.title}>
         Your Vibe
       </Text>
       <VibeQuizResultsView
@@ -70,9 +70,11 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   title: {
-    color: appColors.ink,
-    fontWeight: '900',
+    color: appColors.mutedInk,
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 1.2,
+    marginBottom: -spacing.sm,
   },
   secondary: {
     paddingVertical: spacing.md,

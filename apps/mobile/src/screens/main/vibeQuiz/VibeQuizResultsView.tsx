@@ -1,7 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { ImageBackground, Pressable, StyleSheet } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   VIBE_PROFILE_LABELS,
   type VibeProfile,
@@ -14,11 +21,12 @@ import { VibeMatchCountSkeleton } from '@components/skeletons';
 import { useOnline } from '@hooks/useOnline';
 import { fetchActivities } from '@services/activityService';
 import { appColors, radii, spacing } from '@theme/index';
+import { VIBE_QUIZ_IMAGES } from './vibeQuizImages';
 
 const FOOTER_GRADIENT: readonly [string, string, string] = [
   appColors.primary,
-  '#9333EA',
-  appColors.accent,
+  appColors.primaryDeep,
+  appColors.secondary,
 ];
 
 export interface VibeQuizResultsViewProps {
@@ -62,19 +70,59 @@ export const VibeQuizResultsView = ({
   const showOfflineCachedCopy = !isOnline && hasCached;
   const showSkeleton = matchCountQuery.isLoading && !hasCached;
 
+  const vibeImage =
+    vibeProfile in VIBE_QUIZ_IMAGES
+      ? VIBE_QUIZ_IMAGES[vibeProfile as keyof typeof VIBE_QUIZ_IMAGES]
+      : null;
+
+  const imageOpacity = useSharedValue(0);
+  const imageTranslate = useSharedValue(18);
+
+  // Subtle entrance animation for the hero image
+  useEffect(() => {
+    imageOpacity.value = withDelay(60, withTiming(1, { duration: 380 }));
+    imageTranslate.value = withDelay(60, withTiming(0, { duration: 420 }));
+  }, []);
+
+  const heroAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: imageOpacity.value,
+    transform: [{ translateY: imageTranslate.value }],
+  }));
+
   return (
     <View style={styles.resultsContainer}>
+      {/* Immersive ImageBackground hero with the result card content overlaid */}
+      {vibeImage && (
+        <Animated.View style={[styles.vibeHero, heroAnimatedStyle]}>
+          <ImageBackground
+            source={vibeImage}
+            style={styles.vibeHeroImage}
+            imageStyle={{ borderRadius: radii.xl }}
+            resizeMode="cover"
+          >
+            {/* Stronger gradient overlay for readability + premium depth */}
+            <LinearGradient
+              colors={['rgba(10,8,20,0.15)', 'rgba(10,8,20,0.72)', 'rgba(10,8,20,0.92)']}
+              locations={[0, 0.55, 1]}
+              style={styles.vibeHeroGradient}
+            >
+              <View style={styles.vibeHeroContent}>
+                <NativeText style={styles.badgeEmojiSmall}>{profile.emoji}</NativeText>
+                <Text variant="titleSmall" style={styles.badgeEyebrowLight}>
+                  Your vibe is
+                </Text>
+                <Text variant="headlineMedium" style={styles.badgeNameLight}>
+                  {profile.name}
+                </Text>
+                <Text style={styles.badgeTaglineLight}>{profile.tagline}</Text>
+              </View>
+            </LinearGradient>
+          </ImageBackground>
+        </Animated.View>
+      )}
+
+      {/* Match count and tags as a clean card below the immersive hero */}
       <PanelCard tone="dark" style={styles.resultsCard}>
-        <NativeText style={styles.badgeEmoji}>{profile.emoji}</NativeText>
-        <Text variant="titleSmall" style={styles.badgeEyebrow}>
-          Your vibe is
-        </Text>
-        <Text variant="headlineSmall" style={styles.badgeName}>
-          {profile.name}
-        </Text>
-        <Text style={styles.badgeTagline}>{profile.tagline}</Text>
-      </PanelCard>
-      <PanelCard>
         {showSkeleton ? (
           <VibeMatchCountSkeleton />
         ) : (
@@ -129,13 +177,41 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     alignItems: 'stretch',
   },
+  vibeHero: {
+    width: '100%',
+    height: 300,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  vibeHeroImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  vibeHeroGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radii.xl,
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  vibeHeroContent: {
+    gap: 4,
+  },
   resultsCard: {
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.xl,
   },
+  badgeEmojiSmall: {
+    fontSize: 36,
+    marginBottom: 2,
+  },
+  // Old large emoji style kept for reference but no longer used in main results
   badgeEmoji: {
-    fontSize: 64,
+    fontSize: 28,
+    opacity: 0.9,
   },
   badgeEyebrow: {
     color: '#cbd5ff',
@@ -143,10 +219,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     fontWeight: '700',
   },
+  badgeEyebrowLight: {
+    color: 'rgba(255,255,255,0.75)',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontWeight: '700',
+    fontSize: 12,
+  },
   badgeName: {
     color: appColors.white,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  badgeNameLight: {
+    color: appColors.white,
+    fontWeight: '800',
+    fontSize: 26,
+    lineHeight: 30,
   },
   badgeTagline: {
     color: '#dbe1ff',
@@ -154,6 +243,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: spacing.xs,
+  },
+  badgeTaglineLight: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 14,
+    lineHeight: 18,
+    marginTop: 2,
   },
   matchCountTitle: {
     color: appColors.ink,

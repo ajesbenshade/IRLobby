@@ -1,40 +1,51 @@
 export const brandPalette = {
-  primary: '#7C3AED',
-  primaryDeep: '#EC4899',
-  primarySoft: '#F1E8FF',
-  primaryGlow: '#A78BFA',
-  secondary: '#22D3EE',
-  secondaryDeep: '#0891B2',
-  secondarySoft: '#CFFAFE',
-  accent: '#A78BFA',
-  accentDeep: '#6D28D9',
-  accentSoft: '#EDE9FE',
-  success: '#84CC16',
+  // Electric Midnight — darker, richer, more premium
+  primary: '#5B4BFF',        // Rich indigo-violet
+  primaryDeep: '#C026D3',    // Electric fuchsia
+  primarySoft: '#D9D3F5',    // Soft desaturated violet
+  primaryGlow: '#7C6CFF',    // Lighter violet for glows
+
+  secondary: '#1EE8FF',      // Sharp electric cyan (matches, energy, live states)
+  secondaryDeep: '#0EA5E9',
+  secondarySoft: '#CFF9FF',
+
+  accent: '#E8C872',         // Warm gold — premium/VIP moments
+  accentDeep: '#C5A04A',
+  accentSoft: '#FDF4D9',
+
+  success: '#22C55E',
   warning: '#F59E0B',
   danger: '#F43F5E',
-  ink: '#0F172A',
-  mutedInk: '#64748B',
-  softInk: '#94A3B8',
-  line: '#E2E8F0',
-  lineStrong: '#CBD5E1',
-  surface: '#FFFFFF',
-  surfaceMuted: '#F8FAFC',
-  background: '#F8FAFC',
-  overlay: 'rgba(15,23,42,0.55)',
+
+  ink: '#F4F3FA',
+  mutedInk: '#A5A1C2',
+  softInk: '#7A7599',
+
+  line: '#2A2548',
+  lineStrong: '#3D3659',
+
+  surface: '#161330',
+  surfaceMuted: '#110D24',
+  background: '#0A0814',
+
+  overlay: 'rgba(10, 8, 20, 0.78)',
+
   white: '#FFFFFF',
   black: '#000000',
-  darkBackground: '#0F172A',
-  darkSurface: '#111827',
-  darkSurfaceMuted: '#1E293B',
-  darkLine: '#334155',
-  darkInk: '#F8FAFC',
-  darkMutedInk: '#CBD5E1',
-  darkSoftInk: '#94A3B8',
+
+  darkBackground: '#0A0814',
+  darkSurface: '#110D24',
+  darkSurfaceMuted: '#161330',
+  darkLine: '#2A2548',
+  darkInk: '#F4F3FA',
+  darkMutedInk: '#A5A1C2',
+  darkSoftInk: '#7A7599',
 } as const;
 
 export const brandGradients = {
   primary: [brandPalette.primary, brandPalette.primaryDeep],
   match: [brandPalette.primary, brandPalette.primaryDeep, brandPalette.secondary],
+  premium: [brandPalette.primaryDeep, brandPalette.accent], // Gold-tinged high-end moments
   surfaceGlow: [brandPalette.primarySoft, brandPalette.secondarySoft, brandPalette.accentSoft],
 } as const;
 

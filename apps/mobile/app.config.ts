@@ -12,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   scheme: 'irlobby',
   userInterfaceStyle: 'automatic',
-  primaryColor: '#7C3AED',
+  primaryColor: '#5B4BFF',
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',

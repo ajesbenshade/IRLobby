@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Image, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -32,6 +32,7 @@ import { VIBE_QUESTIONS, type VibeQuestion } from './questions';
 import { VibeOptionCard, VibeProgressBar } from './VibeQuestionCard';
 import { useVibeQuizPersistence } from './useVibeQuizPersistence';
 import { VibeQuizResultsView } from './VibeQuizResultsView';
+import { VIBE_QUIZ_IMAGES } from './vibeQuizImages';
 
 type Phase = 'intro' | 'question' | 'results';
 
@@ -54,7 +55,11 @@ export interface VibeQuizScreenProps {
   resultsCtaLabel?: string;
 }
 
-const FOOTER_GRADIENT: readonly [string, string, string] = [appColors.primary, '#9333EA', appColors.accent];
+const FOOTER_GRADIENT: readonly [string, string, string] = [
+  appColors.primary,
+  appColors.primaryDeep,
+  appColors.secondary,
+];
 
 export const VibeQuizScreen = ({
   existingActivityPreferences,
@@ -271,16 +276,20 @@ export const VibeQuizScreen = ({
   if (phase === 'intro') {
     return (
       <View style={styles.intro}>
-        <View style={styles.heroEmojiRow}>
-          <NativeText style={styles.heroEmoji}>🎉</NativeText>
-          <NativeText style={styles.heroEmojiSmall}>✨</NativeText>
-          <NativeText style={styles.heroEmoji}>🔥</NativeText>
+        <View style={styles.introHero}>
+          <Image
+            source={VIBE_QUIZ_IMAGES.intro}
+            style={styles.introHeroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.introHeroOverlay} />
         </View>
+
         <Text variant="headlineLarge" style={styles.introTitle}>
-          Let’s find your vibe 🔥
+          Discover your vibe
         </Text>
         <Text style={styles.introSubtitle}>
-          5 quick questions → instant personalized IRL hangouts.
+          5 quick questions. Get perfectly matched plans that actually fit you.
         </Text>
         {resumePromptVisible ? (
           <View style={styles.resumeCard}>
@@ -409,16 +418,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xl,
   },
-  heroEmojiRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
+  introHero: {
+    width: '100%',
+    height: 220,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
   },
-  heroEmoji: {
-    fontSize: 60,
+  introHeroImage: {
+    width: '100%',
+    height: '100%',
   },
-  heroEmojiSmall: {
-    fontSize: 40,
+  introHeroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 8, 20, 0.45)',
   },
   resumeCard: {
     position: 'relative',

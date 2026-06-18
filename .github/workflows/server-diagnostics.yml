@@ -7,19 +7,23 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
       - name: SSH and collect server status
         env:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
-          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "Target host length: ${#SSH_HOST}"
+          echo "Target user: ${SSH_USER}"
+          ssh-keygen -lf <(ssh-add -L | head -1) || true
 
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SSH_HOST}" <<'REMOTE'
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SSH_HOST}" <<'REMOTE'
           set -euo pipefail
           echo "=== host ==="
           hostname
@@ -27,14 +31,18 @@ jobs:
           echo "=== docker ps ==="
           if command -v docker >/dev/null 2>&1; then
             docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
-            if [ -d ~/IRLobby/irlobby_backend ]; then
-              cd ~/IRLobby/irlobby_backend
-              docker compose -f docker-compose.oracle.yml --env-file .env.production ps 2>/dev/null || true
-              echo "=== ws logs (tail 40) ==="
-              docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=40 ws 2>/dev/null || true
-              echo "=== nginx logs (tail 20) ==="
-              docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=20 nginx 2>/dev/null || true
-            fi
+            for dir in ~/IRLobby/irlobby_backend /opt/irlobby/irlobby_backend /home/*/IRLobby/irlobby_backend; do
+              if [ -d "$dir" ]; then
+                echo "=== compose in $dir ==="
+                cd "$dir"
+                docker compose -f docker-compose.oracle.yml --env-file .env.production ps 2>/dev/null || docker compose ps 2>/dev/null || true
+                echo "=== ws logs (tail 40) ==="
+                docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=40 ws 2>/dev/null || docker compose logs --tail=40 ws 2>/dev/null || true
+                echo "=== nginx logs (tail 20) ==="
+                docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=20 nginx 2>/dev/null || docker compose logs --tail=20 nginx 2>/dev/null || true
+                break
+              fi
+            done
           else
             echo "docker not installed"
           fi

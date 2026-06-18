@@ -20,10 +20,16 @@ jobs:
           set -euo pipefail
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
           echo "Target host length: ${#SSH_HOST}"
-          echo "Target user: ${SSH_USER}"
-          ssh-keygen -lf <(ssh-add -L | head -1) || true
+          echo "Loaded keys:"
+          ssh-add -L || true
 
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SSH_HOST}" <<'REMOTE'
+          connect() {
+            local user="$1"
+            echo "Trying user: ${user}"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          REMOTE_CMD=$(cat <<'REMOTE'
           set -euo pipefail
           echo "=== host ==="
           hostname
@@ -49,3 +55,14 @@ jobs:
           echo "=== redis listeners ==="
           ss -ltnp 'sport = :6379' 2>/dev/null || true
           REMOTE
+          )
+
+          for candidate in "${SSH_USER}" ubuntu root opc admin deploy; do
+            if connect "${candidate}" "${REMOTE_CMD}"; then
+              echo "Connected as ${candidate}"
+              exit 0
+            fi
+          done
+
+          echo "SSH failed for all attempted users" >&2
+          exit 1

@@ -91,9 +91,11 @@ jobs:
           for dir in ~/IRLobby/irlobby_backend /opt/irlobby/irlobby_backend /home/*/IRLobby/irlobby_backend; do
             if [ -d "$dir" ]; then
               cd "$dir"
-              echo "=== restarting ws in $dir ==="
+              echo "=== restarting ws + nginx in $dir ==="
               docker compose -f docker-compose.oracle.yml --env-file .env.production restart ws
               sleep 8
+              docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
+              sleep 5
               echo "=== ws logs after restart (tail 20) ==="
               docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=20 ws
               echo "=== ws listening check ==="

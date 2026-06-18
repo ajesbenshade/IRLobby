@@ -1,0 +1,43 @@
+name: Server Diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and collect server status
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SSH_HOST}" <<'REMOTE'
+          set -euo pipefail
+          echo "=== host ==="
+          hostname
+          uptime
+          echo "=== docker ps ==="
+          if command -v docker >/dev/null 2>&1; then
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+            if [ -d ~/IRLobby/irlobby_backend ]; then
+              cd ~/IRLobby/irlobby_backend
+              docker compose -f docker-compose.oracle.yml --env-file .env.production ps 2>/dev/null || true
+              echo "=== ws logs (tail 40) ==="
+              docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=40 ws 2>/dev/null || true
+              echo "=== nginx logs (tail 20) ==="
+              docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=20 nginx 2>/dev/null || true
+            fi
+          else
+            echo "docker not installed"
+          fi
+          echo "=== redis listeners ==="
+          ss -ltnp 'sport = :6379' 2>/dev/null || true
+          REMOTE

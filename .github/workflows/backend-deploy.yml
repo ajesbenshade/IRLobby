@@ -84,18 +84,55 @@ jobs:
             exit 1
           fi
 
-          redis_url=""
+          mkdir -p /tmp/irlobby-deploy
+          : > /tmp/irlobby-deploy/redis_url.txt
+          : > /tmp/irlobby-deploy/redis_password.txt
+          : > /tmp/irlobby-deploy/redis_cmd.json
+
+          capture_env_value() {
+            local cname="$1"
+            local key="$2"
+            local outfile="$3"
+            if ! docker inspect "${cname}" >/dev/null 2>&1; then
+              return 1
+            fi
+            docker exec "${cname}" printenv "${key}" 2>/dev/null > "${outfile}" || true
+            if [ -s "${outfile}" ]; then
+              return 0
+            fi
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${cname}" \
+              | awk -F= -v k="${key}" '$1==k {print substr($0, index($0,$2)); exit}' \
+              > "${outfile}" || true
+            [ -s "${outfile}" ]
+          }
+
           for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
-            if docker inspect "${cname}" >/dev/null 2>&1; then
-              redis_url="$(docker exec "${cname}" printenv REDIS_URL 2>/dev/null || true)"
-              if [ -n "${redis_url}" ]; then
-                break
-              fi
+            if capture_env_value "${cname}" REDIS_URL /tmp/irlobby-deploy/redis_url.txt; then
+              echo "Captured REDIS_URL from ${cname}"
+              break
             fi
           done
 
-          python3 deploy/oracle/recover-redis-password.py --env-file .env.production --redis-url "${redis_url}"
+          for cname in irlobby_backend-redis-1 irlobby_backend-web-1 irlobby_backend-ws-1; do
+            if capture_env_value "${cname}" REDIS_PASSWORD /tmp/irlobby-deploy/redis_password.txt; then
+              echo "Captured REDIS_PASSWORD from ${cname}"
+              break
+            fi
+          done
+
+          if docker inspect irlobby_backend-redis-1 >/dev/null 2>&1; then
+            docker inspect -f '{{json .Config.Cmd}}' irlobby_backend-redis-1 \
+              > /tmp/irlobby-deploy/redis_cmd.json || true
+          fi
+
+          python3 deploy/oracle/recover-redis-password.py \
+            --env-file .env.production \
+            --redis-url-file /tmp/irlobby-deploy/redis_url.txt \
+            --password-file /tmp/irlobby-deploy/redis_password.txt \
+            --redis-cmd-json-file /tmp/irlobby-deploy/redis_cmd.json
           python3 deploy/oracle/sanitize-origin-lists.py --env-file .env.production
+          rm -rf /tmp/irlobby-deploy
+
 
           if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
             if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then

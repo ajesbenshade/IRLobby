@@ -84,66 +84,18 @@ jobs:
             exit 1
           fi
 
-          # Recover REDIS_PASSWORD from a live container REDIS_URL if missing/empty.
-          recover_redis_password() {
-            local redis_url=""
-            for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
-              if docker inspect "${cname}" >/dev/null 2>&1; then
-                redis_url="$(docker exec "${cname}" printenv REDIS_URL 2>/dev/null || true)"
-                if [ -n "${redis_url}" ]; then
-                  break
-                fi
+          redis_url=""
+          for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
+            if docker inspect "${cname}" >/dev/null 2>&1; then
+              redis_url="$(docker exec "${cname}" printenv REDIS_URL 2>/dev/null || true)"
+              if [ -n "${redis_url}" ]; then
+                break
               fi
-            done
-            if [ -z "${redis_url}" ]; then
-              redis_url="$(grep -E '^REDIS_URL=' .env.production | head -1 | cut -d= -f2- || true)"
             fi
-            REDIS_URL_CANDIDATE="${redis_url}" python3 - <<'PY'
-import os
-import re
-from pathlib import Path
-from urllib.parse import unquote, urlparse
+          done
 
-path = Path(".env.production")
-text = path.read_text()
-redis_url = os.environ.get("REDIS_URL_CANDIDATE", "").strip().strip('"').strip("'")
-pw = ""
-if redis_url:
-    pw = unquote(urlparse(redis_url).password or "")
-
-def get_val(key):
-    m = re.search(rf"^{re.escape(key)}=(.*)$", text, flags=re.M)
-    return None if m is None else m.group(1)
-
-current = get_val("REDIS_PASSWORD")
-placeholder = current is None or current.strip() == "" or re.search(
-    r"replace-with|CHANGE_ME|change-me", current or "", flags=re.I
-)
-if not pw and placeholder:
-    raise SystemExit("Could not recover REDIS_PASSWORD from REDIS_URL")
-if placeholder and pw:
-    if current is None:
-        if not text.endswith("\n"):
-            text += "\n"
-        text += f"REDIS_PASSWORD={pw}\n"
-        print("Appended REDIS_PASSWORD from live REDIS_URL.")
-    else:
-        text = re.sub(r"^REDIS_PASSWORD=.*$", f"REDIS_PASSWORD={pw}", text, count=1, flags=re.M)
-        print("Filled REDIS_PASSWORD from live REDIS_URL.")
-else:
-    print("REDIS_PASSWORD already set in .env.production.")
-
-if get_val("REDIS_URL") is None and redis_url:
-    if not text.endswith("\n"):
-        text += "\n"
-    text += f"REDIS_URL={redis_url}\n"
-    print("Appended REDIS_URL from live container.")
-
-path.write_text(text)
-PY
-          }
-
-          recover_redis_password
+          python3 deploy/oracle/recover-redis-password.py --env-file .env.production --redis-url "${redis_url}"
+          python3 deploy/oracle/sanitize-origin-lists.py --env-file .env.production
 
           if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
             if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
@@ -158,42 +110,6 @@ PY
             echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
           fi
 
-          # Soft-sanitize CORS/CSRF lists: drop http:// and localhost origins so
-          # new settings/deploy preflight stay happy without wiping the file.
-          python3 - <<'PY'
-from pathlib import Path
-path = Path(".env.production")
-lines = path.read_text().splitlines()
-keys = {
-    "CORS_ALLOWED_ORIGINS",
-    "CSRF_TRUSTED_ORIGINS",
-    "WEBSOCKET_ALLOWED_ORIGINS",
-}
-out = []
-changed = False
-for line in lines:
-    if "=" not in line or line.lstrip().startswith("#"):
-        out.append(line)
-        continue
-    key, val = line.split("=", 1)
-    if key not in keys:
-        out.append(line)
-        continue
-    parts = [p.strip() for p in val.split(",") if p.strip()]
-    kept = []
-    for p in parts:
-        if p.startswith("http://") or "localhost" in p or "127.0.0.1" in p:
-            changed = True
-            continue
-        kept.append(p)
-    out.append(f"{key}={','.join(kept)}")
-if changed:
-    path.write_text("\n".join(out) + "\n")
-    print("Sanitized non-HTTPS/local origins from CORS/CSRF/WS lists.")
-else:
-    print("Origin lists already HTTPS-only.")
-PY
-
           chmod 600 .env.production
 
           if [ "${DEPLOY_MODE}" = "full" ]; then
@@ -201,7 +117,6 @@ PY
             docker compose -f docker-compose.oracle.yml --env-file .env.production build web ws celery_worker celery_beat
             echo "=== recreating app containers (leave redis alone) ==="
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web
-            # Wait for web health before ws/celery which depend on it conceptually.
             for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
               if docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ >/dev/null 2>&1; then
                 echo "web healthy after ${i} checks"
@@ -212,7 +127,6 @@ PY
             done
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate ws celery_worker celery_beat
             docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
-            # Remove leftover broken containers from prior recovery if present.
             docker rm -f irlobby_backend-web-1.broken irlobby_backend-ws-1.broken 2>/dev/null || true
           else
             web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
@@ -262,6 +176,7 @@ PY
           set -euo pipefail
 
           echo "Waiting for web to become ready..."
+          code=""
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
             code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
             echo "health attempt ${attempt}: HTTP ${code}"
@@ -270,7 +185,7 @@ PY
             fi
             sleep 5
           done
-          if [ "${code:-}" != "200" ]; then
+          if [ "${code}" != "200" ]; then
             echo "Health check failed" >&2
             cat /tmp/health.json || true
             exit 1

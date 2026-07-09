@@ -94,7 +94,7 @@ export const LoginScreen = ({ navigation }: Props) => {
   } = useMutation({
     mutationFn: async () => {
       if (!isGoogleConfigured || !googleRequest) {
-        throw new Error('Google sign-in is not configured on this build yet.');
+        throw new Error(authCopy.login.googleNotConfigured);
       }
 
       const authResult = await promptGoogleAsync();
@@ -266,6 +266,11 @@ export const LoginScreen = ({ navigation }: Props) => {
           >
             {authCopy.login.googleCta}
           </Button>
+          {!isGoogleConfigured && (
+            <HelperText type="info" visible>
+              {authCopy.login.googleNotConfigured}
+            </HelperText>
+          )}
           {isAppleAvailable && (
             <Button
               mode="outlined"

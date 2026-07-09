@@ -1,0 +1,142 @@
+name: Backend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: Git ref to deploy (branch, tag, or SHA)
+        type: string
+        default: main
+      ensure_apple_audience:
+        description: Ensure APPLE_OAUTH_AUDIENCES=com.irlobby.app in .env.production
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Resolve SSH user and deploy
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+          GIT_REF: ${{ inputs.git_ref }}
+          ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          connect() {
+            local user="$1"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu opc admin deploy; do
+            if connect "${candidate}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+
+          if [ -z "${EFFECTIVE_USER}" ]; then
+            echo "SSH failed for all attempted users" >&2
+            exit 1
+          fi
+
+          echo "Connected as ${EFFECTIVE_USER}"
+          echo "SSH_USER_EFFECTIVE=${EFFECTIVE_USER}" >> "${GITHUB_ENV}"
+
+          ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" \
+            "GIT_REF='${GIT_REF}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          for dir in /opt/irlobby/irlobby_backend ~/IRLobby/irlobby_backend /home/*/IRLobby/irlobby_backend; do
+            if [ -d "$dir" ]; then
+              cd "$dir"
+              echo "=== deploying from $dir ==="
+              echo "=== git status before ==="
+              git rev-parse --abbrev-ref HEAD || true
+              git rev-parse HEAD || true
+
+              git fetch --all --tags
+              git checkout "${GIT_REF}"
+              git pull --ff-only || git reset --hard "origin/${GIT_REF}" || true
+
+              if [ ! -f .env.production ]; then
+                echo "Missing .env.production" >&2
+                exit 1
+              fi
+
+              if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+                if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
+                  sed -i 's/^APPLE_OAUTH_AUDIENCES=.*/APPLE_OAUTH_AUDIENCES=com.irlobby.app/' .env.production
+                else
+                  printf '\nAPPLE_OAUTH_AUDIENCES=com.irlobby.app\n' >> .env.production
+                fi
+              fi
+
+              if ! grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+                printf '\nGOOGLE_OAUTH_CLIENT_IDS=\n' >> .env.production
+                echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
+              fi
+
+              chmod 600 .env.production
+
+              echo "=== running deploy.sh ==="
+              bash deploy/oracle/deploy.sh
+
+              echo "=== restarting nginx after deploy ==="
+              docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
+
+              echo "=== deployed commit ==="
+              git rev-parse HEAD
+              exit 0
+            fi
+          done
+
+          echo "Could not find IRLobby compose directory" >&2
+          exit 1
+          REMOTE
+
+      - name: Verify auth routes
+        run: |
+          set -euo pipefail
+
+          echo "=== twitter status ==="
+          curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+          echo ""
+
+          echo "=== google mobile (expect JSON 400/503, not HTML 404) ==="
+          google_code="$(curl -sS -o /tmp/google.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/google/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"id_token":"invalid"}')"
+          echo "HTTP ${google_code}"
+          head -c 300 /tmp/google.json || true
+          echo ""
+          if [ "${google_code}" = "404" ]; then
+            echo "Google mobile route still missing (404)" >&2
+            exit 1
+          fi
+
+          echo "=== apple mobile (expect JSON 400/503, not HTML 404) ==="
+          apple_code="$(curl -sS -o /tmp/apple.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/apple/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"identity_token":"invalid"}')"
+          echo "HTTP ${apple_code}"
+          head -c 300 /tmp/apple.json || true
+          echo ""
+          if [ "${apple_code}" = "404" ]; then
+            echo "Apple mobile route still missing (404)" >&2
+            exit 1
+          fi
+
+          echo "Auth route verification passed."

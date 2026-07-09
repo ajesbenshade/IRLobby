@@ -32,11 +32,18 @@ Notes:
 Create a local `.env` for builds (or use EAS secrets) with production endpoints:
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=https://your-backend-domain.com
-EXPO_PUBLIC_WEBSOCKET_URL=wss://your-backend-domain.com
+EXPO_PUBLIC_API_BASE_URL=https://api.irlobby.com
+EXPO_PUBLIC_WEBSOCKET_URL=wss://api.irlobby.com
 EXPO_PUBLIC_TWITTER_CLIENT_ID=...
 EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter
 EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN=...
+# Google Sign-In (required for Continue with Google on store builds)
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
+# Optional Expo Go / legacy fallback (prefer platform-specific IDs above)
+# EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID=...
+# EXPO_PUBLIC_GOOGLE_CLIENT_ID=...
 # Optional but recommended for production: enables Sentry crash + perf reporting.
 EXPO_PUBLIC_SENTRY_DSN=...
 ```
@@ -44,6 +51,28 @@ EXPO_PUBLIC_SENTRY_DSN=...
 Notes:
 - `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` must point to your live backend.
 - Backend must support HTTPS/WSS and include required CORS/host settings.
+- Prefer GitHub Actions variables / EAS secrets over committing real client IDs.
+
+### Social login credential checklist
+
+| Credential | Status | Where |
+|------------|--------|-------|
+| Backend `TWITTER_CLIENT_ID` / `TWITTER_CLIENT_SECRET` | Present (GitHub secrets + live API) | Server `.env.production` |
+| `EXPO_PUBLIC_TWITTER_CLIENT_ID` | Present (GitHub variable) | Mobile EAS / CI |
+| `EXPO_PUBLIC_TWITTER_REDIRECT_URI` | Present → `irlobby://auth/twitter` | Mobile EAS / CI |
+| Twitter portal callback | Must include `https://api.irlobby.com/api/auth/twitter/callback/` | X Developer Portal |
+| `APPLE_OAUTH_AUDIENCES` | Default / set → `com.irlobby.app` | Backend `.env.production` |
+| Apple Sign In capability | Enable on App ID `com.irlobby.app` | Apple Developer |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| Backend `GOOGLE_OAUTH_CLIENT_IDS` | **Missing — comma-separated list of all Google client IDs** | Server `.env.production` |
+
+Google Cloud Console setup (bundle/package `com.irlobby.app`):
+1. Create an **iOS** OAuth client (bundle ID `com.irlobby.app`).
+2. Create an **Android** OAuth client (package `com.irlobby.app` + SHA-1 from `eas credentials`).
+3. Create a **Web** OAuth client (used as `webClientId` for ID token audience).
+4. Put all three IDs into backend `GOOGLE_OAUTH_CLIENT_IDS` (comma-separated) and the matching `EXPO_PUBLIC_GOOGLE_*` vars.
 
 ## 2.1) Configure Twitter/X login for standalone iOS builds
 
@@ -54,12 +83,18 @@ Required setup:
 1. Set backend env vars `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
 2. Register the backend callback URL in the Twitter/X developer portal:
 	- Local example: `http://localhost:8000/api/auth/twitter/callback/`
-	- Production example: `https://your-backend-domain.com/api/auth/twitter/callback/`
+	- Production (required): `https://api.irlobby.com/api/auth/twitter/callback/`
 3. Set `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` for the mobile app if you want an explicit runtime value.
 
 Notes:
 - The backend callback exchanges the Twitter authorization code and then redirects back into the app with app JWTs.
 - This flow is intended for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
+
+## 2.2) Configure Google and Apple for store builds
+
+1. Backend: set `GOOGLE_OAUTH_CLIENT_IDS` and `APPLE_OAUTH_AUDIENCES=com.irlobby.app`, then redeploy so `/api/auth/google/mobile/` and `/api/auth/apple/mobile/` exist.
+2. Mobile: bake Google client IDs into the production EAS profile (GitHub variables → CI env → `eas build`).
+3. Apple: enable Sign In with Apple on App ID `com.irlobby.app` (app already sets `usesAppleSignIn: true`).
 
 ## 3) Confirm app identity
 

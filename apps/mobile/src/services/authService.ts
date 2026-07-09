@@ -294,7 +294,9 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
   const userValue = callbackParams.user;
 
   if (typeof accessTokenValue !== 'string' || !accessTokenValue) {
-    throw new Error('X/Twitter sign-in did not return an access token.');
+    throw new Error(
+      'X/Twitter sign-in did not return an access token. Confirm the Twitter app callback URL includes https://api.irlobby.com/api/auth/twitter/callback/ and try again in a standalone build (not Expo Go).'
+    );
   }
 
   return persistAuthResponse({

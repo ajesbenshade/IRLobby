@@ -23,6 +23,8 @@ export const auth = {
     twitterCta: 'Continue with X',
     googleCta: 'Continue with Google',
     appleCta: 'Continue with Apple',
+    googleNotConfigured:
+      'Google sign-in is not configured on this build yet.',
     forgotPassword: 'Forgot password?',
     footerPrompt: 'New here?',
     footerCta: 'Create account',
@@ -33,6 +35,11 @@ export const auth = {
     title: "Let's get you in.",
     subtitle: 'Two minutes. Then you’re out the door.',
     primaryCta: 'Create account',
+    twitterCta: 'Continue with X',
+    googleCta: 'Continue with Google',
+    appleCta: 'Continue with Apple',
+    googleNotConfigured:
+      'Google sign-in is not configured on this build yet.',
     legalLabel:
       'I agree to the Terms of Service and Privacy Policy.',
     legalRequired: 'Please accept the terms to continue.',

@@ -27,6 +27,11 @@ jobs:
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || vars.GOOGLE_EXPO_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
     steps:
       - name: Explain skipped iOS build
         if: env.HAS_EXPO_TOKEN != 'true'
@@ -82,6 +87,17 @@ jobs:
             exit 1
           fi
 
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID" ]; then
+            echo "Warning: no Google OAuth client IDs configured."
+            echo "Continue with Google will be disabled in this build until you set"
+            echo "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
+            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (or EXPO_PUBLIC_GOOGLE_CLIENT_ID)."
+          fi
+
       - name: Validate mobile TypeScript
         if: env.HAS_EXPO_TOKEN == 'true'
         run: npm run typecheck
@@ -103,6 +119,11 @@ jobs:
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || vars.GOOGLE_EXPO_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
       HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
@@ -147,6 +168,15 @@ jobs:
             echo "Missing required Twitter/Mapbox repository variables."
             echo "Set TWITTER_CLIENT_ID, TWITTER_REDIRECT_URI, MAPBOX_PUBLIC_TOKEN (or EXPO_PUBLIC_* equivalents)."
             exit 1
+          fi
+
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_CLIENT_ID" ] && \
+             [ -z "$EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID" ]; then
+            echo "Warning: no Google OAuth client IDs configured."
+            echo "Continue with Google will be disabled until Google client ID variables are set."
           fi
 
       - name: Materialize Google Play service account

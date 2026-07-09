@@ -18,6 +18,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,6 +35,7 @@ jobs:
           SSH_USER: ${{ secrets.HETZNER_USER }}
           ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
           DEPLOY_MODE: ${{ inputs.mode }}
+          GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
         run: |
           set -euo pipefail
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -75,7 +78,7 @@ jobs:
 
           ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" \
-            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' DEPLOY_MODE='${DEPLOY_MODE}' bash -s" <<'REMOTE'
+            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' DEPLOY_MODE='${DEPLOY_MODE}' GOOGLE_OAUTH_CLIENT_IDS='${GOOGLE_OAUTH_CLIENT_IDS}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${REMOTE_DIR}"
 
@@ -147,7 +150,23 @@ jobs:
             echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
           fi
 
+          if [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
+            if grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+              sed -i "s|^GOOGLE_OAUTH_CLIENT_IDS=.*|GOOGLE_OAUTH_CLIENT_IDS=${GOOGLE_OAUTH_CLIENT_IDS}|" .env.production
+            else
+              printf '\nGOOGLE_OAUTH_CLIENT_IDS=%s\n' "${GOOGLE_OAUTH_CLIENT_IDS}" >> .env.production
+            fi
+            echo "Set GOOGLE_OAUTH_CLIENT_IDS from GitHub variable."
+          fi
+
           chmod 600 .env.production
+
+          if [ "${DEPLOY_MODE}" = "hotpatch" ] && [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
+            echo "=== recreating web/ws to load updated Google OAuth env ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web ws
+            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
+            sleep 8
+          fi
 
           if [ "${DEPLOY_MODE}" = "full" ]; then
             echo "=== full image rebuild (includes google-auth + Google/Apple routes) ==="

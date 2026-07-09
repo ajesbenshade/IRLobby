@@ -3,10 +3,6 @@ name: Backend Deploy
 on:
   workflow_dispatch:
     inputs:
-      git_ref:
-        description: Git ref to deploy (branch, tag, or SHA)
-        type: string
-        default: main
       ensure_apple_audience:
         description: Ensure APPLE_OAUTH_AUDIENCES=com.irlobby.app in .env.production
         type: boolean
@@ -16,16 +12,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
 
-      - name: Resolve SSH user and deploy
+      - name: Resolve SSH user and sync + deploy
         env:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
-          GIT_REF: ${{ inputs.git_ref }}
           ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
         run: |
           set -euo pipefail
@@ -50,59 +48,54 @@ jobs:
           fi
 
           echo "Connected as ${EFFECTIVE_USER}"
-          echo "SSH_USER_EFFECTIVE=${EFFECTIVE_USER}" >> "${GITHUB_ENV}"
+
+          REMOTE_DIR="$(connect "${EFFECTIVE_USER}" 'for dir in /opt/irlobby/irlobby_backend ~/IRLobby/irlobby_backend; do [ -d "$dir" ] && echo "$dir" && exit 0; done; exit 1')"
+          echo "Remote dir: ${REMOTE_DIR}"
+
+          rsync -az --delete \
+            --exclude '.env' \
+            --exclude '.env.production' \
+            --exclude '.env.local' \
+            --exclude '.venv' \
+            --exclude '__pycache__' \
+            --exclude '.pytest_cache' \
+            --exclude 'staticfiles' \
+            --exclude 'media' \
+            --exclude '.git' \
+            ./irlobby_backend/ \
+            "${EFFECTIVE_USER}@${SSH_HOST}:${REMOTE_DIR}/"
 
           ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" \
-            "GIT_REF='${GIT_REF}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' bash -s" <<'REMOTE'
+            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' bash -s" <<'REMOTE'
           set -euo pipefail
+          cd "${REMOTE_DIR}"
 
-          for dir in /opt/irlobby/irlobby_backend ~/IRLobby/irlobby_backend /home/*/IRLobby/irlobby_backend; do
-            if [ -d "$dir" ]; then
-              cd "$dir"
-              echo "=== deploying from $dir ==="
-              echo "=== git status before ==="
-              git rev-parse --abbrev-ref HEAD || true
-              git rev-parse HEAD || true
+          if [ ! -f .env.production ]; then
+            echo "Missing .env.production" >&2
+            exit 1
+          fi
 
-              git fetch --all --tags
-              git checkout "${GIT_REF}"
-              git pull --ff-only || git reset --hard "origin/${GIT_REF}" || true
-
-              if [ ! -f .env.production ]; then
-                echo "Missing .env.production" >&2
-                exit 1
-              fi
-
-              if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
-                if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
-                  sed -i 's/^APPLE_OAUTH_AUDIENCES=.*/APPLE_OAUTH_AUDIENCES=com.irlobby.app/' .env.production
-                else
-                  printf '\nAPPLE_OAUTH_AUDIENCES=com.irlobby.app\n' >> .env.production
-                fi
-              fi
-
-              if ! grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
-                printf '\nGOOGLE_OAUTH_CLIENT_IDS=\n' >> .env.production
-                echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
-              fi
-
-              chmod 600 .env.production
-
-              echo "=== running deploy.sh ==="
-              bash deploy/oracle/deploy.sh
-
-              echo "=== restarting nginx after deploy ==="
-              docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
-
-              echo "=== deployed commit ==="
-              git rev-parse HEAD
-              exit 0
+          if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+            if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
+              sed -i 's/^APPLE_OAUTH_AUDIENCES=.*/APPLE_OAUTH_AUDIENCES=com.irlobby.app/' .env.production
+            else
+              printf '\nAPPLE_OAUTH_AUDIENCES=com.irlobby.app\n' >> .env.production
             fi
-          done
+          fi
 
-          echo "Could not find IRLobby compose directory" >&2
-          exit 1
+          if ! grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+            printf '\nGOOGLE_OAUTH_CLIENT_IDS=\n' >> .env.production
+            echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
+          fi
+
+          chmod 600 .env.production
+
+          echo "=== running deploy.sh ==="
+          bash deploy/oracle/deploy.sh
+
+          echo "=== restarting nginx after deploy ==="
+          docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
           REMOTE
 
       - name: Verify auth routes

@@ -7,6 +7,9 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -29,47 +32,145 @@ jobs:
           done
           [ -n "${EFFECTIVE_USER}" ]
 
+          rsync -az \
+            ./irlobby_backend/users/oauth_views.py \
+            ./irlobby_backend/users/social_auth.py \
+            ./irlobby_backend/users/oauth_urls.py \
+            ./irlobby_backend/irlobby_backend/urls.py \
+            "${EFFECTIVE_USER}@${SSH_HOST}:/tmp/irlobby-auth-patch/"
+
           ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" <<'REMOTE'
           set -euo pipefail
+
           echo "=== docker ps ==="
           docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -30
 
-          echo "=== web logs ==="
-          docker logs --tail 80 irlobby_backend-web-1 2>&1 || true
+          redis_cid="$(docker ps -q -f name=redis | head -1)"
+          web_cid="$(docker ps -aq -f name=irlobby_backend-web-1 | head -1)"
+          ws_cid="$(docker ps -aq -f name=irlobby_backend-ws-1 | head -1)"
 
-          echo "=== ws logs ==="
-          docker logs --tail 40 irlobby_backend-ws-1 2>&1 || true
+          redis_pw=""
+          if [ -n "${redis_cid}" ]; then
+            redis_pw="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${redis_cid}" | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
+            if [ -z "${redis_pw}" ]; then
+              redis_pw="$(docker exec "${redis_cid}" sh -lc 'tr "\0" " " </proc/1/cmdline' 2>/dev/null | sed -n 's/.*--requirepass[" ]*\([^" ]*\).*/\1/p' || true)"
+            fi
+          fi
 
-          cd /opt/irlobby/irlobby_backend
+          if [ -z "${redis_pw}" ]; then
+            echo "Could not recover Redis password" >&2
+            docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
+            exit 1
+          fi
+          echo "Recovered Redis password (len=${#redis_pw})"
 
-          # Prefer restarting from the last known-good image without rebuild.
+          redis_url="redis://:${redis_pw}@redis:6379/0"
+
+          patch_container_env_file() {
+            local cid="$1"
+            [ -n "${cid}" ] || return 0
+            docker exec "${cid}" sh -lc "touch /app/.env && chmod 600 /app/.env"
+            docker exec -e REDIS_URL_VALUE="${redis_url}" -e APPLE_AUD='com.irlobby.app' "${cid}" sh -lc '
+              set -e
+              tmp=$(mktemp)
+              # Drop conflicting keys then append corrected values.
+              if [ -f /app/.env ]; then
+                grep -Ev "^(REDIS_URL|CELERY_BROKER_URL|CELERY_RESULT_BACKEND|APPLE_OAUTH_AUDIENCES|GOOGLE_OAUTH_CLIENT_IDS)=" /app/.env > "$tmp" || true
+              fi
+              {
+                echo "REDIS_URL=${REDIS_URL_VALUE}"
+                echo "CELERY_BROKER_URL=${REDIS_URL_VALUE}"
+                echo "CELERY_RESULT_BACKEND=${REDIS_URL_VALUE}"
+                echo "APPLE_OAUTH_AUDIENCES=${APPLE_AUD}"
+                echo "GOOGLE_OAUTH_CLIENT_IDS="
+              } >> "$tmp"
+              mv "$tmp" /app/.env
+              chmod 600 /app/.env
+            '
+          }
+
+          # Restore only auth route modules (avoid overwriting settings incompatibly again).
+          if [ -n "${web_cid}" ]; then
+            docker cp /tmp/irlobby-auth-patch/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
+            docker cp /tmp/irlobby-auth-patch/social_auth.py "${web_cid}:/app/users/social_auth.py"
+            docker cp /tmp/irlobby-auth-patch/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
+            docker cp /tmp/irlobby-auth-patch/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
+            patch_container_env_file "${web_cid}"
+          fi
+          if [ -n "${ws_cid}" ]; then
+            docker cp /tmp/irlobby-auth-patch/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
+            docker cp /tmp/irlobby-auth-patch/social_auth.py "${ws_cid}:/app/users/social_auth.py"
+            docker cp /tmp/irlobby-auth-patch/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
+            docker cp /tmp/irlobby-auth-patch/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
+            patch_container_env_file "${ws_cid}"
+          fi
+
+          # Also restore settings.py from the image filesystem backup if present in the image layers
+          # by re-copying from a temporary container created from the same image.
+          if [ -n "${web_cid}" ]; then
+            image="$(docker inspect -f '{{.Config.Image}}' "${web_cid}")"
+            echo "Web image: ${image}"
+            tmpc="$(docker create "${image}")"
+            docker cp "${tmpc}:/app/irlobby_backend/settings.py" /tmp/settings.py.orig
+            docker rm "${tmpc}" >/dev/null
+            docker cp /tmp/settings.py.orig "${web_cid}:/app/irlobby_backend/settings.py"
+            if [ -n "${ws_cid}" ]; then
+              docker cp /tmp/settings.py.orig "${ws_cid}:/app/irlobby_backend/settings.py"
+            fi
+            echo "Restored original settings.py from image"
+          fi
+
           echo "=== restarting web/ws/nginx ==="
-          docker start irlobby_backend-web-1 || true
-          docker start irlobby_backend-ws-1 || true
-          docker restart irlobby_backend-web-1 || true
+          docker update --restart unless-stopped irlobby_backend-web-1 || true
+          docker update --restart unless-stopped irlobby_backend-ws-1 || true
+          docker restart irlobby_backend-web-1
           docker restart irlobby_backend-ws-1 || true
           docker restart irlobby_backend-nginx-1 || true
-          sleep 10
+          sleep 12
 
           echo "=== web logs after restart ==="
-          docker logs --tail 60 irlobby_backend-web-1 2>&1 || true
+          docker logs --tail 50 irlobby_backend-web-1 2>&1 || true
 
           echo "=== in-container health ==="
           docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ || true
           REMOTE
 
-      - name: External health check
+      - name: External health and auth checks
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
-            echo "attempt ${attempt}: HTTP ${code}"
+            echo "health attempt ${attempt}: HTTP ${code}"
             head -c 200 /tmp/health.json || true
             echo ""
             if [ "${code}" = "200" ]; then
-              exit 0
+              break
             fi
             sleep 5
           done
-          exit 1
+          [ "${code}" = "200" ]
+
+          echo "=== twitter status ==="
+          curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+          echo ""
+
+          google_code="$(curl -sS -o /tmp/google.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/google/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"id_token":"invalid"}')"
+          echo "google HTTP ${google_code}"
+          head -c 300 /tmp/google.json || true
+          echo ""
+          [ "${google_code}" != "404" ]
+
+          apple_code="$(curl -sS -o /tmp/apple.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/apple/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"identity_token":"invalid"}')"
+          echo "apple HTTP ${apple_code}"
+          head -c 300 /tmp/apple.json || true
+          echo ""
+          [ "${apple_code}" != "404" ]
+
+          echo "Recovery verification passed."

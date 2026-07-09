@@ -107,17 +107,21 @@ jobs:
             exit 1
           fi
 
-          echo "=== hotpatching Python app into running containers ==="
-          docker cp ./users/. "${web_cid}:/app/users/"
-          docker cp ./irlobby_backend/. "${web_cid}:/app/irlobby_backend/"
+          echo "=== hotpatching auth route modules into running containers ==="
+          # Only copy auth-related modules. Do NOT overwrite settings.py (Redis validation
+          # / env assumptions can crash the live image).
+          docker cp ./users/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
+          docker cp ./users/social_auth.py "${web_cid}:/app/users/social_auth.py"
+          docker cp ./users/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
+          docker cp ./irlobby_backend/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
           if [ -n "${ws_cid}" ]; then
-            docker cp ./users/. "${ws_cid}:/app/users/"
-            docker cp ./irlobby_backend/. "${ws_cid}:/app/irlobby_backend/"
+            docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
+            docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"
+            docker cp ./users/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
+            docker cp ./irlobby_backend/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
           fi
 
-          # Ensure Apple audience is present in the running web process env for this restart.
-          # Compose restart keeps existing container env; also write into a local override file
-          # that Django reads via python-decouple/.env if present.
+          # Ensure Apple audience is present for token verification defaults.
           if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
             docker exec "${web_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
             docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'

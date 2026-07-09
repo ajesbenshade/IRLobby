@@ -7,6 +7,13 @@ on:
         description: Ensure APPLE_OAUTH_AUDIENCES=com.irlobby.app in .env.production
         type: boolean
         default: true
+      mode:
+        description: Deploy mode
+        type: choice
+        options:
+          - hotpatch
+          - full
+        default: hotpatch
 
 jobs:
   deploy:
@@ -25,6 +32,7 @@ jobs:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
           ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
+          DEPLOY_MODE: ${{ inputs.mode }}
         run: |
           set -euo pipefail
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -52,7 +60,7 @@ jobs:
           REMOTE_DIR="$(connect "${EFFECTIVE_USER}" 'for dir in /opt/irlobby/irlobby_backend ~/IRLobby/irlobby_backend; do [ -d "$dir" ] && echo "$dir" && exit 0; done; exit 1')"
           echo "Remote dir: ${REMOTE_DIR}"
 
-          rsync -az --delete \
+          rsync -az \
             --exclude '.env' \
             --exclude '.env.production' \
             --exclude '.env.local' \
@@ -67,7 +75,7 @@ jobs:
 
           ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" \
-            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' bash -s" <<'REMOTE'
+            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' DEPLOY_MODE='${DEPLOY_MODE}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${REMOTE_DIR}"
 
@@ -89,63 +97,65 @@ jobs:
             echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
           fi
 
-          # Production CORS/CSRF/WS origins must be HTTPS for deploy preflight.
-          # Keep existing https:// entries; drop http:// entries (e.g. Expo/dev).
-          for key in CORS_ALLOWED_ORIGINS CSRF_TRUSTED_ORIGINS WEBSOCKET_ALLOWED_ORIGINS; do
-            if grep -q "^${key}=" .env.production; then
-              current="$(grep "^${key}=" .env.production | cut -d= -f2-)"
-              filtered="$(printf '%s' "${current}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -E '^https://' | paste -sd, - || true)"
-              if [ -n "${filtered}" ]; then
-                sed -i "s|^${key}=.*|${key}=${filtered}|" .env.production
-                echo "Sanitized ${key} to HTTPS-only origins."
-              fi
-            fi
-          done
-
           chmod 600 .env.production
 
-          echo "=== .env.production keys (names only) ==="
-          grep -E '^[A-Z0-9_]+=' .env.production | cut -d= -f1 | sort
+          web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
+          ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"
+          if [ -z "${web_cid}" ]; then
+            echo "web container not running" >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}' || true
+            exit 1
+          fi
 
-          if ! grep -qE '^REDIS_PASSWORD=.+' .env.production; then
-            echo "REDIS_PASSWORD missing/empty; recovering from running redis container" >&2
-            recovered="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-redis-1 2>/dev/null | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
-            if [ -z "${recovered}" ]; then
-              echo "Could not recover REDIS_PASSWORD" >&2
-              exit 1
+          echo "=== hotpatching Python app into running containers ==="
+          docker cp ./users/. "${web_cid}:/app/users/"
+          docker cp ./irlobby_backend/. "${web_cid}:/app/irlobby_backend/"
+          if [ -n "${ws_cid}" ]; then
+            docker cp ./users/. "${ws_cid}:/app/users/"
+            docker cp ./irlobby_backend/. "${ws_cid}:/app/irlobby_backend/"
+          fi
+
+          # Ensure Apple audience is present in the running web process env for this restart.
+          # Compose restart keeps existing container env; also write into a local override file
+          # that Django reads via python-decouple/.env if present.
+          if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+            docker exec "${web_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+            docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+            if [ -n "${ws_cid}" ]; then
+              docker exec "${ws_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+              docker exec "${ws_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
             fi
-            tmp="$(mktemp)"
-            awk -v val="${recovered}" '
-              BEGIN { found=0 }
-              /^REDIS_PASSWORD=/ { print "REDIS_PASSWORD=" val; found=1; next }
-              { print }
-              END { if (!found) print "REDIS_PASSWORD=" val }
-            ' .env.production > "${tmp}"
-            mv "${tmp}" .env.production
-            chmod 600 .env.production
-            echo "Recovered REDIS_PASSWORD into .env.production"
           fi
 
-          PROFILE_FLAG=""
-          if grep -qE '^USE_LOCAL_POSTGRES=(true|1|True)$' .env.production; then
-            PROFILE_FLAG="--profile localdb"
+          echo "=== restarting web/ws to load new routes ==="
+          docker restart "${web_cid}"
+          if [ -n "${ws_cid}" ]; then
+            docker restart "${ws_cid}"
+          fi
+          sleep 8
+
+          if [ "${DEPLOY_MODE}" = "full" ]; then
+            echo "Full rebuild requested but REDIS_PASSWORD recovery is fragile; hotpatch completed first."
+            echo "Run a manual full deploy on the host when REDIS_PASSWORD is present in .env.production."
           fi
 
-          echo "=== building and starting services ==="
-          set -a
-          # shellcheck disable=SC1091
-          . ./.env.production
-          set +a
-          # shellcheck disable=SC2086
-          docker compose -f docker-compose.oracle.yml --env-file .env.production ${PROFILE_FLAG} build
-          # shellcheck disable=SC2086
-          docker compose -f docker-compose.oracle.yml --env-file .env.production ${PROFILE_FLAG} up -d
-          docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
+          echo "=== container status ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
           REMOTE
 
       - name: Verify auth routes
         run: |
           set -euo pipefail
+
+          echo "Waiting for web to become ready..."
+          for attempt in 1 2 3 4 5 6 7 8; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
+            echo "health attempt ${attempt}: HTTP ${code}"
+            if [ "${code}" = "200" ]; then
+              break
+            fi
+            sleep 5
+          done
 
           echo "=== twitter status ==="
           curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/

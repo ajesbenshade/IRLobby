@@ -104,19 +104,42 @@ jobs:
 
           chmod 600 .env.production
 
-          set -a
-          # shellcheck disable=SC1091
-          source .env.production
-          set +a
+          echo "=== .env.production keys (names only) ==="
+          grep -E '^[A-Z0-9_]+=' .env.production | cut -d= -f1 | sort
 
-          PROFILE_ARGS=()
-          if [ "${USE_LOCAL_POSTGRES:-false}" = "true" ]; then
-            PROFILE_ARGS+=(--profile localdb)
+          if ! grep -qE '^REDIS_PASSWORD=.+' .env.production; then
+            echo "REDIS_PASSWORD missing/empty; recovering from running redis container" >&2
+            recovered="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-redis-1 2>/dev/null | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
+            if [ -z "${recovered}" ]; then
+              echo "Could not recover REDIS_PASSWORD" >&2
+              exit 1
+            fi
+            tmp="$(mktemp)"
+            awk -v val="${recovered}" '
+              BEGIN { found=0 }
+              /^REDIS_PASSWORD=/ { print "REDIS_PASSWORD=" val; found=1; next }
+              { print }
+              END { if (!found) print "REDIS_PASSWORD=" val }
+            ' .env.production > "${tmp}"
+            mv "${tmp}" .env.production
+            chmod 600 .env.production
+            echo "Recovered REDIS_PASSWORD into .env.production"
+          fi
+
+          PROFILE_FLAG=""
+          if grep -qE '^USE_LOCAL_POSTGRES=(true|1|True)$' .env.production; then
+            PROFILE_FLAG="--profile localdb"
           fi
 
           echo "=== building and starting services ==="
-          docker compose -f docker-compose.oracle.yml --env-file .env.production "${PROFILE_ARGS[@]}" build
-          docker compose -f docker-compose.oracle.yml --env-file .env.production "${PROFILE_ARGS[@]}" up -d
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env.production
+          set +a
+          # shellcheck disable=SC2086
+          docker compose -f docker-compose.oracle.yml --env-file .env.production ${PROFILE_FLAG} build
+          # shellcheck disable=SC2086
+          docker compose -f docker-compose.oracle.yml --env-file .env.production ${PROFILE_FLAG} up -d
           docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
           REMOTE
 

@@ -7,15 +7,12 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
 
-      - name: Diagnose and recover web
+      - name: Restore original image files and restart
         env:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
@@ -32,70 +29,55 @@ jobs:
           done
           [ -n "${EFFECTIVE_USER}" ]
 
-          mkdir -p /tmp/irlobby-auth-patch
-          cp irlobby_backend/users/oauth_views.py \
-             irlobby_backend/users/social_auth.py \
-             irlobby_backend/users/oauth_urls.py \
-             irlobby_backend/irlobby_backend/urls.py \
-             /tmp/irlobby-auth-patch/
-          scp -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-            /tmp/irlobby-auth-patch/* \
-            "${EFFECTIVE_USER}@${SSH_HOST}:/tmp/irlobby-auth-patch/"
-
-          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new \
+          ssh -o BatchMode=yes -o ConnectTimeout=40 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" <<'REMOTE'
           set -euo pipefail
-
-          echo "=== docker ps ==="
-          docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -30
 
           web_cid="$(docker ps -aq -f name=irlobby_backend-web-1 | head -1)"
           ws_cid="$(docker ps -aq -f name=irlobby_backend-ws-1 | head -1)"
           [ -n "${web_cid}" ]
-
           image="$(docker inspect -f '{{.Config.Image}}' "${web_cid}")"
           echo "Web image: ${image}"
 
-          # Stop crash-looping containers so docker cp / file edits can succeed.
           docker update --restart=no irlobby_backend-web-1 || true
           docker update --restart=no irlobby_backend-ws-1 || true
           docker stop irlobby_backend-web-1 || true
           docker stop irlobby_backend-ws-1 || true
 
-          # Restore original settings.py from the image (hotpatch overwrote it and
-          # introduced Redis auth validation that crashes with the live env).
           tmpc="$(docker create "${image}")"
-          docker cp "${tmpc}:/app/irlobby_backend/settings.py" /tmp/settings.py.orig
+          mkdir -p /tmp/irlobby-image-restore
+          docker cp "${tmpc}:/app/irlobby_backend/settings.py" /tmp/irlobby-image-restore/settings.py
+          docker cp "${tmpc}:/app/irlobby_backend/urls.py" /tmp/irlobby-image-restore/urls.py
+          docker cp "${tmpc}:/app/users/oauth_views.py" /tmp/irlobby-image-restore/oauth_views.py
+          docker cp "${tmpc}:/app/users/oauth_urls.py" /tmp/irlobby-image-restore/oauth_urls.py || true
+          docker cp "${tmpc}:/app/users/social_auth.py" /tmp/irlobby-image-restore/social_auth.py || true
           docker rm "${tmpc}" >/dev/null
-          docker cp /tmp/settings.py.orig "${web_cid}:/app/irlobby_backend/settings.py"
-          if [ -n "${ws_cid}" ]; then
-            docker cp /tmp/settings.py.orig "${ws_cid}:/app/irlobby_backend/settings.py"
-          fi
-          echo "Restored original settings.py from image"
 
-          # Patch only auth route modules from the repo checkout.
-          docker cp /tmp/irlobby-auth-patch/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
-          docker cp /tmp/irlobby-auth-patch/social_auth.py "${web_cid}:/app/users/social_auth.py"
-          docker cp /tmp/irlobby-auth-patch/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
-          docker cp /tmp/irlobby-auth-patch/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
-          if [ -n "${ws_cid}" ]; then
-            docker cp /tmp/irlobby-auth-patch/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
-            docker cp /tmp/irlobby-auth-patch/social_auth.py "${ws_cid}:/app/users/social_auth.py"
-            docker cp /tmp/irlobby-auth-patch/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
-            docker cp /tmp/irlobby-auth-patch/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
-          fi
-
-          # Best-effort Apple/Google env markers via a temporary start+exec, then stop again.
-          docker start "${web_cid}"
-          sleep 2
-          docker exec "${web_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env; grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env' || true
-          if [ -n "${ws_cid}" ]; then
-            docker start "${ws_cid}" || true
+          restore_into() {
+            local cid="$1"
+            [ -n "${cid}" ] || return 0
+            docker cp /tmp/irlobby-image-restore/settings.py "${cid}:/app/irlobby_backend/settings.py"
+            docker cp /tmp/irlobby-image-restore/urls.py "${cid}:/app/irlobby_backend/urls.py"
+            docker cp /tmp/irlobby-image-restore/oauth_views.py "${cid}:/app/users/oauth_views.py"
+            if [ -f /tmp/irlobby-image-restore/oauth_urls.py ]; then
+              docker cp /tmp/irlobby-image-restore/oauth_urls.py "${cid}:/app/users/oauth_urls.py"
+            fi
+            if [ -f /tmp/irlobby-image-restore/social_auth.py ]; then
+              docker cp /tmp/irlobby-image-restore/social_auth.py "${cid}:/app/users/social_auth.py"
+            else
+              docker exec "${cid}" rm -f /app/users/social_auth.py || true
+            fi
+            # Remove hotpatch-written /app/.env that can override compose env incorrectly.
+            docker start "${cid}" >/dev/null
             sleep 1
-            docker exec "${ws_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env; grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env' || true
-          fi
+            docker exec "${cid}" rm -f /app/.env || true
+            docker stop "${cid}" >/dev/null || true
+          }
 
-          echo "=== starting web/ws/nginx ==="
+          restore_into "${web_cid}"
+          restore_into "${ws_cid}"
+          echo "Restored original Python modules from image and removed /app/.env overrides"
+
           docker update --restart unless-stopped irlobby_backend-web-1 || true
           docker update --restart unless-stopped irlobby_backend-ws-1 || true
           docker start irlobby_backend-web-1
@@ -103,14 +85,13 @@ jobs:
           docker restart irlobby_backend-nginx-1 || true
           sleep 15
 
-          echo "=== web logs after restart ==="
-          docker logs --tail 60 irlobby_backend-web-1 2>&1 || true
-
+          echo "=== web logs ==="
+          docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
           echo "=== in-container health ==="
           docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ || true
           REMOTE
 
-      - name: External health and auth checks
+      - name: External health check
         run: |
           set -euo pipefail
           code=""
@@ -120,32 +101,11 @@ jobs:
             head -c 200 /tmp/health.json || true
             echo ""
             if [ "${code}" = "200" ]; then
-              break
+              echo "=== twitter status ==="
+              curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+              echo ""
+              exit 0
             fi
             sleep 5
           done
-          [ "${code}" = "200" ]
-
-          echo "=== twitter status ==="
-          curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
-          echo ""
-
-          google_code="$(curl -sS -o /tmp/google.json -w "%{http_code}" --max-time 20 \
-            -X POST https://api.irlobby.com/api/auth/google/mobile/ \
-            -H 'Content-Type: application/json' \
-            -d '{"id_token":"invalid"}')"
-          echo "google HTTP ${google_code}"
-          head -c 300 /tmp/google.json || true
-          echo ""
-          [ "${google_code}" != "404" ]
-
-          apple_code="$(curl -sS -o /tmp/apple.json -w "%{http_code}" --max-time 20 \
-            -X POST https://api.irlobby.com/api/auth/apple/mobile/ \
-            -H 'Content-Type: application/json' \
-            -d '{"identity_token":"invalid"}')"
-          echo "apple HTTP ${apple_code}"
-          head -c 300 /tmp/apple.json || true
-          echo ""
-          [ "${apple_code}" != "404" ]
-
-          echo "Recovery verification passed."
+          exit 1

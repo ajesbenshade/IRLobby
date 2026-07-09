@@ -89,12 +89,34 @@ jobs:
             echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
           fi
 
+          # Production CORS/CSRF/WS origins must be HTTPS for deploy preflight.
+          # Keep existing https:// entries; drop http:// entries (e.g. Expo/dev).
+          for key in CORS_ALLOWED_ORIGINS CSRF_TRUSTED_ORIGINS WEBSOCKET_ALLOWED_ORIGINS; do
+            if grep -q "^${key}=" .env.production; then
+              current="$(grep "^${key}=" .env.production | cut -d= -f2-)"
+              filtered="$(printf '%s' "${current}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -E '^https://' | paste -sd, - || true)"
+              if [ -n "${filtered}" ]; then
+                sed -i "s|^${key}=.*|${key}=${filtered}|" .env.production
+                echo "Sanitized ${key} to HTTPS-only origins."
+              fi
+            fi
+          done
+
           chmod 600 .env.production
 
-          echo "=== running deploy.sh ==="
-          bash deploy/oracle/deploy.sh
+          set -a
+          # shellcheck disable=SC1091
+          source .env.production
+          set +a
 
-          echo "=== restarting nginx after deploy ==="
+          PROFILE_ARGS=()
+          if [ "${USE_LOCAL_POSTGRES:-false}" = "true" ]; then
+            PROFILE_ARGS+=(--profile localdb)
+          fi
+
+          echo "=== building and starting services ==="
+          docker compose -f docker-compose.oracle.yml --env-file .env.production "${PROFILE_ARGS[@]}" build
+          docker compose -f docker-compose.oracle.yml --env-file .env.production "${PROFILE_ARGS[@]}" up -d
           docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx || true
           REMOTE
 

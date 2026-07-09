@@ -155,20 +155,20 @@ jobs:
 
             echo "=== clearing leftover recovery containers that block compose names ==="
             # Prior docker-run recovery left unmanaged containers / .broken renames.
+            # Always remove web/ws names before compose recreate; redis stays up.
             docker rm -f \
+              irlobby_backend-web-1 \
+              irlobby_backend-ws-1 \
               irlobby_backend-web-1.broken \
               irlobby_backend-ws-1.broken \
               2>/dev/null || true
-            # If web/ws were created outside compose, remove them so compose can recreate.
-            for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
-              if docker inspect "${cname}" >/dev/null 2>&1; then
-                labels="$(docker inspect -f '{{json .Config.Labels}}' "${cname}" 2>/dev/null || true)"
-                if ! printf '%s' "${labels}" | grep -q 'com.docker.compose.project'; then
-                  echo "Removing non-compose container ${cname}"
+            # Compose sometimes leaves conflict-renamed leftovers like <id>_irlobby_backend-web-1
+            docker ps -a --format '{{.Names}}' \
+              | awk '/irlobby_backend-(web|ws)-1/ {print}' \
+              | while read -r cname; do
+                  echo "Removing leftover container ${cname}"
                   docker rm -f "${cname}" || true
-                fi
-              fi
-            done
+                done
 
             echo "=== recreating app containers (leave redis alone) ==="
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web

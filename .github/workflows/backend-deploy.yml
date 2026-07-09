@@ -152,6 +152,24 @@ jobs:
           if [ "${DEPLOY_MODE}" = "full" ]; then
             echo "=== full image rebuild (includes google-auth + Google/Apple routes) ==="
             docker compose -f docker-compose.oracle.yml --env-file .env.production build web ws celery_worker celery_beat
+
+            echo "=== clearing leftover recovery containers that block compose names ==="
+            # Prior docker-run recovery left unmanaged containers / .broken renames.
+            docker rm -f \
+              irlobby_backend-web-1.broken \
+              irlobby_backend-ws-1.broken \
+              2>/dev/null || true
+            # If web/ws were created outside compose, remove them so compose can recreate.
+            for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
+              if docker inspect "${cname}" >/dev/null 2>&1; then
+                labels="$(docker inspect -f '{{json .Config.Labels}}' "${cname}" 2>/dev/null || true)"
+                if ! printf '%s' "${labels}" | grep -q 'com.docker.compose.project'; then
+                  echo "Removing non-compose container ${cname}"
+                  docker rm -f "${cname}" || true
+                fi
+              fi
+            done
+
             echo "=== recreating app containers (leave redis alone) ==="
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web
             for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
@@ -164,7 +182,6 @@ jobs:
             done
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate ws celery_worker celery_beat
             docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
-            docker rm -f irlobby_backend-web-1.broken irlobby_backend-ws-1.broken 2>/dev/null || true
           else
             web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
             ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"

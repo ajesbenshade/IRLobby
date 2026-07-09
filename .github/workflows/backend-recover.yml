@@ -56,6 +56,12 @@ jobs:
           image="$(docker inspect -f '{{.Config.Image}}' "${web_cid}")"
           echo "Web image: ${image}"
 
+          # Stop crash-looping containers so docker cp / file edits can succeed.
+          docker update --restart=no irlobby_backend-web-1 || true
+          docker update --restart=no irlobby_backend-ws-1 || true
+          docker stop irlobby_backend-web-1 || true
+          docker stop irlobby_backend-ws-1 || true
+
           # Restore original settings.py from the image (hotpatch overwrote it and
           # introduced Redis auth validation that crashes with the live env).
           tmpc="$(docker create "${image}")"
@@ -68,7 +74,6 @@ jobs:
           echo "Restored original settings.py from image"
 
           # Patch only auth route modules from the repo checkout.
-          mkdir -p /tmp/irlobby-auth-patch
           docker cp /tmp/irlobby-auth-patch/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
           docker cp /tmp/irlobby-auth-patch/social_auth.py "${web_cid}:/app/users/social_auth.py"
           docker cp /tmp/irlobby-auth-patch/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
@@ -80,19 +85,21 @@ jobs:
             docker cp /tmp/irlobby-auth-patch/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
           fi
 
-          # Best-effort: ensure Apple audience exists without clobbering Redis env.
-          docker exec "${web_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
-          docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+          # Best-effort Apple/Google env markers via a temporary start+exec, then stop again.
+          docker start "${web_cid}"
+          sleep 2
+          docker exec "${web_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env; grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env' || true
           if [ -n "${ws_cid}" ]; then
-            docker exec "${ws_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
-            docker exec "${ws_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+            docker start "${ws_cid}" || true
+            sleep 1
+            docker exec "${ws_cid}" sh -lc 'touch /app/.env; grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env; grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env' || true
           fi
 
-          echo "=== restarting web/ws/nginx ==="
+          echo "=== starting web/ws/nginx ==="
           docker update --restart unless-stopped irlobby_backend-web-1 || true
           docker update --restart unless-stopped irlobby_backend-ws-1 || true
-          docker restart irlobby_backend-web-1
-          docker restart irlobby_backend-ws-1 || true
+          docker start irlobby_backend-web-1
+          docker start irlobby_backend-ws-1 || true
           docker restart irlobby_backend-nginx-1 || true
           sleep 15
 

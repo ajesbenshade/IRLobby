@@ -8,12 +8,12 @@ on:
         type: boolean
         default: true
       mode:
-        description: Deploy mode
+        description: Deploy mode (full rebuild required for Google/Apple deps)
         type: choice
         options:
-          - hotpatch
           - full
-        default: hotpatch
+          - hotpatch
+        default: full
 
 jobs:
   deploy:
@@ -84,6 +84,67 @@ jobs:
             exit 1
           fi
 
+          # Recover REDIS_PASSWORD from a live container REDIS_URL if missing/empty.
+          recover_redis_password() {
+            local redis_url=""
+            for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
+              if docker inspect "${cname}" >/dev/null 2>&1; then
+                redis_url="$(docker exec "${cname}" printenv REDIS_URL 2>/dev/null || true)"
+                if [ -n "${redis_url}" ]; then
+                  break
+                fi
+              fi
+            done
+            if [ -z "${redis_url}" ]; then
+              redis_url="$(grep -E '^REDIS_URL=' .env.production | head -1 | cut -d= -f2- || true)"
+            fi
+            REDIS_URL_CANDIDATE="${redis_url}" python3 - <<'PY'
+import os
+import re
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+path = Path(".env.production")
+text = path.read_text()
+redis_url = os.environ.get("REDIS_URL_CANDIDATE", "").strip().strip('"').strip("'")
+pw = ""
+if redis_url:
+    pw = unquote(urlparse(redis_url).password or "")
+
+def get_val(key):
+    m = re.search(rf"^{re.escape(key)}=(.*)$", text, flags=re.M)
+    return None if m is None else m.group(1)
+
+current = get_val("REDIS_PASSWORD")
+placeholder = current is None or current.strip() == "" or re.search(
+    r"replace-with|CHANGE_ME|change-me", current or "", flags=re.I
+)
+if not pw and placeholder:
+    raise SystemExit("Could not recover REDIS_PASSWORD from REDIS_URL")
+if placeholder and pw:
+    if current is None:
+        if not text.endswith("\n"):
+            text += "\n"
+        text += f"REDIS_PASSWORD={pw}\n"
+        print("Appended REDIS_PASSWORD from live REDIS_URL.")
+    else:
+        text = re.sub(r"^REDIS_PASSWORD=.*$", f"REDIS_PASSWORD={pw}", text, count=1, flags=re.M)
+        print("Filled REDIS_PASSWORD from live REDIS_URL.")
+else:
+    print("REDIS_PASSWORD already set in .env.production.")
+
+if get_val("REDIS_URL") is None and redis_url:
+    if not text.endswith("\n"):
+        text += "\n"
+    text += f"REDIS_URL={redis_url}\n"
+    print("Appended REDIS_URL from live container.")
+
+path.write_text(text)
+PY
+          }
+
+          recover_redis_password
+
           if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
             if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
               sed -i 's/^APPLE_OAUTH_AUDIENCES=.*/APPLE_OAUTH_AUDIENCES=com.irlobby.app/' .env.production
@@ -97,54 +158,103 @@ jobs:
             echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
           fi
 
+          # Soft-sanitize CORS/CSRF lists: drop http:// and localhost origins so
+          # new settings/deploy preflight stay happy without wiping the file.
+          python3 - <<'PY'
+from pathlib import Path
+path = Path(".env.production")
+lines = path.read_text().splitlines()
+keys = {
+    "CORS_ALLOWED_ORIGINS",
+    "CSRF_TRUSTED_ORIGINS",
+    "WEBSOCKET_ALLOWED_ORIGINS",
+}
+out = []
+changed = False
+for line in lines:
+    if "=" not in line or line.lstrip().startswith("#"):
+        out.append(line)
+        continue
+    key, val = line.split("=", 1)
+    if key not in keys:
+        out.append(line)
+        continue
+    parts = [p.strip() for p in val.split(",") if p.strip()]
+    kept = []
+    for p in parts:
+        if p.startswith("http://") or "localhost" in p or "127.0.0.1" in p:
+            changed = True
+            continue
+        kept.append(p)
+    out.append(f"{key}={','.join(kept)}")
+if changed:
+    path.write_text("\n".join(out) + "\n")
+    print("Sanitized non-HTTPS/local origins from CORS/CSRF/WS lists.")
+else:
+    print("Origin lists already HTTPS-only.")
+PY
+
           chmod 600 .env.production
 
-          web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
-          ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"
-          if [ -z "${web_cid}" ]; then
-            echo "web container not running" >&2
-            docker ps --format 'table {{.Names}}\t{{.Status}}' || true
-            exit 1
-          fi
-
-          echo "=== hotpatching auth route modules into running containers ==="
-          # Only copy auth-related modules. Do NOT overwrite settings.py (Redis validation
-          # / env assumptions can crash the live image).
-          docker cp ./users/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
-          docker cp ./users/social_auth.py "${web_cid}:/app/users/social_auth.py"
-          docker cp ./users/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
-          docker cp ./irlobby_backend/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
-          if [ -n "${ws_cid}" ]; then
-            docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
-            docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"
-            docker cp ./users/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
-            docker cp ./irlobby_backend/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
-          fi
-
-          # Ensure Apple audience is present for token verification defaults.
-          if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
-            docker exec "${web_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
-            docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
-            if [ -n "${ws_cid}" ]; then
-              docker exec "${ws_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
-              docker exec "${ws_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
-            fi
-          fi
-
-          echo "=== restarting web/ws to load new routes ==="
-          docker restart "${web_cid}"
-          if [ -n "${ws_cid}" ]; then
-            docker restart "${ws_cid}"
-          fi
-          sleep 8
-
           if [ "${DEPLOY_MODE}" = "full" ]; then
-            echo "Full rebuild requested but REDIS_PASSWORD recovery is fragile; hotpatch completed first."
-            echo "Run a manual full deploy on the host when REDIS_PASSWORD is present in .env.production."
+            echo "=== full image rebuild (includes google-auth + Google/Apple routes) ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production build web ws celery_worker celery_beat
+            echo "=== recreating app containers (leave redis alone) ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web
+            # Wait for web health before ws/celery which depend on it conceptually.
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ >/dev/null 2>&1; then
+                echo "web healthy after ${i} checks"
+                break
+              fi
+              echo "waiting for web... ${i}"
+              sleep 5
+            done
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate ws celery_worker celery_beat
+            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
+            # Remove leftover broken containers from prior recovery if present.
+            docker rm -f irlobby_backend-web-1.broken irlobby_backend-ws-1.broken 2>/dev/null || true
+          else
+            web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
+            ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"
+            if [ -z "${web_cid}" ]; then
+              echo "web container not running" >&2
+              docker ps --format 'table {{.Names}}\t{{.Status}}' || true
+              exit 1
+            fi
+
+            echo "=== hotpatching auth route modules into running containers ==="
+            docker cp ./users/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
+            docker cp ./users/social_auth.py "${web_cid}:/app/users/social_auth.py"
+            docker cp ./users/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
+            docker cp ./irlobby_backend/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
+            if [ -n "${ws_cid}" ]; then
+              docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
+              docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"
+              docker cp ./users/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
+              docker cp ./irlobby_backend/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
+            fi
+
+            if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+              docker exec "${web_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+              docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+              if [ -n "${ws_cid}" ]; then
+                docker exec "${ws_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+                docker exec "${ws_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+              fi
+            fi
+
+            docker restart "${web_cid}"
+            if [ -n "${ws_cid}" ]; then
+              docker restart "${ws_cid}"
+            fi
+            sleep 8
           fi
 
           echo "=== container status ==="
           docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
+          echo "=== web logs (tail) ==="
+          docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
           REMOTE
 
       - name: Verify auth routes
@@ -152,7 +262,7 @@ jobs:
           set -euo pipefail
 
           echo "Waiting for web to become ready..."
-          for attempt in 1 2 3 4 5 6 7 8; do
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
             code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
             echo "health attempt ${attempt}: HTTP ${code}"
             if [ "${code}" = "200" ]; then
@@ -160,9 +270,20 @@ jobs:
             fi
             sleep 5
           done
+          if [ "${code:-}" != "200" ]; then
+            echo "Health check failed" >&2
+            cat /tmp/health.json || true
+            exit 1
+          fi
 
           echo "=== twitter status ==="
           curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+          echo ""
+
+          echo "=== twitter mobile auth_url callback ==="
+          curl -sS --max-time 20 \
+            'https://api.irlobby.com/api/auth/twitter/url/?mobile_redirect_uri=irlobby://auth/twitter' \
+            | python3 -c 'import sys,json,urllib.parse; d=json.load(sys.stdin); q=urllib.parse.parse_qs(urllib.parse.urlparse(d["auth_url"]).query); print(q.get("redirect_uri"))'
           echo ""
 
           echo "=== google mobile (expect JSON 400/503, not HTML 404) ==="
@@ -171,10 +292,14 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"id_token":"invalid"}')"
           echo "HTTP ${google_code}"
-          head -c 300 /tmp/google.json || true
+          head -c 400 /tmp/google.json || true
           echo ""
           if [ "${google_code}" = "404" ]; then
             echo "Google mobile route still missing (404)" >&2
+            exit 1
+          fi
+          if grep -qi '<html' /tmp/google.json; then
+            echo "Google mobile returned HTML instead of JSON" >&2
             exit 1
           fi
 
@@ -184,10 +309,14 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"identity_token":"invalid"}')"
           echo "HTTP ${apple_code}"
-          head -c 300 /tmp/apple.json || true
+          head -c 400 /tmp/apple.json || true
           echo ""
           if [ "${apple_code}" = "404" ]; then
             echo "Apple mobile route still missing (404)" >&2
+            exit 1
+          fi
+          if grep -qi '<html' /tmp/apple.json; then
+            echo "Apple mobile returned HTML instead of JSON" >&2
             exit 1
           fi
 

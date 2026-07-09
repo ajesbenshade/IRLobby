@@ -61,7 +61,7 @@ Notes:
 | `EXPO_PUBLIC_TWITTER_CLIENT_ID` | Present (GitHub variable) | Mobile EAS / CI |
 | `EXPO_PUBLIC_TWITTER_REDIRECT_URI` | Present → `irlobby://auth/twitter` | Mobile EAS / CI |
 | Twitter portal callback | Must include `https://api.irlobby.com/api/auth/twitter/callback/` | X Developer Portal |
-| `APPLE_OAUTH_AUDIENCES` | Default / set → `com.irlobby.app` | Backend `.env.production` |
+| `APPLE_OAUTH_AUDIENCES` | Set → `com.irlobby.app` (live route accepts Apple posts) | Backend `.env.production` |
 | Apple Sign In capability | Enable on App ID `com.irlobby.app` | Apple Developer |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
@@ -73,6 +73,17 @@ Google Cloud Console setup (bundle/package `com.irlobby.app`):
 2. Create an **Android** OAuth client (package `com.irlobby.app` + SHA-1 from `eas credentials`).
 3. Create a **Web** OAuth client (used as `webClientId` for ID token audience).
 4. Put all three IDs into backend `GOOGLE_OAUTH_CLIENT_IDS` (comma-separated) and the matching `EXPO_PUBLIC_GOOGLE_*` vars.
+
+### Production verification (2026-07-09)
+
+| Check | Result |
+|-------|--------|
+| `GET /api/health/` | OK |
+| `GET /api/auth/twitter/status/` | `configured: true` |
+| Mobile Twitter `auth_url` callback | `https://api.irlobby.com/api/auth/twitter/callback/` |
+| `POST /api/auth/google/mobile/` | Live (JSON; returns 503 until `GOOGLE_OAUTH_CLIENT_IDS` is set) |
+| `POST /api/auth/apple/mobile/` | Live (JSON 400 on invalid token; audience `com.irlobby.app`) |
+| Device smoke tests | Build a production/preview EAS binary (not Expo Go). X can be tested now; Google needs client IDs first; Apple needs a real iOS device/TestFlight. |
 
 ## 2.1) Configure Twitter/X login for standalone iOS builds
 

@@ -12,7 +12,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
 
-      - name: Restore original image files and restart
+      - name: Recreate web/ws from image
         env:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
@@ -29,62 +29,79 @@ jobs:
           done
           [ -n "${EFFECTIVE_USER}" ]
 
-          ssh -o BatchMode=yes -o ConnectTimeout=40 -o StrictHostKeyChecking=accept-new \
+          ssh -o BatchMode=yes -o ConnectTimeout=60 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" <<'REMOTE'
           set -euo pipefail
+          cd /opt/irlobby/irlobby_backend
 
-          web_cid="$(docker ps -aq -f name=irlobby_backend-web-1 | head -1)"
-          ws_cid="$(docker ps -aq -f name=irlobby_backend-ws-1 | head -1)"
-          [ -n "${web_cid}" ]
-          image="$(docker inspect -f '{{.Config.Image}}' "${web_cid}")"
-          echo "Web image: ${image}"
+          echo "=== docker ps ==="
+          docker ps -a --format 'table {{.Names}}\t{{.Status}}' | head -20
 
-          docker update --restart=no irlobby_backend-web-1 || true
-          docker update --restart=no irlobby_backend-ws-1 || true
-          docker stop irlobby_backend-web-1 || true
-          docker stop irlobby_backend-ws-1 || true
+          # Prefer REDIS_URL already baked into the web container env.
+          redis_url="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-web-1 2>/dev/null | sed -n 's/^REDIS_URL=//p' | head -1 || true)"
+          redis_pw=""
+          if printf '%s' "${redis_url}" | grep -qE '^rediss?://:'; then
+            redis_pw="$(printf '%s' "${redis_url}" | sed -E 's|^rediss?://:([^@]+)@.*|\1|')"
+          fi
+          if [ -z "${redis_pw}" ]; then
+            redis_pw="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-redis-1 2>/dev/null | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
+          fi
+          if [ -z "${redis_pw}" ]; then
+            echo "Unable to recover Redis password from container env" >&2
+            exit 1
+          fi
+          echo "Recovered Redis password (len=${#redis_pw})"
 
-          tmpc="$(docker create "${image}")"
-          mkdir -p /tmp/irlobby-image-restore
-          docker cp "${tmpc}:/app/irlobby_backend/settings.py" /tmp/irlobby-image-restore/settings.py
-          docker cp "${tmpc}:/app/irlobby_backend/urls.py" /tmp/irlobby-image-restore/urls.py
-          docker cp "${tmpc}:/app/users/oauth_views.py" /tmp/irlobby-image-restore/oauth_views.py
-          docker cp "${tmpc}:/app/users/oauth_urls.py" /tmp/irlobby-image-restore/oauth_urls.py || true
-          docker cp "${tmpc}:/app/users/social_auth.py" /tmp/irlobby-image-restore/social_auth.py || true
-          docker rm "${tmpc}" >/dev/null
+          tmp="$(mktemp)"
+          awk -v val="${redis_pw}" -v url="redis://:${redis_pw}@redis:6379/0" '
+            BEGIN { found_pw=0; found_url=0 }
+            /^REDIS_PASSWORD=/ { print "REDIS_PASSWORD=" val; found_pw=1; next }
+            /^REDIS_URL=/ { print "REDIS_URL=" url; found_url=1; next }
+            { print }
+            END {
+              if (!found_pw) print "REDIS_PASSWORD=" val
+              if (!found_url) print "REDIS_URL=" url
+            }
+          ' .env.production > "${tmp}"
+          mv "${tmp}" .env.production
+          chmod 600 .env.production
 
-          restore_into() {
-            local cid="$1"
-            [ -n "${cid}" ] || return 0
-            docker cp /tmp/irlobby-image-restore/settings.py "${cid}:/app/irlobby_backend/settings.py"
-            docker cp /tmp/irlobby-image-restore/urls.py "${cid}:/app/irlobby_backend/urls.py"
-            docker cp /tmp/irlobby-image-restore/oauth_views.py "${cid}:/app/users/oauth_views.py"
-            if [ -f /tmp/irlobby-image-restore/oauth_urls.py ]; then
-              docker cp /tmp/irlobby-image-restore/oauth_urls.py "${cid}:/app/users/oauth_urls.py"
+          # Keep HTTPS-only origins so future full deploys can pass preflight.
+          for key in CORS_ALLOWED_ORIGINS CSRF_TRUSTED_ORIGINS WEBSOCKET_ALLOWED_ORIGINS; do
+            if grep -q "^${key}=" .env.production; then
+              current="$(grep "^${key}=" .env.production | cut -d= -f2-)"
+              filtered="$(printf '%s' "${current}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -E '^https://' | paste -sd, - || true)"
+              if [ -n "${filtered}" ]; then
+                sed -i "s|^${key}=.*|${key}=${filtered}|" .env.production
+              fi
             fi
-            if [ -f /tmp/irlobby-image-restore/social_auth.py ]; then
-              docker cp /tmp/irlobby-image-restore/social_auth.py "${cid}:/app/users/social_auth.py"
-            else
-              docker exec "${cid}" rm -f /app/users/social_auth.py || true
-            fi
-            # Remove hotpatch-written /app/.env that can override compose env incorrectly.
-            docker start "${cid}" >/dev/null
-            sleep 1
-            docker exec "${cid}" rm -f /app/.env || true
-            docker stop "${cid}" >/dev/null || true
-          }
+          done
 
-          restore_into "${web_cid}"
-          restore_into "${ws_cid}"
-          echo "Restored original Python modules from image and removed /app/.env overrides"
+          if ! grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
+            printf '\nAPPLE_OAUTH_AUDIENCES=com.irlobby.app\n' >> .env.production
+          fi
+          if ! grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+            printf '\nGOOGLE_OAUTH_CLIENT_IDS=\n' >> .env.production
+          fi
 
-          docker update --restart unless-stopped irlobby_backend-web-1 || true
-          docker update --restart unless-stopped irlobby_backend-ws-1 || true
-          docker start irlobby_backend-web-1
-          docker start irlobby_backend-ws-1 || true
-          docker restart irlobby_backend-nginx-1 || true
-          sleep 15
+          PROFILE_FLAG=""
+          if grep -qE '^USE_LOCAL_POSTGRES=(true|1|True)$' .env.production; then
+            PROFILE_FLAG="--profile localdb"
+          fi
 
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env.production
+          set +a
+
+          echo "=== recreating web/ws from existing images (no rebuild) ==="
+          # Force recreate discards mutated container filesystem from docker cp/rsync.
+          # shellcheck disable=SC2086
+          docker compose -f docker-compose.oracle.yml --env-file .env.production ${PROFILE_FLAG} up -d --force-recreate --no-build web ws nginx
+
+          sleep 20
+          echo "=== status ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
           echo "=== web logs ==="
           docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
           echo "=== in-container health ==="
@@ -95,7 +112,7 @@ jobs:
         run: |
           set -euo pipefail
           code=""
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
             echo "health attempt ${attempt}: HTTP ${code}"
             head -c 200 /tmp/health.json || true

@@ -108,6 +108,21 @@ def main():
         )
     )
 
+    # Compose still interpolates ${REDIS_PASSWORD:?...} even for --no-deps
+    # rebuilds. If the live app REDIS_URL has no auth (common on older
+    # deployments), synthesize a password solely for compose parsing and keep
+    # the captured REDIS_URL as the runtime value.
+    allow_insecure_redis = False
+    if not password and placeholder and redis_url and not has_auth_marker:
+        import secrets
+
+        password = secrets.token_urlsafe(48)
+        allow_insecure_redis = True
+        print(
+            "Synthesized REDIS_PASSWORD for compose interpolation; "
+            "keeping unauthenticated REDIS_URL for app runtime."
+        )
+
     if not password and placeholder:
         print("Could not recover REDIS_PASSWORD from REDIS_URL", file=sys.stderr)
         return 1
@@ -130,11 +145,38 @@ def main():
     else:
         print("REDIS_PASSWORD already set in .env.production.")
 
-    if get_val(text, "REDIS_URL") is None and redis_url:
-        if not text.endswith("\n"):
-            text += "\n"
-        text += "REDIS_URL={}\n".format(redis_url)
-        print("Appended REDIS_URL from live container.")
+    # Always prefer the live container REDIS_URL when present.
+    if redis_url:
+        if get_val(text, "REDIS_URL") is None:
+            if not text.endswith("\n"):
+                text += "\n"
+            text += "REDIS_URL={}\n".format(redis_url)
+            print("Appended REDIS_URL from live container.")
+        else:
+            text = re.sub(
+                r"^REDIS_URL=.*$",
+                "REDIS_URL={}".format(redis_url),
+                text,
+                count=1,
+                flags=re.M,
+            )
+            print("Updated REDIS_URL from live container.")
+
+    if allow_insecure_redis or (redis_url and not has_auth_marker):
+        if get_val(text, "REDIS_REQUIRE_AUTH") is None:
+            if not text.endswith("\n"):
+                text += "\n"
+            text += "REDIS_REQUIRE_AUTH=false\n"
+            print("Set REDIS_REQUIRE_AUTH=false for legacy unauthenticated Redis URL.")
+        else:
+            text = re.sub(
+                r"^REDIS_REQUIRE_AUTH=.*$",
+                "REDIS_REQUIRE_AUTH=false",
+                text,
+                count=1,
+                flags=re.M,
+            )
+            print("Updated REDIS_REQUIRE_AUTH=false for legacy unauthenticated Redis URL.")
 
     path.write_text(text)
     return 0

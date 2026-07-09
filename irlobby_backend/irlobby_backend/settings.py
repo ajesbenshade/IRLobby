@@ -233,9 +233,12 @@ _IS_TESTING = (
 )
 
 REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+# Allow temporary unauthenticated Redis during production migrations where the
+# live REDIS_URL predates requirepass. Prefer REDIS_REQUIRE_AUTH=true.
+REDIS_REQUIRE_AUTH = config("REDIS_REQUIRE_AUTH", default=True, cast=bool)
 
 if not DEBUG and not _IS_TESTING:
-    validate_redis_url("REDIS_URL", REDIS_URL, require_auth=True)
+    validate_redis_url("REDIS_URL", REDIS_URL, require_auth=REDIS_REQUIRE_AUTH)
 
 CHANNEL_LAYERS = {
     "default": {
@@ -397,8 +400,10 @@ USE_TZ = True
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=REDIS_URL)
 if not DEBUG and not _IS_TESTING:
-    validate_redis_url("CELERY_BROKER_URL", CELERY_BROKER_URL, require_auth=True)
-    validate_redis_url("CELERY_RESULT_BACKEND", CELERY_RESULT_BACKEND, require_auth=True)
+    validate_redis_url("CELERY_BROKER_URL", CELERY_BROKER_URL, require_auth=REDIS_REQUIRE_AUTH)
+    validate_redis_url(
+        "CELERY_RESULT_BACKEND", CELERY_RESULT_BACKEND, require_auth=REDIS_REQUIRE_AUTH
+    )
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -514,7 +519,7 @@ if _IS_TESTING or (DEBUG and not explicit_cache_url):
 else:
     CACHE_URL = explicit_cache_url or REDIS_URL
     if not DEBUG and not _IS_TESTING:
-        validate_redis_url("CACHE_URL", CACHE_URL, require_auth=True)
+        validate_redis_url("CACHE_URL", CACHE_URL, require_auth=REDIS_REQUIRE_AUTH)
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",

@@ -39,6 +39,7 @@ jobs:
 
           # Prefer REDIS_URL already baked into the web container env.
           redis_url="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-web-1 2>/dev/null | sed -n 's/^REDIS_URL=//p' | head -1 || true)"
+          echo "web REDIS_URL present: $([ -n "${redis_url}" ] && echo yes || echo no)"
           redis_pw=""
           if printf '%s' "${redis_url}" | grep -qE '^rediss?://:'; then
             redis_pw="$(printf '%s' "${redis_url}" | sed -E 's|^rediss?://:([^@]+)@.*|\1|')"
@@ -47,10 +48,29 @@ jobs:
             redis_pw="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-redis-1 2>/dev/null | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
           fi
           if [ -z "${redis_pw}" ]; then
+            # Redis command may embed --requirepass via shell expansion; try cmdline and Args.
+            redis_pw="$(docker inspect -f '{{json .Args}} {{json .Config.Cmd}}' irlobby_backend-redis-1 2>/dev/null | tr -d '[]\"' | sed -n 's/.*--requirepass[, ]*\([^, ]*\).*/\1/p' || true)"
+          fi
+          if [ -z "${redis_pw}" ]; then
+            redis_pw="$(docker exec irlobby_backend-redis-1 sh -lc 'cat /proc/1/environ | tr "\0" "\n"' 2>/dev/null | sed -n 's/^REDIS_PASSWORD=//p' | head -1 || true)"
+          fi
+          if [ -z "${redis_pw}" ]; then
+            redis_pw="$(docker exec irlobby_backend-redis-1 sh -lc 'tr "\0" " " </proc/1/cmdline' 2>/dev/null | sed -n 's/.*requirepass[" =]*\([^" ]*\).*/\1/p' || true)"
+          fi
+          if [ -z "${redis_pw}" ]; then
             echo "Unable to recover Redis password from container env" >&2
+            echo "web env keys:" >&2
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-web-1 2>/dev/null | cut -d= -f1 | head -40 >&2 || true
+            echo "redis env keys:" >&2
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' irlobby_backend-redis-1 2>/dev/null | cut -d= -f1 | head -40 >&2 || true
+            echo "redis cmdline:" >&2
+            docker exec irlobby_backend-redis-1 sh -lc 'tr "\0" " " </proc/1/cmdline' 2>/dev/null >&2 || true
             exit 1
           fi
           echo "Recovered Redis password (len=${#redis_pw})"
+          if [ -z "${redis_url}" ]; then
+            redis_url="redis://:${redis_pw}@redis:6379/0"
+          fi
 
           tmp="$(mktemp)"
           awk -v val="${redis_pw}" -v url="redis://:${redis_pw}@redis:6379/0" '

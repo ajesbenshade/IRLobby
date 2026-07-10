@@ -9,7 +9,8 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -22,6 +23,9 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "production-no-submit": {
+      "extends": "production"
     }
   },
   "submit": {
@@ -30,10 +34,15 @@
         "ascAppId": "6759202702"
       },
       "android": {
-        "serviceAccountKeyPath": "./credentials/play-service-account.json",
         "track": "internal",
         "releaseStatus": "draft",
         "changesNotSentForReview": false
+      }
+    },
+    "production-ci": {
+      "extends": "production",
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-service-account.json"
       }
     }
   }

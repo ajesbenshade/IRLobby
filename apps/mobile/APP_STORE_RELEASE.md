@@ -85,6 +85,15 @@ Google Cloud Console setup (bundle/package `com.irlobby.app`):
 | `POST /api/auth/apple/mobile/` | Live (JSON 400 on invalid token; audience `com.irlobby.app`) |
 | Device smoke tests | Build a production/preview EAS binary (not Expo Go). X can be tested now; Google needs client IDs first; Apple needs a real iOS device/TestFlight. |
 
+### Expo dashboard builds (`Build from GitHub`)
+
+See [`EAS_ENV_SETUP.md`](EAS_ENV_SETUP.md). Summary:
+
+1. **Base directory:** `apps/mobile`
+2. Add **Production** environment variables in Expo (Google iOS/Android/Web IDs, Twitter client ID, Mapbox token).
+3. **Uncheck EAS Submit** unless Play/App Store submit credentials are configured in Expo.
+4. Use build profile **`production`**.
+
 ## 2.1) Configure Twitter/X login for standalone iOS builds
 
 The mobile app uses a backend-owned Twitter OAuth flow. For standalone/TestFlight builds, the app deep link must remain `irlobby://auth/twitter`.

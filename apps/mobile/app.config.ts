@@ -1,7 +1,5 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const legacyGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'IRLobby',
@@ -34,14 +32,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
     twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
-    googleExpoClientId:
-      process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID ?? legacyGoogleClientId,
-    googleIosClientId:
-      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? legacyGoogleClientId,
-    googleAndroidClientId:
-      process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? legacyGoogleClientId,
-    googleWebClientId:
-      process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? legacyGoogleClientId,
+    googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',

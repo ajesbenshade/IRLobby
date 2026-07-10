@@ -24,14 +24,12 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
-      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
-      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
-      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.GOOGLE_IOS_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.GOOGLE_ANDROID_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_WEB_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || vars.GOOGLE_EXPO_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ secrets.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI || 'irlobby://auth/twitter' }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
     steps:
       - name: Explain skipped iOS build
         if: env.HAS_EXPO_TOKEN != 'true'
@@ -70,13 +68,13 @@ jobs:
         run: |
           if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ]; then
             echo "Twitter client ID is not configured in repository variables."
-            echo "Set TWITTER_CLIENT_ID (or EXPO_PUBLIC_TWITTER_CLIENT_ID) under Settings > Secrets and variables > Actions > Variables."
+            echo "Set EXPO_PUBLIC_TWITTER_CLIENT_ID or TWITTER_CLIENT_ID (secret) under GitHub Actions secrets/variables."
             exit 1
           fi
 
           if [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ]; then
             echo "Twitter redirect URI is not configured in repository variables."
-            echo "Set TWITTER_REDIRECT_URI (or EXPO_PUBLIC_TWITTER_REDIRECT_URI) under Settings > Secrets and variables > Actions > Variables."
+            echo "Set EXPO_PUBLIC_TWITTER_REDIRECT_URI under Settings > Secrets and variables > Actions > Variables."
             echo "Set it to irlobby://auth/twitter for standalone/TestFlight builds."
             exit 1
           fi
@@ -87,15 +85,12 @@ jobs:
             exit 1
           fi
 
-          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID" ]; then
-            echo "Warning: no Google OAuth client IDs configured."
-            echo "Continue with Google will be disabled in this build until you set"
-            echo "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
-            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (or EXPO_PUBLIC_GOOGLE_CLIENT_ID)."
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "Warning: missing one or more Google OAuth client IDs."
+            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
+            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in GitHub Actions secrets or variables."
           fi
 
       - name: Validate mobile TypeScript
@@ -116,14 +111,12 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
-      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
-      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.TWITTER_REDIRECT_URI || vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN || vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
-      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.GOOGLE_IOS_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.GOOGLE_ANDROID_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_WEB_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || vars.GOOGLE_EXPO_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ secrets.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI || 'irlobby://auth/twitter' }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
       HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
@@ -166,17 +159,16 @@ jobs:
              [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ] || \
              [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
             echo "Missing required Twitter/Mapbox repository variables."
-            echo "Set TWITTER_CLIENT_ID, TWITTER_REDIRECT_URI, MAPBOX_PUBLIC_TOKEN (or EXPO_PUBLIC_* equivalents)."
+            echo "Set EXPO_PUBLIC_TWITTER_CLIENT_ID, EXPO_PUBLIC_TWITTER_REDIRECT_URI, EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN."
             exit 1
           fi
 
-          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_CLIENT_ID" ] && \
-             [ -z "$EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID" ]; then
-            echo "Warning: no Google OAuth client IDs configured."
-            echo "Continue with Google will be disabled until Google client ID variables are set."
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "Warning: missing one or more Google OAuth client IDs."
+            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
+            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in GitHub Actions secrets or variables."
           fi
 
       - name: Materialize Google Play service account

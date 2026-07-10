@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
+      GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -36,8 +39,21 @@ jobs:
           ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
           DEPLOY_MODE: ${{ inputs.mode }}
           GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
+          GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
         run: |
           set -euo pipefail
+
+          if [ -z "${GOOGLE_OAUTH_CLIENT_IDS:-}" ] && \
+             [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ] && \
+             [ -n "${GOOGLE_ANDROID_CLIENT_ID:-}" ] && \
+             [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            GOOGLE_OAUTH_CLIENT_IDS="${GOOGLE_IOS_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID},${GOOGLE_WEB_CLIENT_ID}"
+            echo "Composed GOOGLE_OAUTH_CLIENT_IDS from EXPO_PUBLIC_GOOGLE_* secrets/variables."
+          fi
+
+          export GOOGLE_OAUTH_CLIENT_IDS
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           connect() {

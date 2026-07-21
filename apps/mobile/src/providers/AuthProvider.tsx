@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { deactivatePushTokens } from '@services/pushNotificationService';
+import { setAnalyticsUser, track } from '@services/analytics';
 import {
   fetchProfile,
   login,
@@ -13,6 +13,7 @@ import {
   resetPassword as resetPasswordService,
 } from '@services/authService';
 import { authStorage } from '@services/authStorage';
+import { deactivatePushTokens } from '@services/pushNotificationService';
 
 import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
 
@@ -33,6 +34,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const identifyUser = (nextUser: AuthUser) => {
+  setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -50,12 +55,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const profile = await fetchProfile();
         if (isMounted) {
           setUser(profile);
+          identifyUser(profile);
         }
       } catch (error) {
         console.warn('[AuthProvider] Failed to restore session', error);
         await authStorage.clearTokens();
         if (isMounted) {
           setUser(null);
+          setAnalyticsUser(null);
         }
       } finally {
         if (isMounted) {
@@ -74,30 +81,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = useCallback(async (payload: LoginPayload) => {
     const { user: nextUser } = await login(payload);
     setUser(nextUser);
+    identifyUser(nextUser);
+    track('login', { method: 'email' });
     return nextUser;
   }, []);
 
   const signInWithTwitter = useCallback(async () => {
     const { user: nextUser } = await loginWithTwitter();
     setUser(nextUser);
+    identifyUser(nextUser);
+    track('login', { method: 'twitter' });
     return nextUser;
   }, []);
 
   const signInWithApple = useCallback(async () => {
     const { user: nextUser } = await loginWithApple();
     setUser(nextUser);
+    identifyUser(nextUser);
+    track('login', { method: 'apple' });
     return nextUser;
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
     const { user: nextUser } = await loginWithGoogle();
     setUser(nextUser);
+    identifyUser(nextUser);
+    track('login', { method: 'google' });
     return nextUser;
   }, []);
 
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const { user: nextUser } = await register(payload);
     setUser(nextUser);
+    identifyUser(nextUser);
+    track('sign_up', { method: 'email' });
     return nextUser;
   }, []);
 
@@ -105,12 +122,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await deactivatePushTokens();
     await logoutService();
     setUser(null);
+    setAnalyticsUser(null);
   }, []);
 
   const refreshProfile = useCallback(async () => {
     try {
       const profile = await fetchProfile();
       setUser(profile);
+      identifyUser(profile);
       return profile;
     } catch (error) {
       console.warn('[AuthProvider] Failed to refresh profile', error);

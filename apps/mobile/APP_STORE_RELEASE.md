@@ -27,6 +27,33 @@ Notes:
 - The workflow triggers `eas build --platform ios --profile production --auto-submit --non-interactive --no-wait`.
 - If EAS still needs missing Apple build or App Store Connect submit credentials, the GitHub workflow will fail until the one-time manual setup is finished.
 
+## 1.2) Week 1 launch ops (credentials + first production build)
+
+Engineering can ship Sentry + funnel analytics in code, but these ops steps are still required before TestFlight auth validation:
+
+1. **Apple Developer** → Identifiers → App ID `com.irlobby.app` → enable **Sign In with Apple**.
+2. **Google Cloud Console** → create OAuth client IDs for iOS (`com.irlobby.app`), Android (`com.irlobby.app` + SHA-1), and Web.
+3. Set **backend production** env:
+   - `APPLE_CLIENT_ID=com.irlobby.app`
+   - `GOOGLE_IOS_CLIENT_ID=...`
+   - `GOOGLE_ANDROID_CLIENT_ID=...`
+   - `GOOGLE_WEB_CLIENT_ID=...`
+   - Confirm `SENTRY_DSN` is set for backend crashes.
+4. Set **EAS / GitHub** build env (or Expo secrets):
+   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+   - `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+   - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+   - `EXPO_PUBLIC_SENTRY_DSN` (mobile Sentry project DSN)
+   - Optional for source maps: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`
+5. From `apps/mobile`, run one manual production build + submit so Apple credentials are stored:
+   ```bash
+   npm run build:ios
+   npm run submit:ios
+   ```
+6. Confirm in Sentry that a mobile `app_open` event appears after installing the TestFlight build.
+
+Done when: TestFlight build is installed, Apple/Google/X/email login can be attempted against `https://liyf.app`, and Sentry shows mobile sessions/events.
+
 ## 2) Configure production environment values
 
 Create a local `.env` for builds (or use EAS secrets) with production endpoints:
@@ -36,7 +63,11 @@ EXPO_PUBLIC_API_BASE_URL=https://your-backend-domain.com
 EXPO_PUBLIC_WEBSOCKET_URL=wss://your-backend-domain.com
 EXPO_PUBLIC_TWITTER_CLIENT_ID=...
 EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
 EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN=...
+EXPO_PUBLIC_SENTRY_DSN=...
 ```
 
 Notes:

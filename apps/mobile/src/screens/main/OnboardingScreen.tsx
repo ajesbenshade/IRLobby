@@ -22,6 +22,7 @@ import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { createInvite, updateOnboarding } from '@services/authService';
+import { track } from '@services/analytics';
 import {
   deactivatePushTokens,
   registerCurrentDevicePushToken,
@@ -490,11 +491,17 @@ export const OnboardingScreen = () => {
   };
 
   const handleFinish = async () => {
-    await saveOnboardingStep(
-      {
+    onboardingMutation.reset();
+    setStepError(null);
+
+    try {
+      await onboardingMutation.mutateAsync({
         onboarding_completed: true,
-      },
-    );
+      });
+      track('onboarding_completed');
+    } catch (error) {
+      setStepError(getErrorMessage(error, 'Unable to save this step right now.'));
+    }
   };
 
   const openLegalUrl = async (url: string) => {

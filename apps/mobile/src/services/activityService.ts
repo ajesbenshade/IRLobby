@@ -1,4 +1,5 @@
 import { api } from './apiClient';
+import { track, trackFirstJoinOnce } from './analytics';
 import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 
 import type { Activity } from '../types/activity';
@@ -59,11 +60,16 @@ export const createActivity = async (payload: CreateActivityPayload): Promise<Ac
     tags: payload.tags ?? [],
     images: payload.images ?? [],
   });
+  track('activity_create', {
+    activity_id: String(response.data.id),
+    category: payload.category ?? '',
+  });
   return response.data;
 };
 
 export const joinActivity = async (activityId: number | string): Promise<{ message: string }> => {
   const response = await api.post<{ message: string }>(API_ROUTE_BUILDERS.activityJoin(activityId));
+  await trackFirstJoinOnce({ activity_id: String(activityId), source: 'join_button' });
   return response.data;
 };
 
@@ -84,5 +90,19 @@ export const swipeActivity = async (
   const response = await api.post<SwipeActivityResponse>(API_ROUTE_BUILDERS.activitySwipe(activityId), {
     direction,
   });
+
+  if (direction === 'right') {
+    track('activity_swipe_right', {
+      activity_id: String(activityId),
+      matched: Boolean(response.data.matched),
+    });
+    if (response.data.matched) {
+      await trackFirstJoinOnce({
+        activity_id: String(activityId),
+        source: 'swipe_match',
+      });
+    }
+  }
+
   return response.data;
 };

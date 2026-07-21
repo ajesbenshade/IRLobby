@@ -11,6 +11,8 @@ declare global {
       EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?: string;
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string;
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN?: string;
+      EXPO_PUBLIC_SENTRY_DSN?: string;
+      EXPO_PUBLIC_SENTRY_ENVIRONMENT?: string;
       EAS_PROJECT_ID?: string;
     }
   }

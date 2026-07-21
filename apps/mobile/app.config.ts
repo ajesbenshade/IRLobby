@@ -1,5 +1,10 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() || '';
+const googleReversedClientIdScheme = googleIosClientId.endsWith('.apps.googleusercontent.com')
+  ? googleIosClientId.split('.').reverse().join('.')
+  : undefined;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'IRLobby',
@@ -7,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  scheme: 'irlobby',
+  scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',
   userInterfaceStyle: 'light',
   updates: {
     url: process.env.EAS_UPDATE_URL,
@@ -20,6 +25,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
     twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
+    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
@@ -28,6 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.irlobby.app',
+    usesAppleSignIn: true,
     config: {
       usesNonExemptEncryption: false,
     },
@@ -64,6 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: '#2c7ef8',
       },
     ],
+    'expo-apple-authentication',
     'expo-font',
     'expo-location',
     'expo-secure-store',

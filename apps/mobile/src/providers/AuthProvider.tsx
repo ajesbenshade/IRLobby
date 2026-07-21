@@ -4,6 +4,8 @@ import { deactivatePushTokens } from '@services/pushNotificationService';
 import {
   fetchProfile,
   login,
+  loginWithApple,
+  loginWithGoogle,
   loginWithTwitter,
   logout as logoutService,
   register,
@@ -20,6 +22,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
+  signInWithApple: () => Promise<AuthUser>;
+  signInWithGoogle: () => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<AuthUser | null>;
@@ -79,6 +83,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    const { user: nextUser } = await loginWithApple();
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    const { user: nextUser } = await loginWithGoogle();
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const { user: nextUser } = await register(payload);
     setUser(nextUser);
@@ -117,6 +133,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAuthenticated: !!user,
       signIn,
       signInWithTwitter,
+      signInWithApple,
+      signInWithGoogle,
       signUp,
       signOut,
       refreshProfile,
@@ -129,6 +147,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       requestPasswordReset,
       resetPassword,
       signIn,
+      signInWithApple,
+      signInWithGoogle,
       signInWithTwitter,
       signOut,
       signUp,

@@ -84,6 +84,15 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 TWITTER_CLIENT_ID = config("TWITTER_CLIENT_ID", default="")
 TWITTER_CLIENT_SECRET = config("TWITTER_CLIENT_SECRET", default="")
 
+# Sign in with Apple (audience = iOS bundle identifier for native tokens)
+APPLE_CLIENT_ID = config("APPLE_CLIENT_ID", default="com.irlobby.app")
+
+# Google Sign-In (ID token audiences — include iOS/Android/Web OAuth client IDs)
+GOOGLE_CLIENT_IDS = config("GOOGLE_CLIENT_IDS", default="")
+GOOGLE_IOS_CLIENT_ID = config("GOOGLE_IOS_CLIENT_ID", default="")
+GOOGLE_ANDROID_CLIENT_ID = config("GOOGLE_ANDROID_CLIENT_ID", default="")
+GOOGLE_WEB_CLIENT_ID = config("GOOGLE_WEB_CLIENT_ID", default="")
+
 # Social Account Providers
 SOCIALACCOUNT_PROVIDERS = {
     "twitter": {

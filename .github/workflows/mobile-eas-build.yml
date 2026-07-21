@@ -25,6 +25,9 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
       EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
       EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
     steps:
       - name: Checkout
@@ -74,6 +77,11 @@ jobs:
             echo "EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN is not configured in repository variables."
             echo "Add EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN under Settings > Secrets and variables > Actions > Variables."
             exit 1
+          fi
+
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "Warning: Google sign-in client IDs are not configured."
+            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (and optionally WEB/ANDROID) to enable Continue with Google."
           fi
 
       - name: Validate mobile TypeScript

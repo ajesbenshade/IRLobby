@@ -1,7 +1,8 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet } from 'react-native';
 import {
   Button,
   Divider,
@@ -14,6 +15,7 @@ import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
+import { isAppleSignInAvailable, isGoogleSignInConfigured } from '@services/authService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -22,11 +24,34 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export const LoginScreen = ({ navigation }: Props) => {
-  const { signIn, signInWithTwitter } = useAuth();
+  const { signIn, signInWithTwitter, signInWithApple, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
 
   const isFormValid = useMemo(() => email.trim().length > 0 && password.length >= 8, [email, password]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkProviders = async () => {
+      const [apple, google] = await Promise.all([
+        isAppleSignInAvailable(),
+        isGoogleSignInConfigured(),
+      ]);
+      if (isMounted) {
+        setAppleAvailable(apple);
+        setGoogleAvailable(google);
+      }
+    };
+
+    void checkProviders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: () => signIn({ email: email.trim().toLowerCase(), password }),
@@ -40,8 +65,24 @@ export const LoginScreen = ({ navigation }: Props) => {
     mutationFn: () => signInWithTwitter(),
   });
 
-  const isBusy = isPending || isTwitterPending;
-  const authError = error ?? twitterError;
+  const {
+    mutateAsync: signInWithAppleAsync,
+    isPending: isApplePending,
+    error: appleError,
+  } = useMutation({
+    mutationFn: () => signInWithApple(),
+  });
+
+  const {
+    mutateAsync: signInWithGoogleAsync,
+    isPending: isGooglePending,
+    error: googleError,
+  } = useMutation({
+    mutationFn: () => signInWithGoogle(),
+  });
+
+  const isBusy = isPending || isTwitterPending || isApplePending || isGooglePending;
+  const authError = error ?? twitterError ?? appleError ?? googleError;
 
   const handleSubmit = useCallback(async () => {
     if (!isFormValid || isBusy) {
@@ -58,6 +99,22 @@ export const LoginScreen = ({ navigation }: Props) => {
 
     await signInWithTwitterAsync();
   }, [isBusy, signInWithTwitterAsync]);
+
+  const handleAppleSignIn = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
+    await signInWithAppleAsync();
+  }, [isBusy, signInWithAppleAsync]);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
+    await signInWithGoogleAsync();
+  }, [isBusy, signInWithGoogleAsync]);
 
   return (
     <AuthShell
@@ -124,6 +181,26 @@ export const LoginScreen = ({ navigation }: Props) => {
 
           <View style={styles.oauthSection}>
             <Divider />
+            {Platform.OS === 'ios' && appleAvailable ? (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={999}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            ) : null}
+            {googleAvailable ? (
+              <Button
+                mode="outlined"
+                onPress={handleGoogleSignIn}
+                disabled={isBusy}
+                loading={isGooglePending}
+                style={styles.oauthButton}
+              >
+                Continue with Google
+              </Button>
+            ) : null}
             <Button
               mode="outlined"
               onPress={handleTwitterSignIn}
@@ -180,6 +257,10 @@ const styles = StyleSheet.create({
   },
   oauthButton: {
     borderRadius: 999,
+  },
+  appleButton: {
+    width: '100%',
+    height: 54,
   },
   footer: {
     flexDirection: 'row',

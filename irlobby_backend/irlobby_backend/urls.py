@@ -84,6 +84,8 @@ urlpatterns = [
     path("api/auth/password-reset-confirm/", password_reset_confirm, name="password-reset-confirm"),
     path("api/auth/reset-password/", password_reset_confirm, name="reset-password"),
     path("api/auth/twitter/", include("users.oauth_urls")),
+    path("api/auth/apple/", include("users.apple_urls")),
+    path("api/auth/google/", include("users.google_urls")),
     path("api/users/", include("users.urls")),
     path("api/activities/", include("activities.urls")),
     path("api/swipes/", include("swipes.urls")),

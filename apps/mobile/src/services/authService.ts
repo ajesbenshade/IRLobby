@@ -1,4 +1,8 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as AuthSession from 'expo-auth-session';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { API_ROUTES } from '@shared/schema';
 
@@ -14,6 +18,8 @@ import type {
   LoginPayload,
   RegisterPayload,
 } from '../types/auth';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const normalizeTokens = (tokens: Partial<AuthTokens> | null | undefined): AuthTokens => {
   const accessToken =
@@ -131,7 +137,11 @@ const parseCallbackUser = (value: unknown) => {
 };
 
 export async function loginWithTwitter(): Promise<AuthResponse> {
-  const returnUrl = config.twitterRedirectUri?.trim() || Linking.createURL('auth/twitter');
+  const configuredRedirect = config.twitterRedirectUri?.trim();
+  const returnUrl =
+    configuredRedirect && configuredRedirect.startsWith('irlobby://')
+      ? configuredRedirect
+      : 'irlobby://auth/twitter';
 
   const statusResponse = await api.get<TwitterOAuthStatusResponse>(API_ROUTES.AUTH_TWITTER_STATUS);
   if (!statusResponse.data?.configured) {
@@ -178,6 +188,152 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 
   return {
     user: normalizeUser(parseCallbackUser(userValue)),
+    tokens: normalizedTokens,
+  };
+}
+
+export async function isAppleSignInAvailable(): Promise<boolean> {
+  if (Platform.OS !== 'ios') {
+    return false;
+  }
+
+  try {
+    return await AppleAuthentication.isAvailableAsync();
+  } catch (error) {
+    console.warn('[authService] Apple sign-in availability check failed', error);
+    return false;
+  }
+}
+
+export async function loginWithApple(): Promise<AuthResponse> {
+  if (!(await isAppleSignInAvailable())) {
+    throw new Error('Sign in with Apple is not available on this device.');
+  }
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+  } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code === 'ERR_REQUEST_CANCELED') {
+      throw new Error('Apple sign-in was cancelled.');
+    }
+    throw error;
+  }
+
+  if (!credential.identityToken) {
+    throw new Error('Apple sign-in did not return an identity token.');
+  }
+
+  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_APPLE_SIGNIN, {
+    identity_token: credential.identityToken,
+    email: credential.email ?? undefined,
+    full_name: credential.fullName
+      ? {
+          givenName: credential.fullName.givenName ?? undefined,
+          familyName: credential.fullName.familyName ?? undefined,
+        }
+      : undefined,
+  });
+
+  const normalizedTokens = normalizeTokens(response.data.tokens);
+  await authStorage.setTokens(normalizedTokens);
+
+  return {
+    user: normalizeUser(response.data.user),
+    tokens: normalizedTokens,
+  };
+}
+
+const getGoogleClientIdForPlatform = (): string | undefined => {
+  if (Platform.OS === 'ios') {
+    return config.googleIosClientId?.trim() || config.googleWebClientId?.trim();
+  }
+  if (Platform.OS === 'android') {
+    return config.googleAndroidClientId?.trim() || config.googleWebClientId?.trim();
+  }
+  return config.googleWebClientId?.trim();
+};
+
+const getGoogleReversedClientIdScheme = (clientId: string): string | null => {
+  if (!clientId.endsWith('.apps.googleusercontent.com')) {
+    return null;
+  }
+  return clientId.split('.').reverse().join('.');
+};
+
+const createGoogleNonce = async (): Promise<string> => {
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+export async function isGoogleSignInConfigured(): Promise<boolean> {
+  return Boolean(getGoogleClientIdForPlatform());
+}
+
+export async function loginWithGoogle(): Promise<AuthResponse> {
+  const clientId = getGoogleClientIdForPlatform();
+  if (!clientId) {
+    throw new Error('Google sign-in is not configured in the app yet.');
+  }
+
+  const statusResponse = await api.get<{ configured?: boolean }>(API_ROUTES.AUTH_GOOGLE_STATUS);
+  if (!statusResponse.data?.configured) {
+    throw new Error('Google sign-in is not configured on the backend yet.');
+  }
+
+  const reversedScheme = getGoogleReversedClientIdScheme(clientId);
+  const redirectUri =
+    Platform.OS === 'ios' && reversedScheme
+      ? `${reversedScheme}:/oauthredirect`
+      : AuthSession.makeRedirectUri({
+          scheme: 'irlobby',
+          path: 'auth/google',
+        });
+
+  const nonce = await createGoogleNonce();
+  const request = new AuthSession.AuthRequest({
+    clientId,
+    redirectUri,
+    scopes: ['openid', 'profile', 'email'],
+    responseType: AuthSession.ResponseType.IdToken,
+    usePKCE: false,
+    extraParams: {
+      nonce,
+    },
+  });
+
+  const authResult = await request.promptAsync({
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  });
+
+  if (authResult.type !== 'success') {
+    throw new Error('Google sign-in was cancelled.');
+  }
+
+  const identityToken =
+    (typeof authResult.params.id_token === 'string' && authResult.params.id_token) ||
+    (typeof authResult.authentication?.idToken === 'string' && authResult.authentication.idToken) ||
+    '';
+
+  if (!identityToken) {
+    throw new Error('Google sign-in did not return an identity token.');
+  }
+
+  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_GOOGLE_SIGNIN, {
+    identity_token: identityToken,
+  });
+
+  const normalizedTokens = normalizeTokens(response.data.tokens);
+  await authStorage.setTokens(normalizedTokens);
+
+  return {
+    user: normalizeUser(response.data.user),
     tokens: normalizedTokens,
   };
 }

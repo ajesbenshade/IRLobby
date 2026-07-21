@@ -58,6 +58,48 @@ Required setup:
 Notes:
 - The backend callback exchanges the Twitter authorization code and then redirects back into the app with app JWTs.
 - This flow is intended for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
+- Failed or cancelled OAuth attempts redirect back to the app with an `error` query param so the login screen can show a message.
+
+## 2.2) Configure Sign in with Apple
+
+Sign in with Apple is required for App Review when other third-party login options (such as Continue with X) are offered.
+
+Required setup:
+
+1. In Apple Developer → Identifiers → your App ID (`com.irlobby.app`), enable **Sign In with Apple**.
+2. Set backend env var `APPLE_CLIENT_ID=com.irlobby.app` (must match the iOS bundle identifier used as the token audience).
+3. Rebuild the iOS binary after enabling `usesAppleSignIn` / the `expo-apple-authentication` plugin (already configured in `app.config.ts`).
+
+Notes:
+- The app sends Apple's `identityToken` to `POST /api/auth/apple/signin/`.
+- The backend verifies the token against Apple's JWKS and issues IRLobby JWTs.
+- Apple only returns name/email on the first successful authorization; later sign-ins rely on the stable `sub` claim.
+
+## 2.3) Configure Google Sign-In
+
+Google sign-in uses `expo-auth-session` to obtain a Google ID token, then exchanges it with the backend.
+
+Required setup:
+
+1. In Google Cloud Console, create OAuth 2.0 client IDs:
+	- iOS client (bundle ID `com.irlobby.app`)
+	- Android client (package `com.irlobby.app` + SHA-1)
+	- Web client (optional fallback / shared audience)
+2. Set backend env vars to the same client IDs so token audience checks succeed:
+	- `GOOGLE_IOS_CLIENT_ID=...apps.googleusercontent.com`
+	- `GOOGLE_ANDROID_CLIENT_ID=...apps.googleusercontent.com`
+	- `GOOGLE_WEB_CLIENT_ID=...apps.googleusercontent.com`
+	- Or `GOOGLE_CLIENT_IDS=id1,id2,id3`
+3. Set matching mobile build env vars:
+	- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+	- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+	- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+4. Rebuild the app so the reversed iOS client ID URL scheme is embedded (configured automatically from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` in `app.config.ts`).
+
+Notes:
+- The app posts the Google `id_token` to `POST /api/auth/google/signin/`.
+- The backend verifies the token against Google's JWKS and issues IRLobby JWTs.
+- The Continue with Google button is hidden until a platform client ID is present in the mobile config.
 
 ## 3) Confirm app identity
 
@@ -111,6 +153,9 @@ Ensure backend env/config is production-ready:
 
 - Permission prompts are justified and accurate (camera/location/photos)
 - Sign in and registration flows work against production backend
+- Sign in with Apple works on a physical iOS device / TestFlight build
+- Continue with Google returns tokens against production
+- Continue with X returns to the app with tokens (or a clear error) against production
 - Password reset links open correct frontend/app route
 - App handles API downtime gracefully (errors/retries)
 

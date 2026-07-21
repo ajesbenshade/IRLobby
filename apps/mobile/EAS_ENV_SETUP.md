@@ -1,15 +1,15 @@
-# Expo (EAS) environment variables for IRLobby
+# Expo (EAS) Environment Variables for IRLobby
 
-Use this when building from **Expo dashboard → Build from GitHub** (not GitHub Actions).
+Use this when you build from **Expo dashboard → Build from GitHub** (not GitHub Actions).
 
-GitHub secrets are **not** copied into Expo automatically. You must add the same names in Expo.
+GitHub secrets are not copied into Expo automatically. Add the same names in Expo.
 
 ## 1) Open Environment variables
 
 1. Go to [expo.dev](https://expo.dev) → project **irlobby**
-2. **Project settings** → **Environment variables**
-3. Environment: **Production**
-4. Click **Add variable** for each row below
+2. Open **Project settings** → **Environment variables**
+3. Set Environment to **Production**
+4. Select **Add variable** for each row below
 
 ## 2) Required variables (Production)
 
@@ -21,7 +21,7 @@ GitHub secrets are **not** copied into Expo automatically. You must add the same
 | `EXPO_PUBLIC_TWITTER_CLIENT_ID` | Sensitive | GitHub secret `TWITTER_CLIENT_ID` or variable |
 | `EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN` | Sensitive | GitHub variable `EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN` |
 
-Already set in `eas.json` (no need to duplicate in Expo):
+Already set in `eas.json` (do not duplicate in Expo):
 
 - `EXPO_PUBLIC_API_BASE_URL`
 - `EXPO_PUBLIC_WEBSOCKET_URL`
@@ -41,7 +41,7 @@ Uncheck **EAS Submit** until Google Play / App Store submit credentials are set 
 
 ## 4) Not used in the mobile app
 
-Do **not** add these to Expo env for the app build:
+Do not add these to Expo env for the app build:
 
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_SECRET` — never ship OAuth client secrets in a mobile app
 - `TWITTER_CLIENT_SECRET` — backend only
@@ -49,7 +49,7 @@ Do **not** add these to Expo env for the app build:
 
 ## 5) Verify before building
 
-After saving variables, start a build and confirm the log includes:
+After you save variables, start a build and confirm that the log includes:
 
 ```
 Environment variables loaded ... EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, ...

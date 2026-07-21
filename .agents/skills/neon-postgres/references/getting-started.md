@@ -1,6 +1,6 @@
 # Getting Started with Neon
 
-Interactive guide for setting up a Neon project and connecting it to code.
+This is an interactive guide for setting up a Neon project and connecting it to code.
 
 See the [official getting started guide](https://neon.com/docs/get-started/signing-up.md) for complete details.
 
@@ -8,33 +8,33 @@ See the [official getting started guide](https://neon.com/docs/get-started/signi
 
 ### 1. Select Organization and Project
 
-- Check existing organizations and projects (via MCP server or CLI)
-- **1 organization**: default to it
-- **Multiple organizations**: list all and ask which to use
-- **No projects**: ask if they want to create a new project
-- **1 project**: ask "Would you like to use '{project_name}' or create a new one?"
-- **Multiple projects (<6)**: list all and let them choose
-- **Many projects (6+)**: list recent projects, offer to create new or specify by name/ID
+- Check existing organizations and projects (via MCP server or CLI).
+- **1 organization**: Use it as the default.
+- **Multiple organizations**: List all and ask which to use.
+- **No projects**: Ask if the user wants to create a new project.
+- **1 project**: Ask "Would you like to use '{project_name}' or create a new one?"
+- **Multiple projects (<6)**: List all and let the user choose.
+- **Many projects (6+)**: List recent projects. Offer to create a new project or specify by name or ID.
 
 ### 2. Get Connection String
 
-- Use MCP server or CLI to get the connection string
+- Use the MCP server or CLI to get the connection string.
 - Store it in `.env` as `DATABASE_URL`:
 
 ```
 DATABASE_URL=postgresql://user:password@host/database
 ```
 
-**Before modifying `.env`:**
+**Before you modify `.env`:**
 
-1. Try to read the `.env` file first
-2. If readable: use search/replace to update or append `DATABASE_URL`
-3. If unreadable (permissions): use append command or show the line to add manually
-4. Never overwrite an existing `.env` — always append or update in place
+1. Read the `.env` file first.
+2. If the file is readable: use search/replace to update or append `DATABASE_URL`.
+3. If the file is unreadable (permissions): use an append command or show the line to add manually.
+4. Never overwrite an existing `.env`. Always append or update in place.
 
 ### 3. Install Driver
 
-Choose based on deployment platform. For detailed guidance, see `connection-methods.md`.
+Choose a driver based on deployment platform. For detailed guidance, see `connection-methods.md`.
 
 | Environment              | Driver                     | Install                                |
 | ------------------------ | -------------------------- | -------------------------------------- |
@@ -48,18 +48,18 @@ For serverless driver patterns, see `neon-serverless.md`. For complex scenarios 
 
 ### 4. Authentication (if needed)
 
-Skip for CLI tools, scripts, or apps without user accounts.
+Skip this step for CLI tools, scripts, or apps without user accounts.
 
-If the app needs auth: use MCP server `provision_neon_auth` tool, then see `neon-auth.md` for setup. For auth + database queries, see `neon-js.md`.
+If the app needs auth: use the MCP server `provision_neon_auth` tool. Then see `neon-auth.md` for setup. For auth and database queries, see `neon-js.md`.
 
 ### 5. ORM Setup (optional)
 
-Check for existing ORM (Prisma, Drizzle, TypeORM). If none, ask if they want one. For Drizzle integration, see `neon-drizzle.md`.
+Check for an existing ORM (Prisma, Drizzle, TypeORM). If none exists, ask if the user wants one. For Drizzle integration, see `neon-drizzle.md`.
 
 ### 6. Schema Setup
 
-- Check for existing migration files or ORM schemas
-- If none: offer to create an example schema or design one together
+- Check for existing migration files or ORM schemas.
+- If none exist: offer to create an example schema or design one together.
 
 ### 7. Developer Tools
 
@@ -67,7 +67,7 @@ Check for existing ORM (Prisma, Drizzle, TypeORM). If none, ask if they want one
 npx neon init
 ```
 
-Installs the VSCode extension and configures the MCP server. See `devtools.md` for details.
+This installs the VSCode extension and configures the MCP server. See `devtools.md` for details.
 
 ## What's Next
 
@@ -81,7 +81,7 @@ After setup is complete, offer to help with:
 
 ## Resume Support
 
-If the user says "Continue with Neon setup", check what's already configured:
+If the user says "Continue with Neon setup", check what is already configured:
 
 - MCP server connection
 - `.env` file with `DATABASE_URL`
@@ -92,11 +92,11 @@ Then resume from where they left off.
 
 ## Security Reminders
 
-- Never commit connection strings to version control
-- Use environment variables for all credentials
-- Prefer SSL connections (default in Neon)
-- Use least-privilege database roles
-- Rotate API keys and passwords regularly
+- Never commit connection strings to version control.
+- Use environment variables for all credentials.
+- Prefer SSL connections (default in Neon).
+- Use least-privilege database roles.
+- Rotate API keys and passwords regularly.
 
 ## Documentation
 

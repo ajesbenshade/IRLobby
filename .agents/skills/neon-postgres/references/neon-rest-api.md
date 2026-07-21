@@ -1,8 +1,8 @@
 # Neon REST API
 
-Essentials for making direct HTTP requests to the Neon Platform API.
+This page covers essentials for making direct HTTP requests to the Neon Platform API.
 
-See the [official API reference](https://neon.com/docs/reference/api-reference.md) and [interactive explorer](https://api-docs.neon.tech/reference/getting-started-with-neon-api) for complete details. The full [OpenAPI spec](https://neon.com/api_spec/release/v2.json) is available for programmatic lookup of exact endpoints, request/response schemas, and required fields.
+See the [official API reference](https://neon.com/docs/reference/api-reference.md) and [interactive explorer](https://api-docs.neon.tech/reference/getting-started-with-neon-api) for complete details. The full [OpenAPI spec](https://neon.com/api_spec/release/v2.json) is available. Use it to look up exact endpoints, request and response schemas, and required fields.
 
 ## Base URL
 
@@ -30,7 +30,7 @@ Authorization: Bearer $NEON_API_KEY
 
 - 700 requests/minute (~11/second)
 - Bursts up to 40 requests/second per route
-- Handle `429 Too Many Requests` with retry + backoff
+- Handle `429 Too Many Requests` with retry and backoff
 
 ## Common Endpoints
 
@@ -53,13 +53,13 @@ Authorization: Bearer $NEON_API_KEY
 
 ## Important Constraints
 
-- You **cannot delete** a project's root or default branch
-- You **cannot delete** a branch that has child branches — delete all children first
-- Creating a new role may **drop existing connections** to the active compute endpoint
-- A branch can have only one `read_write` endpoint but multiple `read_only` endpoints
-- Operations are async — poll operation status before starting dependent operations
-- Operations older than 6 months may be deleted from Neon's systems
-- The first API key must be created from the [Neon Console](https://console.neon.tech/app/settings/api-keys); subsequent keys can be created via the API
+- You **cannot delete** a project's root or default branch.
+- You **cannot delete** a branch that has child branches. Delete all children first.
+- Creating a new role may **drop existing connections** to the active compute endpoint.
+- A branch can have only one `read_write` endpoint. It can have multiple `read_only` endpoints.
+- Operations are async. Poll operation status before you start dependent operations.
+- Operations older than 6 months may be deleted from Neon's systems.
+- Create the first API key from the [Neon Console](https://console.neon.tech/app/settings/api-keys). Create subsequent keys via the API.
 
 ## Error Codes
 

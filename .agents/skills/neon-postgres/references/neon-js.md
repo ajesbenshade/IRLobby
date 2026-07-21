@@ -2,7 +2,7 @@
 
 The `@neondatabase/neon-js` SDK provides a unified client for Neon Auth and Data API. It combines authentication handling with PostgREST-compatible database queries.
 
-**Auth only?** Use `@neondatabase/auth` instead (see `neon-auth.md`) for smaller bundle size.
+**Auth only?** Use `@neondatabase/auth` instead (see `neon-auth.md`) for a smaller bundle size.
 
 See the [official JavaScript SDK docs](https://neon.com/docs/reference/javascript-sdk.md) for complete details.
 
@@ -116,7 +116,7 @@ Generate a cookie secret: `openssl rand -base64 32`
 
 ## Database Queries (PostgREST / Data API)
 
-> **Prerequisite:** The Data API must be enabled per branch before making queries. Enable it via the Neon Console (Project → Data API), the MCP server's `provision_neon_data_api` tool, or the [REST API](https://api-docs.neon.tech/reference/createprojectbranchdataapi) (`POST /projects/{project_id}/branches/{branch_id}/data-api/{database_name}`). Without it, requests will return 404.
+> **Prerequisite:** Enable the Data API per branch before you make queries. Enable it via the Neon Console (Project → Data API), the MCP server's `provision_neon_data_api` tool, or the [REST API](https://api-docs.neon.tech/reference/createprojectbranchdataapi) (`POST /projects/{project_id}/branches/{branch_id}/data-api/{database_name}`). Without it, requests return 404.
 
 All query methods follow PostgREST syntax (same as Supabase).
 
@@ -394,19 +394,19 @@ const { data } = await client.from("items").select();
 
 ### Using old v0.1 server APIs
 
-Use `createNeonAuth()` + `auth.handler()`, not standalone `authApiHandler()`. See `neon-auth.md` for the v0.2 pattern.
+Use `createNeonAuth()` + `auth.handler()`. Do not use standalone `authApiHandler()`. See `neon-auth.md` for the v0.2 pattern.
 
 ### Missing NEON_AUTH_COOKIE_SECRET
 
-Required for Next.js, must be 32+ characters. Generate with `openssl rand -base64 32`.
+This variable is required for Next.js. It must be 32+ characters. Generate it with `openssl rand -base64 32`.
 
 ### Missing force-dynamic on server components
 
-Server components using `auth.getSession()` need `export const dynamic = 'force-dynamic'`.
+Server components that use `auth.getSession()` need `export const dynamic = 'force-dynamic'`.
 
 ### Wrong adapter import path
 
-`BetterAuthReactAdapter` must be imported from a subpath and called as a function:
+Import `BetterAuthReactAdapter` from a subpath. Call it as a function:
 
 ```typescript
 // WRONG
@@ -416,12 +416,12 @@ import { BetterAuthReactAdapter } from "@neondatabase/neon-js";
 import { BetterAuthReactAdapter } from "@neondatabase/neon-js/auth/react";
 auth: {
   adapter: BetterAuthReactAdapter();
-} // Don't forget ()
+} // Required: call with ()
 ```
 
 ### CSS import conflicts
 
-Choose ONE method. Never import both -- causes duplicate styles:
+Choose ONE method. Never import both. Both imports cause duplicate styles:
 
 ```css
 /* With Tailwind v4 */
@@ -436,7 +436,7 @@ import "@neondatabase/neon-js/ui/css";
 
 ### Missing "use client" directive
 
-Required for any component using `useSession()` or other React hooks:
+Add `"use client"` to any component that uses `useSession()` or other React hooks:
 
 ```typescript
 "use client"; // Required!

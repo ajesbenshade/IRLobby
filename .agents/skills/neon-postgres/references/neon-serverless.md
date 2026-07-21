@@ -1,6 +1,6 @@
 # Neon Serverless Driver
 
-Patterns and best practices for connecting to Neon databases in serverless environments using the `@neondatabase/serverless` driver. The driver connects over **HTTP** for fast, single queries or **WebSockets** for `node-postgres` compatibility and interactive transactions.
+This page covers patterns for connecting to Neon databases in serverless environments. Use the `@neondatabase/serverless` driver. The driver connects over **HTTP** for fast single queries. It connects over **WebSockets** for `node-postgres` compatibility and interactive transactions.
 
 See the [official serverless driver docs](https://neon.com/docs/serverless/serverless-driver.md) for complete details.
 
@@ -50,7 +50,7 @@ const sql = neon("postgres://username:password@host.neon.tech/neondb");
 
 ## HTTP Queries with `neon` function
 
-Ideal for simple, "one-shot" queries in serverless/edge environments. Uses HTTP `fetch` - fastest method for single queries.
+Use the `neon` function for simple one-shot queries in serverless and edge environments. It uses HTTP `fetch`. This is the fastest method for single queries.
 
 ### Parameterized Queries
 
@@ -89,7 +89,7 @@ const result = await sqlFull`SELECT * FROM posts LIMIT 1`;
 
 ## WebSocket Connections with `Pool` and `Client`
 
-Use for `node-postgres` compatibility, interactive transactions, or session support.
+Use WebSocket connections for `node-postgres` compatibility, interactive transactions, or session support.
 
 ### WebSocket Configuration
 
@@ -132,7 +132,7 @@ export default async (req: Request, ctx: ExecutionContext) => {
 
 ### HTTP Transactions
 
-For running multiple queries in a single, non-interactive transaction:
+Use HTTP transactions to run multiple queries in a single non-interactive transaction:
 
 ```typescript
 const [newUser, newProfile] = await sql.transaction(
@@ -149,7 +149,7 @@ const [newUser, newProfile] = await sql.transaction(
 
 ### Interactive Transactions
 
-For complex transactions with conditional logic:
+Use interactive transactions for complex transactions with conditional logic:
 
 ```typescript
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });

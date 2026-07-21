@@ -1,6 +1,6 @@
 # Neon Python SDK
 
-The `neon-api` Python SDK is a Pythonic wrapper around the Neon REST API for managing Neon resources programmatically.
+The `neon-api` Python SDK is a Pythonic wrapper around the Neon REST API. Use it to manage Neon resources programmatically.
 
 For core concepts (Organization, Project, Branch, Endpoint, etc.), see `what-is-neon.md`.
 
@@ -23,7 +23,7 @@ neon = NeonAPI(api_key=os.environ["NEON_API_KEY"])
 
 ## Org-Aware Workflow
 
-All Neon accounts are organization-based. Discover the user's org first, then pass `org_id` to project operations:
+All Neon accounts are organization-based. Discover the user's org first. Then pass `org_id` to project operations:
 
 ```python
 # 1. Get the user's organizations

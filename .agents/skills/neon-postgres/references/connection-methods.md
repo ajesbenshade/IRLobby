@@ -1,18 +1,18 @@
 # Connection Methods
 
-Guide to selecting the optimal connection method for your Neon Postgres database based on deployment platform and runtime environment.
+This guide helps you select a connection method for your Neon Postgres database. Selection depends on deployment platform and runtime environment.
 
 See the [official connection guide](https://neon.com/docs/connect/choose-connection.md) for complete details.
 
 ## Decision Tree
 
-Follow this flow to determine the right connection approach:
+Follow this flow to select the correct connection approach.
 
 ### 1. What Language Are You Using?
 
 **Not TypeScript/JavaScript** → Use **TCP with connection pooling** from a secure server.
 
-For non-TypeScript languages, connect from a secure backend server using your language's native Postgres driver with connection pooling enabled.
+For non-TypeScript languages, connect from a secure backend server. Use your language's native Postgres driver. Enable connection pooling.
 
 | Language/Framework  | Documentation                                 |
 | ------------------- | --------------------------------------------- |
@@ -33,7 +33,7 @@ For non-TypeScript languages, connect from a secure backend server using your la
 
 **Yes** → Use **Neon Data API** via `@neondatabase/neon-js`
 
-This is the only option for client-side apps since browsers cannot make direct TCP connections to Postgres. See `neon-js.md` for setup and the [JavaScript SDK docs](https://neon.com/docs/reference/javascript-sdk.md) for the full reference.
+This is the only option for client-side apps. Browsers cannot make direct TCP connections to Postgres. See `neon-js.md` for setup. See the [JavaScript SDK docs](https://neon.com/docs/reference/javascript-sdk.md) for the full reference.
 
 **No** → Continue to step 3.
 
@@ -43,7 +43,7 @@ This is the only option for client-side apps since browsers cannot make direct T
 
 **Yes** → Use **TCP with connection pooling** via `node-postgres`, `postgres.js`, or `bun:pg`
 
-Long-running servers maintain persistent connections, so standard TCP drivers with pooling are optimal.
+Long-running servers maintain persistent connections. Standard TCP drivers with pooling work best.
 
 **No** → Continue to step 4.
 
@@ -51,7 +51,7 @@ Long-running servers maintain persistent connections, so standard TCP drivers wi
 
 ### 4. Edge Environment Without TCP Support?
 
-Some edge runtimes don't support TCP connections. Rarely the case anymore.
+Some edge runtimes do not support TCP connections. This is rare now.
 
 **Yes** → Continue to step 5 to check transaction requirements.
 
@@ -63,11 +63,11 @@ Some edge runtimes don't support TCP connections. Rarely the case anymore.
 
 **Yes** → Use **WebSocket transport** via `@neondatabase/serverless` with `Pool`
 
-WebSocket maintains connection state needed for transactions. See `neon-serverless.md` for setup.
+WebSocket maintains connection state for transactions. See `neon-serverless.md` for setup.
 
 **No** → Use **HTTP transport** via `@neondatabase/serverless`
 
-HTTP is faster for single queries (~3 roundtrips vs ~8 for TCP). See `neon-serverless.md` for setup and the [serverless driver docs](https://neon.com/docs/serverless/serverless-driver.md) for the full reference.
+HTTP is faster for single queries (~3 roundtrips vs ~8 for TCP). See `neon-serverless.md` for setup. See the [serverless driver docs](https://neon.com/docs/serverless/serverless-driver.md) for the full reference.
 
 ---
 
@@ -75,7 +75,7 @@ HTTP is faster for single queries (~3 roundtrips vs ~8 for TCP). See `neon-serve
 
 **Fluid compute platforms** → Use **TCP with `pg` and platform lifecycle hooks**
 
-Some fluid/serverless compute platforms support connection pooling. Prefer `pg` with a shared pool and the platform's recommended lifecycle hooks for cleaning up idle connections.
+Some fluid and serverless compute platforms support connection pooling. Use `pg` with a shared pool. Use the platform's recommended lifecycle hooks to close idle connections.
 
 **Cloudflare (with Hyperdrive)** → Use **TCP via Hyperdrive**
 
@@ -85,7 +85,7 @@ See the [Cloudflare Hyperdrive guide](https://neon.com/docs/guides/cloudflare-hy
 
 **No pooling support (Netlify, Deno Deploy)** → Use `@neondatabase/serverless`
 
-Fall back to the decision in step 5 based on transaction requirements.
+Use the decision in step 5 based on transaction requirements.
 
 ---
 
@@ -105,7 +105,7 @@ Fall back to the decision in step 5 based on transaction requirements.
 
 ## ORM Support
 
-Popular TypeScript/JavaScript ORMs all work with Neon:
+Popular TypeScript and JavaScript ORMs all work with Neon:
 
 | ORM     | Drivers Supported                               | Documentation                           |
 | ------- | ----------------------------------------------- | --------------------------------------- |
@@ -114,7 +114,7 @@ Popular TypeScript/JavaScript ORMs all work with Neon:
 | Prisma  | `pg`, `@neondatabase/serverless`                | https://neon.com/docs/guides/prisma.md  |
 | TypeORM | `pg`                                            | https://neon.com/docs/guides/typeorm.md |
 
-All ORMs support both TCP drivers and Neon's serverless driver depending on your platform.
+All ORMs support TCP drivers and Neon's serverless driver. The choice depends on your platform.
 
 For Drizzle ORM integration with Neon, see `neon-drizzle.md`.
 
@@ -122,7 +122,7 @@ For Drizzle ORM integration with Neon, see `neon-drizzle.md`.
 
 ## Fluid Compute + Drizzle Example
 
-Complete database client setup for fluid compute platforms with Drizzle ORM and connection pooling. See `neon-drizzle.md` for more examples.
+This example shows database client setup for fluid compute platforms. It uses Drizzle ORM and connection pooling. See `neon-drizzle.md` for more examples.
 
 ```typescript
 // src/lib/db/client.ts
@@ -138,18 +138,18 @@ const pool = new Pool({
 export const db = drizzle({ client: pool, schema });
 ```
 
-**Why platform lifecycle hooks for pooling?**
+**Why use platform lifecycle hooks for pooling?**
 
-- First request establishes the TCP connection (~8 roundtrips)
-- Subsequent requests reuse the connection instantly
-- Ensures idle connections close gracefully before function suspension
-- Prevents connection leaks in serverless environments
+- The first request establishes the TCP connection (~8 roundtrips).
+- Subsequent requests reuse the connection instantly.
+- Idle connections close gracefully before function suspension.
+- This prevents connection leaks in serverless environments.
 
 ---
 
 ## Gathering Requirements
 
-When helping a user choose their connection method, gather this information:
+When you help a user choose a connection method, gather this information:
 
 1. **Deployment platform**: Where will the app run? (cPanel, Cloudflare, Netlify, Railway, browser, etc.)
 2. **Runtime type**: Serverless functions, edge functions, or long-running server?
@@ -158,7 +158,7 @@ When helping a user choose their connection method, gather this information:
 
 Then provide:
 
-- The recommended driver/package
+- The recommended driver or package
 - A working code example for their setup
 - The correct npm install command
 

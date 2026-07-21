@@ -10,7 +10,7 @@
 ![Expo](https://img.shields.io/badge/expo-54.0.34-000020?logo=expo&logoColor=white)
 ![Django](https://img.shields.io/badge/django-4.x-092E20?logo=django&logoColor=white)
 
-**Activity-first social matching for real-life plans.** Swipe on what is happening near you, match with people who want the same night out, and move into a chat with the plan already attached.
+IRLobby is an activity-first social matching application. Users swipe on nearby activities. When two users select the same activity, the application creates a match and opens a chat that includes the activity context.
 
 [Live app](https://irlobby.com) | [Download](https://irlobby.com/download) | [Quick start](#quick-start) | [License](LICENSE)
 
@@ -22,19 +22,19 @@
 	<img src="apps/mobile/store/screenshots/05-profile-or-results.png" alt="IRLobby profile and results screen" width="155">
 </p>
 
-## Why IRLobby?
+## Product purpose
 
-Most swipe apps start with profiles. IRLobby starts with the plan: the activity, time, place, and energy. When two people want the same real-world activity, the app turns that shared intent into a focused match and conversation.
+Many swipe applications start with user profiles. IRLobby starts with the plan: activity, time, place, and energy. When two users want the same real-world activity, the application creates a focused match and conversation.
 
-## Key features
+## Features
 
-- Activity-first discovery with swipeable cards for nearby plans.
-- Vibe quiz personalization so the feed reflects how someone actually wants to spend time.
-- Match-to-chat flow with activity context carried into the conversation.
-- Web and mobile clients sharing API assumptions and release checks.
-- Safety, privacy, account deletion, blocking, reporting, and moderation surfaces.
-- Stripe-ready ticketing and QR redemption infrastructure for paid activities.
-- Production-minded Django backend with REST APIs, WebSockets, Celery, Redis, Postgres/PostGIS, and release gates.
+- Activity-first discovery with swipeable cards for nearby plans
+- Vibe quiz personalization for the activity feed
+- Match-to-chat flow that keeps activity context in the conversation
+- Web and mobile clients that share API assumptions and release checks
+- Safety and privacy surfaces: account deletion, blocking, reporting, and moderation
+- Stripe-ready ticketing and QR redemption for paid activities
+- Django backend with REST APIs, WebSockets, Celery, Redis, Postgres/PostGIS, and release gates
 
 ## Tech stack
 
@@ -66,22 +66,23 @@ flowchart LR
 
 ## Repository layout
 
-All primary packages are active and supported.
+These packages are active and supported:
 
-- `apps/mobile` - React Native / Expo mobile app.
-- `apps/web` - React + Vite public site and authenticated app shell.
-- `irlobby_backend` - Django REST, WebSocket, Celery, and deployment code.
-- `packages/shared` - shared schema and utility code.
-- `docs` - release, parity, deployment, email, and brand documentation.
-- `site` - static legal/support pages for hosted marketing surfaces.
+- `apps/mobile` — React Native / Expo mobile app
+- `apps/web` — React + Vite public site and authenticated app shell
+- `irlobby_backend` — Django REST, WebSocket, Celery, and deployment code
+- `packages/shared` — shared schema and utility code
+- `docs` — release, parity, deployment, email, and brand documentation
+- `site` — static legal and support pages for hosted marketing surfaces
 
 ## Quick start
 
 ### Prerequisites
 
-- Node.js 20.x.
-- Python 3.12 for local development and CI. Production deploys currently pin Python 3.11.9.
-- Git.
+- Node.js 20.x
+- Python 3.12 for local development and CI
+- Python 3.11.9 for production deploys
+- Git
 
 ### Install JavaScript workspaces
 
@@ -115,14 +116,14 @@ npm run dev:web
 npm run dev:mobile
 ```
 
-Follow the Expo CLI instructions to open the app in a simulator or on device.
+Follow the Expo CLI instructions to open the app in a simulator or on a device.
 
 ## Development checks
 
-- `npm run check:api-contract` - validates frontend API path usage against Django routes.
-- `npm run check:web` - runs web lint, format check, tests, and production build.
-- `npm run check:mobile` - runs mobile typecheck and iOS bundle export.
-- `npm run check:release` - runs the full frontend/mobile release gate.
+- `npm run check:api-contract` — validates frontend API path usage against Django routes
+- `npm run check:web` — runs web lint, format check, tests, and production build
+- `npm run check:mobile` — runs mobile typecheck and iOS bundle export
+- `npm run check:release` — runs the full frontend and mobile release gate
 
 Backend checks run from `irlobby_backend`:
 
@@ -133,14 +134,14 @@ pytest
 
 ## Release and deployment
 
-- [Deployment overview](docs/DEPLOYMENT.md) covers production environment variables, Redis hardening, health checks, and hosting notes.
-- [Oracle backend runbook](irlobby_backend/deploy/oracle/README.md) covers the Docker Compose backend deployment.
-- [App Store release](apps/mobile/APP_STORE_RELEASE.md), [launch checklist](LAUNCH_CHECKLIST.md), and [Play Store launch](PLAY_STORE_LAUNCH.md) cover mobile release flow.
-- [Repository settings checklist](docs/REPOSITORY_SETTINGS.md) lists the GitHub description, website, topics, and social preview recommendations.
+- [Deployment overview](docs/DEPLOYMENT.md) — production environment variables, Redis hardening, health checks, and hosting notes
+- [Oracle backend runbook](irlobby_backend/deploy/oracle/README.md) — Docker Compose backend deployment
+- [App Store release](apps/mobile/APP_STORE_RELEASE.md), [launch checklist](LAUNCH_CHECKLIST.md), and [Play Store launch](PLAY_STORE_LAUNCH.md) — mobile release flow
+- [Repository settings checklist](docs/REPOSITORY_SETTINGS.md) — GitHub description, website, topics, and social preview recommendations
 
 ## Contributing
 
-IRLobby is maintained as a closed-source project. Public pull requests are not currently accepted. For authorized contribution arrangements, see [CONTRIBUTING.md](CONTRIBUTING.md).
+IRLobby is a closed-source project. The project does not accept public pull requests. For authorized contribution arrangements, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

@@ -5,22 +5,22 @@ description: Guides and best practices for working with Neon Serverless Postgres
 
 # Neon Serverless Postgres
 
-Neon is a serverless Postgres platform that separates compute and storage to offer autoscaling, branching, instant restore, and scale-to-zero. It's fully compatible with Postgres and works with any language, framework, or ORM that supports Postgres.
+Neon is a serverless Postgres platform. Neon separates compute and storage. Neon provides autoscaling, branching, instant restore, and scale-to-zero. Neon is fully compatible with Postgres. Neon works with any language, framework, or ORM that supports Postgres.
 
 ## Neon Documentation
 
-The Neon documentation is the source of truth for all Neon-related information. Always verify claims against the official docs before responding. Neon features and APIs evolve, so prefer fetching current docs over relying on training data.
+The Neon documentation is the source of truth for all Neon information. Verify all claims against the official docs before you respond. Neon features and APIs change over time. Fetch current docs instead of using training data.
 
-### Fetching docs as markdown
+### Fetching Docs as Markdown
 
-Any Neon doc page can be fetched as markdown in two ways:
+You can fetch any Neon doc page as markdown in two ways:
 
 1. **Append `.md` to the URL** (simplest): `https://neon.com/docs/introduction/branching.md`
 2. **Request `text/markdown`** on the standard URL: `curl -H "Accept: text/markdown" https://neon.com/docs/introduction/branching`
 
-Both return the same markdown content. Use whichever method your tools support.
+Both methods return the same markdown content. Use the method that your tools support.
 
-### Finding the right page
+### Finding the Right Page
 
 The docs index lists every available page with its URL and a short description:
 
@@ -28,7 +28,7 @@ The docs index lists every available page with its URL and a short description:
 https://neon.com/docs/llms.txt
 ```
 
-Common doc URLs are listed in the tables below. If you need a page not listed here, search the [docs index](https://neon.com/docs/llms.txt) — don't guess URLs.
+Common doc URLs are in the tables below. If you need a page that is not listed here, search the [docs index](https://neon.com/docs/llms.txt). Do not guess URLs.
 
 ### Common Documentation Paths
 
@@ -52,7 +52,7 @@ Common doc URLs are listed in the tables below. If you need a page not listed he
 | Neon CLI            | https://neon.com/docs/reference/neon-cli.md               |
 | Logical Replication | https://neon.com/docs/guides/logical-replication-guide.md |
 
-### Framework & Language Guides
+### Framework and Language Guides
 
 | Framework/Language | URL                                       |
 | ------------------ | ----------------------------------------- |
@@ -64,7 +64,7 @@ Common doc URLs are listed in the tables below. If you need a page not listed he
 
 ### Platform API
 
-For managing Neon resources programmatically (projects, branches, endpoints, databases, roles):
+Use the Platform API to manage Neon resources programmatically. Resources include projects, branches, endpoints, databases, and roles.
 
 | Method          | Documentation                                                      |
 | --------------- | ------------------------------------------------------------------ |
@@ -87,7 +87,7 @@ For managing Neon resources programmatically (projects, branches, endpoints, dat
 
 ## Overview of Resources
 
-Reference the appropriate resource file based on the user's needs:
+Use the resource file that matches the user's needs.
 
 ### Core Guides
 
@@ -99,27 +99,27 @@ Reference the appropriate resource file based on the user's needs:
 | Connection Methods | `references/connection-methods.md` | Choosing drivers based on platform and runtime                 |
 | Developer Tools    | `references/devtools.md`           | VSCode extension, MCP server, Neon CLI (`neon init`)           |
 
-### Database Drivers & ORMs
+### Database Drivers and ORMs
 
-HTTP/WebSocket queries for serverless/edge functions.
+Use HTTP or WebSocket queries for serverless and edge functions.
 
 | Area              | Resource                        | When to Use                                         |
 | ----------------- | ------------------------------- | --------------------------------------------------- |
 | Serverless Driver | `references/neon-serverless.md` | `@neondatabase/serverless` - HTTP/WebSocket queries |
 | Drizzle ORM       | `references/neon-drizzle.md`    | Drizzle ORM integration with Neon                   |
 
-### Auth & Data API SDKs
+### Auth and Data API SDKs
 
-Authentication and PostgREST-style data API for Neon.
+Use these SDKs for authentication and PostgREST-style data API access.
 
 | Area        | Resource                  | When to Use                                                                                           |
 | ----------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Neon Auth   | `references/neon-auth.md` | `@neondatabase/auth` or `@neondatabase/neon-js` - Setup, UI components, auth methods, common mistakes |
 | Neon JS SDK | `references/neon-js.md`   | `@neondatabase/neon-js` - Auth + Data API (PostgREST-style queries)                                   |
 
-### Neon Platform API & CLI
+### Neon Platform API and CLI
 
-Managing Neon resources programmatically via REST API, SDKs, or CLI.
+Use the REST API, SDKs, or CLI to manage Neon resources programmatically.
 
 | Area           | Resource                            | When to Use                                      |
 | -------------- | ----------------------------------- | ------------------------------------------------ |

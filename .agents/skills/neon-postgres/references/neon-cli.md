@@ -1,6 +1,6 @@
 # Neon CLI
 
-The Neon CLI is a command-line interface for managing Neon Serverless Postgres directly from your terminal. It provides the same capabilities as the Neon Platform API and is ideal for scripting, CI/CD pipelines, and developers who prefer terminal workflows.
+The Neon CLI is a command-line interface for managing Neon Serverless Postgres from your terminal. It provides the same capabilities as the Neon Platform API. Use it for scripting, CI/CD pipelines, and terminal workflows.
 
 ## Installation
 
@@ -24,7 +24,7 @@ Authenticate with your Neon account:
 neonctl auth
 ```
 
-This opens a browser for OAuth authentication and stores credentials locally.
+This opens a browser for OAuth authentication. It stores credentials locally.
 
 For CI/CD or non-interactive environments, use an API key:
 

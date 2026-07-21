@@ -15,7 +15,7 @@ EAS submits the AAB through a Google service account.
 
 1. In Google Cloud Console (linked to the Play Console org), create a service account.
 2. Grant it the `Service Account User` role.
-3. In Play Console → Setup → API access, link the service account and grant **Release apps to testing tracks** + **Release apps to production**.
+3. In Play Console → Setup → API access, link the service account and grant **Release apps to testing tracks** and **Release apps to production**.
 4. Create a JSON key for the service account and download it.
 5. Add it to GitHub repository secrets as `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (paste the entire JSON content).
 6. Locally for manual submits, save it to `apps/mobile/credentials/play-service-account.json` (gitignored). Path is referenced from `eas.json`.
@@ -122,7 +122,7 @@ npm test
 - Data safety form mismatch with actual SDK behavior (Sentry, Mapbox, etc.)
 - Missing `targetSdkVersion: 36` after Aug 31, 2026
 - Permissions declared in manifest but never used
-- Privacy policy URL unreachable or doesn't mention the package name
+- Privacy policy URL unreachable or does not mention the package name
 - Account deletion flow not exposed in-app (required for accounts since 2024)
 
 ## 12) Reviewer demo account

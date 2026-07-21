@@ -20,7 +20,7 @@
 | 1 | Register + login + logout | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
 | 2 | Password reset request + completion path | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
 | 3 | Onboarding submit + refresh profile | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
-| 4 | Discover list loads | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | Visual parity updates applied: header copy, empty-state guidance, and retry affordance. Manual screenshot pair needed. |
+| 4 | Discover list loads | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | Visual parity updates applied: header copy, empty-state guidance, and retry control. Manual screenshot pair needed. |
 | 5 | Create activity | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
 | 6 | Join/leave activity | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
 | 7 | Matches list loads | ☐ Pass ☐ Fail ☐ N/A | ☐ Pass ☐ Fail ☐ N/A | |
@@ -52,7 +52,7 @@
 | 5 | Create activity | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
 | 6 | Join/leave activity | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
 | 7 | Matches list loads | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | |
-| 8 | Chat list opens + sends message | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | Verify: header title + subtitle visible, sender name above message body, timestamp rendered, retry action shown on forced error, and send button prominence matches. |
+| 8 | Chat list opens + sends message | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | Verify: header title and subtitle visible, sender name above message body, timestamp rendered, retry action shown on forced error, and send button prominence matches. |
 | 9 | Profile update persists | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | ☐ W ☐ M | Verify: section order is profile info → editable fields/stats → navigation/actions, "Connections" naming matches, save/refresh visibility matches, and destructive sign-out/account-delete copy emphasis is equivalent. |
 
 ### Go / No-Go

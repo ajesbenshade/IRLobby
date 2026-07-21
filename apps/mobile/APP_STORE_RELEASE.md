@@ -2,7 +2,7 @@
 
 Use this checklist to publish `apps/mobile` with your Apple Developer account.
 
-> Mobile is the App Store release target. The web client in `apps/web` remains a supported deployment for `irlobby.com` (prebuilt `dist` via cPanel).
+Mobile is the App Store release target. The web client in `apps/web` remains a supported deployment for `irlobby.com` (prebuilt `dist` via cPanel).
 
 ## 1) Accounts and tools
 
@@ -13,19 +13,20 @@ Use this checklist to publish `apps/mobile` with your Apple Developer account.
 
 ## 1.1) Enable automatic Expo builds from GitHub
 
-This repository can now trigger a new iOS production build automatically on every push to `main` when mobile files change.
+This repository can trigger a new iOS production build automatically on every push to `main` when mobile files change.
 
 Required one-time setup:
 
 1. Create an Expo access token from your Expo account.
 2. Add it to GitHub repository secrets as `EXPO_TOKEN`.
-3. Run one successful `eas build -p ios --profile production` manually on a trusted machine and complete any Apple credential prompts so EAS stores the required iOS build credentials remotely.
+3. Run one successful `eas build -p ios --profile production` manually on a trusted machine. Complete any Apple credential prompts so EAS stores the required iOS build credentials remotely.
 4. Run one successful `eas submit -p ios --profile production` manually on a trusted machine, or configure an App Store Connect API key in Expo, so non-interactive submissions can complete from CI.
 
 Notes:
+
 - Automatic builds use `.github/workflows/mobile-eas-build.yml`.
 - The workflow triggers `eas build --platform ios --profile production --auto-submit --non-interactive --no-wait`.
-- If EAS still needs missing Apple build or App Store Connect submit credentials, the GitHub workflow will fail until the one-time manual setup is finished.
+- If EAS still needs missing Apple build or App Store Connect submit credentials, the GitHub workflow fails until the one-time manual setup is finished.
 
 ## 2) Configure production environment values
 
@@ -49,6 +50,7 @@ EXPO_PUBLIC_SENTRY_DSN=...
 ```
 
 Notes:
+
 - `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` must point to your live backend.
 - Backend must support HTTPS/WSS and include required CORS/host settings.
 - Prefer GitHub Actions variables / EAS secrets over committing real client IDs.
@@ -69,6 +71,7 @@ Notes:
 | Backend `GOOGLE_OAUTH_CLIENT_IDS` | **Missing — comma-separated list of all Google client IDs** | Server `.env.production` |
 
 Google Cloud Console setup (bundle/package `com.irlobby.app`):
+
 1. Create an **iOS** OAuth client (bundle ID `com.irlobby.app`).
 2. Create an **Android** OAuth client (package `com.irlobby.app` + SHA-1 from `eas credentials`).
 3. Create a **Web** OAuth client (used as `webClientId` for ID token audience).
@@ -107,8 +110,9 @@ Required setup:
 3. Set `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` for the mobile app if you want an explicit runtime value.
 
 Notes:
+
 - The backend callback exchanges the Twitter authorization code and then redirects back into the app with app JWTs.
-- This flow is intended for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
+- This flow is for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
 
 ## 2.2) Configure Google and Apple for store builds
 
@@ -119,9 +123,10 @@ Notes:
 ## 3) Confirm app identity
 
 Current bundle identifier is set in `app.config.ts`:
+
 - iOS: `com.irlobby.app`
 
-Make sure this matches the App ID in Apple Developer + App Store Connect.
+Confirm that this matches the App ID in Apple Developer and App Store Connect.
 
 ## 4) Build production iOS binary
 
@@ -134,7 +139,7 @@ npm run build:ios
 
 This runs `eas build -p ios --profile production`.
 
-For automated builds, pushes to `main` that touch `apps/mobile/**` or the root `package-lock.json` will submit the same production build through GitHub Actions.
+For automated builds, pushes to `main` that touch `apps/mobile/**` or the root `package-lock.json` submit the same production build through GitHub Actions.
 
 ## 5) Submit to App Store Connect
 
@@ -144,22 +149,27 @@ npm run submit:ios
 
 This runs `eas submit -p ios --profile production`.
 
-If you rely on GitHub Actions, the same submit step now runs automatically after a successful production iOS build because the workflow uses EAS auto-submit.
+If you use GitHub Actions, the same submit step runs automatically after a successful production iOS build because the workflow uses EAS auto-submit.
 
 ## 6) App Store Connect metadata
 
-Complete before submitting for review:
+Complete before you submit for review:
+
 - App name, subtitle, description, keywords
 - Privacy policy URL
 - Support URL and marketing URL (if available)
 - Screenshots for required iPhone sizes
 - App privacy questionnaire answers
 
-> Copy-ready metadata lives in [`store/metadata/`](./store/metadata/).
-> Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./store/metadata/privacy-questionnaire.md).
-> Reviewer demo account (App Privacy → Sign-In Information): [`store/metadata/reviewer-demo-account.md`](./store/metadata/reviewer-demo-account.md).
-> Privacy Policy + Support pages are committed at `site/privacy.html` and `site/support.html` — host them at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
-> Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
+Copy-ready metadata lives in [`store/metadata/`](./store/metadata/).
+
+Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./store/metadata/privacy-questionnaire.md).
+
+Reviewer demo account (App Privacy → Sign-In Information): [`store/metadata/reviewer-demo-account.md`](./store/metadata/reviewer-demo-account.md).
+
+Privacy Policy and Support pages are committed at `site/privacy.html` and `site/support.html`. Host them at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
+
+Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
 
 ### Pre-submission sanity check
 
@@ -170,13 +180,14 @@ cd apps/mobile
 npm run presubmit
 ```
 
-This validates the icon, runs typecheck + tests, scans for debug logs, and verifies metadata length limits.
+This validates the icon, runs typecheck and tests, scans for debug logs, and verifies metadata length limits.
 
 It also checks the required reviewer/privacy support files and the five required App Store screenshot filenames in `store/screenshots/`.
 
 ## 7) Backend production requirements
 
-Ensure backend env/config is production-ready:
+Confirm that backend env/config is production-ready:
+
 - `DEBUG=False`
 - Valid `ALLOWED_HOSTS`
 - Correct `CORS_ALLOWED_ORIGINS`
@@ -188,11 +199,12 @@ Ensure backend env/config is production-ready:
 - Permission prompts are justified and accurate (camera/location/photos)
 - Sign in and registration flows work against production backend
 - Password reset links open correct frontend/app route
-- App handles API downtime gracefully (errors/retries)
+- App handles API downtime with errors and retries
 
 ## 9) TestFlight first, then App Review
 
 Recommended flow:
+
 1. Upload build
 2. Add internal testers
 3. Validate onboarding/auth/activity flows
@@ -204,12 +216,14 @@ Recommended flow:
 ### Week 3 — first session + supply
 
 Engineering (mobile):
+
 - [x] Onboarding: location → vibe → notifications (photo deferred to Profile)
 - [x] Apple Sign-In first in the login OAuth stack
 - [x] Discover defaults to Tonight (next ~8 hours); price filters hidden for v1
 - [x] Recruiting empty states on Discover, Matches, Chat, Activity, Profile
 
 Ops (before submit):
+
 - [ ] Seed 5–10 real activities in your launch city for the next few evenings
 - [ ] Create 2–3 demo accounts for App Review / TestFlight
 - [ ] Smoke TestFlight auth matrix (Apple / Google / Twitter / email)

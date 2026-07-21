@@ -1,6 +1,6 @@
 # App Privacy Questionnaire (App Store Connect)
 
-Use this as a reference when filling out the App Privacy section.
+Use this as a reference when you fill out the App Privacy section.
 
 ## Data Collected and Linked to User
 
@@ -30,4 +30,4 @@ Use this as a reference when filling out the App Privacy section.
 
 - Location is requested only when in use (not background).
 - Camera and Photo Library access is opt-in per upload.
-- All chat content is stored on the IRLobby backend; no third-party message processors.
+- All chat content is stored on the IRLobby backend. No third-party message processors.

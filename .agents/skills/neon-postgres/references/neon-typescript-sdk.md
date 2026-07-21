@@ -1,6 +1,6 @@
 # Neon TypeScript SDK
 
-The `@neondatabase/api-client` TypeScript SDK is a typed wrapper around the Neon REST API for managing Neon resources programmatically.
+The `@neondatabase/api-client` TypeScript SDK is a typed wrapper around the Neon REST API. Use it to manage Neon resources programmatically.
 
 For core concepts (Organization, Project, Branch, Endpoint, etc.), see `what-is-neon.md`.
 
@@ -22,7 +22,7 @@ const apiClient = createApiClient({ apiKey: process.env.NEON_API_KEY! });
 
 ## Org-Aware Workflow
 
-All Neon accounts are organization-based. You must discover the user's org first, then pass `org_id` to project operations:
+All Neon accounts are organization-based. Discover the user's org first. Then pass `org_id` to project operations:
 
 ```typescript
 // 1. Get the user's organizations

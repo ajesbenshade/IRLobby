@@ -12,7 +12,7 @@ Apple requires screenshots for the **iPhone 6.9-inch** display (1320 × 2868 por
 
 ## Capture flow (automated)
 
-The repo includes a deterministic screenshot studio and capture script for the five required App Store images.
+The repository includes a deterministic screenshot studio and capture script for the five required App Store images.
 
 1. Start the screenshot server:
 
@@ -43,11 +43,12 @@ Use **iPhone 16 Pro Max** simulator for native 6.9" output.
 ## Optional: 30-second preview video
 
 Capture with simulator (`xcrun simctl io booted recordVideo preview.mov`) then trim to ≤ 30s.
-Show: Vibe quiz → Swipe → Match → Chat. No voiceover; text overlays optional.
+
+Show: Vibe quiz → Swipe → Match → Chat. No voiceover. Text overlays are optional.
 
 ## Validation
 
 - Portrait only.
 - 1320 × 2868 (or per-device equivalent).
-- Show **actual app UI** — Apple rejects mocked marketing graphics.
+- Show **actual app UI**. Apple rejects mocked marketing graphics.
 - Strip status bar clutter (use `xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3`).

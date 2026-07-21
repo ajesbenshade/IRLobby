@@ -1,12 +1,12 @@
 # New Oracle Backend Checklist
 
-Use this checklist when provisioning a brand new IRLobby backend on Oracle Cloud.
+Use this checklist when you provision a new IRLobby backend on Oracle Cloud.
 
 ## 1. Oracle Cloud Setup
 
 - Create Ubuntu 22.04 VM on `VM.Standard.A1.Flex`.
 - Reserve static public IP.
-- Open inbound TCP ports `22`, `80`, `443` in NSG/Security List only. Do not open Redis/TCP `6379`.
+- Open inbound TCP ports `22`, `80`, and `443` in NSG or Security List only. Do not open Redis or TCP `6379`.
 - Point your API domain `A` record to the VM public IP.
 
 ## 2. VM Bootstrap
@@ -20,7 +20,7 @@ cd IRLobby/irlobby_backend
 sudo bash deploy/oracle/setup-oracle-vm.sh
 ```
 
-Alternative: use `deploy/oracle/bootstrap-user-data.sh` as your Oracle instance user-data script to automate first-boot bootstrap.
+Alternative: use `deploy/oracle/bootstrap-user-data.sh` as your Oracle instance user-data script. This automates first-boot bootstrap.
 
 ## 3. Local Safety Guard (Before Any Commits)
 
@@ -31,7 +31,7 @@ cd IRLobby
 bash scripts/install-secret-guard.sh
 ```
 
-This enables a pre-commit check that blocks common secret leaks.
+This installs a pre-commit check. The check blocks common secret leaks.
 
 ## 4. Production Environment File
 
@@ -43,7 +43,7 @@ cp .env.oracle.example .env.production
 nano .env.production
 ```
 
-- If you are deploying by raw server IP first (no domain/cert yet), set:
+- If you deploy by raw server IP first (no domain or cert yet), set:
 
 ```bash
 SERVER_NAME=203.0.113.10
@@ -65,8 +65,8 @@ bash deploy/oracle/generate-secrets.sh --write
 chmod 600 .env.production
 ```
 
-- Fill all required values for your domain, database, CORS/CSRF, email, and third-party integrations.
-- Confirm `REDIS_PASSWORD` is set. Leave `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` empty unless using an external Redis service; Compose derives authenticated internal URLs automatically.
+- Set all required values for your domain, database, CORS or CSRF, email, and third-party integrations.
+- Confirm `REDIS_PASSWORD` is set. Leave `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` empty unless you use an external Redis service. Compose derives authenticated internal URLs automatically.
 
 ## 5. HTTPS Certificate
 
@@ -97,21 +97,21 @@ bash deploy/oracle/verify-redis-private.sh docker-compose.oracle.yml .env.produc
 nc -vz api.yourdomain.com 6379
 ```
 
-The Redis ping should return `PONG` from inside the container, the privacy check should pass, and the external `6379` connection should fail.
+The Redis ping must return `PONG` from inside the container. The privacy check must pass. The external `6379` connection must fail.
 
 ## 8. Post-Deploy Tasks
 
-- Set mobile/web API and websocket base URLs to your new domain.
+- Set mobile and web API and websocket base URLs to your new domain.
 - Configure daily backup cron:
 
 ```bash
 (crontab -l 2>/dev/null; echo "20 3 * * * cd $(pwd) && bash deploy/oracle/backup.sh >/tmp/irlobby-backup.log 2>&1") | crontab -
 ```
 
-- Save secrets in your secret manager and rotate any temporary/bootstrap values.
+- Save secrets in your secret manager. Rotate any temporary or bootstrap values.
 
 ## 9. Secret Safety Rules
 
-- Never commit `.env`, `.env.production`, API keys, DB passwords, or private keys.
+- Do not commit `.env`, `.env.production`, API keys, DB passwords, or private keys.
 - Use `.env.example` files for placeholders only.
-- If a secret is ever committed, rotate it immediately and purge it from git history.
+- If a secret is ever committed, rotate it immediately. Purge it from git history.

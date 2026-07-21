@@ -1,6 +1,6 @@
 # GitHub Repository Settings
 
-These settings are managed in GitHub rather than source files. Keep this checklist current when the public repository presentation changes.
+GitHub manages these settings. They are not stored in source files. Keep this checklist current when the public repository presentation changes.
 
 ## Description
 
@@ -20,7 +20,7 @@ https://irlobby.com
 
 ## Visibility and access
 
-Recommended for strict closed-source operation:
+Recommended for closed-source operation:
 
 - Set repository visibility to private.
 - Restrict collaborator access to approved team members and contractors.
@@ -48,10 +48,10 @@ postgis
 
 ## Social preview
 
-Use a preview image that shows the actual app, not an abstract graphic. Good candidates:
+Use a preview image that shows the app. Do not use an abstract graphic. Good candidates:
 
-- A composite of `apps/mobile/store/screenshots/02-discover-swipe.png` and `apps/mobile/store/screenshots/03-match-celebration.png`.
-- The current app icon plus one screenshot if the preview needs stronger brand recognition.
+- A composite of `apps/mobile/store/screenshots/02-discover-swipe.png` and `apps/mobile/store/screenshots/03-match-celebration.png`
+- The current app icon plus one screenshot if the preview needs stronger brand recognition
 
 ## Badges
 
@@ -65,8 +65,8 @@ If the repository moves, update the workflow badge URLs in [README.md](../README
 
 ## License display
 
-Set GitHub license labeling and repo messaging to proprietary terms:
+Set GitHub license labeling and repository messaging to proprietary terms:
 
 - Keep [LICENSE](../LICENSE) as proprietary all-rights-reserved text.
-- Ensure README badge and license section use "Proprietary" wording.
+- Confirm that the README badge and license section use "Proprietary" wording.
 - Remove any old references to MIT or open-source contribution language.

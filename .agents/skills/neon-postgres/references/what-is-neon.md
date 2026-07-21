@@ -1,6 +1,6 @@
 # What is Neon
 
-Neon is a serverless Postgres platform that separates compute and storage to offer autoscaling, branching, instant restore, and scale-to-zero.
+Neon is a serverless Postgres platform. Neon separates compute and storage. Neon provides autoscaling, branching, instant restore, and scale-to-zero.
 
 See the [official introduction](https://neon.com/docs/introduction.md) for complete details.
 
@@ -18,17 +18,17 @@ See the [official introduction](https://neon.com/docs/introduction.md) for compl
 
 ## Key Differentiators
 
-1. **Serverless Architecture**: Compute scales automatically and can suspend when idle
-2. **Branching**: Create instant database copies without duplicating storage
-3. **Separation of Compute and Storage**: Pay for compute only when active
-4. **Postgres Compatible**: Works with any Postgres driver, ORM, or tool
+1. **Serverless Architecture**: Compute scales automatically. Compute can suspend when idle.
+2. **Branching**: Create instant database copies without duplicating storage.
+3. **Separation of Compute and Storage**: Pay for compute only when it is active.
+4. **Postgres Compatible**: Works with any Postgres driver, ORM, or tool.
 
 ## When to Use Neon
 
-- **Serverless applications**: Functions that need database access without managing connections
-- **Development workflows**: Branch databases like code for isolated testing
-- **Variable workloads**: Auto-scale during traffic spikes, scale to zero when idle
-- **Cost optimization**: Pay only for active compute time and storage used
+- **Serverless applications**: Functions that need database access without managing connections.
+- **Development workflows**: Branch databases like code for isolated testing.
+- **Variable workloads**: Auto-scale during traffic spikes. Scale to zero when idle.
+- **Cost optimization**: Pay only for active compute time and storage used.
 
 ## Further Reading
 

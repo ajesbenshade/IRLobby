@@ -4,7 +4,7 @@ Used for both Apple App Review (App Store Connect → App Privacy → Sign-In In
 
 ## Credentials
 
-> **Action required:** Create this account on production (`https://irlobby.com`) before submitting. Replace placeholders below.
+> **Action required:** Create this account on production (`https://irlobby.com`) before you submit. Replace placeholders below.
 
 - **Email**: `app-review@irlobby.com`
 - **Password**: `<set in 1Password / shared secret store; paste into ASC + Play Console only>`
@@ -14,12 +14,12 @@ Used for both Apple App Review (App Store Connect → App Privacy → Sign-In In
 ## What the reviewer will see after sign-in
 
 1. Onboarding is auto-completed for this account (vibe quiz answers pre-seeded).
-2. Home tab shows seeded sample activities within ~5 mi of the seeded location.
+2. Home tab shows seeded sample activities within about 5 mi of the seeded location.
 3. The reviewer can:
    - Browse activities, swipe, and join one
    - Open a 1:1 chat with a seeded match
    - Edit profile, upload a photo
-   - Trigger account deletion from Settings → Delete account (do NOT delete this account; it is shared)
+   - Trigger account deletion from Settings → Delete account (do not delete this account; it is shared)
 
 ## Notes for reviewers (paste verbatim into ASC / Play Console)
 
@@ -40,8 +40,10 @@ deletion on this shared review account.
 - Rotate the password each release cycle and update both stores.
 - Re-seed sample activities monthly so reviewers see fresh content.
 - If the account is locked or rate-limited, regenerate via the backend management command:
+
   ```bash
   cd irlobby_backend
   python manage.py seed_review_account
   ```
+
   *(If this command does not yet exist, add it before the next submission.)*

@@ -1,6 +1,6 @@
 # Neon and Drizzle Integration
 
-Integration patterns, configurations, and optimizations for using **Drizzle ORM** with **Neon** Postgres.
+This page covers integration patterns, configurations, and optimizations for using **Drizzle ORM** with **Neon** Postgres.
 
 See the [official Drizzle guide](https://neon.com/docs/guides/drizzle.md) for complete details.
 
@@ -21,7 +21,7 @@ Drizzle ORM works with multiple Postgres drivers. See `connection-methods.md` fo
 
 ### 1. TCP with node-postgres (Long-Running Servers)
 
-Best for Railway and traditional VPS.
+Use this setup for Railway and traditional VPS.
 
 ```bash
 npm install drizzle-orm pg
@@ -57,7 +57,7 @@ export const db = drizzle({ client: pool, schema });
 
 ### 3. HTTP Adapter (Edge Without TCP)
 
-For Cloudflare Workers, Netlify Edge, Deno Deploy. Does NOT support interactive transactions.
+Use this for Cloudflare Workers, Netlify Edge, and Deno Deploy. It does NOT support interactive transactions.
 
 ```bash
 npm install drizzle-orm @neondatabase/serverless
@@ -233,7 +233,7 @@ export async function safeNeonOperation<T>(
 
 ## Best Practices
 
-1. **Connection Management** - See `connection-methods.md` for platform-specific guidance
-2. **Neon Features** - Utilize branching for development/testing (see `features.md`)
-3. **Query Optimization** - Batch operations, use prepared statements
-4. **Schema Design** - Leverage Postgres-specific features, use appropriate indexes
+1. **Connection Management** - See `connection-methods.md` for platform-specific guidance.
+2. **Neon Features** - Use branching for development and testing (see `features.md`).
+3. **Query Optimization** - Batch operations. Use prepared statements.
+4. **Schema Design** - Use Postgres-specific features. Use appropriate indexes.

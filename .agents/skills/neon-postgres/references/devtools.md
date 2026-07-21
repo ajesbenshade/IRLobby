@@ -1,10 +1,10 @@
 # Neon Developer Tools
 
-Neon provides developer tools to enhance your local development workflow, including a VSCode extension and MCP server for AI-assisted development.
+Neon provides developer tools for local development. Tools include a VSCode extension and an MCP server for AI-assisted development.
 
 ## Quick Setup with neon init
 
-The fastest way to set up all Neon developer tools:
+Run this command to set up all Neon developer tools:
 
 ```bash
 npx neon init
@@ -25,7 +25,7 @@ The Neon VSCode extension provides:
 - **Database Explorer**: Browse projects, branches, tables, and data
 - **SQL Editor**: Write and execute queries with IntelliSense
 - **Branch Management**: Create, switch, and manage database branches
-- **Connection String Access**: Quick copy of connection strings
+- **Connection String Access**: Copy connection strings quickly
 
 **Install from VSCode:**
 
@@ -43,11 +43,11 @@ See the [full VSCode extension docs](https://neon.com/docs/local/vscode-extensio
 
 ## Neon MCP Server
 
-The Neon MCP (Model Context Protocol) server enables AI assistants like Claude, Cursor, and GitHub Copilot to interact with your Neon databases directly.
+The Neon MCP (Model Context Protocol) server lets AI assistants interact with your Neon databases. Supported assistants include Claude, Cursor, and GitHub Copilot.
 
 ### Capabilities
 
-The MCP server provides AI assistants with:
+The MCP server gives AI assistants these capabilities:
 
 - **Project Management**: List, create, describe, and delete projects
 - **Branch Operations**: Create branches, compare schemas, reset from parent
@@ -67,7 +67,7 @@ npx neon init
 
 **Option 2: Manual Configuration**
 
-Add to your AI assistant's MCP configuration:
+Add this to your AI assistant's MCP configuration:
 
 ```json
 {

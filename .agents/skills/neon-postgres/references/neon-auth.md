@@ -1,6 +1,6 @@
 # Neon Auth
 
-Neon Auth provides managed authentication that stores users, sessions, and auth configuration directly in your Neon database. When you branch your database, your entire auth state branches with it.
+Neon Auth provides managed authentication. It stores users, sessions, and auth configuration directly in your Neon database. When you branch your database, your entire auth state branches with it.
 
 See the [official Neon Auth docs](https://neon.com/docs/auth/overview.md) for complete details.
 
@@ -119,7 +119,7 @@ const authClient = createAuthClient(import.meta.env.VITE_NEON_AUTH_URL, {
 
 UI components (`AuthView`, `SignedIn`, etc.) work without an adapter.
 
-**2. UI setup** — Wrap your app with `NeonAuthUIProvider` and import CSS. See [UI Components](#ui-components) below. In a SPA, the provider and CSS go in your root component (e.g., `App.tsx` or your router layout).
+**2. UI setup** — Wrap your app with `NeonAuthUIProvider` and import CSS. See [UI Components](#ui-components) below. In a SPA, put the provider and CSS in your root component (e.g., `App.tsx` or your router layout).
 
 **3. Routing** — Map `AuthView` and `AccountView` to routes in your router (React Router, TanStack Router, etc.). For example, with React Router:
 
@@ -177,7 +177,7 @@ import "@neondatabase/neon-js/ui/css";
 
 Wrap your app with `NeonAuthUIProvider`. Only `authClient` is required.
 
-In Next.js, add `suppressHydrationWarning` to the `<html>` tag in your root layout — the provider injects theme attributes (`className="light"`, `color-scheme`) client-side that don't exist in the server render:
+In Next.js, add `suppressHydrationWarning` to the `<html>` tag in your root layout. The provider injects theme attributes (`className="light"`, `color-scheme`) client-side. These attributes do not exist in the server render:
 
 ```tsx
 // app/layout.tsx
@@ -200,7 +200,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-**Social login** requires TWO configurations: enable in Neon Console AND add `social` prop to provider.
+**Social login** requires TWO configurations. Enable it in Neon Console. Add the `social` prop to the provider.
 
 ### AuthView (Next.js)
 
@@ -332,7 +332,7 @@ import "@neondatabase/neon-js/ui/css"; // React SPA
 
 ### Missing NEON_AUTH_COOKIE_SECRET
 
-Required for Next.js, must be 32+ characters for HMAC-SHA256. Generate with `openssl rand -base64 32`.
+This variable is required for Next.js. It must be 32+ characters for HMAC-SHA256. Generate it with `openssl rand -base64 32`.
 
 ### Missing force-dynamic on server components
 
@@ -351,15 +351,15 @@ export default async function Page() {
 
 ### Using v0.1 API patterns
 
-Use `createNeonAuth()` + `auth.handler()`, not the old standalone `authApiHandler()`. See the [migration guide](https://neon.com/docs/auth/migrate/from-auth-v0.1.md).
+Use `createNeonAuth()` + `auth.handler()`. Do not use the old standalone `authApiHandler()`. See the [migration guide](https://neon.com/docs/auth/migrate/from-auth-v0.1.md).
 
 ### Using useSession() without adapter in React SPA
 
-`createAuthClient(url)` without an adapter returns a vanilla client with no React hooks. Either pass `BetterAuthReactAdapter()` or use UI components (`SignedIn`, etc.) which don't require an adapter.
+`createAuthClient(url)` without an adapter returns a vanilla client with no React hooks. Pass `BetterAuthReactAdapter()`. Or use UI components (`SignedIn`, etc.). UI components do not require an adapter.
 
 ### Wrong BetterAuthReactAdapter import
 
-Must use subpath import and call as function:
+Use a subpath import. Call it as a function:
 
 ```typescript
 // WRONG
@@ -372,15 +372,15 @@ const client = createAuthClient(url, { adapter: BetterAuthReactAdapter() });
 
 ### CSS import conflicts
 
-Choose ONE: `ui/css` (without Tailwind) or `ui/tailwind` (with Tailwind v4). Never import both -- causes ~94KB of duplicate styles.
+Choose ONE: `ui/css` (without Tailwind) or `ui/tailwind` (with Tailwind v4). Never import both. Both imports cause ~94KB of duplicate styles.
 
 ### Missing "use client" directive
 
-Required for any component using `useSession()` or other React hooks.
+Add `"use client"` to any component that uses `useSession()` or other React hooks.
 
 ### Wrong createAuthClient signature
 
-URL is the first argument, not a property in an options object:
+The URL is the first argument. It is not a property in an options object:
 
 ```typescript
 // WRONG

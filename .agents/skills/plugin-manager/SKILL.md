@@ -1,17 +1,17 @@
 ---
 name: plugin-manager
-description: Manage plugin structure and configuration for this repository across both Cursor and Claude Code. Use when creating, updating, or reviewing plugin folders under plugins/, wiring marketplace manifests, setting up skill symlinks, assigning per-plugin mcp.json files, or adding additional plugins while preserving repo conventions.
+description: Manage plugin structure and configuration for this repository in Cursor and Claude Code. Use when you create, update, or review plugin folders under plugins/, wire marketplace manifests, set up skill symlinks, assign per-plugin mcp.json files, or add plugins while you keep repo conventions.
 ---
 
 # Plugin Manager
 
-Maintain plugin packaging for both ecosystems in a single repository, using a shared `plugins/` directory and a shared top-level `skills/` source of truth.
+Maintain plugin packaging for both ecosystems in one repository. Use a shared `plugins/` directory and a shared top-level `skills/` source of truth.
 
 ## Working Rules
 
 - Keep each plugin self-contained in `plugins/<plugin-name>/`.
 - Keep shared reusable skill content in top-level `skills/`.
-- Expose shared skills per plugin via symlinks in `plugins/<plugin-name>/skills/`.
+- Expose shared skills per plugin with symlinks in `plugins/<plugin-name>/skills/`.
 - Keep MCP config plugin-local at `plugins/<plugin-name>/mcp.json`.
 - Keep both marketplace manifests at repo root:
   - `.claude-plugin/marketplace.json`
@@ -19,7 +19,7 @@ Maintain plugin packaging for both ecosystems in a single repository, using a sh
 
 ## Required Plugin Layout
 
-For every plugin, ensure this layout exists:
+For every plugin, verify this layout exists:
 
 ```text
 plugins/<plugin-name>/
@@ -40,19 +40,19 @@ plugins/<plugin-name>/
 3. Add or update `plugins/<plugin-name>/mcp.json` for plugin-specific MCP servers.
 4. Symlink required top-level skills into `plugins/<plugin-name>/skills/`.
 5. Add `plugins/<plugin-name>/assets/logo.svg` for Cursor.
-6. Register plugin in both marketplaces using `source: "./plugins/<plugin-name>"`.
-7. Validate JSON and path references before finishing.
+6. Register the plugin in both marketplaces. Use `source: "./plugins/<plugin-name>"`.
+7. Validate JSON and path references before you finish.
 
 ## Manifest Guidelines
 
 - **Claude plugin manifest**
   - Path: `plugins/<plugin-name>/.claude-plugin/plugin.json`
-  - Prefer plugin-local relative paths, for example:
+  - Use plugin-local relative paths. For example:
     - `"skills": "./skills/"`
     - `"mcpServers": "./mcp.json"`
 - **Cursor plugin manifest**
   - Path: `plugins/<plugin-name>/.cursor-plugin/plugin.json`
-  - Prefer plugin-local relative paths, for example:
+  - Use plugin-local relative paths. For example:
     - `"skills": "./skills/"`
     - `"mcpServers": "./mcp.json"`
     - `"logo": "assets/logo.svg"`

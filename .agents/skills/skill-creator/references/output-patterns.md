@@ -1,6 +1,6 @@
 # Output Patterns
 
-Use these patterns when skills need to produce consistent, high-quality output.
+Use these patterns when skills must produce consistent, high-quality output.
 
 ## Template Pattern
 
@@ -57,7 +57,7 @@ Adjust sections as needed for the specific analysis type.
 
 ## Examples Pattern
 
-For skills where output quality depends on seeing examples, provide input/output pairs:
+For skills where output quality depends on examples, provide input/output pairs:
 
 ```markdown
 ## Commit message format

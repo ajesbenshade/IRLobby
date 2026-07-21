@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -19,17 +20,24 @@ interface FriendsModalProps {
 }
 
 export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
-  const { data: matches = [], isLoading, isError, error, refetch, isRefetching } = useQuery<
-    MatchConnection[]
-  >({
+  const {
+    data: matches = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery<MatchConnection[] | PaginatedResponse<MatchConnection>>({
     queryKey: [API_ROUTES.MATCHES],
     queryFn: async () => {
       const response = await apiRequest('GET', API_ROUTES.MATCHES);
-      return response.json();
+      return response.json() as Promise<MatchConnection[] | PaginatedResponse<MatchConnection>>;
     },
     enabled: isOpen,
     retry: 1,
   });
+
+  const matchItems = asArrayResponse(matches);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -52,13 +60,18 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
             <p className="text-sm text-red-600 dark:text-red-400">
               {error instanceof Error ? error.message : 'Unable to load connections.'}
             </p>
-            <Button size="sm" variant="outline" onClick={() => void refetch()} disabled={isRefetching}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refetch()}
+              disabled={isRefetching}
+            >
               {isRefetching ? 'Retrying...' : 'Retry'}
             </Button>
           </div>
-        ) : matches.length > 0 ? (
+        ) : matchItems.length > 0 ? (
           <div className="space-y-2">
-            {matches.map((match) => (
+            {matchItems.map((match) => (
               <Card key={match.id} className="p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm">

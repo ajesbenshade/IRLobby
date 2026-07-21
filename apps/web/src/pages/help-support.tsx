@@ -33,7 +33,7 @@ export default function HelpSupport() {
       setName('');
       setEmail('');
       setMessage('');
-    } catch (error) {
+    } catch {
       toast({
         title: 'Something went wrong',
         description: 'Please try again later.',

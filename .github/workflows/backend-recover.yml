@@ -1,0 +1,118 @@
+name: Backend Recover
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Recreate web/ws with docker run
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu; do
+            if ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${candidate}@${SSH_HOST}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+          [ -n "${EFFECTIVE_USER}" ]
+
+          ssh -o BatchMode=yes -o ConnectTimeout=90 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" <<'REMOTE'
+          set -euo pipefail
+
+          echo "=== docker ps ==="
+          docker ps -a --format 'table {{.Names}}\t{{.Status}}' | head -20
+
+          web_old="$(docker ps -aq -f name=^irlobby_backend-web-1$ | head -1)"
+          ws_old="$(docker ps -aq -f name=^irlobby_backend-ws-1$ | head -1)"
+          [ -n "${web_old}" ]
+
+          image="$(docker inspect -f '{{.Config.Image}}' "${web_old}")"
+          network="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "${web_old}" | head -1)"
+          echo "image=${image}"
+          echo "network=${network}"
+
+          # Capture env from the old web container (includes working REDIS_URL).
+          docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${web_old}" > /tmp/web.env
+          # Ensure migration flags for web.
+          grep -q '^RUN_MIGRATIONS=' /tmp/web.env || echo 'RUN_MIGRATIONS=true' >> /tmp/web.env
+          grep -q '^RUN_COLLECTSTATIC=' /tmp/web.env || echo 'RUN_COLLECTSTATIC=true' >> /tmp/web.env
+
+          cp /tmp/web.env /tmp/ws.env
+          # ws should not migrate/collectstatic.
+          grep -vE '^(RUN_MIGRATIONS|RUN_COLLECTSTATIC)=' /tmp/ws.env > /tmp/ws.env.tmp || true
+          mv /tmp/ws.env.tmp /tmp/ws.env
+          echo 'RUN_MIGRATIONS=false' >> /tmp/ws.env
+          echo 'RUN_COLLECTSTATIC=false' >> /tmp/ws.env
+
+          entrypoint="$(docker inspect -f '{{json .Config.Entrypoint}}' "${web_old}")"
+          echo "entrypoint=${entrypoint}"
+
+          docker update --restart=no irlobby_backend-web-1 || true
+          docker update --restart=no irlobby_backend-ws-1 || true
+          docker stop irlobby_backend-web-1 irlobby_backend-ws-1 || true
+          docker rename irlobby_backend-web-1 irlobby_backend-web-1.broken || true
+          docker rename irlobby_backend-ws-1 irlobby_backend-ws-1.broken || true
+
+          echo "=== creating fresh web container from image ==="
+          docker run -d \
+            --name irlobby_backend-web-1 \
+            --network "${network}" \
+            --network-alias web \
+            --env-file /tmp/web.env \
+            --restart unless-stopped \
+            "${image}" \
+            gunicorn irlobby_backend.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+
+          echo "=== creating fresh ws container from image ==="
+          docker run -d \
+            --name irlobby_backend-ws-1 \
+            --network "${network}" \
+            --network-alias ws \
+            --env-file /tmp/ws.env \
+            --restart unless-stopped \
+            "${image}" \
+            daphne -b 0.0.0.0 -p 8001 irlobby_backend.asgi:application
+
+          docker restart irlobby_backend-nginx-1 || true
+          sleep 20
+
+          echo "=== status ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
+          echo "=== web logs ==="
+          docker logs --tail 60 irlobby_backend-web-1 2>&1 || true
+          echo "=== in-container health ==="
+          docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ || true
+          REMOTE
+
+      - name: External health check
+        run: |
+          set -euo pipefail
+          code=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
+            echo "health attempt ${attempt}: HTTP ${code}"
+            head -c 200 /tmp/health.json || true
+            echo ""
+            if [ "${code}" = "200" ]; then
+              echo "=== twitter status ==="
+              curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+              echo ""
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1

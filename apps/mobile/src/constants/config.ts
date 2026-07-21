@@ -9,13 +9,13 @@ const extra =
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000';
-const DEFAULT_PROD_API_BASE_URL = 'https://liyf.app';
 
 const normalizeApiBaseUrl = (value: string | undefined) => {
   const cleanedValue = value?.trim();
 
   if (!cleanedValue) {
-    return __DEV__ ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+    if (__DEV__) return DEFAULT_DEV_API_BASE_URL;
+    throw new Error('EXPO_PUBLIC_API_BASE_URL is not set');
   }
 
   return removeTrailingSlash(cleanedValue);
@@ -38,8 +38,10 @@ export const config = {
   apiBaseUrlSource: isUsingFallbackApiBaseUrl ? (__DEV__ ? 'fallback-dev' : 'fallback-production') : 'configured',
   twitterClientId: extra.twitterClientId as string | undefined,
   twitterRedirectUri: extra.twitterRedirectUri as string | undefined,
+  googleExpoClientId: extra.googleExpoClientId as string | undefined,
   googleIosClientId: extra.googleIosClientId as string | undefined,
   googleAndroidClientId: extra.googleAndroidClientId as string | undefined,
   googleWebClientId: extra.googleWebClientId as string | undefined,
   mapboxPublicToken: extra.mapboxPublicToken as string | undefined,
+  sentryDsn: extra.sentryDsn as string | undefined,
 };

@@ -10,6 +10,19 @@ vite.config.ts.*
 .env.local
 .env.production
 
+# Private keys and credential bundles
+id_rsa
+id_ed25519
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+play-service-account.json
+
 # Logs
 logs
 *.log
@@ -25,6 +38,8 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage
+coverage.xml
+htmlcov/
 
 # nyc test coverage
 .nyc_output
@@ -58,7 +73,6 @@ jspm_packages/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-.vercel
 .vite/
 
 # Python
@@ -66,16 +80,22 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.coverage
+.coverage.*
 .Python
 build/
 develop-eggs/
 dist/
+!apps/web/dist/
+!apps/web/dist/**
 downloads/
 eggs/
 .eggs/
 lib/
 !apps/web/src/lib/
 !apps/web/src/lib/**
+!apps/mobile/src/lib/
+!apps/mobile/src/lib/**
 lib64/
 parts/
 sdist/

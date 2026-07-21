@@ -1,0 +1,15 @@
+# cPanel Git Version Control deployment manifest.
+# Triggered by clicking "Update from Remote" + "Deploy HEAD Commit"
+# in cPanel → Git Version Control, OR via the cpanel-deploy webhook
+# if you wire it up. The deploy key labelled "Web Server" lets cPanel
+# pull from GitHub over SSH.
+#
+# This deploy now builds the React web app and ships apps/web/dist.
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/public_html
+    - export REPOPATH=$PWD
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf {} +
+    - /bin/cp -rf $REPOPATH/apps/web/dist/. $DEPLOYPATH/

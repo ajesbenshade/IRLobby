@@ -10,10 +10,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'IRLobby',
   slug: 'irlobby',
   version: '1.0.0',
+  description: 'IRLobby — Get out. Get together. Real plans nearby.',
   orientation: 'portrait',
   icon: './assets/icon.png',
   scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
+  primaryColor: '#5B4BFF',
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#7C3AED',
+    dark: {
+      image: './assets/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#0F172A',
+    },
+  },
   updates: {
     url: process.env.EAS_UPDATE_URL,
   },
@@ -25,6 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
     twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
     twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
+    googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
     googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -52,7 +65,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: 'com.irlobby.app',
-    versionCode: 1,
+    // versionCode is managed remotely by EAS (`appVersionSource: "remote"` in eas.json)
+    // with `autoIncrement: true` on the production build profile.
     permissions: [
       'CAMERA',
       'ACCESS_FINE_LOCATION',
@@ -63,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#7C3AED',
     },
   },
   plugins: [
@@ -71,20 +85,30 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/icon.png',
-        color: '#2c7ef8',
-      },
-    ],
-    'expo-apple-authentication',
-    [
-      '@sentry/react-native/expo',
-      {
-        organization: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT,
+        color: '#7C3AED',
       },
     ],
     'expo-font',
     'expo-location',
-    'expo-secure-store',
+    [
+      'expo-secure-store',
+      {
+        configureAndroidBackup: true,
+      },
+    ],
     'expo-web-browser',
+    'expo-apple-authentication',
+    [
+      // Required for Google Play targetSdkVersion 36 (Android 16) compliance.
+      // Enforcement deadline: 2026-08-31 for new app updates.
+      'expo-build-properties',
+      {
+        android: {
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          buildToolsVersion: '36.0.0',
+        },
+      },
+    ],
   ],
 });

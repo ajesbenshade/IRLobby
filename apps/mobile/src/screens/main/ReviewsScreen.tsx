@@ -6,8 +6,9 @@ import { Button, Card, HelperText, Surface, Text } from 'react-native-paper';
 import { TextInput } from '@components/PaperCompat';
 import { ScrollView, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
-import { fetchMatches } from '@services/matchService';
+import { fetchMatches, type MatchItem } from '@services/matchService';
 import { createReview, fetchReviews } from '@services/reviewService';
+import type { ReliabilitySummary } from '../../types/auth';
 import { getErrorMessage } from '@utils/error';
 
 interface ReviewOpportunity {
@@ -16,7 +17,29 @@ interface ReviewOpportunity {
   activity: string;
   revieweeId: number;
   revieweeName: string;
+  revieweeReliability?: ReliabilitySummary;
 }
+
+const getReliabilityText = (summary?: ReliabilitySummary) => {
+  if (!summary) {
+    return 'New profile';
+  }
+
+  if (summary.score == null) {
+    return summary.label;
+  }
+
+  return `${summary.label} · ${summary.score}/100`;
+};
+
+const hasFeedbackOpened = (match: MatchItem) => {
+  if (typeof match.review_available === 'boolean') {
+    return match.review_available;
+  }
+
+  const feedbackAt = match.activity_end_time ?? match.activity_time;
+  return feedbackAt ? new Date(feedbackAt).getTime() <= Date.now() : false;
+};
 
 export const ReviewsScreen = () => {
   const queryClient = useQueryClient();
@@ -59,6 +82,7 @@ export const ReviewsScreen = () => {
 
     return matches
       .filter((match) => Boolean(match.activity_id) && Boolean(match.user_a_id) && Boolean(match.user_b_id))
+      .filter(hasFeedbackOpened)
       .map((match) => {
         const isUserA = match.user_a_id === userId;
         return {
@@ -67,6 +91,7 @@ export const ReviewsScreen = () => {
           activity: match.activity,
           revieweeId: isUserA ? Number(match.user_b_id) : Number(match.user_a_id),
           revieweeName: isUserA ? match.user_b : match.user_a,
+          revieweeReliability: isUserA ? match.user_b_reliability : match.user_a_reliability,
         };
       })
       .filter((item) => item.revieweeId !== userId)
@@ -80,6 +105,7 @@ export const ReviewsScreen = () => {
 
     return reviews.filter((review) => review.reviewerId === Number(user.id));
   }, [reviews, user]);
+  const reliability = user?.reliability;
 
   const submitReview = () => {
     if (!selectedOpportunity || rating < 1) {
@@ -108,13 +134,31 @@ export const ReviewsScreen = () => {
       )}
 
       <Card>
+        <Card.Title title="Reliability score" subtitle="Built from post-activity reviews and ticket checks." />
+        <Card.Content style={styles.reliabilityContent}>
+          <Text variant="displaySmall" style={styles.scoreText}>
+            {reliability?.score ?? '--'}
+          </Text>
+          <View style={styles.reliabilityCopy}>
+            <Text variant="titleMedium">{reliability?.label ?? 'New profile'}</Text>
+            <Text variant="bodySmall" style={styles.mutedText}>
+              {reliability?.reviewCount ?? 0} reviews · {reliability?.successfulTicketValidations ?? 0} successful ticket checks
+            </Text>
+          </View>
+        </Card.Content>
+      </Card>
+
+      <Card>
         <Card.Title title="Pending reviews" />
         <Card.Content style={styles.listContent}>
-          {opportunities.length === 0 && <Text>No pending reviews right now.</Text>}
+          {opportunities.length === 0 && <Text>No post-activity reviews right now.</Text>}
           {opportunities.map((item) => (
             <Surface key={`${item.matchId}-${item.revieweeId}`} elevation={1} style={styles.itemCard}>
               <Text variant="titleSmall">{item.activity}</Text>
               <Text variant="bodySmall">Review {item.revieweeName}</Text>
+              <Text variant="bodySmall" style={styles.mutedText}>
+                Trust: {getReliabilityText(item.revieweeReliability)}
+              </Text>
               <Button mode="outlined" onPress={() => setSelectedOpportunity(item)}>
                 Write review
               </Button>
@@ -189,6 +233,23 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     opacity: 0.75,
+  },
+  reliabilityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  reliabilityCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  scoreText: {
+    minWidth: 72,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  mutedText: {
+    opacity: 0.7,
   },
   listContent: {
     gap: 10,

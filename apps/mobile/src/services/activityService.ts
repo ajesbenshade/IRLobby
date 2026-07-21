@@ -1,8 +1,12 @@
-import { api } from './apiClient';
-import { track, trackFirstJoinOnce } from './analytics';
-import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
+import { api } from "./apiClient";
+import { track, trackFirstJoinOnce } from "./analytics";
+import {
+  API_ROUTES,
+  API_ROUTE_BUILDERS,
+  parseActivityListResponse,
+} from "@shared/schema";
 
-import type { Activity } from '../types/activity';
+import type { Activity } from "../types/activity";
 
 export interface ActivityFetchFilters {
   category?: string;
@@ -18,16 +22,18 @@ export interface ActivityFetchFilters {
   date_to?: string;
 }
 
-export const fetchActivities = async (filters?: ActivityFetchFilters): Promise<Activity[]> => {
+export const fetchActivities = async (
+  filters?: ActivityFetchFilters
+): Promise<Activity[]> => {
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES, {
     params: filters,
   });
-  return response.data;
+  return parseActivityListResponse(response.data) as Activity[];
 };
 
 export const fetchHostedActivities = async (): Promise<Activity[]> => {
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES_HOSTED);
-  return response.data;
+  return parseActivityListResponse(response.data) as Activity[];
 };
 
 export interface CreateActivityPayload {
@@ -54,52 +60,67 @@ export interface CreateActivityPayload {
   images?: string[];
 }
 
-export const createActivity = async (payload: CreateActivityPayload): Promise<Activity> => {
+export const createActivity = async (
+  payload: CreateActivityPayload
+): Promise<Activity> => {
   const response = await api.post<Activity>(API_ROUTES.ACTIVITIES, {
     ...payload,
     tags: payload.tags ?? [],
     images: payload.images ?? [],
   });
-  track('activity_create', {
+  track("activity_create", {
     activity_id: String(response.data.id),
-    category: payload.category ?? '',
+    category: payload.category ?? "",
   });
   return response.data;
 };
 
-export const joinActivity = async (activityId: number | string): Promise<{ message: string }> => {
-  const response = await api.post<{ message: string }>(API_ROUTE_BUILDERS.activityJoin(activityId));
-  await trackFirstJoinOnce({ activity_id: String(activityId), source: 'join_button' });
+export const joinActivity = async (
+  activityId: number | string
+): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>(
+    API_ROUTE_BUILDERS.activityJoin(activityId)
+  );
+  await trackFirstJoinOnce({ activity_id: String(activityId), source: "join_button" });
   return response.data;
 };
 
-export const leaveActivity = async (activityId: number | string): Promise<{ message: string }> => {
-  const response = await api.post<{ message: string }>(API_ROUTE_BUILDERS.activityLeave(activityId));
+export const leaveActivity = async (
+  activityId: number | string
+): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>(
+    API_ROUTE_BUILDERS.activityLeave(activityId)
+  );
   return response.data;
 };
 
 export interface SwipeActivityResponse {
   message: string;
   matched: boolean;
+  matchId?: number;
+  conversationId?: number;
 }
 
 export const swipeActivity = async (
   activityId: number | string,
-  direction: 'left' | 'right',
+  direction: "left" | "right"
 ): Promise<SwipeActivityResponse> => {
-  const response = await api.post<SwipeActivityResponse>(API_ROUTE_BUILDERS.activitySwipe(activityId), {
-    direction,
-  });
+  const response = await api.post<SwipeActivityResponse>(
+    API_ROUTE_BUILDERS.activitySwipe(activityId),
+    {
+      direction,
+    }
+  );
 
-  if (direction === 'right') {
-    track('activity_swipe_right', {
+  if (direction === "right") {
+    track("activity_swipe_right", {
       activity_id: String(activityId),
       matched: Boolean(response.data.matched),
     });
     if (response.data.matched) {
       await trackFirstJoinOnce({
         activity_id: String(activityId),
-        source: 'swipe_match',
+        source: "swipe_match",
       });
     }
   }

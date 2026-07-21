@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTE_BUILDERS } from '@shared/schema';
 import type { Activity } from '@shared/client-types';
+import { API_ROUTE_BUILDERS } from '@shared/schema';
 import { useMutation } from '@tanstack/react-query';
 import { X, Heart, Info } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -44,6 +44,24 @@ export function SwipeStack({
       }
     };
   }, []);
+
+  useEffect(() => {
+    const activeCard = cardRef.current;
+    if (!activeCard) {
+      return;
+    }
+
+    if (draggedCard && draggedCard.index === currentIndex) {
+      activeCard.style.transform = `translateX(${draggedCard.x}px) translateY(${draggedCard.y}px) rotate(${draggedCard.rotation}deg) scale(1)`;
+      activeCard.style.opacity = String(draggedCard.opacity);
+      activeCard.style.transition = 'none';
+      return;
+    }
+
+    activeCard.style.transform = '';
+    activeCard.style.opacity = '';
+    activeCard.style.transition = '';
+  }, [currentIndex, draggedCard]);
 
   const swipeMutation = useMutation({
     mutationFn: async ({ activityId, direction }: { activityId: string; direction: string }) => {
@@ -272,34 +290,40 @@ export function SwipeStack({
       <div className="relative h-full">
         {visibleCards.map((activity, index) => {
           const isActive = index === 0;
-          const absoluteIndex = currentIndex + index;
+          const stackClassName = [
+            'absolute left-1 right-1',
+            isActive ? 'transition-[transform,opacity] duration-200 ease-out' : '',
+            index === 0 ? 'top-0 z-[3] scale-100 opacity-100' : '',
+            index === 1 ? 'top-1 z-[2] scale-[0.98] opacity-80' : '',
+            index === 2 ? 'top-2 z-[1] scale-[0.96] opacity-60' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
 
-          const style: React.CSSProperties = {
-            position: 'absolute',
-            top: index * 4,
-            left: 4,
-            right: 4,
-            zIndex: 3 - index,
-            transform: `scale(${1 - index * 0.02})`,
-            opacity: 1 - index * 0.2,
-          };
+          const hostRecord =
+            typeof activity.host === 'object' && activity.host !== null
+              ? (activity.host as Record<string, unknown>)
+              : null;
 
-          // Apply drag transformation to active card
-          if (isActive && draggedCard && draggedCard.index === absoluteIndex) {
-            style.transform = `translateX(${draggedCard.x}px) translateY(${draggedCard.y}px) rotate(${draggedCard.rotation}deg) scale(1)`;
-            style.opacity = draggedCard.opacity;
-            style.transition = 'none';
-          } else if (isActive) {
-            style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-          }
-
-          // Ensure location is a string to match ActivityCard's expected type
-          // Provide a default for maxParticipants so the resulting object matches the non-optional Activity type
-          // Provide a default for description so the object satisfies Activity's non-optional description field
           const activityWithLocation = {
             ...activity,
+            category: activity.category ?? 'Activity',
+            host: hostRecord
+              ? {
+                  profileImageUrl:
+                    typeof hostRecord.profileImageUrl === 'string'
+                      ? hostRecord.profileImageUrl
+                      : undefined,
+                  firstName:
+                    typeof hostRecord.firstName === 'string' ? hostRecord.firstName : undefined,
+                  lastName:
+                    typeof hostRecord.lastName === 'string' ? hostRecord.lastName : undefined,
+                  email: typeof hostRecord.email === 'string' ? hostRecord.email : undefined,
+                  rating: typeof hostRecord.rating === 'string' ? hostRecord.rating : undefined,
+                }
+              : undefined,
             location: activity.location || '',
-            maxParticipants: activity.maxParticipants ?? 0,
+            maxParticipants: activity.max_participants ?? 0,
             description: activity.description ?? '',
           };
 
@@ -307,7 +331,7 @@ export function SwipeStack({
             <div
               key={activity.id}
               ref={isActive ? cardRef : undefined}
-              style={style}
+              className={stackClassName}
               onTouchStart={isActive ? handleTouchStart : undefined}
               onTouchMove={isActive ? handleTouchMove : undefined}
               onTouchEnd={isActive ? handleTouchEnd : undefined}

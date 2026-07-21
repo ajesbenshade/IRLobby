@@ -190,7 +190,7 @@ export default function RootLayout({ children }) {
       <body>
         <NeonAuthUIProvider
           authClient={authClient}
-          social={{ providers: ["google", "github", "vercel"] }} // optional
+          social={{ providers: ["google", "github"] }} // optional
         >
           {children}
         </NeonAuthUIProvider>

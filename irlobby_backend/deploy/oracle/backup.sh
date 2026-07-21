@@ -22,19 +22,51 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${BACKUP_GPG_RECIPIENT:-}" && -z "${BACKUP_GPG_PASSPHRASE:-}" ]]; then
+  if [[ "${ALLOW_UNENCRYPTED_BACKUPS:-false}" != "true" ]]; then
+    echo "Refusing to write plaintext backups. Set BACKUP_GPG_RECIPIENT or BACKUP_GPG_PASSPHRASE, or set ALLOW_UNENCRYPTED_BACKUPS=true for a local-only emergency backup."
+    exit 1
+  fi
+fi
+
+encrypt_stream() {
+  local output_path="$1"
+
+  if [[ -n "${BACKUP_GPG_RECIPIENT:-}" ]]; then
+    gpg --batch --yes --trust-model always --encrypt \
+      --recipient "${BACKUP_GPG_RECIPIENT}" \
+      --output "${output_path}.gpg" \
+      -
+  elif [[ -n "${BACKUP_GPG_PASSPHRASE:-}" ]]; then
+    gpg --batch --yes --pinentry-mode loopback \
+      --passphrase "${BACKUP_GPG_PASSPHRASE}" \
+      --symmetric --cipher-algo AES256 \
+      --output "${output_path}.gpg" \
+      -
+  else
+    cat > "${output_path}"
+  fi
+}
+
 echo "Creating PostgreSQL dump..."
 docker run --rm \
   -e DATABASE_URL="${DATABASE_URL}" \
-  -v "${BACKUP_DIR}:/backup" \
   postgres:16-alpine \
-  sh -lc 'pg_dump "$DATABASE_URL" | gzip > "/backup/db_${0}.sql.gz"' "${TIMESTAMP}"
+  sh -lc 'pg_dump "$DATABASE_URL" | gzip' \
+  | encrypt_stream "${BACKUP_DIR}/db_${TIMESTAMP}.sql.gz"
 
 echo "Saving deployment config snapshot..."
-tar -czf "${BACKUP_DIR}/config_${TIMESTAMP}.tar.gz" \
+tar -cz \
   -C "${ROOT_DIR}" \
   docker-compose.oracle.yml \
-  .env.production \
   .env.oracle.example \
-  deploy/oracle/nginx/default.conf.template
+  deploy/oracle/nginx/default.conf.template \
+  | encrypt_stream "${BACKUP_DIR}/config_${TIMESTAMP}.tar.gz"
+
+if [[ "${BACKUP_RETENTION_DAYS:-30}" =~ ^[0-9]+$ ]]; then
+  find "${BACKUP_DIR}" -type f -mtime +"${BACKUP_RETENTION_DAYS:-30}" \
+    \( -name 'db_*.sql.gz' -o -name 'db_*.sql.gz.gpg' -o -name 'config_*.tar.gz' -o -name 'config_*.tar.gz.gpg' \) \
+    -delete
+fi
 
 echo "Backup complete in ${BACKUP_DIR}."

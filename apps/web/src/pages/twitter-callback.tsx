@@ -35,7 +35,9 @@ const TwitterCallback = () => {
         // Exchange code for tokens
         const response = await apiRequest(
           'GET',
-          `${API_ROUTES.AUTH_TWITTER_CALLBACK}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
+          `${API_ROUTES.AUTH_TWITTER_CALLBACK}?code=${encodeURIComponent(
+            code,
+          )}&state=${encodeURIComponent(state)}`,
         );
 
         if (!response.ok) {

@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Animated, StyleSheet } from 'react-native';
 
 import { View } from '@components/RNCompat';
+import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
 
 import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
@@ -15,6 +16,8 @@ import { NotificationsScreen } from '@screens/main/NotificationsScreen';
 import { ProfileScreen } from '@screens/main/ProfileScreen';
 import { ReviewsScreen } from '@screens/main/ReviewsScreen';
 import { SettingsScreen } from '@screens/main/SettingsScreen';
+import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
+import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
 import { WebContentScreen } from '@screens/main/WebContentScreen';
 import { appColors } from '@theme/index';
 
@@ -51,14 +54,17 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
     ]).start();
   }, [focused, opacity, scale]);
 
-  const iconMap: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> = {
-    Discover: 'compass-outline',
-    Activity: 'calendar-month-outline',
-    Create: 'plus-circle-outline',
-    Chat: 'message-text-outline',
-    Profile: 'account-circle-outline',
+  const iconMap: Record<
+    keyof MainTabParamList,
+    { active: keyof typeof MaterialCommunityIcons.glyphMap; inactive: keyof typeof MaterialCommunityIcons.glyphMap }
+  > = {
+    Discover: { active: 'compass', inactive: 'compass-outline' },
+    Activity: { active: 'calendar-month', inactive: 'calendar-month-outline' },
+    Create: { active: 'plus', inactive: 'plus' },
+    Chat: { active: 'message-text', inactive: 'message-text-outline' },
+    Profile: { active: 'account-circle', inactive: 'account-circle-outline' },
   };
-  const iconName = iconMap[routeName];
+  const iconName = focused ? iconMap[routeName].active : iconMap[routeName].inactive;
   const isCreateRoute = routeName === 'Create';
 
   return (
@@ -77,7 +83,7 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
       >
         <MaterialCommunityIcons
           name={iconName}
-          size={isCreateRoute ? size + 2 : size}
+          size={isCreateRoute ? size + 6 : size}
           color={isCreateRoute ? appColors.white : color}
         />
       </View>
@@ -90,36 +96,37 @@ const MainTabs = () => (
     screenOptions={({ route }) => ({
       headerShown: false,
       sceneStyle: { backgroundColor: appColors.background },
-      tabBarActiveTintColor: appColors.primaryDeep,
+      tabBarActiveTintColor: appColors.primary,
       tabBarInactiveTintColor: appColors.softInk,
       tabBarStyle: {
         position: 'absolute',
-        left: 16,
-        right: 16,
-        bottom: 18,
-        height: 78,
+        left: 12,
+        right: 12,
+        bottom: 12,
+        height: 64,
         borderTopWidth: 0,
-        borderRadius: 30,
-        paddingTop: 10,
-        paddingBottom: 10,
+        borderRadius: 20,
+        paddingTop: 8,
+        paddingBottom: 8,
         paddingHorizontal: 8,
         backgroundColor: appColors.card,
         borderWidth: 1,
-        borderColor: '#f3dfe8',
-        shadowColor: '#8f3465',
+        borderColor: appColors.line,
+        shadowColor: appColors.primary,
         shadowOpacity: 0.16,
-        shadowRadius: 22,
-        shadowOffset: { width: 0, height: 12 },
-        elevation: 10,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 8,
       },
       tabBarLabelStyle: {
         fontSize: 11,
-        fontWeight: '700',
+        fontWeight: '600',
         letterSpacing: 0.1,
+        marginTop: route.name === 'Create' ? 12 : 2,
       },
       tabBarItemStyle: {
         marginHorizontal: 2,
-        borderRadius: 22,
+        borderRadius: 16,
       },
       tabBarIcon: ({ color, size, focused }) => (
         <TabIcon
@@ -129,15 +136,15 @@ const MainTabs = () => (
           routeName={route.name as keyof MainTabParamList}
         />
       ),
-      tabBarIconStyle: route.name === 'Create' ? { marginTop: -4 } : undefined,
+      tabBarIconStyle: route.name === 'Create' ? { marginTop: -8 } : undefined,
       tabBarLabelPosition: 'below-icon',
     })}
   >
-    <Tab.Screen name="Discover" component={DiscoverScreen} />
-    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Activity' }} />
-    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} />
-    <Tab.Screen name="Chat" component={ChatScreen} options={{ title: 'Sparks' }} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Events' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} listeners={{ tabPress: () => { void safeImpactHaptic('medium'); } }} />
+    <Tab.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
 );
 
@@ -163,19 +170,19 @@ export const MainNavigator = () => (
     <Stack.Screen
       name="HelpSupport"
       component={WebContentScreen}
-      initialParams={{ title: 'Help & Support', url: 'https://liyf.app/help-support' }}
+      initialParams={{ title: 'Help & Support', url: 'https://irlobby.com/help-support' }}
       options={{ title: 'Help & Support' }}
     />
     <Stack.Screen
       name="PrivacyPolicy"
       component={WebContentScreen}
-      initialParams={{ title: 'Privacy Policy', url: 'https://liyf.app/privacy-policy' }}
+      initialParams={{ title: 'Privacy Policy', url: 'https://irlobby.com/privacy-policy' }}
       options={{ title: 'Privacy Policy' }}
     />
     <Stack.Screen
       name="TermsOfService"
       component={WebContentScreen}
-      initialParams={{ title: 'Terms of Service', url: 'https://liyf.app/terms-of-service' }}
+      initialParams={{ title: 'Terms of Service', url: 'https://irlobby.com/terms-of-service' }}
       options={{ title: 'Terms of Service' }}
     />
     <Stack.Screen
@@ -183,32 +190,40 @@ export const MainNavigator = () => (
       component={WebContentScreen}
       options={({ route }) => ({ title: route.params?.title ?? 'Details' })}
     />
+    <Stack.Screen
+      name="VibeQuizModal"
+      component={VibeQuizModalScreen}
+      options={{ presentation: 'modal', title: 'Vibe Quiz' }}
+    />
+    <Stack.Screen
+      name="VibeQuizResults"
+      component={VibeQuizResultsScreen}
+      options={{ title: 'Your Vibe' }}
+    />
   </Stack.Navigator>
 );
 
 const styles = StyleSheet.create({
   tabIconWrap: {
-    minWidth: 38,
-    minHeight: 38,
+    minWidth: 36,
+    minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 19,
+    borderRadius: 16,
   },
   tabIconWrapFocused: {
-    backgroundColor: appColors.backgroundAccent,
-    borderWidth: 1,
-    borderColor: '#ffc8d8',
+    backgroundColor: appColors.primarySoft,
   },
   createIconWrap: {
-    minWidth: 42,
-    minHeight: 42,
+    minWidth: 56,
+    minHeight: 56,
+    borderRadius: 28,
     backgroundColor: appColors.primary,
-    borderWidth: 1,
-    borderColor: '#ff8fb1',
-    shadowColor: '#b8386e',
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 0,
+    shadowColor: appColors.primaryDeep,
+    shadowOpacity: 0.26,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
 });

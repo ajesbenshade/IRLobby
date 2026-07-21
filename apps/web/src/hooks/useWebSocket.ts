@@ -1,3 +1,4 @@
+import { config } from '@/lib/config';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 export interface WebSocketMessage {
@@ -22,17 +23,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return;
     }
 
-    const configuredWebSocketBase = (import.meta.env.VITE_WEBSOCKET_BASE_URL as string | undefined)?.trim();
-    const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const websocketBaseSource = configuredWebSocketBase || configuredApiBase;
-    const wsBaseUrl = websocketBaseSource
-      ? websocketBaseSource
-          .replace(/^https?:\/\//, (prefix) => (prefix === 'https://' ? 'wss://' : 'ws://'))
-          .replace(/\/$/, '')
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
-    const wsUrl = `${wsBaseUrl}/ws`;
+    const wsUrl = `${config.websocketUrl}/ws`;
 
-    console.log('Connecting to WebSocket at:', wsUrl);
+    if (import.meta.env.DEV) {
+      console.info('Connecting to WebSocket at:', wsUrl);
+    }
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -40,14 +35,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
       ws.onopen = () => {
         setIsConnected(true);
-        console.log('WebSocket connected successfully');
+        if (import.meta.env.DEV) {
+          console.info('WebSocket connected successfully');
+        }
         options.onOpen?.();
       };
 
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log('WebSocket message received:', message);
+          if (import.meta.env.DEV) {
+            console.info('WebSocket message received:', message);
+          }
           options.onMessage?.(message);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -56,12 +55,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
       ws.onclose = (event) => {
         setIsConnected(false);
-        console.log('WebSocket disconnected with code:', event.code, event.reason);
+        if (import.meta.env.DEV) {
+          console.info('WebSocket disconnected with code:', event.code, event.reason);
+        }
         options.onClose?.();
 
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Attempting to reconnect WebSocket...');
+          if (import.meta.env.DEV) {
+            console.info('Attempting to reconnect WebSocket...');
+          }
           connect();
         }, 3000);
       };

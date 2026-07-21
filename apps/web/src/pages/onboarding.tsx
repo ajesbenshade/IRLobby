@@ -3,7 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -11,10 +17,22 @@ import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
+const FALLBACK_AVATAR_BASE_URL = 'https://api.dicebear.com/9.x/initials/svg';
+
+const isDataUrl = (value: string) => value.startsWith('data:');
+
+const buildFallbackAvatarUrl = (seedParts: string[]) => {
+  const seed =
+    seedParts
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(' ') || 'IRLobby';
+  return `${FALLBACK_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed).slice(0, 80)}`;
+};
 
 export default function Onboarding() {
   const [bio, setBio] = useState('');
@@ -30,6 +48,8 @@ export default function Onboarding() {
     smallGroups: true,
     weekendPreferred: true,
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const [inviteName, setInviteName] = useState('');
   const [inviteContact, setInviteContact] = useState('');
@@ -133,17 +153,54 @@ export default function Onboarding() {
     setPhotoAlbum((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
+  const getCompletionIssues = () => {
+    const issues: string[] = [];
+
+    if (!bio.trim()) {
+      issues.push('about you');
+    }
+    if (!city.trim()) {
+      issues.push('city');
+    }
+    if (!interests.length && !Object.values(activityPreferences).some(Boolean)) {
+      issues.push('at least one interest or activity preference');
+    }
+    if (!termsAccepted || !privacyAccepted) {
+      issues.push('terms and privacy acceptance');
+    }
+
+    return issues;
+  };
+
   const saveOnboarding = async (markCompleted: boolean) => {
+    if (markCompleted) {
+      const issues = getCompletionIssues();
+      if (issues.length) {
+        toast({
+          title: 'Finish the required fields',
+          description: `Please add ${issues.join(', ')} before completing onboarding.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
+      const persistedProfilePhotoUrl = isDataUrl(profilePhotoUrl)
+        ? buildFallbackAvatarUrl([city, interests[0] ?? '', bio])
+        : profilePhotoUrl;
+
       await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, {
         bio,
         city,
         age_range: ageRange,
         interests,
-        avatar_url: profilePhotoUrl,
-        photo_album: photoAlbum,
+        avatar_url: persistedProfilePhotoUrl,
+        photo_album: photoAlbum.filter((photoUrl) => !isDataUrl(photoUrl)),
         activity_preferences: activityPreferences,
+        terms_accepted: termsAccepted,
+        privacy_accepted: privacyAccepted,
         onboarding_completed: markCompleted,
       });
 
@@ -153,11 +210,11 @@ export default function Onboarding() {
       toast({
         title: markCompleted ? 'Onboarding complete' : 'Saved',
         description: markCompleted
-          ? 'Your profile is ready. Let\'s find your first activity.'
+          ? "Your profile is ready. Let's find your first activity."
           : 'Your onboarding progress was saved.',
       });
 
-      navigate('/');
+      navigate('/app', { replace: true });
     } catch (error) {
       toast({
         title: 'Failed to save onboarding',
@@ -285,7 +342,7 @@ export default function Onboarding() {
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="profile-photo">Profile photo</Label>
+              <Label htmlFor="profile-photo">Profile photo (optional)</Label>
               <input
                 id="profile-photo"
                 type="file"
@@ -372,6 +429,42 @@ export default function Onboarding() {
                 />
               </div>
             </div>
+
+            <div className="space-y-3 rounded-md border p-4">
+              <Label>Legal acceptance</Label>
+              <PreferenceToggle
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      className="font-medium text-primary underline"
+                      to="/terms"
+                      target="_blank"
+                    >
+                      Terms of Service
+                    </Link>
+                  </>
+                }
+                checked={termsAccepted}
+                onChange={setTermsAccepted}
+              />
+              <PreferenceToggle
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      className="font-medium text-primary underline"
+                      to="/privacy"
+                      target="_blank"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </>
+                }
+                checked={privacyAccepted}
+                onChange={setPrivacyAccepted}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -400,7 +493,10 @@ export default function Onboarding() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="invite-channel">Invite channel</Label>
-              <Select value={inviteChannel} onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}>
+              <Select
+                value={inviteChannel}
+                onValueChange={(value) => setInviteChannel(value as 'sms' | 'email')}
+              >
                 <SelectTrigger id="invite-channel" aria-label="Invite channel">
                   <SelectValue placeholder="Invite channel" />
                 </SelectTrigger>
@@ -417,7 +513,12 @@ export default function Onboarding() {
         </Card>
 
         <div className="flex gap-3 justify-end">
-          <Button type="button" variant="ghost" onClick={() => void saveOnboarding(true)} disabled={isSaving}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void saveOnboarding(false)}
+            disabled={isSaving}
+          >
             Skip for now
           </Button>
           <Button type="button" onClick={() => void saveOnboarding(true)} disabled={isSaving}>
@@ -434,7 +535,7 @@ function PreferenceToggle({
   checked,
   onChange,
 }: {
-  label: string;
+  label: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {

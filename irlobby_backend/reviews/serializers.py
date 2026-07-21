@@ -1,7 +1,9 @@
-from activities.models import Activity
 from django.db.models import Q
-from matches.models import Match
+from django.utils import timezone
 from rest_framework import serializers
+
+from activities.models import Activity
+from matches.models import Match
 from users.models import User
 from utils.sanitize import strip_html
 
@@ -61,6 +63,10 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot review yourself.")
 
         if reviewee and activity:
+            feedback_time = activity.end_time or activity.time
+            if feedback_time and feedback_time > timezone.now():
+                raise serializers.ValidationError("Reviews open after the activity has happened.")
+
             match_exists = (
                 Match.objects.filter(activity=activity)
                 .filter(Q(user_a=reviewer, user_b=reviewee) | Q(user_a=reviewee, user_b=reviewer))
@@ -70,6 +76,16 @@ class ReviewSerializer(serializers.ModelSerializer):
             if not match_exists:
                 raise serializers.ValidationError(
                     "You can only review users you matched with for this activity."
+                )
+
+            if (
+                self.instance is None
+                and Review.objects.filter(
+                    reviewer=reviewer, reviewee=reviewee, activity=activity
+                ).exists()
+            ):
+                raise serializers.ValidationError(
+                    "You have already reviewed this user for this activity."
                 )
 
         return attrs

@@ -1,11 +1,13 @@
 from datetime import timedelta
 
-from activities.models import Activity
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from moderation.models import BlockedUser
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from activities.models import Activity
+from moderation.models import BlockedUser
 from users.models import User
 
 from .models import Match
@@ -90,6 +92,22 @@ class MatchListViewTests(APITestCase):
             response.data if isinstance(response.data, list) else response.data.get("results", [])
         )
         self.assertEqual(len(results), 1)
+        self.assertIn("review_available", results[0])
+        self.assertIn("user_a_reliability", results[0])
+        self.assertFalse(results[0]["review_available"])
+
+    def test_match_list_marks_past_activity_review_available(self):
+        self.activity.time = timezone.now() - timedelta(hours=2)
+        self.activity.save(update_fields=["time", "location_point"])
+        Match.objects.create(user_a=self.user, user_b=self.other, activity=self.activity)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse("match-list"))
+
+        results = (
+            response.data if isinstance(response.data, list) else response.data.get("results", [])
+        )
+        self.assertTrue(results[0]["review_available"])
 
     def test_match_list_excludes_other_users_matches(self):
         Match.objects.create(user_a=self.other, user_b=self.third, activity=self.activity)
@@ -129,3 +147,14 @@ class MatchListViewTests(APITestCase):
     def test_unauthenticated_cannot_list_matches(self):
         response = self.client.get(reverse("match-list"))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"match_reads": "1/min"}})
+    def test_match_list_is_rate_limited(self):
+        Match.objects.create(user_a=self.user, user_b=self.other, activity=self.activity)
+
+        self.client.force_authenticate(self.user)
+        first_response = self.client.get(reverse("match-list"))
+        second_response = self.client.get(reverse("match-list"))
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)

@@ -7,8 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Profile({ onNavigate }: { onNavigate?: (screen: string) => void }) {
+export default function Profile() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -16,8 +18,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
   const handleLogout = async () => {
     try {
       await logout();
-      // Force navigation to landing page after logout
-      window.location.href = '/';
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -35,6 +36,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
     `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() ||
     user.email?.charAt(0).toUpperCase() ||
     'U';
+  const eventsHosted = user.eventsHosted ?? 0;
+  const eventsAttended = user.eventsAttended ?? 0;
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
@@ -58,12 +61,8 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
 
           <div className="flex items-center justify-center mt-2">
             <Star className="w-4 h-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              5.0
-            </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-              (0 reviews)
-            </span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">5.0</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">(0 reviews)</span>
           </div>
         </div>
       </header>
@@ -75,18 +74,18 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Activity Stats</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-primary">{(user as any).eventsHosted || 0}</p>
+                <p className="text-2xl font-bold text-primary">{eventsHosted}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Events Hosted</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {(user as any).eventsAttended || 0}
+                  {eventsAttended}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Events Attended</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {((user as any).eventsHosted || 0) + ((user as any).eventsAttended || 0)}
+                  {eventsHosted + eventsAttended}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Total Activities</p>
               </div>
@@ -139,7 +138,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('settings')}
+            onClick={() => navigate('/app/settings')}
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
@@ -148,7 +147,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('reviews')}
+            onClick={() => navigate('/app/reviews')}
           >
             <Star className="w-4 h-4 mr-2" />
             Reviews
@@ -157,7 +156,7 @@ export default function Profile({ onNavigate }: { onNavigate?: (screen: string) 
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => onNavigate && onNavigate('help-support')}
+            onClick={() => navigate('/app/help-support')}
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             Help & Support

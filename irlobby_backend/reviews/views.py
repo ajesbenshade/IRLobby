@@ -4,11 +4,17 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Review
 from .serializers import ReviewSerializer
+from .throttles import ReviewCreateThrottle
 
 
 class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [ReviewCreateThrottle()]
+        return []
 
     def get_queryset(self):
         user = self.request.user

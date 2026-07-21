@@ -1,0 +1,327 @@
+name: Backend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ensure_apple_audience:
+        description: Ensure APPLE_OAUTH_AUDIENCES=com.irlobby.app in .env.production
+        type: boolean
+        default: true
+      mode:
+        description: Deploy mode (full rebuild required for Google/Apple deps)
+        type: choice
+        options:
+          - full
+          - hotpatch
+        default: full
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
+      GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Resolve SSH user and sync + deploy
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+          ENSURE_APPLE_AUDIENCE: ${{ inputs.ensure_apple_audience }}
+          DEPLOY_MODE: ${{ inputs.mode }}
+          GOOGLE_OAUTH_CLIENT_IDS: ${{ vars.GOOGLE_OAUTH_CLIENT_IDS }}
+          GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_OAUTH_CLIENT_IDS:-}" ] && \
+             [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ] && \
+             [ -n "${GOOGLE_ANDROID_CLIENT_ID:-}" ] && \
+             [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            GOOGLE_OAUTH_CLIENT_IDS="${GOOGLE_IOS_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID},${GOOGLE_WEB_CLIENT_ID}"
+            echo "Composed GOOGLE_OAUTH_CLIENT_IDS from EXPO_PUBLIC_GOOGLE_* secrets/variables."
+          fi
+
+          export GOOGLE_OAUTH_CLIENT_IDS
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          connect() {
+            local user="$1"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu opc admin deploy; do
+            if connect "${candidate}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+
+          if [ -z "${EFFECTIVE_USER}" ]; then
+            echo "SSH failed for all attempted users" >&2
+            exit 1
+          fi
+
+          echo "Connected as ${EFFECTIVE_USER}"
+
+          REMOTE_DIR="$(connect "${EFFECTIVE_USER}" 'for dir in /opt/irlobby/irlobby_backend ~/IRLobby/irlobby_backend; do [ -d "$dir" ] && echo "$dir" && exit 0; done; exit 1')"
+          echo "Remote dir: ${REMOTE_DIR}"
+
+          rsync -az \
+            --exclude '.env' \
+            --exclude '.env.production' \
+            --exclude '.env.local' \
+            --exclude '.venv' \
+            --exclude '__pycache__' \
+            --exclude '.pytest_cache' \
+            --exclude 'staticfiles' \
+            --exclude 'media' \
+            --exclude '.git' \
+            ./irlobby_backend/ \
+            "${EFFECTIVE_USER}@${SSH_HOST}:${REMOTE_DIR}/"
+
+          ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" \
+            "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' DEPLOY_MODE='${DEPLOY_MODE}' GOOGLE_OAUTH_CLIENT_IDS='${GOOGLE_OAUTH_CLIENT_IDS}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "${REMOTE_DIR}"
+
+          if [ ! -f .env.production ]; then
+            echo "Missing .env.production" >&2
+            exit 1
+          fi
+
+          mkdir -p /tmp/irlobby-deploy
+          : > /tmp/irlobby-deploy/redis_url.txt
+          : > /tmp/irlobby-deploy/redis_password.txt
+          : > /tmp/irlobby-deploy/redis_cmd.json
+
+          capture_env_value() {
+            local cname="$1"
+            local key="$2"
+            local outfile="$3"
+            if ! docker inspect "${cname}" >/dev/null 2>&1; then
+              return 1
+            fi
+            docker exec "${cname}" printenv "${key}" 2>/dev/null > "${outfile}" || true
+            if [ -s "${outfile}" ]; then
+              return 0
+            fi
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${cname}" \
+              | awk -F= -v k="${key}" '$1==k {print substr($0, index($0,$2)); exit}' \
+              > "${outfile}" || true
+            [ -s "${outfile}" ]
+          }
+
+          for cname in irlobby_backend-web-1 irlobby_backend-ws-1; do
+            if capture_env_value "${cname}" REDIS_URL /tmp/irlobby-deploy/redis_url.txt; then
+              echo "Captured REDIS_URL from ${cname}"
+              break
+            fi
+          done
+
+          for cname in irlobby_backend-redis-1 irlobby_backend-web-1 irlobby_backend-ws-1; do
+            if capture_env_value "${cname}" REDIS_PASSWORD /tmp/irlobby-deploy/redis_password.txt; then
+              echo "Captured REDIS_PASSWORD from ${cname}"
+              break
+            fi
+          done
+
+          if docker inspect irlobby_backend-redis-1 >/dev/null 2>&1; then
+            docker inspect -f '{{json .Config.Cmd}}' irlobby_backend-redis-1 \
+              > /tmp/irlobby-deploy/redis_cmd.json || true
+          fi
+
+          python3 deploy/oracle/recover-redis-password.py \
+            --env-file .env.production \
+            --redis-url-file /tmp/irlobby-deploy/redis_url.txt \
+            --password-file /tmp/irlobby-deploy/redis_password.txt \
+            --redis-cmd-json-file /tmp/irlobby-deploy/redis_cmd.json
+          python3 deploy/oracle/sanitize-origin-lists.py --env-file .env.production
+          rm -rf /tmp/irlobby-deploy
+
+
+          if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+            if grep -q '^APPLE_OAUTH_AUDIENCES=' .env.production; then
+              sed -i 's/^APPLE_OAUTH_AUDIENCES=.*/APPLE_OAUTH_AUDIENCES=com.irlobby.app/' .env.production
+            else
+              printf '\nAPPLE_OAUTH_AUDIENCES=com.irlobby.app\n' >> .env.production
+            fi
+          fi
+
+          if ! grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+            printf '\nGOOGLE_OAUTH_CLIENT_IDS=\n' >> .env.production
+            echo "Added empty GOOGLE_OAUTH_CLIENT_IDS placeholder (fill with real client IDs)."
+          fi
+
+          if [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
+            if grep -q '^GOOGLE_OAUTH_CLIENT_IDS=' .env.production; then
+              sed -i "s|^GOOGLE_OAUTH_CLIENT_IDS=.*|GOOGLE_OAUTH_CLIENT_IDS=${GOOGLE_OAUTH_CLIENT_IDS}|" .env.production
+            else
+              printf '\nGOOGLE_OAUTH_CLIENT_IDS=%s\n' "${GOOGLE_OAUTH_CLIENT_IDS}" >> .env.production
+            fi
+            echo "Set GOOGLE_OAUTH_CLIENT_IDS from GitHub variable."
+          fi
+
+          chmod 600 .env.production
+
+          if [ "${DEPLOY_MODE}" = "hotpatch" ] && [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
+            echo "=== recreating web/ws to load updated Google OAuth env ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web ws
+            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
+            sleep 8
+          fi
+
+          if [ "${DEPLOY_MODE}" = "full" ]; then
+            echo "=== full image rebuild (includes google-auth + Google/Apple routes) ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production build web ws celery_worker celery_beat
+
+            echo "=== clearing leftover recovery containers that block compose names ==="
+            # Prior docker-run recovery left unmanaged containers / .broken renames.
+            # Always remove web/ws names before compose recreate; redis stays up.
+            docker rm -f \
+              irlobby_backend-web-1 \
+              irlobby_backend-ws-1 \
+              irlobby_backend-web-1.broken \
+              irlobby_backend-ws-1.broken \
+              2>/dev/null || true
+            # Compose sometimes leaves conflict-renamed leftovers like <id>_irlobby_backend-web-1
+            docker ps -a --format '{{.Names}}' \
+              | awk '/irlobby_backend-(web|ws)-1/ {print}' \
+              | while read -r cname; do
+                  echo "Removing leftover container ${cname}"
+                  docker rm -f "${cname}" || true
+                done
+
+            echo "=== recreating app containers (leave redis alone) ==="
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if docker exec irlobby_backend-web-1 curl -fsS http://127.0.0.1:8000/api/health/ >/dev/null 2>&1; then
+                echo "web healthy after ${i} checks"
+                break
+              fi
+              echo "waiting for web... ${i}"
+              sleep 5
+            done
+            docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate ws celery_worker celery_beat
+            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
+          else
+            web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
+            ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"
+            if [ -z "${web_cid}" ]; then
+              echo "web container not running" >&2
+              docker ps --format 'table {{.Names}}\t{{.Status}}' || true
+              exit 1
+            fi
+
+            echo "=== hotpatching auth route modules into running containers ==="
+            docker cp ./users/oauth_views.py "${web_cid}:/app/users/oauth_views.py"
+            docker cp ./users/social_auth.py "${web_cid}:/app/users/social_auth.py"
+            docker cp ./users/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
+            docker cp ./irlobby_backend/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
+            if [ -n "${ws_cid}" ]; then
+              docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
+              docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"
+              docker cp ./users/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
+              docker cp ./irlobby_backend/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
+            fi
+
+            if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
+              docker exec "${web_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+              docker exec "${web_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+              if [ -n "${ws_cid}" ]; then
+                docker exec "${ws_cid}" sh -lc 'grep -q "^APPLE_OAUTH_AUDIENCES=" /app/.env 2>/dev/null || echo "APPLE_OAUTH_AUDIENCES=com.irlobby.app" >> /app/.env'
+                docker exec "${ws_cid}" sh -lc 'grep -q "^GOOGLE_OAUTH_CLIENT_IDS=" /app/.env 2>/dev/null || echo "GOOGLE_OAUTH_CLIENT_IDS=" >> /app/.env'
+              fi
+            fi
+
+            docker restart "${web_cid}"
+            if [ -n "${ws_cid}" ]; then
+              docker restart "${ws_cid}"
+            fi
+            sleep 8
+          fi
+
+          echo "=== container status ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
+          echo "=== web logs (tail) ==="
+          docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
+          REMOTE
+
+      - name: Verify auth routes
+        run: |
+          set -euo pipefail
+
+          echo "Waiting for web to become ready..."
+          code=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
+            echo "health attempt ${attempt}: HTTP ${code}"
+            if [ "${code}" = "200" ]; then
+              break
+            fi
+            sleep 5
+          done
+          if [ "${code}" != "200" ]; then
+            echo "Health check failed" >&2
+            cat /tmp/health.json || true
+            exit 1
+          fi
+
+          echo "=== twitter status ==="
+          curl -sS --max-time 20 https://api.irlobby.com/api/auth/twitter/status/
+          echo ""
+
+          echo "=== twitter mobile auth_url callback ==="
+          curl -sS --max-time 20 \
+            'https://api.irlobby.com/api/auth/twitter/url/?mobile_redirect_uri=irlobby://auth/twitter' \
+            | python3 -c 'import sys,json,urllib.parse; d=json.load(sys.stdin); q=urllib.parse.parse_qs(urllib.parse.urlparse(d["auth_url"]).query); print(q.get("redirect_uri"))'
+          echo ""
+
+          echo "=== google mobile (expect JSON 400/503, not HTML 404) ==="
+          google_code="$(curl -sS -o /tmp/google.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/google/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"id_token":"invalid"}')"
+          echo "HTTP ${google_code}"
+          head -c 400 /tmp/google.json || true
+          echo ""
+          if [ "${google_code}" = "404" ]; then
+            echo "Google mobile route still missing (404)" >&2
+            exit 1
+          fi
+          if grep -qi '<html' /tmp/google.json; then
+            echo "Google mobile returned HTML instead of JSON" >&2
+            exit 1
+          fi
+
+          echo "=== apple mobile (expect JSON 400/503, not HTML 404) ==="
+          apple_code="$(curl -sS -o /tmp/apple.json -w "%{http_code}" --max-time 20 \
+            -X POST https://api.irlobby.com/api/auth/apple/mobile/ \
+            -H 'Content-Type: application/json' \
+            -d '{"identity_token":"invalid"}')"
+          echo "HTTP ${apple_code}"
+          head -c 400 /tmp/apple.json || true
+          echo ""
+          if [ "${apple_code}" = "404" ]; then
+            echo "Apple mobile route still missing (404)" >&2
+            exit 1
+          fi
+          if grep -qi '<html' /tmp/apple.json; then
+            echo "Apple mobile returned HTML instead of JSON" >&2
+            exit 1
+          fi
+
+          echo "Auth route verification passed."

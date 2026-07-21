@@ -27,52 +27,72 @@ Notes:
 - The workflow triggers `eas build --platform ios --profile production --auto-submit --non-interactive --no-wait`.
 - If EAS still needs missing Apple build or App Store Connect submit credentials, the GitHub workflow will fail until the one-time manual setup is finished.
 
-## 1.2) Week 1 launch ops (credentials + first production build)
-
-Engineering can ship Sentry + funnel analytics in code, but these ops steps are still required before TestFlight auth validation:
-
-1. **Apple Developer** → Identifiers → App ID `com.irlobby.app` → enable **Sign In with Apple**.
-2. **Google Cloud Console** → create OAuth client IDs for iOS (`com.irlobby.app`), Android (`com.irlobby.app` + SHA-1), and Web.
-3. Set **backend production** env:
-   - `APPLE_CLIENT_ID=com.irlobby.app`
-   - `GOOGLE_IOS_CLIENT_ID=...`
-   - `GOOGLE_ANDROID_CLIENT_ID=...`
-   - `GOOGLE_WEB_CLIENT_ID=...`
-   - Confirm `SENTRY_DSN` is set for backend crashes.
-4. Set **EAS / GitHub** build env (or Expo secrets):
-   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-   - `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
-   - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-   - `EXPO_PUBLIC_SENTRY_DSN` (mobile Sentry project DSN)
-   - Optional for source maps: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`
-5. From `apps/mobile`, run one manual production build + submit so Apple credentials are stored:
-   ```bash
-   npm run build:ios
-   npm run submit:ios
-   ```
-6. Confirm in Sentry that a mobile `app_open` event appears after installing the TestFlight build.
-
-Done when: TestFlight build is installed, Apple/Google/X/email login can be attempted against `https://liyf.app`, and Sentry shows mobile sessions/events.
-
 ## 2) Configure production environment values
 
 Create a local `.env` for builds (or use EAS secrets) with production endpoints:
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=https://your-backend-domain.com
-EXPO_PUBLIC_WEBSOCKET_URL=wss://your-backend-domain.com
+EXPO_PUBLIC_API_BASE_URL=https://api.irlobby.com
+EXPO_PUBLIC_WEBSOCKET_URL=wss://api.irlobby.com
 EXPO_PUBLIC_TWITTER_CLIENT_ID=...
 EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter
+EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN=...
+# Google Sign-In (required for Continue with Google on store builds)
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
 EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
-EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN=...
+# Optional Expo Go / legacy fallback (prefer platform-specific IDs above)
+# EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID=...
+# EXPO_PUBLIC_GOOGLE_CLIENT_ID=...
+# Optional but recommended for production: enables Sentry crash + perf reporting.
 EXPO_PUBLIC_SENTRY_DSN=...
 ```
 
 Notes:
 - `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` must point to your live backend.
 - Backend must support HTTPS/WSS and include required CORS/host settings.
+- Prefer GitHub Actions variables / EAS secrets over committing real client IDs.
+
+### Social login credential checklist
+
+| Credential | Status | Where |
+|------------|--------|-------|
+| Backend `TWITTER_CLIENT_ID` / `TWITTER_CLIENT_SECRET` | Present (GitHub secrets + live API) | Server `.env.production` |
+| `EXPO_PUBLIC_TWITTER_CLIENT_ID` | Present (GitHub variable) | Mobile EAS / CI |
+| `EXPO_PUBLIC_TWITTER_REDIRECT_URI` | Present → `irlobby://auth/twitter` | Mobile EAS / CI |
+| Twitter portal callback | Must include `https://api.irlobby.com/api/auth/twitter/callback/` | X Developer Portal |
+| `APPLE_OAUTH_AUDIENCES` | Set → `com.irlobby.app` (live route accepts Apple posts) | Backend `.env.production` |
+| Apple Sign In capability | Enable on App ID `com.irlobby.app` | Apple Developer |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | **Missing — create in Google Cloud** | GitHub var + EAS |
+| Backend `GOOGLE_OAUTH_CLIENT_IDS` | **Missing — comma-separated list of all Google client IDs** | Server `.env.production` |
+
+Google Cloud Console setup (bundle/package `com.irlobby.app`):
+1. Create an **iOS** OAuth client (bundle ID `com.irlobby.app`).
+2. Create an **Android** OAuth client (package `com.irlobby.app` + SHA-1 from `eas credentials`).
+3. Create a **Web** OAuth client (used as `webClientId` for ID token audience).
+4. Put all three IDs into backend `GOOGLE_OAUTH_CLIENT_IDS` (comma-separated) and the matching `EXPO_PUBLIC_GOOGLE_*` vars.
+
+### Production verification (2026-07-09)
+
+| Check | Result |
+|-------|--------|
+| `GET /api/health/` | OK |
+| `GET /api/auth/twitter/status/` | `configured: true` |
+| Mobile Twitter `auth_url` callback | `https://api.irlobby.com/api/auth/twitter/callback/` |
+| `POST /api/auth/google/mobile/` | Live (JSON; returns 503 until `GOOGLE_OAUTH_CLIENT_IDS` is set) |
+| `POST /api/auth/apple/mobile/` | Live (JSON 400 on invalid token; audience `com.irlobby.app`) |
+| Device smoke tests | Build a production/preview EAS binary (not Expo Go). X can be tested now; Google needs client IDs first; Apple needs a real iOS device/TestFlight. |
+
+### Expo dashboard builds (`Build from GitHub`)
+
+See [`EAS_ENV_SETUP.md`](EAS_ENV_SETUP.md). Summary:
+
+1. **Base directory:** `apps/mobile`
+2. Add **Production** environment variables in Expo (Google iOS/Android/Web IDs, Twitter client ID, Mapbox token).
+3. **Uncheck EAS Submit** unless Play/App Store submit credentials are configured in Expo.
+4. Use build profile **`production`**.
 
 ## 2.1) Configure Twitter/X login for standalone iOS builds
 
@@ -83,54 +103,18 @@ Required setup:
 1. Set backend env vars `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
 2. Register the backend callback URL in the Twitter/X developer portal:
 	- Local example: `http://localhost:8000/api/auth/twitter/callback/`
-	- Production example: `https://your-backend-domain.com/api/auth/twitter/callback/`
+	- Production (required): `https://api.irlobby.com/api/auth/twitter/callback/`
 3. Set `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` for the mobile app if you want an explicit runtime value.
 
 Notes:
 - The backend callback exchanges the Twitter authorization code and then redirects back into the app with app JWTs.
 - This flow is intended for standalone/TestFlight builds. Expo Go callback URLs are not part of the supported release path.
-- Failed or cancelled OAuth attempts redirect back to the app with an `error` query param so the login screen can show a message.
 
-## 2.2) Configure Sign in with Apple
+## 2.2) Configure Google and Apple for store builds
 
-Sign in with Apple is required for App Review when other third-party login options (such as Continue with X) are offered.
-
-Required setup:
-
-1. In Apple Developer → Identifiers → your App ID (`com.irlobby.app`), enable **Sign In with Apple**.
-2. Set backend env var `APPLE_CLIENT_ID=com.irlobby.app` (must match the iOS bundle identifier used as the token audience).
-3. Rebuild the iOS binary after enabling `usesAppleSignIn` / the `expo-apple-authentication` plugin (already configured in `app.config.ts`).
-
-Notes:
-- The app sends Apple's `identityToken` to `POST /api/auth/apple/signin/`.
-- The backend verifies the token against Apple's JWKS and issues IRLobby JWTs.
-- Apple only returns name/email on the first successful authorization; later sign-ins rely on the stable `sub` claim.
-
-## 2.3) Configure Google Sign-In
-
-Google sign-in uses `expo-auth-session` to obtain a Google ID token, then exchanges it with the backend.
-
-Required setup:
-
-1. In Google Cloud Console, create OAuth 2.0 client IDs:
-	- iOS client (bundle ID `com.irlobby.app`)
-	- Android client (package `com.irlobby.app` + SHA-1)
-	- Web client (optional fallback / shared audience)
-2. Set backend env vars to the same client IDs so token audience checks succeed:
-	- `GOOGLE_IOS_CLIENT_ID=...apps.googleusercontent.com`
-	- `GOOGLE_ANDROID_CLIENT_ID=...apps.googleusercontent.com`
-	- `GOOGLE_WEB_CLIENT_ID=...apps.googleusercontent.com`
-	- Or `GOOGLE_CLIENT_IDS=id1,id2,id3`
-3. Set matching mobile build env vars:
-	- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-	- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
-	- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-4. Rebuild the app so the reversed iOS client ID URL scheme is embedded (configured automatically from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` in `app.config.ts`).
-
-Notes:
-- The app posts the Google `id_token` to `POST /api/auth/google/signin/`.
-- The backend verifies the token against Google's JWKS and issues IRLobby JWTs.
-- The Continue with Google button is hidden until a platform client ID is present in the mobile config.
+1. Backend: set `GOOGLE_OAUTH_CLIENT_IDS` and `APPLE_OAUTH_AUDIENCES=com.irlobby.app`, then redeploy so `/api/auth/google/mobile/` and `/api/auth/apple/mobile/` exist.
+2. Mobile: bake Google client IDs into the production EAS profile (GitHub variables → CI env → `eas build`).
+3. Apple: enable Sign In with Apple on App ID `com.irlobby.app` (app already sets `usesAppleSignIn: true`).
 
 ## 3) Confirm app identity
 
@@ -171,6 +155,25 @@ Complete before submitting for review:
 - Screenshots for required iPhone sizes
 - App privacy questionnaire answers
 
+> Copy-ready metadata lives in [`store/metadata/`](./store/metadata/).
+> Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./store/metadata/privacy-questionnaire.md).
+> Reviewer demo account (App Privacy → Sign-In Information): [`store/metadata/reviewer-demo-account.md`](./store/metadata/reviewer-demo-account.md).
+> Privacy Policy + Support pages are committed at `site/privacy.html` and `site/support.html` — host them at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
+> Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
+
+### Pre-submission sanity check
+
+Run before every release build:
+
+```bash
+cd apps/mobile
+npm run presubmit
+```
+
+This validates the icon, runs typecheck + tests, scans for debug logs, and verifies metadata length limits.
+
+It also checks the required reviewer/privacy support files and the five required App Store screenshot filenames in `store/screenshots/`.
+
 ## 7) Backend production requirements
 
 Ensure backend env/config is production-ready:
@@ -184,23 +187,8 @@ Ensure backend env/config is production-ready:
 
 - Permission prompts are justified and accurate (camera/location/photos)
 - Sign in and registration flows work against production backend
-- Sign in with Apple works on a physical iOS device / TestFlight build
-- Continue with Google returns tokens against production
-- Continue with X returns to the app with tokens (or a clear error) against production
 - Password reset links open correct frontend/app route
-- Report / block is reachable from Discover activity details and chat threads
-- Hosts can remove participants via `DELETE /api/activities/{id}/participants/{userId}/`
-- Push taps for join / match / message open the app (Chat or Activity tab)
 - App handles API downtime gracefully (errors/retries)
-
-## 8.1) Week 2 engineering checklist
-
-- [x] Block + report UI on Discover (host) and Chat (other user)
-- [x] Host participant removal API
-- [x] Push payload `screen` for join / match / message + tap navigation
-- [ ] Full auth matrix on physical TestFlight device (ops)
-- [ ] Parity smoke doc filled with build number (ops)
-- [ ] Seed-host recruiting started (ops)
 
 ## 9) TestFlight first, then App Review
 

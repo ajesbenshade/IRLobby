@@ -1,16 +1,37 @@
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from activities.models import Activity
+from asgiref.sync import async_to_sync
+from channels.testing import WebsocketCommunicator
+from django.test import TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
-from matches.models import Match
-from moderation.models import BlockedUser
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+
+from activities.models import Activity
+from irlobby_backend.asgi import application
+from matches.models import Match
+from moderation.models import BlockedUser
 from users.models import User
 
+from .middleware import JwtAuthMiddleware
 from .models import Conversation, Message
+
+
+class FakeRedis:
+    def __init__(self):
+        self.values = {}
+
+    async def setex(self, key, ttl, value):
+        self.values[key] = value
+
+    async def delete(self, key):
+        self.values.pop(key, None)
+
+    async def get(self, key):
+        return self.values.get(key)
 
 
 class ConversationListTests(APITestCase):
@@ -166,3 +187,150 @@ class MessageListTests(APITestCase):
         msg = Message.objects.filter(conversation=self.conversation).first()
         self.assertNotIn("<script>", msg.text)
         self.assertIn("Hello", msg.text)
+
+
+class JwtAuthMiddlewareTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="socket-user", email="socket@example.com", password="password123"
+        )
+        self.middleware = JwtAuthMiddleware(lambda scope, receive, send: None)
+
+    def test_extract_token_from_authorization_header(self):
+        token = str(AccessToken.for_user(self.user))
+        scope = {"headers": [(b"authorization", f"Bearer {token}".encode("utf-8"))]}
+
+        self.assertEqual(self.middleware._extract_token(scope), token)
+
+    def test_refresh_token_is_rejected_for_websocket_auth(self):
+        refresh_token = str(RefreshToken.for_user(self.user))
+
+        authenticated_user = async_to_sync(self.middleware._get_user_from_token)(refresh_token)
+
+        self.assertTrue(authenticated_user.is_anonymous)
+
+
+class WebSocketOriginSecurityTests(TransactionTestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="origin-user", email="origin@example.com", password="password123"
+        )
+
+    def test_disallowed_origin_is_rejected(self):
+        token = str(AccessToken.for_user(self.user))
+
+        async def run_test():
+            communicator = WebsocketCommunicator(
+                application,
+                f"/ws/?token={token}",
+                headers=[(b"origin", b"https://evil.example")],
+            )
+            connected, _ = await communicator.connect()
+            self.assertFalse(connected)
+
+        async_to_sync(run_test)()
+
+    @patch("chat.consumers.clear_user_online")
+    @patch("chat.consumers.set_user_online")
+    def test_allowed_origin_and_access_token_can_connect(
+        self, mock_set_user_online, mock_clear_user_online
+    ):
+        token = str(AccessToken.for_user(self.user))
+
+        async def run_test():
+            communicator = WebsocketCommunicator(
+                application,
+                f"/ws/?token={token}",
+                headers=[(b"origin", b"http://localhost:5173")],
+            )
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.disconnect()
+
+        async_to_sync(run_test)()
+        self.assertGreaterEqual(mock_set_user_online.await_count, 1)
+        self.assertGreaterEqual(mock_clear_user_online.await_count, 1)
+
+
+class ChatPresenceTypingTests(TransactionTestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="presence-user", email="presence@example.com", password="password123"
+        )
+        self.other = User.objects.create_user(
+            username="presence-other", email="presence-other@example.com", password="password123"
+        )
+        self.activity = Activity.objects.create(
+            host=self.other,
+            is_approved=True,
+            title="Presence Activity",
+            description="Test",
+            location="Location",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=10,
+            tags=[],
+            images=[],
+        )
+        self.match = Match.objects.create(
+            user_a=self.user, user_b=self.other, activity=self.activity
+        )
+        self.conversation = Conversation.objects.create(match=self.match)
+
+    def _communicator(self, user):
+        token = str(AccessToken.for_user(user))
+        return WebsocketCommunicator(
+            application,
+            f"/ws/chat/{self.conversation.id}/?token={token}",
+            headers=[(b"origin", b"http://localhost:5173")],
+        )
+
+    def test_chat_connect_sends_presence_snapshot(self):
+        fake_redis = FakeRedis()
+        fake_redis.values[f"user_online:{self.other.id}"] = "1"
+
+        async def run_test():
+            communicator = self._communicator(self.user)
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+
+            snapshot = await communicator.receive_json_from()
+            self.assertEqual(snapshot["type"], "chat.presence_snapshot")
+            users = {item["userId"]: item["isOnline"] for item in snapshot["users"]}
+            self.assertTrue(users[self.user.id])
+            self.assertTrue(users[self.other.id])
+
+            presence = await communicator.receive_json_from()
+            self.assertEqual(presence["type"], "chat.presence")
+            self.assertEqual(presence["userId"], self.user.id)
+            self.assertTrue(presence["isOnline"])
+
+            await communicator.disconnect()
+
+        with patch("chat.consumers.get_redis_client", new=AsyncMock(return_value=fake_redis)):
+            async_to_sync(run_test)()
+
+    def test_chat_typing_event_has_typed_payload(self):
+        fake_redis = FakeRedis()
+
+        async def run_test():
+            communicator = self._communicator(self.user)
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+
+            await communicator.receive_json_from()
+            await communicator.receive_json_from()
+
+            await communicator.send_json_to({"type": "typing", "isTyping": True})
+            payload = await communicator.receive_json_from()
+
+            self.assertEqual(payload["type"], "chat.typing")
+            self.assertEqual(payload["conversationId"], self.conversation.id)
+            self.assertEqual(payload["userId"], self.user.id)
+            self.assertTrue(payload["isTyping"])
+
+            await communicator.disconnect()
+
+        with patch("chat.consumers.get_redis_client", new=AsyncMock(return_value=fake_redis)):
+            async_to_sync(run_test)()

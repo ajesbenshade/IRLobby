@@ -27,8 +27,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      SECRET_KEY: ci-release-key
+      SECRET_KEY: ci-release-gate-only-not-a-real-secret-key-2026-04-28-IRLobby
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api.irlobby.com
+      CORS_ALLOWED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      CSRF_TRUSTED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      WEBSOCKET_ALLOWED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      REDIS_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CELERY_BROKER_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CACHE_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
 
     steps:
       - name: Checkout
@@ -50,7 +58,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+
+      - name: Install GDAL system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev binutils libproj-dev
 
       - name: Install backend dependencies
         run: |
@@ -65,4 +78,7 @@ jobs:
         working-directory: irlobby_backend
         run: |
           python manage.py check --deploy
+
+      - name: Backend tests
+        run: |
           pytest

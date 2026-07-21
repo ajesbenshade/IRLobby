@@ -20,12 +20,13 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { API_ROUTES } from '@shared/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, MapPin, X } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 const MAX_EVENT_CAPACITY = 10;
@@ -44,9 +45,7 @@ const insertActivitySchema = z.object({
     .number()
     .min(1, 'At least 1 participant required')
     .max(MAX_EVENT_CAPACITY, `Maximum ${MAX_EVENT_CAPACITY} participants allowed`),
-  visibility: z
-    .array(z.enum(['friends', 'friendsOfFriends', 'everyone']))
-    .default(['everyone']),
+  visibility: z.array(z.enum(['friends', 'friendsOfFriends', 'everyone'])).default(['everyone']),
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).default([]),
@@ -65,10 +64,6 @@ const formSchema = insertActivitySchema.extend({
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-interface CreateActivityProps {
-  onActivityCreated: () => void;
-}
 
 const categories = [
   'Sports & Fitness',
@@ -132,7 +127,8 @@ function getBrowserCoordinates(): Promise<{ latitude: number; longitude: number 
   });
 }
 
-export default function CreateActivity({ onActivityCreated }: CreateActivityProps) {
+export default function CreateActivity() {
+  const navigate = useNavigate();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isResolvingCoords, setIsResolvingCoords] = useState(false);
@@ -260,7 +256,7 @@ export default function CreateActivity({ onActivityCreated }: CreateActivityProp
       });
       await queryClient.invalidateQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
       await queryClient.refetchQueries({ queryKey: [API_ROUTES.ACTIVITIES] });
-      onActivityCreated();
+      navigate('/app/discovery');
     },
     onError: (error: Error) => {
       toast({

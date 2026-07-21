@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@shared/schema';
 import { useEffect, useState } from 'react';
 
 import { Button } from './ui/button';
@@ -5,8 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
-import { apiRequest } from '../lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
+import { apiRequest, extractApiErrorMessage } from '../lib/queryClient';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
@@ -31,15 +31,15 @@ const resolveAuthTokens = (data: AuthResponsePayload) => {
     typeof data.tokens?.access === 'string'
       ? data.tokens.access
       : typeof data.access === 'string'
-        ? data.access
-        : null;
+      ? data.access
+      : null;
 
   const refreshToken =
     typeof data.tokens?.refresh === 'string'
       ? data.tokens.refresh
       : typeof data.refresh === 'string'
-        ? data.refresh
-        : null;
+      ? data.refresh
+      : null;
 
   return { accessToken, refreshToken };
 };
@@ -68,15 +68,28 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     const checkTwitterOAuthStatus = async () => {
       try {
         const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_STATUS);
+        if (!response.ok) {
+          throw new Error(`Twitter status request failed (${response.status})`);
+        }
+
+        const contentType = response.headers.get('content-type') ?? '';
+        if (!contentType.toLowerCase().includes('application/json')) {
+          throw new Error('Twitter status response was not JSON');
+        }
+
         const data = (await response.json()) as { configured?: boolean };
-        if (isMounted) {
-          setIsTwitterAvailable(Boolean(data.configured));
+        if (!isMounted) {
+          return;
+        }
+
+        // Only disable when the API explicitly reports disabled.
+        if (typeof data.configured === 'boolean') {
+          setIsTwitterAvailable(data.configured);
         }
       } catch (error) {
         console.warn('Twitter OAuth status check failed:', error);
-        if (isMounted) {
-          setIsTwitterAvailable(false);
-        }
+        // Keep the button available so users can still attempt OAuth if
+        // status checks fail due to transient networking/proxy issues.
       }
     };
 
@@ -100,25 +113,20 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
 
     try {
       setIsLoading(true);
-      console.log('Starting Twitter OAuth...');
 
       const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_URL);
-      console.log('OAuth URL response:', response.status, response);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OAuth URL error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('OAuth URL data:', data);
 
       const authUrl = data.auth_url;
       const stateToken = data.state ?? null;
 
       if (!authUrl || authUrl === '#' || authUrl.startsWith('#')) {
-        console.error('Invalid OAuth response:', data);
         throw new Error('Invalid OAuth response from server');
       }
 
@@ -128,7 +136,6 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
         sessionStorage.removeItem('twitter_oauth_state');
       }
 
-      console.log('Redirecting to Twitter OAuth URL...');
       window.location.href = authUrl;
     } catch (error) {
       console.error('Twitter OAuth error:', error);
@@ -176,17 +183,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', formData.email);
-
       const response = await apiRequest('POST', API_ROUTES.USER_LOGIN, {
         email: formData.email,
         password: formData.password,
       });
 
-      console.log('Login response status:', response.status);
       const data = (await response.json()) as AuthResponsePayload;
-      console.log('Login response data:', data);
-      console.log('Data structure:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.detail || data.error || 'Login failed');
@@ -199,17 +201,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (
-        typeof window !== 'undefined' &&
-        window.location.protocol !== 'https:' &&
-        refreshToken
-      ) {
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
 
       localStorage.setItem('authToken', accessToken);
       localStorage.setItem('userId', String(userId));
-      console.log('Login successful, token stored:', accessToken);
 
       await onAuthenticated(accessToken, String(userId));
 
@@ -258,15 +255,7 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       const data = (await response.json()) as AuthResponsePayload;
 
       if (!response.ok) {
-        // Handle Django's error format
-        const errorMessage =
-          data.username?.[0] ||
-          data.email?.[0] ||
-          data.password?.[0] ||
-          data.detail ||
-          data.error ||
-          'Registration failed';
-        throw new Error(errorMessage);
+        throw new Error(extractApiErrorMessage(data, 'Registration failed'));
       }
 
       const { accessToken, refreshToken } = resolveAuthTokens(data);
@@ -276,17 +265,12 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       }
 
       // Store the tokens in localStorage (Django JWT format)
-      if (
-        typeof window !== 'undefined' &&
-        window.location.protocol !== 'https:' &&
-        refreshToken
-      ) {
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
 
       localStorage.setItem('authToken', accessToken);
       localStorage.setItem('userId', String(userId));
-      console.log('Registration successful, token stored:', accessToken);
 
       await onAuthenticated(accessToken, String(userId));
 
@@ -494,8 +478,8 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
               {isLoading
                 ? 'Connecting...'
                 : isTwitterAvailable
-                  ? 'Continue with X (Twitter)'
-                  : 'X (Twitter) Login Unavailable'}
+                ? 'Continue with X (Twitter)'
+                : 'X (Twitter) Login Unavailable'}
             </Button>
           </div>
         </div>
@@ -503,11 +487,11 @@ const AuthForm = ({ onAuthenticated }: AuthFormProps) => {
       <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">
         <p>IRLobby - Where activities meet people</p>
         <div className="flex space-x-4">
-          <a href="/privacy-policy" className="hover:underline">
+          <a href="/privacy" className="hover:underline">
             Privacy Policy
           </a>
           <span aria-hidden="true">&bull;</span>
-          <a href="/terms-of-service" className="hover:underline">
+          <a href="/terms" className="hover:underline">
             Terms of Service
           </a>
         </div>

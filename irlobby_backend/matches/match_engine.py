@@ -240,12 +240,6 @@ class ObservabilityHook(Protocol):
     def __call__(self, event_name: str, payload: dict[str, Any]) -> None: ...
 
 
-_weights: MatchWeights = MatchWeights.from_settings()
-_profile_provider: ProfileProvider | None = None
-_candidate_provider: CandidateProvider | None = None
-_observability_hook: ObservabilityHook | None = None
-
-
 def configure_match_engine(
     *,
     profile_provider: ProfileProvider | None = None,
@@ -493,6 +487,12 @@ def _require_profile_provider() -> None:
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, value))
+
+
+_weights: MatchWeights = MatchWeights.from_settings()
+_profile_provider: ProfileProvider | None = None
+_candidate_provider: CandidateProvider | None = None
+_observability_hook: ObservabilityHook | None = None
 
 
 def _effective_location(user: UserMatchProfile) -> tuple[float, float]:

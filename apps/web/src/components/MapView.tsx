@@ -9,80 +9,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import type { Activity, ActivityFilters } from '@/types/activity';
+import { API_ROUTES, API_ROUTE_BUILDERS } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { MapPin, Navigation, Calendar, Users, List } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-
-// Google Maps type declarations
-declare global {
-  namespace google {
-    namespace maps {
-      class Map {
-        constructor(mapDiv: HTMLElement, opts?: MapOptions);
-        setCenter(latlng: LatLng | LatLngLiteral): void;
-        setZoom(zoom: number): void;
-      }
-
-      class Marker {
-        constructor(opts?: MarkerOptions);
-        setMap(map: Map | null): void;
-        setPosition(position: LatLng | LatLngLiteral): void;
-        addListener(eventName: string, handler: () => void): void;
-      }
-
-      class InfoWindow {
-        constructor(opts?: InfoWindowOptions);
-        open(map?: Map, anchor?: Marker): void;
-        close(): void;
-        setContent(content: string | HTMLElement): void;
-      }
-
-      class LatLng {
-        constructor(lat: number, lng: number);
-        lat(): number;
-        lng(): number;
-      }
-
-      interface LatLngLiteral {
-        lat: number;
-        lng: number;
-      }
-
-      interface MapOptions {
-        center?: LatLng | LatLngLiteral;
-        zoom?: number;
-        styles?: any[];
-      }
-
-      interface MarkerOptions {
-        position?: LatLng | LatLngLiteral;
-        map?: Map | null;
-        title?: string;
-        icon?: string | Icon;
-      }
-
-      interface InfoWindowOptions {
-        content?: string | HTMLElement;
-      }
-
-      interface Icon {
-        url: string;
-        scaledSize?: Size;
-      }
-
-      class Size {
-        constructor(width: number, height: number);
-      }
-    }
-  }
-
-  interface Window {
-    google: typeof google;
-  }
-}
 
 interface MapViewProps {
   onActivitySelect: (activity: Activity) => void;
@@ -141,7 +73,10 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         params.set(key, String(value));
       }
 
-      const response = await apiRequest('GET', API_ROUTE_BUILDERS.activitiesWithSearch(params.toString()));
+      const response = await apiRequest(
+        'GET',
+        API_ROUTE_BUILDERS.activitiesWithSearch(params.toString()),
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch activities');
       }
@@ -176,7 +111,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div style="padding: 8px; max-width: 250px;">
-              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${activity.title}</h3>
+              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${
+                activity.title
+              }</h3>
               <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${activity.location}</p>
               <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${
                 activity.time
@@ -207,12 +144,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
   }, [activities]);
 
   const initializeMap = useCallback(() => {
-    if (
-      typeof window === 'undefined' ||
-      !mapRef.current ||
-      !userLocation ||
-      !window.google?.maps
-    ) {
+    if (typeof window === 'undefined' || !mapRef.current || !userLocation || !window.google?.maps) {
       return;
     }
 
@@ -439,7 +371,7 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
 
       {/* Interactive Google Map */}
       <div className="relative h-96">
-        <div ref={mapRef} className="w-full h-full" style={{ minHeight: '400px' }} />
+        <div ref={mapRef} className="w-full h-full min-h-[400px]" />
 
         {/* Your Location Indicator */}
         {userLocation && (
@@ -507,7 +439,9 @@ export default function MapView({ onActivitySelect, onToggleView, filters }: Map
                           {activity.time ? (
                             <>
                               {format(new Date(activity.time), 'MMM dd, yyyy')}
-                              <span aria-hidden="true" className="mx-1">&bull;</span>
+                              <span aria-hidden="true" className="mx-1">
+                                &bull;
+                              </span>
                               {format(new Date(activity.time), 'h:mm a')}
                             </>
                           ) : (

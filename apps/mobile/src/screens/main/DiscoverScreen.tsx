@@ -3,8 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { Button, HelperText, Modal, Portal, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, HelperText, Modal, Portal, Snackbar, Text } from 'react-native-paper';
 
 import {
   AccentPill,
@@ -14,9 +13,13 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
+import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
+import MapView, { Marker } from '@components/MapViewCompat';
+import { MatchCelebration } from '@components/MatchCelebration';
+import { ActivityCardSkeleton } from '@components/skeletons';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
-import { HomeOverviewContent } from '@screens/main/HomeScreen';
+import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import {
   fetchActivities,
@@ -35,10 +38,11 @@ const AnimatedView = Animated.View as unknown as ComponentType<any>;
 export const DiscoverScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const pan = useRef(new Animated.ValueXY()).current;
-  const [activeSegment, setActiveSegment] = useState<'discover' | 'home'>('discover');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
+  const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -55,8 +59,6 @@ export const DiscoverScreen = () => {
   const [priceMaxFilter, setPriceMaxFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
-  const matchCardOpacity = useRef(new Animated.Value(0)).current;
-  const matchCardLift = useRef(new Animated.Value(16)).current;
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -123,15 +125,30 @@ export const DiscoverScreen = () => {
       swipeActivity(activityId, direction),
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
-        setMatchMessage('New spark unlocked. Your match is waiting in chat.');
+        void safeNotificationHaptic('success');
+        const matchedActivity = activities[currentIndex];
+        const hostName =
+          matchedActivity == null
+            ? undefined
+            : typeof matchedActivity.host === 'string'
+              ? matchedActivity.host
+              : [matchedActivity.host.firstName, matchedActivity.host.lastName]
+                  .filter(Boolean)
+                  .join(' ') || matchedActivity.host.email || undefined;
+        setMatchContext({ name: hostName, title: matchedActivity?.title });
+        setMatchMessage("It's a match!");
       } else {
         setMatchMessage(null);
+        setMatchContext(null);
       }
 
       setCurrentIndex((previous) => previous + 1);
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-matches'] });
+      if (data.conversationId != null) {
+        await queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+      }
     },
   });
 
@@ -197,6 +214,8 @@ export const DiscoverScreen = () => {
         return;
       }
 
+      void safeImpactHaptic(direction === 'right' ? 'medium' : 'light');
+
       animateSwipe(direction, () => {
         swipeMutation.mutate({
           activityId: currentActivity.id,
@@ -238,6 +257,7 @@ export const DiscoverScreen = () => {
   const resetDeck = useCallback(() => {
     setCurrentIndex(0);
     setMatchMessage(null);
+    setMatchContext(null);
     void refetch();
   }, [refetch]);
 
@@ -255,6 +275,33 @@ export const DiscoverScreen = () => {
     setDateToFilter('');
     setCurrentIndex(0);
   }, []);
+
+  // Vibe quiz integration -----------------------------------------------------
+  // Seed the tag filter from the user's vibe profile on first mount so the deck
+  // is personalized immediately. We only do this once per session and only when
+  // the user has not already typed something into the filter themselves.
+  const vibeDiscoverTags = user?.vibe?.vibeDiscoverTags ?? [];
+  const vibeQuizSkipped = Boolean(user?.vibe?.vibeQuizSkipped);
+  const hasVibeProfile = Boolean(user?.vibe?.vibeProfile);
+  const vibeSeededRef = useRef(false);
+  const [vibeToastVisible, setVibeToastVisible] = useState(false);
+  const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
+
+  useEffect(() => {
+    if (vibeSeededRef.current) {
+      return;
+    }
+    if (!hasVibeProfile || vibeDiscoverTags.length === 0) {
+      return;
+    }
+    if (tagFilter.trim().length > 0) {
+      vibeSeededRef.current = true;
+      return;
+    }
+    vibeSeededRef.current = true;
+    setTagFilter(vibeDiscoverTags.join(', '));
+    setVibeToastVisible(true);
+  }, [hasVibeProfile, vibeDiscoverTags, tagFilter]);
 
   const cardStyle = {
     transform: [
@@ -281,77 +328,47 @@ export const DiscoverScreen = () => {
     ? new Date(currentActivity.time).toLocaleString()
     : 'Time TBD';
 
-  useEffect(() => {
-    if (!matchMessage) {
-      matchCardOpacity.setValue(0);
-      matchCardLift.setValue(16);
-      return;
-    }
-
-    Animated.parallel([
-      Animated.timing(matchCardOpacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.spring(matchCardLift, {
-        toValue: 0,
-        friction: 8,
-        tension: 120,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [matchCardLift, matchCardOpacity, matchMessage]);
-
   return (
+    <>
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <PageHeader
-        eyebrow={activeSegment === 'discover' ? 'For you' : 'Quick pulse'}
-        title={activeSegment === 'discover' ? 'Find the plan worth leaving for' : 'A fast read on your scene'}
-        subtitle={
-          activeSegment === 'discover'
-            ? 'Scroll the live deck first, then flip over to Home whenever you want the quick version of what you are hosting.'
-            : 'Check your counts, latest hosted plans, and jump back into discovery without adding another tab.'
-        }
+        eyebrow="For you"
+        title="Plans worth leaving for"
+        subtitle="Swipe through what's happening near you tonight."
         rightContent={
-          activeSegment === 'discover' ? (
-            <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
-              Pings
-            </Button>
-          ) : null
+          <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
+            Pings
+          </Button>
         }
       />
 
-      <PanelCard style={styles.segmentShell} tone={activeSegment === 'discover' ? 'default' : 'warm'}>
-        <View style={styles.segmentShellHeader}>
-          <AccentPill tone={activeSegment === 'discover' ? 'secondary' : 'neutral'}>
-            {activeSegment === 'discover' ? 'Swipe mode' : 'Pulse mode'}
-          </AccentPill>
-          <Text style={styles.segmentShellCopy}>
-            {activeSegment === 'discover'
-              ? 'Discover stays front and center. Home is still one tap away when you want the quick version.'
-              : 'Home stays compact here so the swipe deck keeps the spotlight.'}
+      {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
+        <PanelCard style={styles.vibeReminderCard}>
+          <Text variant="titleMedium" style={styles.vibeReminderTitle}>
+            Want a feed that actually fits?
           </Text>
-        </View>
-        <SegmentedButtons
-          value={activeSegment}
-          onValueChange={(value) => setActiveSegment(value as 'discover' | 'home')}
-          buttons={[
-            { value: 'discover', label: 'Discover' },
-            { value: 'home', label: 'Home' },
-          ]}
-          style={styles.segmentedControl}
-        />
-      </PanelCard>
+          <Text style={styles.vibeReminderSubtitle}>
+            Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your energy.
+          </Text>
+          <View style={styles.vibeReminderActions}>
+            <Button mode="text" compact onPress={() => setVibeReminderDismissed(true)}>
+              Not now
+            </Button>
+            <Button
+              mode="contained"
+              compact
+              onPress={() => navigation.navigate('VibeQuizModal')}
+            >
+              Take the quiz
+            </Button>
+          </View>
+        </PanelCard>
+      ) : null}
 
-      {activeSegment === 'home' ? (
-        <HomeOverviewContent compact onOpenDiscover={() => setActiveSegment('discover')} />
-      ) : (
-        <>
-          <View style={styles.toolbar}>
+      <View style={styles.toolbar}>
             <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
               {showFilters ? 'Hide vibe filters' : `Vibe filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
             </Button>
@@ -468,7 +485,7 @@ export const DiscoverScreen = () => {
             </PanelCard>
           ) : null}
 
-          {isLoading ? <Text style={styles.loadingText}>Pulling in fresh plans...</Text> : null}
+          {isLoading ? <ActivityCardSkeleton /> : null}
 
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>
@@ -485,22 +502,6 @@ export const DiscoverScreen = () => {
             <HelperText type="error" visible>
               {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
             </HelperText>
-          ) : null}
-
-          {matchMessage ? (
-            <AnimatedView
-              style={{
-                opacity: matchCardOpacity,
-                transform: [{ translateY: matchCardLift }],
-              }}
-            >
-              <PanelCard style={styles.matchCard} tone="accent">
-                <AccentPill tone="secondary">New spark</AccentPill>
-                <Text variant="titleMedium" style={styles.matchTitle}>
-                  {matchMessage}
-                </Text>
-              </PanelCard>
-            </AnimatedView>
           ) : null}
 
           {!isLoading && activities.length === 0 ? (
@@ -606,12 +607,14 @@ export const DiscoverScreen = () => {
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
                   ) : null}
-                  {typeof currentActivity.host !== 'string' && currentActivity.host?.id ? (
+                  {typeof currentActivity.host !== 'string' &&
+                  currentActivity.host &&
+                  typeof (currentActivity.host as { id?: number | string }).id !== 'undefined' ? (
                     <Button
                       mode="text"
                       onPress={() => {
-                        const host = currentActivity.host;
-                        if (typeof host === 'string' || !host?.id) {
+                        const host = currentActivity.host as { id?: number | string };
+                        if (!host?.id) {
                           return;
                         }
                         setSafetyUserId(host.id);
@@ -673,23 +676,44 @@ export const DiscoverScreen = () => {
               ) : null}
             </Modal>
           </Portal>
-        </>
-      )}
-
-      <SafetyActionsModal
-        visible={safetyUserId != null}
-        userId={safetyUserId}
-        userLabel={safetyUserLabel}
-        onClose={() => {
-          setSafetyUserId(null);
-          setSafetyUserLabel(undefined);
-        }}
-        onBlocked={() => {
-          void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
-          setCurrentIndex((previous) => previous + 1);
-        }}
-      />
     </AppScrollView>
+    <SafetyActionsModal
+      visible={safetyUserId != null}
+      userId={safetyUserId}
+      userLabel={safetyUserLabel}
+      onClose={() => {
+        setSafetyUserId(null);
+        setSafetyUserLabel(undefined);
+      }}
+      onBlocked={() => {
+        void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
+        setCurrentIndex((previous) => previous + 1);
+      }}
+    />
+    <MatchCelebration
+      visible={!!matchMessage}
+      message={matchMessage ?? undefined}
+      matchName={matchContext?.name}
+      activityTitle={matchContext?.title}
+      onPrimaryAction={() => {
+        // Jump to the Chat tab inside the parent tab navigator.
+        const parent = navigation.getParent();
+        parent?.navigate('Chat' as never);
+      }}
+      onDismiss={() => {
+        setMatchMessage(null);
+        setMatchContext(null);
+      }}
+    />
+    <Snackbar
+      visible={vibeToastVisible}
+      onDismiss={() => setVibeToastVisible(false)}
+      duration={3500}
+      action={{ label: 'Got it', onPress: () => setVibeToastVisible(false) }}
+    >
+      Personalized feed unlocked! 🎉
+    </Snackbar>
+    </>
   );
 };
 
@@ -697,21 +721,22 @@ const styles = StyleSheet.create({
   container: {
     gap: 16,
   },
-  segmentShell: {
-    gap: 12,
-    paddingVertical: 14,
-    backgroundColor: '#fff1f6',
-    borderColor: '#ffd2e0',
-  },
-  segmentShellHeader: {
+  vibeReminderCard: {
     gap: 8,
   },
-  segmentShellCopy: {
+  vibeReminderTitle: {
+    color: appColors.ink,
+    fontWeight: '800',
+  },
+  vibeReminderSubtitle: {
     color: appColors.mutedInk,
     lineHeight: 20,
   },
-  segmentedControl: {
-    marginBottom: 0,
+  vibeReminderActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
   },
   toolbar: {
     flexDirection: 'row',
@@ -721,6 +746,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: appColors.mutedInk,
+  },
+  skeletonCard: {
+    gap: 0,
   },
   filterCard: {
     gap: 8,
@@ -768,14 +796,6 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     gap: 8,
-  },
-  matchCard: {
-    gap: 10,
-    borderColor: '#b5f1e5',
-  },
-  matchTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
   },
   animatedCard: {
     width: '100%',

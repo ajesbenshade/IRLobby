@@ -110,7 +110,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 Create, use, and close the pool within the same invocation:
 
 ```typescript
-// Vercel Edge Functions example
+// Edge function example
 export default async (req: Request, ctx: ExecutionContext) => {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 
@@ -178,7 +178,7 @@ try {
 ## Environment-Specific Optimizations
 
 ```javascript
-// For Vercel Edge Functions, specify nearest region
+// For edge functions, specify nearest region
 export const config = {
   runtime: "edge",
   regions: ["iad1"], // Region nearest to your Neon DB

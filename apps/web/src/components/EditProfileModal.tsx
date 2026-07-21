@@ -16,8 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { API_ROUTES } from '@shared/schema';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Camera, Upload, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -145,7 +145,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+      <DialogContent className="left-0 top-auto bottom-0 max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl p-4 sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-6">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>
@@ -173,7 +173,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <Button type="button" variant="outline" size="sm" className="w-full" asChild>
                       <label htmlFor="profile-picture" className="cursor-pointer">
                         <Camera className="h-4 w-4 mr-2" />
-                        Change Profile Picture
+                        Change profile picture
                       </label>
                     </Button>
                     <input
@@ -193,7 +193,11 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <FormItem>
                       <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your first name" autoComplete="given-name" {...field} />
+                        <Input
+                          placeholder="Enter your first name"
+                          autoComplete="given-name"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -207,7 +211,11 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                     <FormItem>
                       <FormLabel>Last Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your last name" autoComplete="family-name" {...field} />
+                        <Input
+                          placeholder="Enter your last name"
+                          autoComplete="family-name"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -260,8 +268,9 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                             type="button"
                             variant="destructive"
                             size="sm"
-                            className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 h-7 w-7 p-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             onClick={() => removePhotoFromAlbum(index)}
+                            aria-label={`Remove album photo ${index + 1}`}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -274,6 +283,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                       <Card
                         key={`empty-${index}`}
                         className="border-2 border-dashed border-gray-300"
+                        aria-hidden="true"
                       >
                         <CardContent className="p-0 h-24 flex items-center justify-center">
                           <Upload className="h-6 w-6 text-gray-400" />
@@ -308,6 +318,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                           size="sm"
                           className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
                           onClick={() => removeInterest(interest)}
+                          aria-label={`Remove ${interest}`}
                         >
                           <X className="h-3 w-3" />
                         </Button>

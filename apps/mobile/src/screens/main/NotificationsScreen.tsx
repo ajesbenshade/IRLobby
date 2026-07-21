@@ -12,6 +12,7 @@ import {
   SectionIntro,
 } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { NotificationRowSkeleton } from '@components/skeletons';
 import { fetchConversations } from '@services/chatService';
 import { fetchMatches } from '@services/matchService';
 import { appColors, radii, spacing } from '@theme/index';
@@ -26,6 +27,10 @@ interface NotificationItem {
   createdAt: string;
   type: NotificationType;
 }
+
+const getConversationMessages = (conversation: { messages?: unknown }) => (
+  Array.isArray(conversation.messages) ? conversation.messages : []
+);
 
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
@@ -74,7 +79,8 @@ export const NotificationsScreen = () => {
     }));
 
     const messageItems: NotificationItem[] = conversations.flatMap((conversation) => {
-      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      const messages = getConversationMessages(conversation);
+      const lastMessage = messages[messages.length - 1];
       if (!lastMessage) {
         return [];
       }
@@ -158,7 +164,11 @@ export const NotificationsScreen = () => {
 
       {isLoading ? (
         <PanelCard>
-          <Text style={styles.loadingText}>Loading your activity feed...</Text>
+          <View style={styles.listStack}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <NotificationRowSkeleton key={`notification-skeleton-${index}`} />
+            ))}
+          </View>
         </PanelCard>
       ) : null}
 

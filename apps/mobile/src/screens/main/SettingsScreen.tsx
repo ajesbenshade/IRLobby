@@ -1,4 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo } from 'react';
 import { Alert, Share, StyleSheet } from 'react-native';
 import { Button, HelperText, Switch, Text } from 'react-native-paper';
@@ -14,6 +16,7 @@ import {
 } from '@components/AppChrome';
 import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
+import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
 import {
   deactivatePushTokens,
@@ -112,6 +115,7 @@ const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice
 
 export const SettingsScreen = () => {
   const { signOut } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
     queryKey: ['mobile-settings'],
@@ -477,6 +481,19 @@ export const SettingsScreen = () => {
               disabled={isBusy}
             >
               {settings.preferences.maxDistance} {settings.preferences.distanceUnit}
+            </Button>
+          }
+        />
+        <DetailRow
+          title="Retake vibe quiz"
+          subtitle="Refresh your personalized feed with a quick 60-second vibe check."
+          accessory={
+            <Button
+              mode="outlined"
+              compact
+              onPress={() => navigation.navigate('VibeQuizModal')}
+            >
+              Retake
             </Button>
           }
         />

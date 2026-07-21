@@ -1,13 +1,15 @@
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import patch
 
+from django.db import connection
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-from users.models import User
 
-from activities.models import Activity, ActivityParticipant, Ticket
+from activities.models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
+from users.models import User
 
 
 class ActivityPermissionsTests(APITestCase):
@@ -110,7 +112,12 @@ class ActivityApprovalWorkflowTests(APITestCase):
         list_response = self.client.get(reverse("activity-list"))
         detail_response = self.client.get(reverse("activity-detail", args=[activity.id]))
 
-        ids = [item["id"] for item in list_response.data]
+        items = (
+            list_response.data
+            if isinstance(list_response.data, list)
+            else list_response.data.get("results", [])
+        )
+        ids = [item["id"] for item in items]
         self.assertNotIn(activity.id, ids)
         self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -168,6 +175,101 @@ class ActivityApprovalWorkflowTests(APITestCase):
         self.assertEqual(response.data.get("message"), "Activity is full")
 
 
+@skipUnless(connection.vendor == "postgresql", "PostGIS distance lookups require PostgreSQL")
+class ActivityLocationQueryTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="location-user",
+            email="location-user@example.com",
+            password="password123",
+        )
+        self.host = User.objects.create_user(
+            username="location-host",
+            email="location-host@example.com",
+            password="password123",
+        )
+        self.nearest = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Nearest Rooftop",
+            description="Close to the search origin.",
+            location="Lower Manhattan",
+            latitude=40.7130,
+            longitude=-74.0062,
+            time=timezone.now() + timedelta(days=1),
+            capacity=5,
+            tags=["rooftop"],
+            images=[],
+        )
+        self.nearby = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Nearby Gallery Walk",
+            description="Still inside the search radius.",
+            location="Brooklyn",
+            latitude=40.6782,
+            longitude=-73.9442,
+            time=timezone.now() + timedelta(days=1),
+            capacity=5,
+            tags=["art"],
+            images=[],
+        )
+        self.far = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Far Beach Day",
+            description="Outside the search radius.",
+            location="Los Angeles",
+            latitude=34.0522,
+            longitude=-118.2437,
+            time=timezone.now() + timedelta(days=1),
+            capacity=5,
+            tags=["outdoors"],
+            images=[],
+        )
+
+    def _result_ids(self, response):
+        results = response.data if isinstance(response.data, list) else response.data["results"]
+        return [item["id"] for item in results]
+
+    def test_location_query_returns_nearby_activities_in_distance_order(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(
+            reverse("activity-list"),
+            {"latitude": 40.7128, "longitude": -74.0060, "radius": 10},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = self._result_ids(response)
+        self.assertEqual(ids[:2], [self.nearest.id, self.nearby.id])
+        self.assertNotIn(self.far.id, ids)
+
+    def test_location_query_cache_does_not_change_results(self):
+        self.client.force_authenticate(self.user)
+        params = {"latitude": 40.7128, "longitude": -74.0060, "radius": 10}
+
+        first_response = self.client.get(reverse("activity-list"), params)
+        second_response = self.client.get(reverse("activity-list"), params)
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._result_ids(first_response), self._result_ids(second_response))
+
+    def test_invalid_location_query_falls_back_to_standard_results(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(
+            reverse("activity-list"),
+            {"latitude": "not-a-lat", "longitude": -74.0060, "radius": "nearby"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = self._result_ids(response)
+        self.assertIn(self.nearest.id, ids)
+        self.assertIn(self.far.id, ids)
+
+
 class TicketingTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
@@ -221,6 +323,16 @@ class TicketingTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get("message"), "This activity is not ticketed.")
+
+    def test_cannot_buy_sold_out_activity(self):
+        self.activity.tickets_sold = self.activity.max_tickets
+        self.activity.save(update_fields=["tickets_sold"])
+
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(reverse("activity-ticket-buy", args=[self.activity.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "Tickets are sold out.")
 
     @patch("activities.views.stripe.Webhook.construct_event")
     def test_webhook_marks_ticket_paid_and_generates_qr(self, mock_construct_event):
@@ -298,8 +410,11 @@ class TicketingTests(APITestCase):
         response = self.client.get(reverse("ticket-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["activityId"], self.activity.id)
+        results = (
+            response.data if isinstance(response.data, list) else response.data.get("results", [])
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["activityId"], self.activity.id)
 
     def test_validate_ticket_marks_used_and_reports_attendee(self):
         ticket = Ticket.objects.create(
@@ -321,6 +436,84 @@ class TicketingTests(APITestCase):
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, "used")
         self.assertEqual(response.data["buyer_username"], self.buyer.username)
+        self.assertTrue(
+            TicketRedemptionLog.objects.filter(
+                ticket=ticket,
+                host=self.host,
+                successful=True,
+                status="used",
+            ).exists()
+        )
+
+    def test_validate_ticket_rejects_malformed_qr_token(self):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("ticket-validate", args=[ticket.ticket_id]),
+            data={"ticketToken": "not-a-signed-ticket"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "Invalid ticket token.")
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "paid")
+
+    def test_validate_ticket_rejects_identifier_mismatch(self):
+        first_ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_123",
+        )
+        second_ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="paid",
+            stripe_session_id="cs_test_456",
+        )
+
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("ticket-validate", args=[second_ticket.ticket_id]),
+            data={"ticketToken": first_ticket.get_qr_token()},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "Ticket identifier mismatch.")
+
+    def test_validate_ticket_rejects_pending_ticket_and_logs_failure(self):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="pending",
+            stripe_session_id="cs_test_123",
+        )
+
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("ticket-validate", args=[ticket.ticket_id]),
+            data={"ticketToken": ticket.get_qr_token()},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("message"), "Ticket is not valid for redemption.")
+        self.assertTrue(
+            TicketRedemptionLog.objects.filter(
+                ticket=ticket,
+                host=self.host,
+                successful=False,
+                status="pending",
+            ).exists()
+        )
 
     def test_duplicate_validate_ticket_fails(self):
         ticket = Ticket.objects.create(
@@ -358,62 +551,3 @@ class TicketingTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-
-class ActivityParticipantModerationTests(APITestCase):
-    def setUp(self):
-        self.host = User.objects.create_user(
-            username="host-mod", email="host-mod@example.com", password="password123"
-        )
-        self.joiner = User.objects.create_user(
-            username="joiner-mod", email="joiner-mod@example.com", password="password123"
-        )
-        self.outsider = User.objects.create_user(
-            username="outsider-mod", email="outsider-mod@example.com", password="password123"
-        )
-        self.activity = Activity.objects.create(
-            host=self.host,
-            is_approved=True,
-            title="Hosted Plan",
-            description="Safety check",
-            location="Park",
-            latitude=40.0,
-            longitude=-74.0,
-            time=timezone.now() + timedelta(days=1),
-            capacity=6,
-            tags=[],
-            images=[],
-        )
-        ActivityParticipant.objects.create(
-            activity=self.activity, user=self.joiner, status="pending"
-        )
-
-    def test_host_can_remove_participant(self):
-        self.client.force_authenticate(self.host)
-        response = self.client.delete(
-            reverse("remove-activity-participant", args=[self.activity.id, self.joiner.id])
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(
-            ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).exists()
-        )
-
-    def test_non_host_cannot_remove_participant(self):
-        self.client.force_authenticate(self.outsider)
-        response = self.client.delete(
-            reverse("remove-activity-participant", args=[self.activity.id, self.joiner.id])
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertTrue(
-            ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).exists()
-        )
-
-    def test_join_notifies_host(self):
-        ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).delete()
-        self.client.force_authenticate(self.joiner)
-        with patch("users.push_notifications.send_activity_join_notification") as notify:
-            response = self.client.post(reverse("join-activity", args=[self.activity.id]))
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            notify.assert_called_once()

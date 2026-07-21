@@ -73,9 +73,9 @@ HTTP is faster for single queries (~3 roundtrips vs ~8 for TCP). See `neon-serve
 
 ### 6. Serverless Environment With Connection Pooling Support?
 
-**Vercel (Fluid Compute)** → Use **TCP with `@vercel/functions`**
+**Fluid compute platforms** → Use **TCP with `pg` and platform lifecycle hooks**
 
-Vercel's Fluid compute supports connection pooling. Use `attachDatabasePool` for optimal connection management. See the [Vercel connection methods guide](https://neon.com/docs/guides/vercel-connection-methods.md) for details.
+Some fluid/serverless compute platforms support connection pooling. Prefer `pg` with a shared pool and the platform's recommended lifecycle hooks for cleaning up idle connections.
 
 **Cloudflare (with Hyperdrive)** → Use **TCP via Hyperdrive**
 
@@ -93,7 +93,7 @@ Fall back to the decision in step 5 based on transaction requirements.
 
 | Platform                | TCP Support | Pooling             | Recommended Driver         |
 | ----------------------- | ----------- | ------------------- | -------------------------- |
-| Vercel (Fluid)          | Yes         | `@vercel/functions` | `pg` (node-postgres)       |
+| Fluid compute platforms | Yes         | Platform hooks      | `pg` (node-postgres)       |
 | Cloudflare (Hyperdrive) | Yes         | Hyperdrive          | `pg` (node-postgres)       |
 | Cloudflare Workers      | No          | No                  | `@neondatabase/serverless` |
 | Netlify Functions       | No          | No                  | `@neondatabase/serverless` |
@@ -120,13 +120,12 @@ For Drizzle ORM integration with Neon, see `neon-drizzle.md`.
 
 ---
 
-## Vercel Fluid + Drizzle Example
+## Fluid Compute + Drizzle Example
 
-Complete database client setup for Vercel with Drizzle ORM and connection pooling. See `neon-drizzle.md` for more examples.
+Complete database client setup for fluid compute platforms with Drizzle ORM and connection pooling. See `neon-drizzle.md` for more examples.
 
 ```typescript
 // src/lib/db/client.ts
-import { attachDatabasePool } from "@vercel/functions";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -135,12 +134,11 @@ import * as schema from "./schema";
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
-attachDatabasePool(pool);
 
 export const db = drizzle({ client: pool, schema });
 ```
 
-**Why `attachDatabasePool`?**
+**Why platform lifecycle hooks for pooling?**
 
 - First request establishes the TCP connection (~8 roundtrips)
 - Subsequent requests reuse the connection instantly
@@ -153,7 +151,7 @@ export const db = drizzle({ client: pool, schema });
 
 When helping a user choose their connection method, gather this information:
 
-1. **Deployment platform**: Where will the app run? (Vercel, Cloudflare, Netlify, Railway, browser, etc.)
+1. **Deployment platform**: Where will the app run? (cPanel, Cloudflare, Netlify, Railway, browser, etc.)
 2. **Runtime type**: Serverless functions, edge functions, or long-running server?
 3. **Transaction requirements**: Does the app need SQL transactions?
 4. **ORM preference**: Using Drizzle, Kysely, Prisma, or raw SQL?
@@ -174,4 +172,4 @@ Then provide:
 | Serverless Driver          | https://neon.com/docs/serverless/serverless-driver.md     |
 | JavaScript SDK             | https://neon.com/docs/reference/javascript-sdk.md         |
 | Connection Pooling         | https://neon.com/docs/connect/connection-pooling.md       |
-| Vercel Connection Methods  | https://neon.com/docs/guides/vercel-connection-methods.md |
+| Platform Pooling Guidance  | https://neon.com/docs/connect/connection-pooling.md        |

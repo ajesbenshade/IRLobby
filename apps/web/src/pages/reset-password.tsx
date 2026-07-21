@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -7,7 +8,6 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 
 const ResetPasswordPage = () => {
   const { token } = useParams<{ token: string }>();
@@ -57,7 +57,8 @@ const ResetPasswordPage = () => {
 
       if (!response.ok) {
         // Check for error messages in different fields
-        const errorMessage = data.error || data.message || data.detail || 'Failed to reset password';
+        const errorMessage =
+          data.error || data.message || data.detail || 'Failed to reset password';
         throw new Error(errorMessage);
       }
 

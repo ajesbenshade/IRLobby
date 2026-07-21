@@ -1,13 +1,16 @@
+import { ListSkeleton, PageState } from '@/components/AppState';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
 import { API_ROUTES } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { MessageCircle, Clock, CheckCircle } from 'lucide-react';
+import { MessageCircle, Clock, CheckCircle, RefreshCw, WifiOff } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface MatchParticipant {
   id: string;
@@ -33,15 +36,23 @@ interface Match {
 }
 
 interface MatchesProps {
-  onOpenChat: (matchId: number) => void;
   showUserActivities?: boolean;
 }
 
-export default function Matches({ onOpenChat, showUserActivities = false }: MatchesProps) {
-  const { data: matches = [], isLoading } = useQuery<Match[]>({
+export default function Matches({ showUserActivities = false }: MatchesProps) {
+  const navigate = useNavigate();
+  const {
+    data: matches = [],
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery<Match[] | PaginatedResponse<Match>>({
     queryKey: [API_ROUTES.MATCHES],
     retry: 1,
   });
+
+  const matchItems = asArrayResponse(matches);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -90,9 +101,34 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+        <header className="flex items-center justify-between bg-white p-4 shadow-sm dark:bg-gray-800">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              {showUserActivities ? 'My Activities' : 'Matches'}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {showUserActivities ? "Activities you've joined" : 'People who matched with you'}
+            </p>
+          </div>
+        </header>
+        <ListSkeleton />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageState
+        icon={WifiOff}
+        title="Unable to load matches"
+        description={error instanceof Error ? error.message : 'Please try again in a moment.'}
+        actionLabel="Retry"
+        onAction={() => void refetch()}
+        isActionLoading={isRefetching}
+        tone="danger"
+        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      />
     );
   }
 
@@ -107,26 +143,29 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
             {showUserActivities ? "Activities you've joined" : 'People who matched with you'}
           </p>
         </div>
-        {matches.length > 0 && (
-          <Button onClick={() => openProfileModal(matches[0])} variant="outline">
+        {matchItems.length > 0 && (
+          <Button onClick={() => openProfileModal(matchItems[0])} variant="outline">
             View Group Profiles
           </Button>
         )}
       </header>
 
       <div className="p-4 space-y-4">
-        {matches.length === 0 ? (
-          <div className="text-center py-12">
-            <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              No matches yet
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400">
-              Start swiping to find activities you love!
-            </p>
-          </div>
+        {matchItems.length === 0 ? (
+          <PageState
+            icon={showUserActivities ? RefreshCw : MessageCircle}
+            title={showUserActivities ? 'No joined activities yet' : 'No matches yet'}
+            description={
+              showUserActivities
+                ? 'When you join a plan, it will appear here with its latest status.'
+                : 'Start swiping through nearby plans to find people and activities you want to meet around.'
+            }
+            actionLabel="Open discovery"
+            onAction={() => navigate('/app/discovery')}
+            className="min-h-[55vh]"
+          />
         ) : (
-          matches.map((match) => (
+          matchItems.map((match) => (
             <Card
               key={match.id}
               className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-shadow"
@@ -141,7 +180,7 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                         <span className="text-primary font-semibold text-lg">
                           {match.activity.title.charAt(0)}
                         </span>
@@ -161,8 +200,9 @@ export default function Matches({ onOpenChat, showUserActivities = false }: Matc
                     {match.status === 'approved' ? (
                       <Button
                         size="sm"
-                        onClick={() => onOpenChat(match.id)}
+                        onClick={() => navigate(`/app/matches/${match.id}/chat`)}
                         className="w-10 h-10 p-0 bg-primary rounded-full relative"
+                        aria-label={`Open chat for ${match.activity.title}`}
                       >
                         <MessageCircle className="w-5 h-5 text-white" />
                       </Button>

@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'apps/mobile/**'
-      - 'package-lock.json'
-      - '.github/workflows/mobile-eas-build.yml'
+      - "apps/mobile/**"
+      - "package-lock.json"
+      - ".github/workflows/mobile-eas-build.yml"
   workflow_dispatch:
 
 concurrency:
@@ -23,21 +23,31 @@ jobs:
         working-directory: apps/mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ vars.EXPO_PUBLIC_TWITTER_CLIENT_ID }}
-      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI }}
-      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
-      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
-      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN }}
+      HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ secrets.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI || 'irlobby://auth/twitter' }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
       EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
     steps:
+      - name: Explain skipped iOS build
+        if: env.HAS_EXPO_TOKEN != 'true'
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository."
+          echo "Skipping iOS EAS build for this run."
+          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
+
       - name: Checkout
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/checkout@v5
 
       - name: Setup Node
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -45,51 +55,184 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm ci
         working-directory: .
 
       - name: Setup Expo and EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
 
-      - name: Verify EXPO_TOKEN
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "EXPO_TOKEN is not configured for this repository."
-            echo "Add the EXPO_TOKEN repository secret before relying on automatic mobile builds."
-            exit 1
-          fi
-
       - name: Verify mobile build keys
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: |
           if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ]; then
-            echo "EXPO_PUBLIC_TWITTER_CLIENT_ID is not configured in repository variables."
-            echo "Add EXPO_PUBLIC_TWITTER_CLIENT_ID under Settings > Secrets and variables > Actions > Variables."
+            echo "Twitter client ID is not configured in repository variables."
+            echo "Set EXPO_PUBLIC_TWITTER_CLIENT_ID or TWITTER_CLIENT_ID (secret) under GitHub Actions secrets/variables."
             exit 1
           fi
 
           if [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ]; then
-            echo "EXPO_PUBLIC_TWITTER_REDIRECT_URI is not configured in repository variables."
+            echo "Twitter redirect URI is not configured in repository variables."
+            echo "Set EXPO_PUBLIC_TWITTER_REDIRECT_URI under Settings > Secrets and variables > Actions > Variables."
             echo "Set it to irlobby://auth/twitter for standalone/TestFlight builds."
             exit 1
           fi
 
           if [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
-            echo "EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN is not configured in repository variables."
-            echo "Add EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN under Settings > Secrets and variables > Actions > Variables."
+            echo "Mapbox public token is not configured in repository variables."
+            echo "Set MAPBOX_PUBLIC_TOKEN (or EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN) under Settings > Secrets and variables > Actions > Variables."
             exit 1
           fi
 
-          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] && [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
-            echo "Warning: Google sign-in client IDs are not configured."
-            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (and optionally WEB/ANDROID) to enable Continue with Google."
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "Warning: missing one or more Google OAuth client IDs."
+            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
+            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in GitHub Actions secrets or variables."
           fi
 
       - name: Validate mobile TypeScript
+        if: env.HAS_EXPO_TOKEN == 'true'
         run: npm run typecheck
 
       - name: Trigger iOS production build
+        if: env.HAS_EXPO_TOKEN == 'true'
+        continue-on-error: true
         run: eas build --platform ios --profile production --auto-submit --non-interactive --no-wait
+
+  build-android:
+    name: Trigger Android production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ${{ secrets.TWITTER_CLIENT_ID || vars.EXPO_PUBLIC_TWITTER_CLIENT_ID || vars.TWITTER_CLIENT_ID }}
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: ${{ vars.EXPO_PUBLIC_TWITTER_REDIRECT_URI || vars.TWITTER_REDIRECT_URI || 'irlobby://auth/twitter' }}
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: ${{ vars.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN || vars.MAPBOX_PUBLIC_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    steps:
+      - name: Explain skipped Android build
+        if: env.HAS_EXPO_TOKEN != 'true'
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository."
+          echo "Skipping Android EAS build for this run."
+          echo "Add EXPO_TOKEN under Settings > Secrets and variables > Actions > Secrets to enable mobile builds."
+
+      - name: Checkout
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: env.HAS_EXPO_TOKEN == 'true'
+        run: npm ci
+        working-directory: .
+
+      - name: Setup Expo and EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ env.EXPO_TOKEN }}
+
+      - name: Verify mobile build keys
+        if: env.HAS_EXPO_TOKEN == 'true'
+        run: |
+          if [ -z "$EXPO_PUBLIC_TWITTER_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_TWITTER_REDIRECT_URI" ] || \
+             [ -z "$EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN" ]; then
+            echo "Missing required Twitter/Mapbox repository variables."
+            echo "Set EXPO_PUBLIC_TWITTER_CLIENT_ID, EXPO_PUBLIC_TWITTER_REDIRECT_URI, EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN."
+            exit 1
+          fi
+
+          if [ -z "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID" ] || \
+             [ -z "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "Warning: missing one or more Google OAuth client IDs."
+            echo "Set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,"
+            echo "and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in GitHub Actions secrets or variables."
+          fi
+
+      - name: Materialize Google Play service account
+        if: env.HAS_EXPO_TOKEN == 'true' && env.HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON == 'true'
+        run: |
+          mkdir -p credentials
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > credentials/play-service-account.json
+          chmod 600 credentials/play-service-account.json
+
+      - name: Validate Google Play service account JSON
+        if: env.HAS_EXPO_TOKEN == 'true' && env.HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON == 'true'
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const path = 'credentials/play-service-account.json';
+
+          let serviceAccount;
+          try {
+            serviceAccount = JSON.parse(fs.readFileSync(path, 'utf8'));
+          } catch (error) {
+            console.error('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON.');
+            console.error(error instanceof Error ? error.message : error);
+            process.exit(1);
+          }
+
+          const requiredKeys = ['type', 'project_id', 'private_key', 'client_email', 'client_id'];
+          const missingKeys = requiredKeys.filter((key) => !serviceAccount[key]);
+          if (missingKeys.length > 0) {
+            console.error(`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing required keys: ${missingKeys.join(', ')}`);
+            process.exit(1);
+          }
+
+          if (serviceAccount.type !== 'service_account') {
+            console.error(`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON has unexpected type: ${serviceAccount.type}`);
+            process.exit(1);
+          }
+
+          console.log(
+            `Validated Google Play service account JSON for ${serviceAccount.client_email} in project ${serviceAccount.project_id}.`
+          );
+          EOF
+
+      - name: Validate mobile TypeScript
+        if: env.HAS_EXPO_TOKEN == 'true'
+        run: npm run typecheck
+
+      - name: Trigger Android production build
+        if: env.HAS_EXPO_TOKEN == 'true'
+        continue-on-error: true
+        env:
+          EXPO_DEBUG: 1
+        run: |
+          if [ "$HAS_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" = "true" ]; then
+            eas build --platform android --profile production --auto-submit-with-profile production-ci --non-interactive --no-wait
+          else
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not configured; triggering Android build without auto-submit."
+            echo "Add the secret to enable Play Console submission from CI."
+            eas build --platform android --profile production --non-interactive --no-wait
+          fi

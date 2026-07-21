@@ -1,13 +1,14 @@
+import hashlib
 import logging
-from datetime import timedelta
 from urllib.parse import urljoin
 
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,6 +18,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .models import Invite, PushDeviceToken, User
+from .password_reset import (
+    generate_password_reset_token,
+    hash_password_reset_token,
+    password_reset_token_expired,
+    password_reset_token_matches,
+)
 from .serializers import (
     InviteCreateSerializer,
     InviteSerializer,
@@ -31,6 +38,39 @@ from .throttles import AuthAnonThrottle, AuthUserThrottle
 from .utils import clear_refresh_cookie, set_refresh_cookie
 
 logger = logging.getLogger(__name__)
+
+
+def _email_log_hash(email):
+    if not email or not isinstance(email, str):
+        return None
+    normalized = email.strip().lower()
+    if not normalized:
+        return None
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+
+
+def _clear_password_reset_token(user):
+    user.password_reset_token = None
+    user.token_created_at = None
+    user.save(update_fields=["password_reset_token", "token_created_at"])
+
+
+def _get_user_for_password_reset_token(token):
+    token_hash = hash_password_reset_token(token)
+    users = list(User.objects.filter(password_reset_token=token_hash))
+    if len(users) != 1:
+        if len(users) > 1:
+            logger.warning("Multiple users share password reset token hash; clearing collisions.")
+            User.objects.filter(password_reset_token=token_hash).update(
+                password_reset_token=None,
+                token_created_at=None,
+            )
+        return None
+
+    user = users[0]
+    if not password_reset_token_matches(user.password_reset_token, token):
+        return None
+    return user
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -155,12 +195,14 @@ def register(request):
     )
 
     try:
-        logger.info(f"Registration attempt for email: {request.data.get('email')}")
+        logger.info(
+            "Registration attempt email_hash=%s", _email_log_hash(request.data.get("email"))
+        )
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             refresh = RefreshToken.for_user(user)
-            logger.info("User registration succeeded for user_id=%s email=%s", user.id, user.email)
+            logger.info("User registration succeeded for user_id=%s", user.id)
             response_payload = {
                 "user": UserSerializer(user).data,
                 "tokens": {
@@ -171,8 +213,8 @@ def register(request):
             return Response(response_payload, status=status.HTTP_201_CREATED)
 
         logger.warning(
-            "User registration failed for email=%s errors=%s",
-            request.data.get("email"),
+            "User registration failed email_hash=%s errors=%s",
+            _email_log_hash(request.data.get("email")),
             serializer.errors,
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -193,12 +235,20 @@ def login(request):
     )
 
     try:
-        logger.info(f"Login attempt for email: {request.data.get('email')}")
-        serializer = UserLoginSerializer(data=request.data)
+        logger.info("Login attempt email_hash=%s", _email_log_hash(request.data.get("email")))
+        serializer = UserLoginSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
-            logger.info("User login succeeded for user_id=%s email=%s", user.id, user.email)
+            try:
+                from axes.handlers.proxy import AxesProxyHandler
+
+                axes_request = getattr(request, "_request", request)
+                AxesProxyHandler.user_logged_in(sender=login, request=axes_request, user=user)
+                AxesProxyHandler.reset_attempts(username=user.email)
+            except Exception as exc:
+                logger.warning("Login abuse tracking success reset failed: %s", exc)
+            logger.info("User login succeeded for user_id=%s", user.id)
             response_payload = {
                 "user": UserSerializer(user).data,
                 "tokens": {
@@ -209,7 +259,9 @@ def login(request):
             return Response(response_payload, status=status.HTTP_200_OK)
 
         logger.warning(
-            "User login failed for email=%s errors=%s", request.data.get("email"), serializer.errors
+            "User login failed email_hash=%s errors=%s",
+            _email_log_hash(request.data.get("email")),
+            serializer.errors,
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
@@ -428,18 +480,10 @@ def auth_status(request):
 def password_reset_confirm(request):
     """Handle password reset confirmations."""
     if request.method == "OPTIONS":
-        response = Response(status=status.HTTP_200_OK)
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response["Access-Control-Allow-Credentials"] = "true"
-        return response
+        return Response(status=status.HTTP_200_OK)
 
     def _invalid_response(message, status_code=status.HTTP_400_BAD_REQUEST):
-        error_response = Response({"error": message}, status=status_code)
-        error_response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        error_response["Access-Control-Allow-Credentials"] = "true"
-        return error_response
+        return Response({"error": message}, status=status_code)
 
     token = None
     if request.method == "GET":
@@ -453,31 +497,13 @@ def password_reset_confirm(request):
         if not token:
             return _invalid_response("Token is required.")
 
-        try:
-            user = User.objects.get(password_reset_token=token)
-        except User.DoesNotExist:
-            return _invalid_response("Invalid or expired token.")
-        except User.MultipleObjectsReturned:
-            logger.warning(
-                "Multiple users share password reset token=%s; clearing collisions.", token
-            )
-            User.objects.filter(password_reset_token=token).update(
-                password_reset_token=None,
-                token_created_at=None,
-            )
+        user = _get_user_for_password_reset_token(token)
+        if not user:
             return _invalid_response("Invalid or expired token.")
 
-        if not user.token_created_at:
+        if password_reset_token_expired(user.token_created_at):
             logger.warning("Password reset token missing timestamp for user_id=%s", user.id)
-            user.password_reset_token = None
-            user.save(update_fields=["password_reset_token"])
-            return _invalid_response("Token has expired.")
-
-        token_age = timezone.now() - user.token_created_at
-        if token_age > timedelta(hours=2):
-            user.password_reset_token = None
-            user.token_created_at = None
-            user.save(update_fields=["password_reset_token", "token_created_at"])
+            _clear_password_reset_token(user)
             return _invalid_response("Token has expired.")
 
         frontend_base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
@@ -486,15 +512,11 @@ def password_reset_confirm(request):
             redirect_url = urljoin(f"{frontend_base}/", reset_path)
             response = Response(status=status.HTTP_302_FOUND)
             response["Location"] = redirect_url
-            response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-            response["Access-Control-Allow-Credentials"] = "true"
             return response
 
         success_response = Response(
             {"detail": "Token is valid.", "token": token}, status=status.HTTP_200_OK
         )
-        success_response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        success_response["Access-Control-Allow-Credentials"] = "true"
         return success_response
 
     new_password = (
@@ -506,47 +528,29 @@ def password_reset_confirm(request):
     if not token or not new_password:
         return _invalid_response("Token and new password are required.")
 
-    try:
-        user = User.objects.get(password_reset_token=token)
-    except User.DoesNotExist:
-        return _invalid_response("Invalid or expired token.")
-    except User.MultipleObjectsReturned:
-        logger.warning("Multiple users share password reset token=%s; clearing collisions.", token)
-        User.objects.filter(password_reset_token=token).update(
-            password_reset_token=None,
-            token_created_at=None,
-        )
+    user = _get_user_for_password_reset_token(token)
+    if not user:
         return _invalid_response("Invalid or expired token.")
 
-    if not user.token_created_at:
+    if password_reset_token_expired(user.token_created_at):
         logger.warning("Password reset token missing timestamp for user_id=%s", user.id)
-        user.password_reset_token = None
-        user.save(update_fields=["password_reset_token"])
+        _clear_password_reset_token(user)
         return _invalid_response("Token has expired.")
 
-    token_age = timezone.now() - user.token_created_at
-    if token_age > timedelta(hours=2):
-        user.password_reset_token = None
-        user.token_created_at = None
-        user.save(update_fields=["password_reset_token", "token_created_at"])
-        return _invalid_response("Token has expired.")
-
-    # Validate password strength
-    if len(new_password) < 8:
-        return _invalid_response("Password must be at least 8 characters long.")
+    try:
+        validate_password(new_password, user)
+    except DjangoValidationError as exc:
+        return _invalid_response(" ".join(exc.messages))
 
     try:
         user.set_password(new_password)
-        user.password_reset_token = None
-        user.token_created_at = None
-        user.save(update_fields=["password", "password_reset_token", "token_created_at"])
+        _clear_password_reset_token(user)
+        user.save(update_fields=["password"])
 
         logger.info("Password reset successful for user_id=%s", user.id)
         response = Response(
             {"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK
         )
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Credentials"] = "true"
         return response
     except Exception as e:
         logger.error("Password reset failed for user_id=%s: %s", user.id, str(e))
@@ -554,8 +558,6 @@ def password_reset_confirm(request):
             {"error": "Failed to reset password. Please try again."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-        response["Access-Control-Allow-Origin"] = request.META.get("HTTP_ORIGIN", "*")
-        response["Access-Control-Allow-Credentials"] = "true"
         return response
 
 
@@ -581,8 +583,8 @@ def request_password_reset(request):
 
     if user:
         try:
-            token = get_random_string(length=32)
-            user.password_reset_token = token
+            token = generate_password_reset_token()
+            user.password_reset_token = hash_password_reset_token(token)
             user.token_created_at = timezone.now()
             user.save(update_fields=["password_reset_token", "token_created_at"])
 

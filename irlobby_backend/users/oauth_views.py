@@ -3,32 +3,53 @@ import hashlib
 import json
 import logging
 import secrets
-from urllib.parse import quote, urlencode, urlparse
+from urllib.parse import quote, urlencode
 
 import requests
+from decouple import config as env_config
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.http import HttpResponse
+from django.http import HttpResponseRedirect
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import UserSerializer
+from .social_auth import (
+    SocialAuthConflict,
+    build_auth_error,
+    build_auth_response,
+    is_apple_oauth_configured,
+    is_google_oauth_configured,
+    normalize_email,
+    resolve_or_create_social_user,
+    split_display_name,
+    verify_apple_identity_token,
+    verify_google_identity_token,
+)
 
 logger = logging.getLogger(__name__)
 
-User = get_user_model()
 
-ALLOWED_MOBILE_REDIRECT_PATHS = {"/twitter"}
+class _MobileAppRedirect(HttpResponseRedirect):
+    """HttpResponseRedirect that permits the mobile app's custom URL scheme."""
+
+    allowed_schemes = HttpResponseRedirect.allowed_schemes + ["irlobby"]
 
 
 def get_twitter_credentials():
-    # Read only from Django settings so tests can override with override_settings.
-    client_id = str(getattr(settings, "TWITTER_CLIENT_ID", "") or "").strip()
-    client_secret = str(getattr(settings, "TWITTER_CLIENT_SECRET", "") or "").strip()
+    configured_client_id = getattr(settings, "TWITTER_CLIENT_ID", None)
+    configured_client_secret = getattr(settings, "TWITTER_CLIENT_SECRET", None)
+    client_id = (
+        configured_client_id
+        if configured_client_id is not None
+        else env_config("TWITTER_CLIENT_ID", default="")
+    ).strip()
+    client_secret = (
+        configured_client_secret
+        if configured_client_secret is not None
+        else env_config("TWITTER_CLIENT_SECRET", default="")
+    ).strip()
     return client_id, client_secret
 
 
@@ -119,60 +140,36 @@ def resolve_frontend_origin(request):
         ):
             return request_origin
 
+    # Honor the request origin when it matches a trusted CSRF origin so that
+    # multiple deployed frontends (e.g. cPanel + direct backend host) can each
+    # complete the OAuth round-trip back to themselves.
+    trusted_origins = {
+        origin.rstrip("/")
+        for origin in getattr(settings, "CSRF_TRUSTED_ORIGINS", []) or []
+        if isinstance(origin, str)
+    }
+    if request_origin and request_origin in trusted_origins:
+        return request_origin
+
+    # Fall back to the request host when no explicit origin was sent (common
+    # for top-level navigations) so callbacks land on the site the user is on.
+    if not request_origin:
+        try:
+            host = request.get_host()
+        except Exception:
+            host = ""
+        if host:
+            scheme = "https" if request.is_secure() else "http"
+            host_origin = f"{scheme}://{host}".rstrip("/")
+            if not trusted_origins or host_origin in trusted_origins:
+                return host_origin
+
     frontend_base_url = getattr(settings, "FRONTEND_BASE_URL", None) or "http://localhost:5173"
     return frontend_base_url.rstrip("/")
 
 
 def is_valid_mobile_redirect_uri(uri):
-    """Only allow the known app deep-link used by standalone/TestFlight builds."""
-    if not isinstance(uri, str) or not uri:
-        return False
-
-    parsed = urlparse(uri)
-    path = (parsed.path or "").rstrip("/") or "/"
-    return (
-        parsed.scheme == "irlobby"
-        and parsed.netloc == "auth"
-        and path in ALLOWED_MOBILE_REDIRECT_PATHS
-        and not parsed.query
-        and not parsed.fragment
-        and not parsed.params
-    )
-
-
-def redirect_to_mobile(mobile_redirect_uri, params):
-    """Redirect to an app deep link.
-
-    Django's HttpResponseRedirect disallows custom schemes, so set Location manually.
-    """
-    target = f"{mobile_redirect_uri}?{urlencode(params)}"
-    response = HttpResponse(status=302)
-    response["Location"] = target
-    return response
-
-
-def mobile_or_json_error(mobile_redirect_uri, message, http_status=status.HTTP_400_BAD_REQUEST):
-    if mobile_redirect_uri and is_valid_mobile_redirect_uri(mobile_redirect_uri):
-        return redirect_to_mobile(mobile_redirect_uri, {"error": message})
-    return Response({"error": message}, status=http_status)
-
-
-def build_auth_tokens_payload(user, created=False):
-    refresh = RefreshToken.for_user(user)
-    access_token = str(refresh.access_token)
-    refresh_token = str(refresh)
-    serialized_user = UserSerializer(user).data
-    return {
-        "user": serialized_user,
-        "tokens": {
-            "refresh": refresh_token,
-            "access": access_token,
-        },
-        "created": created,
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "serialized_user": serialized_user,
-    }
+    return isinstance(uri, str) and uri.startswith("irlobby://")
 
 
 @api_view(["GET"])
@@ -182,8 +179,8 @@ def twitter_oauth_url(request):
     try:
         logger.info(f"Twitter OAuth URL request from origin: {request.META.get('HTTP_ORIGIN')}")
 
-        client_id, client_secret = get_twitter_credentials()
-        if not is_twitter_oauth_configured(client_id, client_secret):
+        client_id, _ = get_twitter_credentials()
+        if not is_twitter_oauth_configured(client_id, _):
             logger.error("Twitter OAuth credentials are incomplete")
             return Response(
                 {"error": "Twitter OAuth not configured. Please contact support."},
@@ -249,42 +246,34 @@ def twitter_oauth_url(request):
 @permission_classes([AllowAny])
 def twitter_oauth_callback(request):
     """Handle Twitter OAuth callback"""
-    mobile_redirect_uri = None
     try:
         logger.info(
             f"Twitter OAuth callback received from origin: {request.META.get('HTTP_ORIGIN')}"
         )
         code = request.GET.get("code")
         state = request.GET.get("state")
-        oauth_error = request.GET.get("error")
 
         logger.info(f"Twitter callback - code present: {bool(code)}, state present: {bool(state)}")
 
-        oauth_session = cache.get(f"twitter_oauth_{state}") if state else None
-        if isinstance(oauth_session, dict):
-            mobile_redirect_uri = oauth_session.get("mobile_redirect_uri")
-
-        if oauth_error:
-            description = request.GET.get("error_description") or oauth_error
-            logger.warning("Twitter callback returned error: %s", description)
-            if state:
-                cache.delete(f"twitter_oauth_{state}")
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                f"Twitter authentication was cancelled or failed: {description}",
-            )
-
         if not code:
             logger.warning("Twitter callback missing authorization code")
-            return mobile_or_json_error(mobile_redirect_uri, "Authorization code required")
+            return Response(
+                {"error": "Authorization code required"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if not state:
             logger.warning("Twitter callback missing state parameter")
-            return mobile_or_json_error(mobile_redirect_uri, "State parameter required")
+            return Response(
+                {"error": "State parameter required"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # Retrieve OAuth session details from cache using state as key
+        oauth_session = cache.get(f"twitter_oauth_{state}")
         if not oauth_session:
             logger.warning(f"Twitter callback - invalid or expired state: {state[:10]}...")
-            return mobile_or_json_error(mobile_redirect_uri, "Session expired or invalid state")
+            return Response(
+                {"error": "Session expired or invalid state"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if isinstance(oauth_session, dict):
             code_verifier = oauth_session.get("code_verifier")
@@ -299,7 +288,9 @@ def twitter_oauth_callback(request):
 
         if not code_verifier:
             logger.warning("Twitter callback - missing code_verifier in cached state")
-            return mobile_or_json_error(mobile_redirect_uri, "Session invalid. Please try again.")
+            return Response(
+                {"error": "Session invalid. Please try again."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Clean up the cached code_verifier
         cache.delete(f"twitter_oauth_{state}")
@@ -309,10 +300,9 @@ def twitter_oauth_callback(request):
 
         if not is_twitter_oauth_configured(client_id, client_secret):
             logger.error("Twitter OAuth credentials are incomplete")
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                "Twitter OAuth not configured",
-                status.HTTP_503_SERVICE_UNAVAILABLE,
+            return Response(
+                {"error": "Twitter OAuth not configured"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         logger.info("Twitter callback - using redirect_uri: %s", redirect_uri)
@@ -326,23 +316,27 @@ def twitter_oauth_callback(request):
                 client_secret=client_secret,
             )
             logger.info(f"Twitter callback - token response status: {token_response.status_code}")
+            logger.info(
+                f"Twitter callback - token response headers: {dict(token_response.headers)}"
+            )
 
             if token_response.status_code != 200:
                 logger.error(
                     f"Twitter callback - token exchange failed: {token_response.status_code}"
                 )
                 logger.error(f"Twitter callback - token response body: {token_response.text}")
-                return mobile_or_json_error(
-                    mobile_redirect_uri,
-                    "Twitter authentication failed. Please try again.",
+                return Response(
+                    {
+                        "error": f"Twitter authentication failed: {token_response.status_code}",
+                        "details": token_response.text[:200],
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         except requests.RequestException as e:
             logger.error(f"Twitter callback - network error during token exchange: {str(e)}")
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                "Failed to connect to Twitter",
-                status.HTTP_502_BAD_GATEWAY,
+            return Response(
+                {"error": "Failed to connect to Twitter"}, status=status.HTTP_502_BAD_GATEWAY
             )
 
         token_data = token_response.json()
@@ -350,13 +344,11 @@ def twitter_oauth_callback(request):
 
         if not access_token:
             logger.error("No access token received from Twitter")
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                "Invalid response from Twitter",
-                status.HTTP_502_BAD_GATEWAY,
+            return Response(
+                {"error": "Invalid response from Twitter"}, status=status.HTTP_502_BAD_GATEWAY
             )
 
-        # Get user info from Twitter
+        # Get user info from Twitter (including email)
         user_url = "https://api.twitter.com/2/users/me"
         headers = {"Authorization": f"Bearer {access_token}"}
         params = {"user.fields": "name,username"}
@@ -365,71 +357,127 @@ def twitter_oauth_callback(request):
             user_response = requests.get(user_url, headers=headers, params=params, timeout=30)
         except requests.RequestException as e:
             logger.error(f"Twitter user info request failed: {str(e)}")
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                "Failed to get user information from Twitter",
-                status.HTTP_502_BAD_GATEWAY,
+            return Response(
+                {"error": "Failed to get user information from Twitter"},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
         if user_response.status_code != 200:
             logger.error(
                 f"Twitter user info failed: {user_response.status_code} - {user_response.text}"
             )
-            return mobile_or_json_error(
-                mobile_redirect_uri,
-                "Failed to get user information from Twitter",
-                status.HTTP_502_BAD_GATEWAY,
+            return Response(
+                {"error": "Failed to get user information from Twitter"},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
         twitter_user = user_response.json()["data"]
-
-        # Create or get user
-        user, created = User.objects.get_or_create(
-            oauth_id=twitter_user["id"],
-            oauth_provider="twitter",
-            defaults={
-                "username": twitter_user["username"],
-                "email": f"{twitter_user['username']}@twitter.oauth.local",
-                "first_name": (
-                    twitter_user.get("name", "").split()[0] if twitter_user.get("name") else ""
-                ),
-                "last_name": (
-                    " ".join(twitter_user.get("name", "").split()[1:])
-                    if twitter_user.get("name") and len(twitter_user.get("name", "").split()) > 1
-                    else ""
-                ),
-            },
-        )
-
-        auth_payload = build_auth_tokens_payload(user, created=created)
+        first_name, last_name = split_display_name(twitter_user.get("name", ""))
+        try:
+            user, created = resolve_or_create_social_user(
+                provider="twitter",
+                provider_user_id=twitter_user["id"],
+                username=twitter_user.get("username"),
+                first_name=first_name,
+                last_name=last_name,
+            )
+        except SocialAuthConflict as error:
+            return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+        response_payload = build_auth_response(user, created=created)
 
         if mobile_redirect_uri:
-            return redirect_to_mobile(
-                mobile_redirect_uri,
+            callback_query = urlencode(
                 {
-                    "access": auth_payload["access_token"],
-                    "refresh": auth_payload["refresh_token"],
-                    "user": json.dumps(auth_payload["serialized_user"], separators=(",", ":")),
+                    "access": response_payload["tokens"]["access"],
+                    "refresh": response_payload["tokens"]["refresh"],
+                    "user": json.dumps(response_payload["user"], separators=(",", ":")),
                     "created": "true" if created else "false",
-                },
+                }
             )
+            return _MobileAppRedirect(f"{mobile_redirect_uri}?{callback_query}")
 
-        return Response(
-            {
-                "user": auth_payload["user"],
-                "tokens": auth_payload["tokens"],
-                "created": created,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(response_payload, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.error(f"Twitter OAuth callback failed: {str(e)}")
-        return mobile_or_json_error(
-            mobile_redirect_uri,
-            "Authentication failed. Please try again.",
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return Response(
+            {"error": "Authentication failed. Please try again."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def google_mobile_login(request):
+    id_token_value = request.data.get("id_token") or request.data.get("idToken")
+    if not isinstance(id_token_value, str) or not id_token_value.strip():
+        return build_auth_error("Google identity token is required.")
+
+    if not is_google_oauth_configured():
+        return build_auth_error(
+            "Google OAuth is not configured.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payload = verify_google_identity_token(id_token_value)
+    except Exception as error:
+        logger.warning("Google mobile login failed: %s", error)
+        return build_auth_error("Google sign-in could not be verified.")
+
+    email = normalize_email(payload.get("email"))
+    if not email or not payload.get("email_verified"):
+        return build_auth_error("Google account email must be verified.")
+
+    try:
+        user, created = resolve_or_create_social_user(
+            provider="google",
+            provider_user_id=payload["sub"],
+            email=email,
+            username=email.split("@", 1)[0],
+            first_name=payload.get("given_name", "") or "",
+            last_name=payload.get("family_name", "") or "",
+        )
+    except SocialAuthConflict as error:
+        return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def apple_mobile_login(request):
+    identity_token = request.data.get("identity_token") or request.data.get("identityToken")
+    if not isinstance(identity_token, str) or not identity_token.strip():
+        return build_auth_error("Apple identity token is required.")
+
+    if not is_apple_oauth_configured():
+        return build_auth_error(
+            "Apple Sign In is not configured.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payload = verify_apple_identity_token(identity_token)
+    except Exception as error:
+        logger.warning("Apple mobile login failed: %s", error)
+        return build_auth_error("Apple sign-in could not be verified.")
+
+    first_name = (request.data.get("first_name") or request.data.get("firstName") or "").strip()
+    last_name = (request.data.get("last_name") or request.data.get("lastName") or "").strip()
+    email = normalize_email(payload.get("email") or request.data.get("email"))
+
+    try:
+        user, created = resolve_or_create_social_user(
+            provider="apple",
+            provider_user_id=payload["sub"],
+            email=email,
+            username=email.split("@", 1)[0] if email else None,
+            first_name=first_name,
+            last_name=last_name,
+        )
+    except SocialAuthConflict as error:
+        return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

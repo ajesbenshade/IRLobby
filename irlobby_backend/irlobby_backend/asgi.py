@@ -4,7 +4,7 @@ ASGI config for irlobby_backend project.
 It exposes the ASGI callable as a module-level variable named ``application``.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
+https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
 """
 
 import os
@@ -19,17 +19,24 @@ if not settings.configured:
 
 # Now safe to import Django components
 # Import routing after Django is set up
-import chat.routing
-from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
-from chat.middleware import JwtAuthMiddleware
+from channels.security.websocket import OriginValidator
 from django.core.asgi import get_asgi_application
+
+import chat.routing
+from chat.middleware import JwtAuthMiddleware
+
+websocket_application = JwtAuthMiddleware(URLRouter(chat.routing.websocket_urlpatterns))
+
+if getattr(settings, "WEBSOCKET_ALLOWED_ORIGINS", None):
+    websocket_application = OriginValidator(
+        websocket_application,
+        settings.WEBSOCKET_ALLOWED_ORIGINS,
+    )
 
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": JwtAuthMiddleware(
-            AuthMiddlewareStack(URLRouter(chat.routing.websocket_urlpatterns))
-        ),
+        "websocket": websocket_application,
     }
 )

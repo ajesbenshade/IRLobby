@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Activity } from '@/types/activity';
 import { format, isValid } from 'date-fns';
-import { MapPin, Clock, Users, Star } from 'lucide-react';
+import { ExternalLink, MapPin, Clock, Users, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface ActivityDetailsModalProps {
   activity: Activity & {
@@ -28,11 +29,12 @@ export default function ActivityDetailsModal({
   onJoin,
 }: ActivityDetailsModalProps) {
   const safeTitle = activity.title || 'Untitled Activity';
-  const safeTags = Array.isArray(activity.tags)
-    ? activity.tags
-    : typeof activity.tags === 'string' && activity.tags.trim().length > 0
-      ? [activity.tags]
-      : [];
+  const rawTags = activity.tags as unknown;
+  const safeTags = Array.isArray(rawTags)
+    ? rawTags
+    : typeof rawTags === 'string' && rawTags.trim().length > 0
+    ? [rawTags]
+    : [];
   const rawActivityTime =
     activity.time ||
     (activity as Activity & { dateTime?: string; date_time?: string }).dateTime ||
@@ -63,13 +65,9 @@ export default function ActivityDetailsModal({
         </DialogHeader>
 
         {/* Activity Image */}
-        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl mb-4 overflow-hidden">
+        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl mb-4 overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
-            <img
-              src={activity.images[0]}
-              alt={safeTitle}
-              className="w-full h-full object-cover"
-            />
+            <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
@@ -107,7 +105,9 @@ export default function ActivityDetailsModal({
                 : 'Date TBD'}
               {hasValidDate && parsedActivityDate && (
                 <>
-                  <span aria-hidden="true" className="mx-1">&bull;</span>
+                  <span aria-hidden="true" className="mx-1">
+                    &bull;
+                  </span>
                   {format(parsedActivityDate, 'h:mm a')}
                 </>
               )}
@@ -173,6 +173,12 @@ export default function ActivityDetailsModal({
         <div className="flex space-x-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
+          </Button>
+          <Button asChild variant="outline" className="flex-1">
+            <Link to={`/app/activity/${activity.id}`} onClick={onClose}>
+              <ExternalLink className="mr-1 h-4 w-4" />
+              View page
+            </Link>
           </Button>
           <Button onClick={handleJoin} className="flex-1 bg-green-600 hover:bg-green-700">
             Join Event

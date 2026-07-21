@@ -1,11 +1,11 @@
-from activities.models import Activity
-from chat.models import Conversation, Message
 from django.core.management.base import BaseCommand
 from django.db import transaction
+
+from activities.models import Activity
+from chat.models import Conversation, Message
 from matches.models import Match
 from reviews.models import Review
 from swipes.models import Swipe
-
 from users.models import User
 
 

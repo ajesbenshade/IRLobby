@@ -1,0 +1,69 @@
+upstream django_web {
+    server web:8000;
+}
+
+upstream django_ws {
+    server ws:8001;
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    client_max_body_size 25m;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location = /ws {
+        return 301 /ws/;
+    }
+
+    location /ws/ {
+        proxy_pass http://django_ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+
+    location /api/ {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /admin/ {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    location /media/ {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    # SPA: serve built web app, fall back to index.html for client-side routes
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

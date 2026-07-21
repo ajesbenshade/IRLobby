@@ -1,9 +1,11 @@
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
+
 from utils.sanitize import strip_html
 
 from .models import Invite, PushDeviceToken, User
+from .reliability import build_reliability_summary
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -21,6 +23,9 @@ class UserSerializer(serializers.ModelSerializer):
     legalAccepted = serializers.SerializerMethodField()
     termsAcceptedAt = serializers.DateTimeField(source="terms_accepted_at", read_only=True)
     privacyAcceptedAt = serializers.DateTimeField(source="privacy_accepted_at", read_only=True)
+    reliability = serializers.SerializerMethodField()
+    swipes_remaining_today = serializers.SerializerMethodField()
+    swipesRemainingToday = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -50,6 +55,9 @@ class UserSerializer(serializers.ModelSerializer):
             "privacyAcceptedAt",
             "latitude",
             "longitude",
+            "reliability",
+            "swipes_remaining_today",
+            "swipesRemainingToday",
         )
         read_only_fields = ("id",)
 
@@ -76,6 +84,17 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_legalAccepted(self, obj):
         return bool(obj.terms_accepted_at and obj.privacy_accepted_at)
+
+    def get_reliability(self, obj):
+        return build_reliability_summary(obj)
+
+    def get_swipes_remaining_today(self, obj):
+        from swipes.throttles import get_swipes_remaining_today
+
+        return get_swipes_remaining_today(obj)
+
+    def get_swipesRemainingToday(self, obj):
+        return self.get_swipes_remaining_today(obj)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -104,12 +123,18 @@ class UserLoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        request = self.context.get("request")
+        auth_request = getattr(request, "_request", request)
 
         try:
             user_obj = User.objects.filter(email=email).first()
-            if not user_obj:
-                raise serializers.ValidationError("Invalid credentials")
-            user = authenticate(username=user_obj.username, password=password)
+            username = user_obj.username if user_obj else email
+            user = authenticate(
+                request=auth_request,
+                username=username,
+                password=password,
+                email=email,
+            )
         except Exception:
             raise serializers.ValidationError("Invalid credentials")
 
@@ -162,11 +187,6 @@ class UserOnboardingSerializer(serializers.Serializer):
         instance = getattr(self, "instance", None)
         preferences = dict(instance.preferences or {}) if instance else {}
 
-        bio = (attrs.get("bio", instance.bio if instance else "") or "").strip()
-        city = (attrs.get("city", instance.location if instance else "") or "").strip()
-        avatar_url = (
-            attrs.get("avatar_url", instance.avatar_url if instance else "") or ""
-        ).strip()
         interests = attrs.get("interests", preferences.get("interests", []))
         activity_preferences = attrs.get(
             "activity_preferences", preferences.get("activity_preferences", {})
@@ -187,14 +207,14 @@ class UserOnboardingSerializer(serializers.Serializer):
             bool(value) for value in (activity_preferences or {}).values()
         )
 
-        if bio and city and avatar_url and has_preferences and terms_accepted and privacy_accepted:
+        if has_preferences and terms_accepted and privacy_accepted:
             return attrs
 
         raise serializers.ValidationError(
             {
                 "detail": (
-                    "Complete your bio, city, profile photo, interests or activity preferences, "
-                    "and accept the terms and privacy policy before finishing onboarding."
+                    "Choose interests or activity preferences, and accept the terms and "
+                    "privacy policy before finishing onboarding."
                 )
             }
         )

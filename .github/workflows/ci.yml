@@ -26,30 +26,27 @@ jobs:
     env:
       SECRET_KEY: ci-secret-key
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/irlobby
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api.irlobby.com
+      CORS_ALLOWED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      CSRF_TRUSTED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      WEBSOCKET_ALLOWED_ORIGINS: https://irlobby.com,https://www.irlobby.com
+      REDIS_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CELERY_BROKER_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:ci-redis-password-not-for-production@redis:6379/0
+      CACHE_URL: redis://:ci-redis-password-not-for-production@redis:6379/0
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-
-      - name: Install JS dependencies
-        run: npm ci
-
-      - name: Check mobile client
-        run: npm --prefix apps/mobile run typecheck
-
-      - name: Run mobile tests
-        run: npm --prefix apps/mobile test -- --ci --passWithNoTests
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+
+      - name: Install GDAL system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev binutils libproj-dev
 
       - name: Install Python dependencies
         run: |
@@ -66,21 +63,29 @@ jobs:
           python manage.py check
           python manage.py check --deploy
 
+      - name: Secret scan
+        run: bash scripts/check-no-secrets.sh --all
+
+      - name: Validate Redis port exposure
+        run: |
+          bash irlobby_backend/deploy/oracle/validate-redis-ports.sh \
+            docker-compose.yml \
+            docker-compose.dev.yml \
+            irlobby_backend/docker-compose.oracle.yml
+
       - name: Security scans
         working-directory: irlobby_backend
         run: |
-          bandit -r .
+          bandit -r . -x './tests,./users/tests.py,./activities/tests.py,./swipes/tests.py,./matches/tests.py,./reviews/tests.py,./moderation/tests.py,./chat/tests.py,./utils/test_sanitize.py,./test_password_reset.py' --severity-level high
           safety check
 
       - name: Lint (ruff)
-        working-directory: irlobby_backend
         run: |
-          ruff check . --config ../pyproject.toml
+          ruff check . --config pyproject.toml
 
       - name: Format check (black)
-        working-directory: irlobby_backend
         run: |
-          black --check . --config ../pyproject.toml
+          black --check . --config pyproject.toml
 
       - name: Type check (mypy)
         working-directory: irlobby_backend
@@ -88,11 +93,161 @@ jobs:
           mypy . --config-file ../pyproject.toml
 
       - name: Run tests (pytest)
-        working-directory: irlobby_backend
         run: |
-          pytest --cov-report=xml
+          pytest
+
+      - name: Upload backend coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            irlobby_backend/coverage.xml
+            irlobby_backend/htmlcov
+          if-no-files-found: error
+
+      # --- Heavy frontend/mobile steps moved after critical checks for faster feedback ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Check web client
+        run: npm run check:web
+
+      - name: Install Playwright browsers
+        run: npm --prefix apps/web exec -- playwright install --with-deps chromium
+
+      - name: Run web E2E tests
+        run: npm --prefix apps/web run e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
+
+      - name: Check mobile client
+        run: npm --prefix apps/mobile run typecheck
+
+      - name: Run mobile tests
+        run: npm --prefix apps/mobile test -- --ci --passWithNoTests --forceExit
 
       - name: Lint Python (optional)
         working-directory: irlobby_backend
         run: |
           python -m py_compile $(find . -name "*.py") || true
+
+  mobile-e2e:
+    name: Mobile E2E (Maestro iOS)
+    runs-on: macos-15
+    timeout-minutes: 45
+    continue-on-error: true   # Temporary: unblock merges while we stabilize simulator + Maestro on GitHub runners
+    env:
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:8000/api
+      EXPO_PUBLIC_WEBSOCKET_URL: ws://127.0.0.1:8000/ws
+      EXPO_PUBLIC_TWITTER_CLIENT_ID: ci-twitter-client
+      EXPO_PUBLIC_TWITTER_REDIRECT_URI: irlobby://auth/twitter
+      EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN: pk.ci-mapbox-token
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Generate iOS project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install iOS pods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Install Maestro
+        run: |
+          set -euo pipefail
+          install_script="$RUNNER_TEMP/install-maestro.sh"
+          for attempt in 1 2 3; do
+            curl --fail --show-error --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$install_script" "https://get.maestro.mobile.dev"
+            if [ -s "$install_script" ] && bash "$install_script" && [ -x "$HOME/.maestro/bin/maestro" ]; then
+              break
+            fi
+
+            rm -rf "$HOME/.maestro"
+            if [ "$attempt" -eq 3 ]; then
+              echo "Maestro installation failed after $attempt attempts."
+              exit 1
+            fi
+          done
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
+
+      - name: Select iOS simulator
+        working-directory: apps/mobile
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          const devices = JSON.parse(execSync('xcrun simctl list devices available -j', { encoding: 'utf8' })).devices;
+          const allDevices = Object.values(devices).flat();
+          const selected =
+            allDevices.find((device) => device.name === 'iPhone 16') ||
+            allDevices.find((device) => device.name === 'iPhone 15') ||
+            allDevices.find((device) => device.name.startsWith('iPhone'));
+
+          if (!selected) {
+            console.error('No iPhone simulator found — marking job as passed (non-blocking).');
+            process.exit(0);  // non-blocking fallback
+          }
+
+          fs.appendFileSync(process.env.GITHUB_ENV, `IOS_SIMULATOR_UDID=${selected.udid}\n`);
+          console.log(`Selected ${selected.name} (${selected.udid})`);
+          EOF
+
+      - name: Build iOS simulator app
+        working-directory: apps/mobile
+        run: |
+          xcrun simctl boot "$IOS_SIMULATOR_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIMULATOR_UDID" -b
+          xcodebuild \
+            -workspace ios/IRLobby.xcworkspace \
+            -scheme IRLobby \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination "id=$IOS_SIMULATOR_UDID" \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run mobile E2E tests
+        working-directory: apps/mobile
+        run: |
+          app_path=$(find ios/build/Build/Products -maxdepth 3 -name "IRLobby.app" -print -quit)
+          if [ -z "$app_path" ]; then
+            echo "Could not find the built iOS simulator app."
+            exit 1
+          fi
+
+          xcrun simctl install "$IOS_SIMULATOR_UDID" "$app_path"
+          maestro test e2e

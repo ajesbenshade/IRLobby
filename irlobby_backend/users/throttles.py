@@ -1,9 +1,9 @@
-from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from utils.throttles import DynamicAnonRateThrottle, DynamicUserRateThrottle
 
 
-class AuthAnonThrottle(AnonRateThrottle):
+class AuthAnonThrottle(DynamicAnonRateThrottle):
     scope = "auth_anon"
 
 
-class AuthUserThrottle(UserRateThrottle):
+class AuthUserThrottle(DynamicUserRateThrottle):
     scope = "auth_user"

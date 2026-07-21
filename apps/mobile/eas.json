@@ -9,20 +9,40 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview"
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://liyf.app",
-        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://liyf.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.irlobby.com",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://api.irlobby.com",
+        "EXPO_PUBLIC_TWITTER_REDIRECT_URI": "irlobby://auth/twitter"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
+    },
+    "production-no-submit": {
+      "extends": "production"
     }
   },
   "submit": {
     "production": {
       "ios": {
         "ascAppId": "6759202702"
+      },
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": false
+      }
+    },
+    "production-ci": {
+      "extends": "production",
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-service-account.json"
       }
     }
   }

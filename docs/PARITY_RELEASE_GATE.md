@@ -24,8 +24,8 @@ npm run check:release
 
 - Contract checker: `scripts/check-api-contract.mjs`
 - Scan scope:
-  - `client/src/**`
-  - `irlobby_mobile/src/**`
+  - `apps/mobile/src/**`
+  - `packages/shared/**`
 
 If this fails, fix unsupported endpoint usage before building TestFlight.
 
@@ -158,7 +158,7 @@ Use this matrix during smoke run evidence capture.
   - Notifications parity implemented on web + mobile.
   - Legacy activity-chat drift removed (`client/src/components/chat-window.tsx`).
 - Warning cleanup:
-  - Updated `baseline-browser-mapping` to latest in both `client` and `irlobby_mobile`.
+  - Updated `baseline-browser-mapping` to latest in both `client` and `apps/mobile`.
   - Verified warning no longer appears in web build and mobile bundle output.
 - Final gate results (local):
   - `npm run check:api-contract` ✅

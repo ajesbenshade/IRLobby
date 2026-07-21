@@ -1,15 +1,18 @@
 from django.db.models import Q
-from moderation.models import BlockedUser
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
+from moderation.models import BlockedUser
+
 from .models import Match
 from .serializers import MatchSerializer
+from .throttles import MatchReadThrottle
 
 
 class MatchListView(generics.ListAPIView):
     serializer_class = MatchSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [MatchReadThrottle]
 
     def get_queryset(self):
         user = self.request.user
@@ -21,6 +24,7 @@ class MatchListView(generics.ListAPIView):
 
         return (
             Match.objects.filter(Q(user_a=user) | Q(user_b=user))
+            .select_related("activity", "user_a", "user_b")
             .exclude(user_a_id__in=exclude_ids)
             .exclude(user_b_id__in=exclude_ids)
             .order_by("-created_at")

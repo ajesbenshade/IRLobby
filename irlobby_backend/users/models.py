@@ -6,7 +6,7 @@ from django.db import models
 
 class User(AbstractUser):
     bio = models.TextField(blank=True)
-    avatar_url = models.URLField(blank=True)
+    avatar_url = models.TextField(blank=True)
     location = models.CharField(max_length=255, blank=True)
     preferences = models.JSONField(default=dict)
     latitude = models.FloatField(null=True, blank=True)
@@ -16,7 +16,7 @@ class User(AbstractUser):
     oauth_provider = models.CharField(max_length=50, blank=True, null=True)
     oauth_id = models.CharField(max_length=100, blank=True, null=True)
 
-    # Password reset fields
+    # Password reset fields. password_reset_token stores a hash, never the emailed token.
     password_reset_token = models.CharField(max_length=100, blank=True, null=True)
     token_created_at = models.DateTimeField(null=True, blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
@@ -28,6 +28,36 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class SocialAuthIdentity(models.Model):
+    PROVIDER_CHOICES = [
+        ("apple", "Apple"),
+        ("google", "Google"),
+        ("twitter", "Twitter/X"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="social_identities")
+    provider = models.CharField(max_length=32, choices=PROVIDER_CHOICES)
+    provider_user_id = models.CharField(max_length=255)
+    email = models.EmailField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "provider_user_id"],
+                name="unique_social_auth_identity",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "provider"],
+                name="unique_user_social_provider",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.provider_user_id} -> user {self.user_id}"
 
 
 class Invite(models.Model):

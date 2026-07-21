@@ -1,13 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 import type { AuthTokens } from '../types/auth';
 
 const STORAGE_KEY = '@irlobby/auth/tokens';
+const LEGACY_ASYNC_STORAGE_KEY = STORAGE_KEY;
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+  keychainService: 'irlobby.auth.tokens',
+};
+
+const clearLegacyTokens = async () => {
+  await AsyncStorage.removeItem(LEGACY_ASYNC_STORAGE_KEY);
+};
 
 export const authStorage = {
   async getTokens(): Promise<AuthTokens | null> {
     try {
-      const value = await AsyncStorage.getItem(STORAGE_KEY);
+      const value = await SecureStore.getItemAsync(STORAGE_KEY, SECURE_STORE_OPTIONS);
+      await clearLegacyTokens();
       return value ? (JSON.parse(value) as AuthTokens) : null;
     } catch (error) {
       console.warn('[authStorage] Failed to read tokens', error);
@@ -16,14 +27,16 @@ export const authStorage = {
   },
   async setTokens(tokens: AuthTokens): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(tokens), SECURE_STORE_OPTIONS);
+      await clearLegacyTokens();
     } catch (error) {
       console.warn('[authStorage] Failed to persist tokens', error);
     }
   },
   async clearTokens(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await SecureStore.deleteItemAsync(STORAGE_KEY, SECURE_STORE_OPTIONS);
+      await clearLegacyTokens();
     } catch (error) {
       console.warn('[authStorage] Failed to clear tokens', error);
     }

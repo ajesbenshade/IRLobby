@@ -1,21 +1,17 @@
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import {
-  Button,
-  Divider,
-  HelperText,
-  Text,
-} from 'react-native-paper';
+import { Button, Divider, HelperText, Text } from 'react-native-paper';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
 import { config } from '@constants/config';
+import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
-import { isAppleSignInAvailable, isGoogleSignInConfigured } from '@services/authService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -24,29 +20,55 @@ import type { AuthStackParamList } from '@navigation/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export const LoginScreen = ({ navigation }: Props) => {
-  const { signIn, signInWithTwitter, signInWithApple, signInWithGoogle } = useAuth();
+  const {
+    signIn,
+    signInWithAppleIdentityToken,
+    signInWithGoogleIdToken,
+    signInWithTwitter,
+  } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [appleAvailable, setAppleAvailable] = useState(false);
-  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
 
-  const isFormValid = useMemo(() => email.trim().length > 0 && password.length >= 8, [email, password]);
+  const isFormValid = useMemo(
+    () => email.trim().length > 0 && password.length >= 8,
+    [email, password]
+  );
+  const isGoogleConfigured = useMemo(
+    () =>
+      Boolean(
+        config.googleExpoClientId ||
+          config.googleIosClientId ||
+          config.googleAndroidClientId ||
+          config.googleWebClientId
+      ),
+    []
+  );
+
+  const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: config.googleExpoClientId,
+    iosClientId: config.googleIosClientId,
+    androidClientId: config.googleAndroidClientId,
+    webClientId: config.googleWebClientId,
+    scopes: ['profile', 'email'],
+    selectAccount: true,
+  });
 
   useEffect(() => {
     let isMounted = true;
 
-    const checkProviders = async () => {
-      const [apple, google] = await Promise.all([
-        isAppleSignInAvailable(),
-        isGoogleSignInConfigured(),
-      ]);
+    const checkAppleAvailability = async () => {
+      if (Platform.OS !== 'ios') {
+        return;
+      }
+
+      const available = await AppleAuthentication.isAvailableAsync();
       if (isMounted) {
-        setAppleAvailable(apple);
-        setGoogleAvailable(google);
+        setIsAppleAvailable(available);
       }
     };
 
-    void checkProviders();
+    void checkAppleAvailability();
 
     return () => {
       isMounted = false;
@@ -66,23 +88,62 @@ export const LoginScreen = ({ navigation }: Props) => {
   });
 
   const {
-    mutateAsync: signInWithAppleAsync,
-    isPending: isApplePending,
-    error: appleError,
-  } = useMutation({
-    mutationFn: () => signInWithApple(),
-  });
-
-  const {
     mutateAsync: signInWithGoogleAsync,
     isPending: isGooglePending,
     error: googleError,
   } = useMutation({
-    mutationFn: () => signInWithGoogle(),
+    mutationFn: async () => {
+      if (!isGoogleConfigured || !googleRequest) {
+        throw new Error(authCopy.login.googleNotConfigured);
+      }
+
+      const authResult = await promptGoogleAsync();
+      if (authResult.type !== 'success') {
+        throw new Error('Google sign-in was cancelled.');
+      }
+
+      const idToken = authResult.params?.id_token;
+      if (typeof idToken !== 'string' || !idToken) {
+        throw new Error('Google sign-in did not return an identity token.');
+      }
+
+      return signInWithGoogleIdToken(idToken);
+    },
   });
 
-  const isBusy = isPending || isTwitterPending || isApplePending || isGooglePending;
-  const authError = error ?? twitterError ?? appleError ?? googleError;
+  const {
+    mutateAsync: signInWithAppleAsync,
+    isPending: isApplePending,
+    error: appleError,
+  } = useMutation({
+    mutationFn: async () => {
+      if (!isAppleAvailable) {
+        throw new Error('Apple sign-in is not available on this device.');
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('Apple sign-in did not return an identity token.');
+      }
+
+      return signInWithAppleIdentityToken({
+        identityToken: credential.identityToken,
+        email: credential.email,
+        firstName: credential.fullName?.givenName,
+        lastName: credential.fullName?.familyName,
+      });
+    },
+  });
+
+  const isBusy =
+    isPending || isTwitterPending || isGooglePending || isApplePending;
+  const authError = error ?? twitterError ?? googleError ?? appleError;
 
   const handleSubmit = useCallback(async () => {
     if (!isFormValid || isBusy) {
@@ -100,14 +161,6 @@ export const LoginScreen = ({ navigation }: Props) => {
     await signInWithTwitterAsync();
   }, [isBusy, signInWithTwitterAsync]);
 
-  const handleAppleSignIn = useCallback(async () => {
-    if (isBusy) {
-      return;
-    }
-
-    await signInWithAppleAsync();
-  }, [isBusy, signInWithAppleAsync]);
-
   const handleGoogleSignIn = useCallback(async () => {
     if (isBusy) {
       return;
@@ -116,110 +169,129 @@ export const LoginScreen = ({ navigation }: Props) => {
     await signInWithGoogleAsync();
   }, [isBusy, signInWithGoogleAsync]);
 
+  const handleAppleSignIn = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
+    await signInWithAppleAsync();
+  }, [isBusy, signInWithAppleAsync]);
+
   return (
     <AuthShell
-      eyebrow="IRLobby"
-      title="Find your people fast."
-      subtitle="Sign in to spot nearby plans, keep the group chat warm, and turn a maybe into an actual night out."
+      eyebrow={authCopy.login.eyebrow}
+      title={authCopy.login.title}
+      subtitle={authCopy.login.subtitle}
       footer={
         <View style={styles.footer}>
-          <Text variant="bodyMedium" style={styles.footerText}>New here?</Text>
-          <Button mode="text" onPress={() => navigation.navigate('Register')} disabled={isBusy} compact>
-            Create an account
+          <Text variant="bodyMedium" style={styles.footerText}>
+            {authCopy.login.footerPrompt}
+          </Text>
+          <Button
+            mode="text"
+            onPress={() => navigation.navigate('Register')}
+            disabled={isBusy}
+            compact
+          >
+            {authCopy.login.footerCta}
           </Button>
         </View>
       }
     >
       <View style={styles.heroRow}>
-        <AccentPill>Good plans only</AccentPill>
-        <Text style={styles.heroMetric}>Nearby hangs, better group chats, and fewer "we should do something" texts.</Text>
+        <AccentPill>{authCopy.login.pillText}</AccentPill>
       </View>
 
       <View style={styles.form}>
-          <TextInput
-            label="Email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Password"
-            secureTextEntry
-            autoCapitalize="none"
-            value={password}
-            onChangeText={setPassword}
-            mode="outlined"
-            style={styles.input}
-          />
-          {authError && (
-            <HelperText type="error" visible>
-              {getErrorMessage(authError, 'Unable to sign in. Please try again.')}
-            </HelperText>
-          )}
+        <TextInput
+          label="Email"
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          mode="outlined"
+          style={styles.input}
+        />
+        <TextInput
+          label="Password"
+          secureTextEntry
+          autoCapitalize="none"
+          value={password}
+          onChangeText={setPassword}
+          mode="outlined"
+          style={styles.input}
+        />
+        {authError && (
+          <HelperText type="error" visible>
+            {getErrorMessage(authError, 'Unable to sign in. Please try again.')}
+          </HelperText>
+        )}
 
-          {config.isUsingFallbackApiBaseUrl && (
-            <HelperText type="info" visible>
-              Using default backend URL: {config.apiBaseUrl}
-            </HelperText>
-          )}
+        {config.isUsingFallbackApiBaseUrl && (
+          <HelperText type="info" visible>
+            Using default backend URL: {config.apiBaseUrl}
+          </HelperText>
+        )}
 
+        <Button
+          mode="contained"
+          onPress={handleSubmit}
+          disabled={!isFormValid || isBusy}
+          loading={isPending}
+          style={styles.submitButton}
+          contentStyle={styles.submitButtonContent}
+          buttonColor={appColors.primary}
+        >
+          {authCopy.login.primaryCta}
+        </Button>
+
+        <View style={styles.oauthSection}>
+          <Divider />
           <Button
-            mode="contained"
-            onPress={handleSubmit}
-            disabled={!isFormValid || isBusy}
-            loading={isPending}
-            style={styles.submitButton}
-            contentStyle={styles.submitButtonContent}
-            buttonColor={appColors.primary}
+            mode="outlined"
+            onPress={handleTwitterSignIn}
+            disabled={isBusy}
+            loading={isTwitterPending}
+            style={styles.oauthButton}
           >
-            Sign in
+            {authCopy.login.twitterCta}
           </Button>
-
-          <View style={styles.oauthSection}>
-            <Divider />
-            {Platform.OS === 'ios' && appleAvailable ? (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={999}
-                style={styles.appleButton}
-                onPress={handleAppleSignIn}
-              />
-            ) : null}
-            {googleAvailable ? (
-              <Button
-                mode="outlined"
-                onPress={handleGoogleSignIn}
-                disabled={isBusy}
-                loading={isGooglePending}
-                style={styles.oauthButton}
-              >
-                Continue with Google
-              </Button>
-            ) : null}
+          <Button
+            mode="outlined"
+            onPress={handleGoogleSignIn}
+            disabled={isBusy || !isGoogleConfigured || !googleRequest}
+            loading={isGooglePending}
+            style={styles.oauthButton}
+          >
+            {authCopy.login.googleCta}
+          </Button>
+          {!isGoogleConfigured && (
+            <HelperText type="info" visible>
+              {authCopy.login.googleNotConfigured}
+            </HelperText>
+          )}
+          {isAppleAvailable && (
             <Button
               mode="outlined"
-              onPress={handleTwitterSignIn}
+              onPress={handleAppleSignIn}
               disabled={isBusy}
-              loading={isTwitterPending}
+              loading={isApplePending}
               style={styles.oauthButton}
             >
-              Continue with X
+              {authCopy.login.appleCta}
             </Button>
-          </View>
+          )}
+        </View>
 
-          <Button
-            mode="text"
-            onPress={() => navigation.navigate('ForgotPassword')}
-            disabled={isBusy}
-            style={styles.linkButton}
-          >
-            Forgot password?
-          </Button>
+        <Button
+          mode="text"
+          onPress={() => navigation.navigate('ForgotPassword')}
+          disabled={isBusy}
+          style={styles.linkButton}
+        >
+          {authCopy.login.forgotPassword}
+        </Button>
       </View>
     </AuthShell>
   );
@@ -228,12 +300,6 @@ export const LoginScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   heroRow: {
     gap: 10,
-  },
-  heroMetric: {
-    color: appColors.ink,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '600',
   },
   form: {
     gap: 12,
@@ -257,10 +323,6 @@ const styles = StyleSheet.create({
   },
   oauthButton: {
     borderRadius: 999,
-  },
-  appleButton: {
-    width: '100%',
-    height: 54,
   },
   footer: {
     flexDirection: 'row',

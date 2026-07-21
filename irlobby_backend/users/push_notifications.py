@@ -152,3 +152,4 @@ def send_activity_join_notification(activity, joiner):
         f"{joiner_label} asked to join {activity.title}.",
         payload,
     )
+

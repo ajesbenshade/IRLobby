@@ -1,5 +1,6 @@
-import { QueryClient, QueryFunction } from '@tanstack/react-query';
 import { API_ROUTES } from '@shared/schema';
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
+
 import { config } from './config';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
@@ -85,11 +86,51 @@ function resolveUrl(url: string) {
   return joinBaseUrl(API_BASE_URL, url);
 }
 
+export function extractApiErrorMessage(value: unknown, fallback = 'Request failed') {
+  if (typeof value === 'string') {
+    return value || fallback;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+
+  const data = value as Record<string, unknown>;
+  const directMessage = data.detail ?? data.error ?? data.message;
+  if (typeof directMessage === 'string' && directMessage.trim()) {
+    return directMessage;
+  }
+
+  const firstFieldError = Object.values(data).find(
+    (entry): entry is string[] => Array.isArray(entry) && typeof entry[0] === 'string',
+  );
+
+  return firstFieldError?.[0] ?? fallback;
+}
+
+async function readResponseBody(res: Response) {
+  const text = await res.text();
+  if (!text) {
+    return '';
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const body = await readResponseBody(res);
+    throw new Error(`${res.status}: ${extractApiErrorMessage(body, res.statusText)}`);
   }
+}
+
+export async function parseJsonResponse<T>(res: Response): Promise<T> {
+  await throwIfResNotOk(res);
+  return (await res.json()) as T;
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS) {

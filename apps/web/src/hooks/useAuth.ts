@@ -1,6 +1,6 @@
+import { API_ROUTES } from '@shared/schema';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
-import { API_ROUTES } from '@shared/schema';
 
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
@@ -27,7 +27,25 @@ interface User {
   totalRatings?: number;
   eventsHosted?: number;
   eventsAttended?: number;
+  swipesRemainingToday?: number | null;
 }
+
+const toOptionalNumber = (value: unknown): number | null | undefined => {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
 
 const normalizeUser = (profile: Record<string, unknown>): User => ({
   id: String(profile.id ?? ''),
@@ -53,8 +71,11 @@ const normalizeUser = (profile: Record<string, unknown>): User => ({
     typeof profile.onboardingCompleted === 'boolean'
       ? profile.onboardingCompleted
       : typeof profile.onboarding_completed === 'boolean'
-        ? profile.onboarding_completed
-        : undefined,
+      ? profile.onboarding_completed
+      : undefined,
+  swipesRemainingToday: toOptionalNumber(
+    profile.swipesRemainingToday ?? profile.swipes_remaining_today,
+  ),
 });
 
 export function useAuth() {
@@ -115,8 +136,8 @@ export function useAuth() {
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       if (!token) {
         setAuthErrorMessage(null);
@@ -224,6 +245,7 @@ export function useAuth() {
     user,
     isAuthenticated: !!user,
     isLoading,
+    needsOnboarding: user?.onboardingCompleted === false,
     token,
     handleAuthentication,
     logout,

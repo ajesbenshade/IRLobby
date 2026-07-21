@@ -1,52 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 20 14.3% 4.1%;
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
+  /* Electric Midnight (light surface for some components) */
+  --background: 240 20% 97%;
+  --foreground: 245 20% 12%;
+  --muted: 245 15% 94%;
+  --muted-foreground: 245 12% 45%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover-foreground: 245 20% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
-  --primary: 243 75% 59%; /* #6366F1 - Indigo */
-  --primary-foreground: 211 100% 99%;
-  --secondary: 38 95% 56%; /* #F59E0B - Amber */
-  --secondary-foreground: 24 9.8% 10%;
-  --accent: 157 65% 42%; /* #10B981 - Emerald */
-  --accent-foreground: 60 9.1% 97.8%;
-  --destructive: 0 84.2% 60.2%; /* #EF4444 - Red */
-  --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 20 14.3% 4.1%;
+  --card-foreground: 245 20% 12%;
+  --border: 245 15% 88%;
+  --input: 245 15% 88%;
+  --primary: 248 100% 65%; /* #5B4BFF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 295 81% 47%; /* #C026D3 */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 188 100% 56%; /* #1EE8FF */
+  --accent-foreground: 245 20% 12%;
+  --destructive: 350 89% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 248 100% 65%;
+  --chart-1: 248 100% 65%;
+  --chart-2: 295 81% 47%;
+  --chart-3: 188 100% 56%;
+  --chart-4: 45 75% 68%; /* gold */
+  --chart-5: 38 92% 50%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 245 20% 12%;
+  --sidebar-primary: 248 100% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 248 40% 94%;
+  --sidebar-accent-foreground: 248 100% 40%;
+  --sidebar-border: 245 15% 88%;
+  --sidebar-ring: 248 100% 65%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --primary: 243 75% 59%;
-  --primary-foreground: 211 100% 99%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
+  /* Electric Midnight — primary dark premium experience */
+  --background: 245 25% 6%; /* #0A0814 */
+  --foreground: 245 25% 97%; /* #F4F3FA */
+  --muted: 245 20% 12%;
+  --muted-foreground: 245 15% 68%; /* #A5A1C2 */
+  --popover: 245 22% 9%;
+  --popover-foreground: 245 25% 97%;
+  --card: 245 22% 9%; /* #110D24 */
+  --card-foreground: 245 25% 97%;
+  --border: 245 18% 18%; /* #2A2548 */
+  --input: 245 18% 18%;
+  --primary: 248 100% 65%; /* #5B4BFF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 295 81% 47%; /* #C026D3 */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 188 100% 56%; /* #1EE8FF */
+  --accent-foreground: 245 25% 97%;
+  --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 240 4.9% 83.9%;
+  --ring: 248 100% 65%;
+  --chart-1: 248 100% 65%;
+  --chart-2: 295 81% 47%;
+  --chart-3: 188 100% 56%;
+  --chart-4: 45 75% 68%; /* gold */
+  --chart-5: 38 92% 50%;
+  --sidebar-background: 245 22% 9%;
+  --sidebar-foreground: 245 25% 97%;
+  --sidebar-primary: 248 100% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 245 18% 14%;
+  --sidebar-accent-foreground: 245 25% 97%;
+  --sidebar-border: 245 18% 18%;
+  --sidebar-ring: 248 100% 65%;
   --radius: 0.5rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
@@ -58,7 +88,9 @@
   }
 
   body {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
+      'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: hsl(var(--background));
@@ -68,25 +100,53 @@
 
 /* Custom animations */
 @keyframes swipeRight {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(100px) rotate(15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100px) rotate(15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes swipeLeft {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(-100px) rotate(-15deg); opacity: 0; }
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100px) rotate(-15deg);
+    opacity: 0;
+  }
 }
 
 @keyframes bounceIn {
-  0% { transform: scale(0.3); opacity: 0; }
-  50% { transform: scale(1.05); }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-swipe-right {
@@ -127,6 +187,59 @@ html {
   scroll-behavior: smooth;
 }
 
+.public-site-bg {
+  /* Electric Midnight dark premium */
+  background: radial-gradient(circle at 12% 18%, rgba(91, 75, 255, 0.22), transparent 32%),
+    radial-gradient(circle at 78% 12%, rgba(192, 38, 211, 0.18), transparent 26%),
+    radial-gradient(circle at 78% 86%, rgba(30, 232, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, #0a0814 0%, #110d24 55%, #0a0814 100%);
+}
+
+.public-page-bg {
+  background: radial-gradient(circle at 50% 0%, rgba(91, 75, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 95% 20%, rgba(192, 38, 211, 0.12), transparent 24%), #0a0814;
+}
+
+.public-glass {
+  background: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.public-text-gradient {
+  background: linear-gradient(135deg, #5b4bff 0%, #c026d3 52%, #1ee8ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.public-card-hover {
+  transition: transform 220ms ease, background-color 220ms ease, border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.public-card-hover:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 50px rgba(91, 75, 255, 0.14);
+}
+
+.public-phone-shadow {
+  box-shadow: 0 38px 120px rgba(91, 75, 255, 0.2), 0 20px 70px rgba(192, 38, 211, 0.14),
+    0 16px 60px rgba(30, 232, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-card-hover {
+    transition: none;
+  }
+
+  .public-card-hover:hover {
+    transform: none;
+  }
+}
 
 .pb-bottom-nav {
   padding-bottom: var(--bottom-nav-offset);
@@ -139,7 +252,6 @@ html {
 /* Hide scrollbar but keep functionality */
 .hide-scrollbar {
   -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -181,26 +293,26 @@ html {
 @supports (-webkit-touch-callout: none) {
   /* Fix iOS Safari 100vh issue */
   .h-screen {
-    height: 100vh;
     height: -webkit-fill-available;
+    height: 100vh;
   }
 
   .min-h-screen {
-    min-height: 100vh;
     min-height: -webkit-fill-available;
+    min-height: 100vh;
   }
 
   /* Better scrolling on iOS */
   .overflow-auto {
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   /* Fix iOS Safari input zoom */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
     font-size: 16px !important;
@@ -208,25 +320,26 @@ html {
   }
 
   /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
+  input:focus,
+  textarea:focus,
+  select:focus {
     -webkit-user-select: text;
     user-select: text;
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #6366f1;
+    border: 2px solid #7c3aed;
     border-radius: 8px;
   }
 
   /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
-    -webkit-text-size-adjust: 100%;
     -webkit-appearance: none;
     appearance: none;
     border-radius: 8px;
@@ -234,7 +347,6 @@ html {
 
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
@@ -248,7 +360,7 @@ html {
   }
 
   /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
+  [role='dialog'],
   .modal-overlay {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -263,6 +375,7 @@ html {
   }
 
   .backdrop-blur {
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background-color: rgba(255, 255, 255, 0.8);
   }
@@ -272,7 +385,9 @@ html {
   }
 
   /* Optimize animations for mobile performance */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.2s !important;
     animation-delay: 0s !important;
     transition-duration: 0.2s !important;
@@ -283,25 +398,26 @@ html {
 
 @supports (-webkit-touch-callout: none) {
   /* Fix iOS Safari input focus issues */
-  input:focus, textarea:focus, select:focus {
+  input:focus,
+  textarea:focus,
+  select:focus {
     -webkit-user-select: text;
     user-select: text;
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #6366f1;
+    border: 2px solid #7c3aed;
     border-radius: 8px;
   }
 
   /* Prevent iOS Safari from zooming on form elements */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="tel"],
-  input[type="number"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='number'],
   textarea,
   select {
-    -webkit-text-size-adjust: 100%;
     -webkit-appearance: none;
     appearance: none;
     border-radius: 8px;
@@ -309,7 +425,6 @@ html {
 
   /* Fix iOS Safari scrolling and momentum */
   .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
@@ -323,7 +438,7 @@ html {
   }
 
   /* Fix iOS Safari modal and overlay issues */
-  [role="dialog"],
+  [role='dialog'],
   .modal-overlay {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -336,6 +451,7 @@ html {
 @media (max-width: 768px) and (max-height: 1024px) {
   /* Disable expensive backdrop filters on low-end devices */
   .backdrop-blur {
+    -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background-color: rgba(255, 255, 255, 0.95);
   }
@@ -365,7 +481,7 @@ html {
   input,
   select,
   textarea,
-  [role="button"] {
+  [role='button'] {
     min-width: 44px;
     min-height: 44px;
   }

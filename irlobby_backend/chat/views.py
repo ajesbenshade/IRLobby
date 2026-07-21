@@ -1,8 +1,9 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from moderation.models import BlockedUser
 from rest_framework import generics, serializers
 from rest_framework.permissions import IsAuthenticated
+
+from moderation.models import BlockedUser
 from users.push_notifications import send_new_message_notification
 
 from .models import Conversation, Message

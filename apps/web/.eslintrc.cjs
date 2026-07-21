@@ -1,3 +1,7 @@
+const path = require('path');
+
+const typescriptImportResolver = require.resolve('eslint-import-resolver-typescript');
+
 module.exports = {
   root: true,
   env: {
@@ -18,15 +22,15 @@ module.exports = {
       version: 'detect',
     },
     'import/resolver': {
-      typescript: {
-        project: ['./tsconfig.json'],
+      [typescriptImportResolver]: {
+        project: [path.join(__dirname, 'tsconfig.json')],
       },
       node: {
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
       },
     },
   },
-  plugins: ['react', 'react-hooks', '@typescript-eslint', 'jsx-a11y', 'import', 'prettier'],
+  plugins: ['react', 'react-hooks', '@typescript-eslint', 'jsx-a11y', 'import'],
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
@@ -35,7 +39,7 @@ module.exports = {
     'plugin:jsx-a11y/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
-    'plugin:prettier/recommended',
+    'prettier',
   ],
   rules: {
     'react/react-in-jsx-scope': 'off',
@@ -55,6 +59,13 @@ module.exports = {
       },
     ],
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    'prettier/prettier': 'warn',
   },
+  overrides: [
+    {
+      files: ['**/*.d.ts'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': 'off',
+      },
+    },
+  ],
 };

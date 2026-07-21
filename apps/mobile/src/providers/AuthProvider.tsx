@@ -1,11 +1,19 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { setAnalyticsUser, track } from '@services/analytics';
+import { deactivatePushTokens } from '@services/pushNotificationService';
 import {
   fetchProfile,
   login,
-  loginWithApple,
-  loginWithGoogle,
+  loginWithAppleIdentityToken,
+  loginWithGoogleIdToken,
   loginWithTwitter,
   logout as logoutService,
   register,
@@ -13,9 +21,12 @@ import {
   resetPassword as resetPasswordService,
 } from '@services/authService';
 import { authStorage } from '@services/authStorage';
-import { deactivatePushTokens } from '@services/pushNotificationService';
 
 import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
+import {
+  clearUser as clearMonitoringUser,
+  setUser as setMonitoringUser,
+} from '../lib/monitoring';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -23,8 +34,13 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
-  signInWithApple: () => Promise<AuthUser>;
-  signInWithGoogle: () => Promise<AuthUser>;
+  signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
+  signInWithAppleIdentityToken: (payload: {
+    identityToken: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<AuthUser | null>;
@@ -33,10 +49,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-const identifyUser = (nextUser: AuthUser) => {
-  setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
-};
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -55,14 +67,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const profile = await fetchProfile();
         if (isMounted) {
           setUser(profile);
-          identifyUser(profile);
         }
       } catch (error) {
         console.warn('[AuthProvider] Failed to restore session', error);
         await authStorage.clearTokens();
         if (isMounted) {
           setUser(null);
-          setAnalyticsUser(null);
         }
       } finally {
         if (isMounted) {
@@ -78,10 +88,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  // Tag/untag the Sentry user whenever auth state flips. Safe no-op when Sentry
+  // isn't initialized (DSN missing or SDK not installed yet).
+  useEffect(() => {
+    if (user) {
+      setMonitoringUser({ id: String(user.id), email: user.email });
+    } else {
+      clearMonitoringUser();
+    }
+  }, [user]);
+
   const signIn = useCallback(async (payload: LoginPayload) => {
     const { user: nextUser } = await login(payload);
     setUser(nextUser);
-    identifyUser(nextUser);
+    setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'email' });
     return nextUser;
   }, []);
@@ -89,31 +109,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithTwitter = useCallback(async () => {
     const { user: nextUser } = await loginWithTwitter();
     setUser(nextUser);
-    identifyUser(nextUser);
+    setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'twitter' });
     return nextUser;
   }, []);
 
-  const signInWithApple = useCallback(async () => {
-    const { user: nextUser } = await loginWithApple();
+  const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
+    const { user: nextUser } = await loginWithGoogleIdToken(idToken);
     setUser(nextUser);
-    identifyUser(nextUser);
-    track('login', { method: 'apple' });
-    return nextUser;
-  }, []);
-
-  const signInWithGoogle = useCallback(async () => {
-    const { user: nextUser } = await loginWithGoogle();
-    setUser(nextUser);
-    identifyUser(nextUser);
+    setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'google' });
     return nextUser;
   }, []);
 
+  const signInWithAppleIdentityToken = useCallback(
+    async (payload: {
+      identityToken: string;
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    }) => {
+      const { user: nextUser } = await loginWithAppleIdentityToken(payload);
+      setUser(nextUser);
+      setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
+      track('login', { method: 'apple' });
+      return nextUser;
+    },
+    []
+  );
+
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const { user: nextUser } = await register(payload);
     setUser(nextUser);
-    identifyUser(nextUser);
+    setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('sign_up', { method: 'email' });
     return nextUser;
   }, []);
@@ -129,7 +157,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const profile = await fetchProfile();
       setUser(profile);
-      identifyUser(profile);
       return profile;
     } catch (error) {
       console.warn('[AuthProvider] Failed to refresh profile', error);
@@ -141,9 +168,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await requestPasswordResetService(email);
   }, []);
 
-  const resetPassword = useCallback(async (token: string, newPassword: string) => {
-    await resetPasswordService(token, newPassword);
-  }, []);
+  const resetPassword = useCallback(
+    async (token: string, newPassword: string) => {
+      await resetPasswordService(token, newPassword);
+    },
+    []
+  );
 
   const value = useMemo(
     () => ({
@@ -152,8 +182,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAuthenticated: !!user,
       signIn,
       signInWithTwitter,
-      signInWithApple,
-      signInWithGoogle,
+      signInWithGoogleIdToken,
+      signInWithAppleIdentityToken,
       signUp,
       signOut,
       refreshProfile,
@@ -166,13 +196,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       requestPasswordReset,
       resetPassword,
       signIn,
-      signInWithApple,
-      signInWithGoogle,
       signInWithTwitter,
+      signInWithGoogleIdToken,
+      signInWithAppleIdentityToken,
       signOut,
       signUp,
       user,
-    ],
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

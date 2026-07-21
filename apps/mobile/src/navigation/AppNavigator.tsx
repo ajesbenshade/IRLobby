@@ -20,8 +20,8 @@ const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     Linking.createURL('/'),
     'irlobby://',
-    'https://liyf.app',
-    'https://www.liyf.app',
+    'https://irlobby.com',
+    'https://www.irlobby.com',
   ],
   config: {
     screens: {
@@ -52,6 +52,7 @@ export const AppNavigator = () => {
   const { isAuthenticated, isInitializing, user } = useAuth();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   usePushNotificationNavigation(navigationRef);
+
 
   if (isInitializing) {
     return (

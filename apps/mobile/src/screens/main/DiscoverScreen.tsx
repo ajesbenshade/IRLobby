@@ -20,7 +20,7 @@ import { ActivityCardSkeleton } from '@components/skeletons';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
-import type { MainStackParamList } from '@navigation/types';
+import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import {
   fetchActivities,
   joinActivity,
@@ -31,12 +31,19 @@ import {
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
+type DiscoverNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Discover'>,
+  NativeStackNavigationProp<MainStackParamList>
+>;
+
 export const DiscoverScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const navigation = useNavigation<DiscoverNavigationProp>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const pan = useRef(new Animated.ValueXY()).current;
@@ -55,10 +62,9 @@ export const DiscoverScreen = () => {
   const [skillFilter, setSkillFilter] = useState('');
   const [ageFilter, setAgeFilter] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState('');
-  const [priceMinFilter, setPriceMinFilter] = useState('');
-  const [priceMaxFilter, setPriceMaxFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
+  const [tonightOnly, setTonightOnly] = useState(true);
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -72,6 +78,15 @@ export const DiscoverScreen = () => {
 
     return trimmed;
   }, []);
+
+  const tonightWindow = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    return {
+      date_from: now.toISOString(),
+      date_to: end.toISOString(),
+    };
+  }, [tonightOnly]);
 
   const discoverFilters: ActivityFetchFilters = useMemo(
     () => ({
@@ -88,10 +103,10 @@ export const DiscoverScreen = () => {
       skill_level: skillFilter.trim() || undefined,
       age_restriction: ageFilter.trim() || undefined,
       visibility: visibilityFilter.trim() || undefined,
-      price_min: priceMinFilter.trim() ? Number(priceMinFilter) : undefined,
-      price_max: priceMaxFilter.trim() ? Number(priceMaxFilter) : undefined,
-      date_from: normalizeDateFilter(dateFromFilter, false),
-      date_to: normalizeDateFilter(dateToFilter, true),
+      date_from: tonightOnly
+        ? tonightWindow.date_from
+        : normalizeDateFilter(dateFromFilter, false),
+      date_to: tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
     }),
     [
       ageFilter,
@@ -101,10 +116,11 @@ export const DiscoverScreen = () => {
       distanceFilter,
       locationFilter,
       normalizeDateFilter,
-      priceMaxFilter,
-      priceMinFilter,
       skillFilter,
       tagFilter,
+      tonightOnly,
+      tonightWindow.date_from,
+      tonightWindow.date_to,
       visibilityFilter,
     ],
   );
@@ -174,10 +190,9 @@ export const DiscoverScreen = () => {
         skillFilter,
         ageFilter,
         visibilityFilter,
-        priceMinFilter,
-        priceMaxFilter,
-        dateFromFilter,
-        dateToFilter,
+        tonightOnly ? 'tonight' : '',
+        tonightOnly ? '' : dateFromFilter,
+        tonightOnly ? '' : dateToFilter,
       ].filter((value) => value.trim().length > 0).length,
     [
       ageFilter,
@@ -186,10 +201,9 @@ export const DiscoverScreen = () => {
       dateToFilter,
       distanceFilter,
       locationFilter,
-      priceMaxFilter,
-      priceMinFilter,
       skillFilter,
       tagFilter,
+      tonightOnly,
       visibilityFilter,
     ],
   );
@@ -269,10 +283,9 @@ export const DiscoverScreen = () => {
     setSkillFilter('');
     setAgeFilter('');
     setVisibilityFilter('');
-    setPriceMinFilter('');
-    setPriceMaxFilter('');
     setDateFromFilter('');
     setDateToFilter('');
+    setTonightOnly(true);
     setCurrentIndex(0);
   }, []);
 
@@ -411,38 +424,34 @@ export const DiscoverScreen = () => {
                 mode="outlined"
                 style={styles.input}
               />
-              <View style={styles.filterRow}>
-                <TextInput
-                  label="Price min"
-                  value={priceMinFilter}
-                  onChangeText={setPriceMinFilter}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  style={[styles.input, styles.halfInput]}
-                />
-                <TextInput
-                  label="Price max"
-                  value={priceMaxFilter}
-                  onChangeText={setPriceMaxFilter}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  style={[styles.input, styles.halfInput]}
-                />
-              </View>
-              <TextInput
-                label="Date from (YYYY-MM-DD or ISO)"
-                value={dateFromFilter}
-                onChangeText={setDateFromFilter}
-                mode="outlined"
+              <Button
+                mode={tonightOnly ? 'contained' : 'outlined'}
+                onPress={() => {
+                  setTonightOnly((previous) => !previous);
+                  setCurrentIndex(0);
+                }}
                 style={styles.input}
-              />
-              <TextInput
-                label="Date to (YYYY-MM-DD or ISO)"
-                value={dateToFilter}
-                onChangeText={setDateToFilter}
-                mode="outlined"
-                style={styles.input}
-              />
+              >
+                {tonightOnly ? 'Tonight (next 8 hours) · on' : 'Tonight filter · off'}
+              </Button>
+              {!tonightOnly ? (
+                <>
+                  <TextInput
+                    label="Date from (YYYY-MM-DD or ISO)"
+                    value={dateFromFilter}
+                    onChangeText={setDateFromFilter}
+                    mode="outlined"
+                    style={styles.input}
+                  />
+                  <TextInput
+                    label="Date to (YYYY-MM-DD or ISO)"
+                    value={dateToFilter}
+                    onChangeText={setDateToFilter}
+                    mode="outlined"
+                    style={styles.input}
+                  />
+                </>
+              ) : null}
             </PanelCard>
           ) : null}
 
@@ -506,12 +515,33 @@ export const DiscoverScreen = () => {
 
           {!isLoading && activities.length === 0 ? (
             <EmptyStatePanel
-              title="Nothing matches this vibe yet"
-              description="Widen the radius, clear a few filters, or refresh to pull in the latest nearby plans."
+              title={tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
+              description={
+                tonightOnly
+                  ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
+                  : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
+              }
               action={
-                <Button mode="contained" buttonColor={appColors.primary} onPress={resetDeck}>
-                  Refresh deck
-                </Button>
+                <View style={styles.emptyActions}>
+                  {tonightOnly ? (
+                    <Button
+                      mode="contained"
+                      buttonColor={appColors.primary}
+                      onPress={() => {
+                        setTonightOnly(false);
+                        setCurrentIndex(0);
+                      }}
+                    >
+                      Show all times
+                    </Button>
+                  ) : null}
+                  <Button mode="outlined" onPress={resetDeck}>
+                    Refresh deck
+                  </Button>
+                  <Button mode="text" onPress={() => navigation.navigate('Create')}>
+                    Host a plan
+                  </Button>
+                </View>
               }
             />
           ) : null}
@@ -519,11 +549,16 @@ export const DiscoverScreen = () => {
           {!isLoading && activities.length > 0 && !currentActivity ? (
             <EmptyStatePanel
               title="You cleared the deck"
-              description="You’ve seen the current round. Refresh to reshuffle and catch anything new."
+              description="You’ve seen this round. Refresh for anything new, or host a plan so others can find you."
               action={
-                <Button mode="outlined" onPress={resetDeck}>
-                  Reload deck
-                </Button>
+                <View style={styles.emptyActions}>
+                  <Button mode="outlined" onPress={resetDeck}>
+                    Reload deck
+                  </Button>
+                  <Button mode="text" onPress={() => navigation.navigate('Create')}>
+                    Host a plan
+                  </Button>
+                </View>
               }
             />
           ) : null}
@@ -795,6 +830,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   errorContainer: {
+    gap: 8,
+  },
+  emptyActions: {
     gap: 8,
   },
   animatedCard: {

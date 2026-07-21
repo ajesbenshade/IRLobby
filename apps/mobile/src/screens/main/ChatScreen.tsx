@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
 import { Button, HelperText, Text } from 'react-native-paper';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import { TextInput } from '@components/PaperCompat';
 import { FlatList, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
+import type { MainTabParamList } from '@navigation/types';
 import { fetchMatches } from '@services/matchService';
 import {
   fetchConversationMessages,
@@ -18,6 +20,8 @@ import {
 import { getAccessToken } from '@services/authStorage';
 import { appColors, appTypography } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 const getConversationMessages = (conversation: { messages?: unknown } | null | undefined) => (
   Array.isArray(conversation?.messages) ? conversation.messages : []
@@ -36,6 +40,7 @@ type ChatSocketPayload = {
 };
 
 export const ChatScreen = () => {
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
@@ -484,10 +489,10 @@ export const ChatScreen = () => {
       {!conversationsLoading && conversations.length === 0 ? (
         <EmptyStatePanel
           title="No chats yet"
-          description="Match with someone or join a plan to start chatting."
+          description="Match on a plan first — then message here to lock in the details."
           action={
-            <Button mode="contained" buttonColor={appColors.primary} onPress={() => void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] })}>
-              Find someone to chat
+            <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Discover')}>
+              Find a plan
             </Button>
           }
         />

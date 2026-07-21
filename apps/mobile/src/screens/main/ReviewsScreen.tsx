@@ -134,7 +134,7 @@ export const ReviewsScreen = () => {
       )}
 
       <Card>
-        <Card.Title title="Reliability score" subtitle="Built from post-activity reviews and ticket checks." />
+        <Card.Title title="Reliability score" subtitle="Built from post-activity reviews." />
         <Card.Content style={styles.reliabilityContent}>
           <Text variant="displaySmall" style={styles.scoreText}>
             {reliability?.score ?? '--'}
@@ -142,7 +142,7 @@ export const ReviewsScreen = () => {
           <View style={styles.reliabilityCopy}>
             <Text variant="titleMedium">{reliability?.label ?? 'New profile'}</Text>
             <Text variant="bodySmall" style={styles.mutedText}>
-              {reliability?.reviewCount ?? 0} reviews · {reliability?.successfulTicketValidations ?? 0} successful ticket checks
+              {reliability?.reviewCount ?? 0} reviews
             </Text>
           </View>
         </Card.Content>

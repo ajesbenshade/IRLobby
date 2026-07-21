@@ -248,15 +248,17 @@ export const LoginScreen = ({ navigation }: Props) => {
 
         <View style={styles.oauthSection}>
           <Divider />
-          <Button
-            mode="outlined"
-            onPress={handleTwitterSignIn}
-            disabled={isBusy}
-            loading={isTwitterPending}
-            style={styles.oauthButton}
-          >
-            {authCopy.login.twitterCta}
-          </Button>
+          {isAppleAvailable && (
+            <Button
+              mode="outlined"
+              onPress={handleAppleSignIn}
+              disabled={isBusy}
+              loading={isApplePending}
+              style={styles.oauthButton}
+            >
+              {authCopy.login.appleCta}
+            </Button>
+          )}
           <Button
             mode="outlined"
             onPress={handleGoogleSignIn}
@@ -271,17 +273,15 @@ export const LoginScreen = ({ navigation }: Props) => {
               {authCopy.login.googleNotConfigured}
             </HelperText>
           )}
-          {isAppleAvailable && (
-            <Button
-              mode="outlined"
-              onPress={handleAppleSignIn}
-              disabled={isBusy}
-              loading={isApplePending}
-              style={styles.oauthButton}
-            >
-              {authCopy.login.appleCta}
-            </Button>
-          )}
+          <Button
+            mode="outlined"
+            onPress={handleTwitterSignIn}
+            disabled={isBusy}
+            loading={isTwitterPending}
+            style={styles.oauthButton}
+          >
+            {authCopy.login.twitterCta}
+          </Button>
         </View>
 
         <Button

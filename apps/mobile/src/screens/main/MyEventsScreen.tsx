@@ -191,8 +191,13 @@ export const MyEventsScreen = () => {
               </View>
             ) : (
               <EmptyStatePanel
-                title="No hosted events yet"
-                description="Once you publish an activity, it will show up here with its attendance and schedule details."
+                title="No hosted plans yet"
+                description="Post something for tonight. Nearby people will see it in Discover."
+                action={
+                  <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Create')}>
+                    Host a plan
+                  </Button>
+                }
               />
             )}
           </PanelCard>
@@ -241,10 +246,10 @@ export const MyEventsScreen = () => {
           ) : (
             <EmptyStatePanel
               title="No matches yet"
-              description="Start swiping on activities you actually want to attend and this space will turn into your warm lead list."
+              description="Swipe right on plans you want. Matches show up here so you can message and meet."
               action={
                 <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Discover')}>
-                  Keep exploring
+                  Open Discover
                 </Button>
               }
             />

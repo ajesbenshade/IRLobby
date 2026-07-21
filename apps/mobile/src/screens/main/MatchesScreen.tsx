@@ -53,10 +53,10 @@ export const MatchesScreen = () => {
       {!isLoading && data.length === 0 && (
         <EmptyStatePanel
           title="No matches yet"
-          description="Start swiping on activities you actually want to attend and this space will turn into your warm lead list."
+          description="Right-swipe a few plans that sound good. Matches land here so you can chat and show up."
           action={
             <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Discover')}>
-              Keep exploring
+              Open Discover
             </Button>
           }
         />

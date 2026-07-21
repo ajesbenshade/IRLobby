@@ -198,3 +198,19 @@ Recommended flow:
 3. Validate onboarding/auth/activity flows
 4. Submit to external testers (optional)
 5. Submit for App Review
+
+## 10) Launch weeks (ops checklist)
+
+### Week 3 — first session + supply
+
+Engineering (mobile):
+- [x] Onboarding: location → vibe → notifications (photo deferred to Profile)
+- [x] Apple Sign-In first in the login OAuth stack
+- [x] Discover defaults to Tonight (next ~8 hours); price filters hidden for v1
+- [x] Recruiting empty states on Discover, Matches, Chat, Activity, Profile
+
+Ops (before submit):
+- [ ] Seed 5–10 real activities in your launch city for the next few evenings
+- [ ] Create 2–3 demo accounts for App Review / TestFlight
+- [ ] Smoke TestFlight auth matrix (Apple / Google / Twitter / email)
+- [ ] Confirm empty Discover with Tonight on still explains how to widen / host

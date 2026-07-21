@@ -373,7 +373,7 @@ export const ProfileScreen = () => {
         ) : (
           <EmptyStatePanel
             title="No interests yet"
-            description="Add a few interests so your profile feels specific, social, and easier to match around."
+            description="Add a few so people know what you’re into before they join your plans."
           />
         )}
       </PanelCard>
@@ -434,8 +434,8 @@ export const ProfileScreen = () => {
           </View>
         ) : (
           <EmptyStatePanel
-            title="No photo album yet"
-            description="A few photos make your profile feel trusted, lived-in, and easier to say yes to."
+            title="No photos yet"
+            description="Add a couple from Profile when you’re ready — not required to start discovering."
           />
         )}
       </PanelCard>

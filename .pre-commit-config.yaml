@@ -1,4 +1,4 @@
-exclude: ^(irlobby_backend/venv/|\.venv/)
+exclude: ^(irlobby_backend/(venv|\.venv|\.venv_[^/]+)/|\.venv/|\.venv_[^/]+/)
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -6,6 +6,9 @@ test_password_reset_direct.py
 check_config.py
 .env
 .env.production
+.venv/
+.venv_*/
+venv/
 backups/
 deploy/oracle/certbot-webroot/
 

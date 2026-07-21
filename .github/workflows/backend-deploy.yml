@@ -84,6 +84,8 @@ jobs:
             --exclude '.env.production' \
             --exclude '.env.local' \
             --exclude '.venv' \
+            --exclude '.venv_*' \
+            --exclude 'venv' \
             --exclude '__pycache__' \
             --exclude '.pytest_cache' \
             --exclude 'staticfiles' \

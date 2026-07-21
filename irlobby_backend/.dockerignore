@@ -8,6 +8,7 @@ db.sqlite3
 .env.production
 venv/
 .venv/
+.venv_*/
 node_modules/
 backups/
 deploy/oracle/certbot-webroot/

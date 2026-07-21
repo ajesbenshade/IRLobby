@@ -43,6 +43,14 @@ If Redis/TCP `6379` is already reachable publicly, close the provider firewall r
 
 The web app can use relative `/api` routes when hosted behind the same origin or a rewrite. If the frontend and backend are on different origins, set `VITE_API_BASE_URL` and `VITE_WEBSOCKET_BASE_URL` at build time.
 
+Optional web OAuth build-time variables:
+
+- `VITE_GOOGLE_WEB_CLIENT_ID` — Google OAuth **web** client ID used by Google Identity Services on `irlobby.com`. Also include this ID in backend `GOOGLE_OAUTH_CLIENT_IDS`.
+- `VITE_APPLE_WEB_CLIENT_ID` — Apple Services ID for Sign in with Apple on the web. Ensure `APPLE_OAUTH_AUDIENCES` / domain association covers `irlobby.com`.
+- `VITE_APPLE_REDIRECT_URI` — optional; defaults to `window.location.origin` (typically `https://irlobby.com`).
+
+cPanel deploys by copying the prebuilt `apps/web/dist` tree (see `.cpanel.yml`). After pushing `main`, use cPanel → Git Version Control → **Update from Remote** → **Deploy HEAD Commit**.
+
 Use `VITE_LOG_CONFIG=true` only while diagnosing startup config. Do not leave noisy config logging enabled for normal production builds.
 
 ## Mobile release notes

@@ -13,8 +13,9 @@ import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff } from 'lucide-react';
-import { useState, useCallback, useRef } from 'react';
+import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff, Sparkles } from 'lucide-react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 interface SwipePayload {
   activityId: number;
@@ -34,13 +35,51 @@ export default function Discovery() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
+  const [tonightOnly, setTonightOnly] = useState(true);
+  const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
+  const vibeSeededRef = useRef(false);
+
+  const vibeDiscoverTags = useMemo(
+    () => user?.vibe?.vibeDiscoverTags ?? [],
+    [user?.vibe?.vibeDiscoverTags],
+  );
+  const vibeQuizSkipped = Boolean(user?.vibe?.vibeQuizSkipped);
+  const hasVibeProfile = Boolean(user?.vibe?.vibeProfile);
+
+  useEffect(() => {
+    if (vibeSeededRef.current) return;
+    if (!hasVibeProfile || vibeDiscoverTags.length === 0) return;
+    if ((filters.tags?.length ?? 0) > 0) {
+      vibeSeededRef.current = true;
+      return;
+    }
+    vibeSeededRef.current = true;
+    setFilters((prev) => ({ ...prev, tags: [...vibeDiscoverTags] }));
+  }, [hasVibeProfile, vibeDiscoverTags, filters.tags]);
+
+  const tonightWindow = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    return { dateFrom: now, dateTo: end };
+    // Recompute when Tonight toggles so the 8h window stays fresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tonightOnly intentionally refreshes the window
+  }, [tonightOnly]);
+
+  const effectiveFilters = useMemo<Partial<ActivityFilters>>(
+    () => ({
+      ...filters,
+      dateFrom: tonightOnly ? tonightWindow.dateFrom : filters.dateFrom,
+      dateTo: tonightOnly ? tonightWindow.dateTo : filters.dateTo,
+    }),
+    [filters, tonightOnly, tonightWindow.dateFrom, tonightWindow.dateTo],
+  );
 
   // Use the token in the API request
   const {
@@ -49,7 +88,7 @@ export default function Discovery() {
     error,
     refetch,
   } = useQuery<Activity[]>({
-    queryKey: [API_ROUTES.ACTIVITIES, filters],
+    queryKey: [API_ROUTES.ACTIVITIES, effectiveFilters],
     queryFn: async ({ queryKey }) => {
       const [, activeFilters] = queryKey as [string, Partial<ActivityFilters>];
       const params = buildActivitySearchParams(activeFilters ?? {});
@@ -102,8 +141,12 @@ export default function Discovery() {
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
+    setTonightOnly(false);
     setCurrentActivityIndex(0);
   };
+
+  const deckCleared = activities.length > 0 && currentActivityIndex >= activities.length;
+  const noActivities = !isLoading && activities.length === 0;
 
   // Pull to refresh functionality
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -169,17 +212,77 @@ export default function Discovery() {
     );
   }
 
-  if (!activities.length || currentActivityIndex >= activities.length) {
+  if (noActivities || deckCleared) {
     return (
-      <PageState
-        icon={MapPin}
-        title="No activities match your filters"
-        description="Try widening the distance, clearing a filter, or checking back when new plans go live."
-        actionLabel="Refresh"
-        onAction={() => void handleRefresh()}
-        isActionLoading={isRefreshing}
-        className="min-h-screen bg-gray-50 dark:bg-gray-900"
-      />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={tonightOnly ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setTonightOnly((prev) => !prev);
+                setCurrentActivityIndex(0);
+              }}
+            >
+              Tonight
+            </Button>
+            <Button variant="ghost" size="sm" className="w-10 h-10 p-0" onClick={() => setShowFilterModal(true)}>
+              <Filter className="w-5 h-5" />
+            </Button>
+          </div>
+        </header>
+        <PageState
+          icon={MapPin}
+          title={
+            deckCleared
+              ? 'You cleared the deck'
+              : tonightOnly
+                ? 'Quiet night nearby'
+                : 'Nothing nearby yet'
+          }
+          description={
+            deckCleared
+              ? 'You’ve seen this round. Refresh for anything new, or host a plan so others can find you.'
+              : tonightOnly
+                ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
+                : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
+          }
+          actionLabel={deckCleared ? 'Reload deck' : tonightOnly ? 'Show all times' : 'Refresh'}
+          onAction={() => {
+            if (deckCleared) {
+              setCurrentActivityIndex(0);
+              void handleRefresh();
+              return;
+            }
+            if (tonightOnly) {
+              setTonightOnly(false);
+              setCurrentActivityIndex(0);
+              return;
+            }
+            void handleRefresh();
+          }}
+          isActionLoading={isRefreshing}
+          className="bg-transparent"
+        />
+        <div className="flex justify-center pb-8">
+          <Button asChild variant="outline">
+            <Link to="/app/create">Host a plan</Link>
+          </Button>
+        </div>
+        <FilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApplyFilters={handleApplyFilters}
+          currentFilters={filters}
+        />
+      </div>
     );
   }
 
@@ -211,9 +314,21 @@ export default function Discovery() {
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Find activities near you</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={tonightOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setTonightOnly((prev) => !prev);
+              setCurrentActivityIndex(0);
+            }}
+          >
+            Tonight
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -222,11 +337,6 @@ export default function Discovery() {
             aria-label="Open notifications"
           >
             <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            {/* {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </span>
-            )} */}
           </Button>
           <Button
             variant="ghost"
@@ -258,6 +368,30 @@ export default function Discovery() {
           </Button>
         </div>
       </header>
+
+      {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
+        <div className="mx-4 mt-4 rounded-xl border bg-white dark:bg-gray-800 p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
+            <div className="flex-1 space-y-2">
+              <p className="font-medium text-gray-900 dark:text-gray-100">
+                Want a feed that actually fits?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your energy.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setVibeReminderDismissed(true)}>
+                  Not now
+                </Button>
+                <Button asChild size="sm">
+                  <Link to="/app/vibe-quiz">Take the quiz</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Swipe Cards Container */}
       <div className="relative p-4 md:p-6 lg:p-8 h-full">
@@ -366,7 +500,7 @@ export default function Discovery() {
               setShowDetailsModal(true);
             }}
             onToggleView={() => setShowMapView(false)}
-            filters={filters}
+            filters={effectiveFilters}
           />
         </div>
       )}

@@ -2,7 +2,7 @@
 
 Use this checklist to publish `apps/mobile` with your Apple Developer account.
 
-> `apps/web` is archived in this repository and is no longer a supported deployment target. Mobile is the only actively released client.
+> Mobile is the App Store release target. The web client in `apps/web` remains a supported deployment for `irlobby.com` (prebuilt `dist` via cPanel).
 
 ## 1) Accounts and tools
 

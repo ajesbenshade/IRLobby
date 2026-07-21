@@ -149,13 +149,16 @@ function PhonePreview() {
 }
 
 export default function Landing() {
-  const { handleAuthentication } = useAuth();
+  const { handleAuthentication, loginWithGoogleIdToken, loginWithAppleIdentityToken } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const postAuthRedirect = () =>
+    navigate(getSafePostAuthRedirect(searchParams.get('redirect')), { replace: true });
+
   const handleAuth = async (token: string, userId: string) => {
     await handleAuthentication(token, userId);
-    navigate(getSafePostAuthRedirect(searchParams.get('redirect')), { replace: true });
+    postAuthRedirect();
   };
 
   return (
@@ -320,7 +323,12 @@ export default function Landing() {
                 Create an account here or jump back in before opening the app.
               </p>
             </div>
-            <AuthForm onAuthenticated={handleAuth} />
+            <AuthForm
+              onAuthenticated={handleAuth}
+              loginWithGoogleIdToken={loginWithGoogleIdToken}
+              loginWithAppleIdentityToken={loginWithAppleIdentityToken}
+              onOAuthSuccess={postAuthRedirect}
+            />
           </div>
         </div>
       </section>

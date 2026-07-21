@@ -4,7 +4,8 @@
 # if you wire it up. The deploy key labelled "Web Server" lets cPanel
 # pull from GitHub over SSH.
 #
-# This deploy now builds the React web app and ships apps/web/dist.
+# Copies the prebuilt apps/web/dist tree into public_html (no build on host).
+# Run `npm run build:web` locally/CI and commit dist before deploying.
 ---
 deployment:
   tasks:

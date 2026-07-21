@@ -1,4 +1,4 @@
-import { API_ROUTES } from '@shared/schema';
+import { API_ROUTES, type VibeAnswers } from '@shared/schema';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -13,6 +13,15 @@ const dispatchAuthTokenChange = () => {
   }
 };
 
+export interface UserVibe {
+  vibeProfile?: string;
+  vibeTags?: string[];
+  vibeDiscoverTags?: string[];
+  vibeAnswers?: VibeAnswers;
+  vibeCompletedAt?: string;
+  vibeQuizSkipped?: boolean;
+}
+
 interface User {
   id: string;
   email?: string;
@@ -22,6 +31,8 @@ interface User {
   bio?: string;
   interests?: string[];
   photoAlbum?: string[];
+  activityPreferences?: Record<string, unknown>;
+  vibe?: UserVibe;
   onboardingCompleted?: boolean;
   rating?: number;
   totalRatings?: number;
@@ -47,36 +58,109 @@ const toOptionalNumber = (value: unknown): number | null | undefined => {
   return undefined;
 };
 
-const normalizeUser = (profile: Record<string, unknown>): User => ({
-  id: String(profile.id ?? ''),
-  email: typeof profile.email === 'string' ? profile.email : undefined,
-  firstName:
-    (typeof profile.firstName === 'string' ? profile.firstName : undefined) ??
-    (typeof profile.first_name === 'string' ? profile.first_name : undefined),
-  lastName:
-    (typeof profile.lastName === 'string' ? profile.lastName : undefined) ??
-    (typeof profile.last_name === 'string' ? profile.last_name : undefined),
-  profileImageUrl:
-    (typeof profile.profileImageUrl === 'string' ? profile.profileImageUrl : undefined) ??
-    (typeof profile.avatarUrl === 'string' ? profile.avatarUrl : undefined) ??
-    (typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined),
-  bio: typeof profile.bio === 'string' ? profile.bio : undefined,
-  interests: Array.isArray(profile.interests)
-    ? profile.interests.filter((item): item is string => typeof item === 'string')
-    : undefined,
-  photoAlbum: Array.isArray(profile.photoAlbum)
-    ? profile.photoAlbum.filter((item): item is string => typeof item === 'string')
-    : undefined,
-  onboardingCompleted:
-    typeof profile.onboardingCompleted === 'boolean'
-      ? profile.onboardingCompleted
-      : typeof profile.onboarding_completed === 'boolean'
-      ? profile.onboarding_completed
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const normalizeVibe = (vibeSource: Record<string, unknown> | null | undefined): UserVibe | undefined => {
+  if (!vibeSource) return undefined;
+  return {
+    vibeProfile: typeof vibeSource.vibeProfile === 'string' ? vibeSource.vibeProfile : undefined,
+    vibeTags: Array.isArray(vibeSource.vibeTags)
+      ? vibeSource.vibeTags.filter((tag): tag is string => typeof tag === 'string')
       : undefined,
-  swipesRemainingToday: toOptionalNumber(
-    profile.swipesRemainingToday ?? profile.swipes_remaining_today,
-  ),
-});
+    vibeDiscoverTags: Array.isArray(vibeSource.vibeDiscoverTags)
+      ? vibeSource.vibeDiscoverTags.filter((tag): tag is string => typeof tag === 'string')
+      : undefined,
+    vibeAnswers:
+      vibeSource.vibeAnswers && typeof vibeSource.vibeAnswers === 'object'
+        ? (vibeSource.vibeAnswers as VibeAnswers)
+        : undefined,
+    vibeCompletedAt:
+      typeof vibeSource.vibeCompletedAt === 'string' ? vibeSource.vibeCompletedAt : undefined,
+    vibeQuizSkipped: Boolean(vibeSource.vibeQuizSkipped),
+  };
+};
+
+const normalizeUser = (profile: Record<string, unknown>): User => {
+  const preferences = asRecord(profile.preferences);
+  const activityPreferences =
+    asRecord(profile.activityPreferences) ??
+    asRecord(profile.activity_preferences) ??
+    asRecord(preferences?.activity_preferences) ??
+    asRecord(preferences?.activityPreferences);
+
+  const vibeSource =
+    asRecord(activityPreferences?.vibe) ?? asRecord(preferences?.vibe) ?? asRecord(profile.vibe);
+
+  return {
+    id: String(profile.id ?? ''),
+    email: typeof profile.email === 'string' ? profile.email : undefined,
+    firstName:
+      (typeof profile.firstName === 'string' ? profile.firstName : undefined) ??
+      (typeof profile.first_name === 'string' ? profile.first_name : undefined),
+    lastName:
+      (typeof profile.lastName === 'string' ? profile.lastName : undefined) ??
+      (typeof profile.last_name === 'string' ? profile.last_name : undefined),
+    profileImageUrl:
+      (typeof profile.profileImageUrl === 'string' ? profile.profileImageUrl : undefined) ??
+      (typeof profile.avatarUrl === 'string' ? profile.avatarUrl : undefined) ??
+      (typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined),
+    bio: typeof profile.bio === 'string' ? profile.bio : undefined,
+    interests: Array.isArray(profile.interests)
+      ? profile.interests.filter((item): item is string => typeof item === 'string')
+      : undefined,
+    photoAlbum: Array.isArray(profile.photoAlbum)
+      ? profile.photoAlbum.filter((item): item is string => typeof item === 'string')
+      : Array.isArray(profile.photo_album)
+        ? profile.photo_album.filter((item): item is string => typeof item === 'string')
+        : undefined,
+    activityPreferences,
+    vibe: normalizeVibe(vibeSource),
+    onboardingCompleted:
+      typeof profile.onboardingCompleted === 'boolean'
+        ? profile.onboardingCompleted
+        : typeof profile.onboarding_completed === 'boolean'
+          ? profile.onboarding_completed
+          : undefined,
+    swipesRemainingToday: toOptionalNumber(
+      profile.swipesRemainingToday ?? profile.swipes_remaining_today,
+    ),
+  };
+};
+
+type AuthResponsePayload = {
+  tokens?: {
+    access?: string;
+    refresh?: string;
+  };
+  access?: string;
+  refresh?: string;
+  user?: {
+    id?: string | number;
+  };
+  detail?: string;
+  error?: string;
+};
+
+const resolveAuthTokens = (data: AuthResponsePayload) => {
+  const accessToken =
+    typeof data.tokens?.access === 'string'
+      ? data.tokens.access
+      : typeof data.access === 'string'
+        ? data.access
+        : null;
+
+  const refreshToken =
+    typeof data.tokens?.refresh === 'string'
+      ? data.tokens.refresh
+      : typeof data.refresh === 'string'
+        ? data.refresh
+        : null;
+
+  return { accessToken, refreshToken };
+};
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -200,6 +284,62 @@ export function useAuth() {
     [queryClient, setAuthErrorMessage],
   );
 
+  const persistOAuthResponse = useCallback(
+    async (data: AuthResponsePayload) => {
+      const { accessToken, refreshToken } = resolveAuthTokens(data);
+      const userId = data.user?.id;
+      if (!accessToken || userId === undefined || userId === null) {
+        throw new Error('OAuth response missing authentication data');
+      }
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      await handleAuthentication(accessToken, String(userId));
+    },
+    [handleAuthentication],
+  );
+
+  const loginWithGoogleIdToken = useCallback(
+    async (idToken: string) => {
+      const response = await apiRequest('POST', API_ROUTES.AUTH_GOOGLE_MOBILE, {
+        id_token: idToken,
+      });
+      const data = (await response.json()) as AuthResponsePayload;
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Google sign-in failed');
+      }
+      await persistOAuthResponse(data);
+    },
+    [persistOAuthResponse],
+  );
+
+  const loginWithAppleIdentityToken = useCallback(
+    async (payload: {
+      identityToken: string;
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    }) => {
+      const response = await apiRequest('POST', API_ROUTES.AUTH_APPLE_MOBILE, {
+        identity_token: payload.identityToken,
+        email: payload.email,
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+      });
+      const data = (await response.json()) as AuthResponsePayload;
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Apple sign-in failed');
+      }
+      await persistOAuthResponse(data);
+    },
+    [persistOAuthResponse],
+  );
+
+  const updateOnboarding = useCallback(async (payload: Record<string, unknown>) => {
+    await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, payload);
+    await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
+  }, [queryClient]);
+
   const logout = useCallback(async () => {
     try {
       try {
@@ -248,6 +388,9 @@ export function useAuth() {
     needsOnboarding: user?.onboardingCompleted === false,
     token,
     handleAuthentication,
+    loginWithGoogleIdToken,
+    loginWithAppleIdentityToken,
+    updateOnboarding,
     logout,
     refreshToken,
     authError,

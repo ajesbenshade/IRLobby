@@ -8,6 +8,11 @@ urlpatterns = [
     path("hosted/", views.HostedActivitiesView.as_view(), name="hosted-activities"),
     path("<int:pk>/join/", views.join_activity, name="join-activity"),
     path("<int:pk>/leave/", views.leave_activity, name="leave-activity"),
+    path(
+        "<int:pk>/participants/<int:user_id>/",
+        views.remove_activity_participant,
+        name="remove-activity-participant",
+    ),
     path("<int:pk>/chat/", views.activity_chat, name="activity-chat"),
     path(
         "<int:pk>/buy-ticket/",

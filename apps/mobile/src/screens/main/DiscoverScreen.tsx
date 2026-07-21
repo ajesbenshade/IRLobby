@@ -13,6 +13,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { TextInput } from '@components/PaperCompat';
 import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
 import { HomeOverviewContent } from '@screens/main/HomeScreen';
@@ -41,6 +42,8 @@ export const DiscoverScreen = () => {
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
+  const [safetyUserLabel, setSafetyUserLabel] = useState<string | undefined>(undefined);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
@@ -603,6 +606,22 @@ export const DiscoverScreen = () => {
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
                   ) : null}
+                  {typeof currentActivity.host !== 'string' && currentActivity.host?.id ? (
+                    <Button
+                      mode="text"
+                      onPress={() => {
+                        const host = currentActivity.host;
+                        if (typeof host === 'string' || !host?.id) {
+                          return;
+                        }
+                        setSafetyUserId(host.id);
+                        setSafetyUserLabel(currentHostName);
+                        setShowDetails(false);
+                      }}
+                    >
+                      Report / block host
+                    </Button>
+                  ) : null}
                   <View style={styles.modalActions}>
                     <Button mode="outlined" onPress={() => setShowDetails(false)}>
                       Close
@@ -656,6 +675,20 @@ export const DiscoverScreen = () => {
           </Portal>
         </>
       )}
+
+      <SafetyActionsModal
+        visible={safetyUserId != null}
+        userId={safetyUserId}
+        userLabel={safetyUserLabel}
+        onClose={() => {
+          setSafetyUserId(null);
+          setSafetyUserLabel(undefined);
+        }}
+        onBlocked={() => {
+          void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
+          setCurrentIndex((previous) => previous + 1);
+        }}
+      />
     </AppScrollView>
   );
 };

@@ -6,6 +6,10 @@ import { ActivityIndicator } from 'react-native-paper';
 import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
+import {
+  useNavigationContainerRef,
+  usePushNotificationNavigation,
+} from '@services/pushNotificationNavigation';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import type { RootStackParamList } from './types';
@@ -26,12 +30,28 @@ const linking: LinkingOptions<RootStackParamList> = {
           ResetPassword: 'reset-password/:token',
         },
       },
+      Main: {
+        screens: {
+          Tabs: {
+            screens: {
+              Discover: 'discover',
+              Activity: 'activity',
+              Create: 'create',
+              Chat: 'chat',
+              Profile: 'profile',
+            },
+          },
+          Notifications: 'notifications',
+        },
+      },
     },
   },
 };
 
 export const AppNavigator = () => {
   const { isAuthenticated, isInitializing, user } = useAuth();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  usePushNotificationNavigation(navigationRef);
 
   if (isInitializing) {
     return (
@@ -48,7 +68,7 @@ export const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer theme={DefaultTheme} linking={linking}>
+    <NavigationContainer ref={navigationRef} theme={DefaultTheme} linking={linking}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           user?.onboardingCompleted === false ? (

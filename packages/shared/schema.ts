@@ -29,6 +29,8 @@ export const API_ROUTES = {
 	MATCHES: '/api/matches/',
 	MESSAGES_CONVERSATIONS: '/api/messages/conversations/',
 	REVIEWS: '/api/reviews/',
+	MODERATION_BLOCKED: '/api/moderation/blocked/',
+	MODERATION_REPORT: '/api/moderation/report/',
 	TICKET_PURCHASE: '/api/activities/{activityId}/buy-ticket/',
 	TICKETS_MY: '/api/activities/tickets/my/',
 	TICKET_VALIDATE: '/api/activities/tickets/{ticketId}/validate/',
@@ -41,6 +43,10 @@ export const API_ROUTE_BUILDERS = {
 	activityLeave: (activityId: number | string) =>
 		`${API_ROUTES.ACTIVITIES}${activityId}/leave/`,
 	activitySwipe: (activityId: number | string) => `${API_ROUTES.SWIPES}${activityId}/swipe/`,
+	activityRemoveParticipant: (activityId: number | string, userId: number | string) =>
+		`${API_ROUTES.ACTIVITIES}${activityId}/participants/${userId}/`,
+	moderationBlockUser: (userId: number | string) => `/api/moderation/block/${userId}/`,
+	moderationUnblockUser: (userId: number | string) => `/api/moderation/unblock/${userId}/`,
 	conversationMessages: (conversationId: number | string) =>
 		`${API_ROUTES.MESSAGES_CONVERSATIONS}${conversationId}/messages/`,
 	activitiesWithSearch: (query: string) => `${API_ROUTES.ACTIVITIES}?${query}`,

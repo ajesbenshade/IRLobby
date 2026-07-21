@@ -3,7 +3,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Onboarding: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainStackParamList> | undefined;
   Modal?: { screen: string; params?: Record<string, unknown> };
 };
 
@@ -23,7 +23,7 @@ export type MainTabParamList = {
 };
 
 export type MainStackParamList = {
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Settings: undefined;
   Friends: undefined;
   Reviews: undefined;

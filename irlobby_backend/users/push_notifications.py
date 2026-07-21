@@ -95,6 +95,7 @@ def send_new_match_notifications(match):
         "type": "new_match",
         "matchId": match.id,
         "activityId": match.activity_id,
+        "screen": "Chat",
     }
 
     send_push_to_user(
@@ -122,11 +123,32 @@ def send_new_message_notification(message):
         "conversationId": conversation.id,
         "matchId": match.id,
         "activityId": match.activity_id,
+        "screen": "Chat",
     }
 
     send_push_to_user(
         recipient,
         f"New message from {sender_label}",
         message.text[:120],
+        payload,
+    )
+
+
+def send_activity_join_notification(activity, joiner):
+    if activity.host_id == joiner.id:
+        return
+
+    joiner_label = (joiner.first_name or "").strip() or joiner.username
+    payload = {
+        "type": "activity_join",
+        "activityId": activity.id,
+        "userId": joiner.id,
+        "screen": "Activity",
+    }
+
+    send_push_to_user(
+        activity.host,
+        "Someone asked to join",
+        f"{joiner_label} asked to join {activity.title}.",
         payload,
     )

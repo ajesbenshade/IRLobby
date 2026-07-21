@@ -395,6 +395,10 @@ def join_activity(request, pk):
 
     ActivityParticipant.objects.create(activity=activity, user=user, status="pending")
 
+    from users.push_notifications import send_activity_join_notification
+
+    send_activity_join_notification(activity, user)
+
     return Response({"message": "Join request sent"}, status=status.HTTP_201_CREATED)
 
 
@@ -410,6 +414,27 @@ def leave_activity(request, pk):
         return Response({"message": "Left activity successfully"})
     except ActivityParticipant.DoesNotExist:
         return Response({"message": "Not a participant"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def remove_activity_participant(request, pk, user_id):
+    """Allow the host to remove a participant from their activity."""
+    activity = get_object_or_404(Activity, pk=pk)
+    if activity.host_id != request.user.id:
+        return Response({"detail": "Only the host can remove participants."}, status=status.HTTP_403_FORBIDDEN)
+
+    if int(user_id) == request.user.id:
+        return Response(
+            {"detail": "Hosts cannot remove themselves this way. Delete or leave the activity instead."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    deleted, _ = ActivityParticipant.objects.filter(activity=activity, user_id=user_id).delete()
+    if not deleted:
+        return Response({"detail": "Participant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({"detail": "Participant removed."}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "POST"])

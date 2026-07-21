@@ -358,3 +358,62 @@ class TicketingTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class ActivityParticipantModerationTests(APITestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(
+            username="host-mod", email="host-mod@example.com", password="password123"
+        )
+        self.joiner = User.objects.create_user(
+            username="joiner-mod", email="joiner-mod@example.com", password="password123"
+        )
+        self.outsider = User.objects.create_user(
+            username="outsider-mod", email="outsider-mod@example.com", password="password123"
+        )
+        self.activity = Activity.objects.create(
+            host=self.host,
+            is_approved=True,
+            title="Hosted Plan",
+            description="Safety check",
+            location="Park",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=1),
+            capacity=6,
+            tags=[],
+            images=[],
+        )
+        ActivityParticipant.objects.create(
+            activity=self.activity, user=self.joiner, status="pending"
+        )
+
+    def test_host_can_remove_participant(self):
+        self.client.force_authenticate(self.host)
+        response = self.client.delete(
+            reverse("remove-activity-participant", args=[self.activity.id, self.joiner.id])
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(
+            ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).exists()
+        )
+
+    def test_non_host_cannot_remove_participant(self):
+        self.client.force_authenticate(self.outsider)
+        response = self.client.delete(
+            reverse("remove-activity-participant", args=[self.activity.id, self.joiner.id])
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(
+            ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).exists()
+        )
+
+    def test_join_notifies_host(self):
+        ActivityParticipant.objects.filter(activity=self.activity, user=self.joiner).delete()
+        self.client.force_authenticate(self.joiner)
+        with patch("users.push_notifications.send_activity_join_notification") as notify:
+            response = self.client.post(reverse("join-activity", args=[self.activity.id]))
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            notify.assert_called_once()

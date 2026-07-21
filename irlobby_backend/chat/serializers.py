@@ -32,8 +32,28 @@ class ConversationSerializer(serializers.ModelSerializer):
     activityId = serializers.IntegerField(
         source="match.activity.id", read_only=True, allow_null=True
     )
+    otherUserId = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ("id", "match", "matchId", "activityId", "messages", "created_at")
+        fields = (
+            "id",
+            "match",
+            "matchId",
+            "activityId",
+            "otherUserId",
+            "messages",
+            "created_at",
+        )
         read_only_fields = ("id", "created_at")
+
+    def get_otherUserId(self, obj):
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None):
+            return None
+        current_user_id = request.user.id
+        if obj.match.user_a_id == current_user_id:
+            return obj.match.user_b_id
+        if obj.match.user_b_id == current_user_id:
+            return obj.match.user_a_id
+        return None

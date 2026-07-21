@@ -188,7 +188,19 @@ Ensure backend env/config is production-ready:
 - Continue with Google returns tokens against production
 - Continue with X returns to the app with tokens (or a clear error) against production
 - Password reset links open correct frontend/app route
+- Report / block is reachable from Discover activity details and chat threads
+- Hosts can remove participants via `DELETE /api/activities/{id}/participants/{userId}/`
+- Push taps for join / match / message open the app (Chat or Activity tab)
 - App handles API downtime gracefully (errors/retries)
+
+## 8.1) Week 2 engineering checklist
+
+- [x] Block + report UI on Discover (host) and Chat (other user)
+- [x] Host participant removal API
+- [x] Push payload `screen` for join / match / message + tap navigation
+- [ ] Full auth matrix on physical TestFlight device (ops)
+- [ ] Parity smoke doc filled with build number (ops)
+- [ ] Seed-host recruiting started (ops)
 
 ## 9) TestFlight first, then App Review
 

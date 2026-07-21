@@ -4,6 +4,7 @@ import { Button, HelperText, Text } from 'react-native-paper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
+import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { TextInput } from '@components/PaperCompat';
 import { FlatList, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { config } from '@constants/config';
@@ -23,6 +24,8 @@ export const ChatScreen = () => {
   const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
+  const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
+  const [safetyUserLabel, setSafetyUserLabel] = useState<string | undefined>(undefined);
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -149,7 +152,17 @@ export const ChatScreen = () => {
               Keep the energy moving while the plan is still warm.
             </Text>
           </View>
-          <AccentPill tone="secondary">Live now</AccentPill>
+          <Button
+            mode="text"
+            compact
+            disabled={!selectedConversation?.otherUserId}
+            onPress={() => {
+              setSafetyUserId(selectedConversation?.otherUserId ?? null);
+              setSafetyUserLabel(selectedConversation?.match);
+            }}
+          >
+            Safety
+          </Button>
         </View>
 
         {messagesError && (
@@ -217,11 +230,27 @@ export const ChatScreen = () => {
             Send it
           </Button>
         </View>
+
+        <SafetyActionsModal
+          visible={safetyUserId != null}
+          userId={safetyUserId}
+          userLabel={safetyUserLabel}
+          onClose={() => {
+            setSafetyUserId(null);
+            setSafetyUserLabel(undefined);
+          }}
+          onBlocked={() => {
+            setSelectedConversationId(null);
+            void queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+            void queryClient.invalidateQueries({ queryKey: ['mobile-matches'] });
+          }}
+        />
       </AppScreenContainer>
     );
   }
 
   return (
+    <>
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={
@@ -314,6 +343,20 @@ export const ChatScreen = () => {
         );
       })}
     </AppScrollView>
+    <SafetyActionsModal
+      visible={safetyUserId != null}
+      userId={safetyUserId}
+      userLabel={safetyUserLabel}
+      onClose={() => {
+        setSafetyUserId(null);
+        setSafetyUserLabel(undefined);
+      }}
+      onBlocked={() => {
+        void queryClient.invalidateQueries({ queryKey: ['mobile-conversations'] });
+        void queryClient.invalidateQueries({ queryKey: ['mobile-matches'] });
+      }}
+    />
+    </>
   );
 };
 

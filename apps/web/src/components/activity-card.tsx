@@ -43,7 +43,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
 
   return (
     <Card className={`swipe-card overflow-hidden ${className}`} onClick={onClick}>
-      <div className="aspect-video bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
+      <div className="aspect-video bg-gradient-to-br from-primary to-primary-deep relative overflow-hidden">
         {activity.imageUrl ? (
           <img
             src={activity.imageUrl}
@@ -56,7 +56,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
           </div>
         )}
         <div className="absolute top-3 right-3">
-          <Badge className="bg-secondary text-white">{activity.category}</Badge>
+          <Badge className="bg-primary text-primary-foreground">{activity.category}</Badge>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
 
           {activity.host && (
             <div className="flex items-center">
-              <Star className="h-4 w-4 text-secondary mr-1" />
+              <Star className="h-4 w-4 text-accent mr-1" />
               <span className="text-sm font-medium text-gray-700">{hostRating.toFixed(1)}</span>
             </div>
           )}
@@ -141,7 +141,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-primary to-primary-deep flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {activity.host.firstName?.charAt(0) || activity.host.email?.charAt(0) || 'H'}
                   </span>

@@ -1,5 +1,7 @@
 import {
   brand as sharedBrand,
+  brandBlur,
+  brandElevation,
   brandFontSize,
   brandLineHeight,
   brandMotion,
@@ -13,16 +15,10 @@ import {
  * IRLobby mobile design tokens.
  * Tagline: "Get out. Get together."
  *
- * New Electric Midnight direction (darker + premium).
- * Shared source of truth: packages/shared/design-tokens.ts
+ * Electric Midnight — shared source: packages/shared/design-tokens.ts
  */
 
-// ---------------------------------------------------------------------------
-// Color palette
-// ---------------------------------------------------------------------------
-
 export const palette = {
-  // Electric Midnight — darker, richer, premium (gold accent added)
   primary: brandPalette.primary,
   primaryDeep: brandPalette.primaryDeep,
   primarySoft: brandPalette.primarySoft,
@@ -36,12 +32,10 @@ export const palette = {
   accentDeep: brandPalette.accentDeep,
   accentSoft: brandPalette.accentSoft,
 
-  // Status
   success: brandPalette.success,
   warning: brandPalette.warning,
   danger: brandPalette.danger,
 
-  // Neutrals (light)
   ink: brandPalette.ink,
   mutedInk: brandPalette.mutedInk,
   softInk: brandPalette.softInk,
@@ -51,10 +45,11 @@ export const palette = {
   surfaceMuted: brandPalette.surfaceMuted,
   background: brandPalette.background,
   overlay: brandPalette.overlay,
+  glass: brandPalette.glass,
+  glassBorder: brandPalette.glassBorder,
   white: brandPalette.white,
   black: brandPalette.black,
 
-  // Neutrals (dark)
   darkBackground: brandPalette.darkBackground,
   darkSurface: brandPalette.darkSurface,
   darkSurfaceMuted: brandPalette.darkSurfaceMuted,
@@ -62,11 +57,17 @@ export const palette = {
   darkInk: brandPalette.darkInk,
   darkMutedInk: brandPalette.darkMutedInk,
   darkSoftInk: brandPalette.darkSoftInk,
-} as const;
 
-// ---------------------------------------------------------------------------
-// Radii — tighter, more modern
-// ---------------------------------------------------------------------------
+  lightBackground: brandPalette.lightBackground,
+  lightSurface: brandPalette.lightSurface,
+  lightSurfaceMuted: brandPalette.lightSurfaceMuted,
+  lightInk: brandPalette.lightInk,
+  lightMutedInk: brandPalette.lightMutedInk,
+  lightSoftInk: brandPalette.lightSoftInk,
+  lightLine: brandPalette.lightLine,
+  lightLineStrong: brandPalette.lightLineStrong,
+  lightOverlay: brandPalette.lightOverlay,
+} as const;
 
 export const radii = {
   xs: brandRadii.xs,
@@ -76,10 +77,6 @@ export const radii = {
   xl: brandRadii.xl,
   pill: brandRadii.pill,
 } as const;
-
-// ---------------------------------------------------------------------------
-// Spacing — 4px base
-// ---------------------------------------------------------------------------
 
 export const spacing = {
   xxs: brandSpacing.xxs,
@@ -91,10 +88,6 @@ export const spacing = {
   xxl: brandSpacing.xxl,
   xxxl: brandSpacing.xxxl,
 } as const;
-
-// ---------------------------------------------------------------------------
-// Type scale
-// ---------------------------------------------------------------------------
 
 export const typography = {
   bodyRegular: brandTypography.bodyRegular,
@@ -121,50 +114,49 @@ export const lineHeight = {
   normal: brandLineHeight.normal,
 } as const;
 
-// ---------------------------------------------------------------------------
-// Shadows — neutral, no pink tint
-// ---------------------------------------------------------------------------
-
 export const shadows = {
-  // Subtle — for content cards and inputs
   card: {
-    shadowColor: brandPalette.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    shadowColor: brandElevation.card.shadowColor,
+    shadowOpacity: brandElevation.card.shadowOpacity,
+    shadowRadius: brandElevation.card.shadowRadius,
+    shadowOffset: brandElevation.card.shadowOffset,
+    elevation: brandElevation.card.elevation,
   },
-  // Stronger — for floating CTAs, tab bar, modals
   float: {
-    shadowColor: brandPalette.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    shadowColor: brandElevation.float.shadowColor,
+    shadowOpacity: brandElevation.float.shadowOpacity,
+    shadowRadius: brandElevation.float.shadowRadius,
+    shadowOffset: brandElevation.float.shadowOffset,
+    elevation: brandElevation.float.elevation,
   },
-  // Tight, sharp — for raised buttons (FAB)
   pop: {
-    shadowColor: brandPalette.primaryDeep,
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowColor: brandElevation.pop.shadowColor,
+    shadowOpacity: brandElevation.pop.shadowOpacity,
+    shadowRadius: brandElevation.pop.shadowRadius,
+    shadowOffset: brandElevation.pop.shadowOffset,
+    elevation: brandElevation.pop.elevation,
+  },
+  soft: {
+    shadowColor: brandElevation.soft.shadowColor,
+    shadowOpacity: brandElevation.soft.shadowOpacity,
+    shadowRadius: brandElevation.soft.shadowRadius,
+    shadowOffset: brandElevation.soft.shadowOffset,
+    elevation: brandElevation.soft.elevation,
   },
 } as const;
 
-// ---------------------------------------------------------------------------
-// Motion — animation durations (ms)
-// ---------------------------------------------------------------------------
+export const blur = {
+  sm: brandBlur.sm,
+  md: brandBlur.md,
+  lg: brandBlur.lg,
+  xl: brandBlur.xl,
+} as const;
 
 export const motion = {
   fast: brandMotion.fast,
   base: brandMotion.base,
   slow: brandMotion.slow,
 } as const;
-
-// ---------------------------------------------------------------------------
-// Brand
-// ---------------------------------------------------------------------------
 
 export const brand = {
   name: sharedBrand.name,

@@ -309,7 +309,7 @@ export function VibeQuiz({
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-gradient-to-r from-primary to-secondary transition-all"
+          className="h-full bg-gradient-to-r from-primary to-primary-deep transition-all"
           style={{ width: `${progressPct}%` }}
         />
       </div>

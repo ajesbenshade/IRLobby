@@ -180,7 +180,7 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary-deep/20 flex items-center justify-center">
                         <span className="text-primary font-semibold text-lg">
                           {match.activity.title.charAt(0)}
                         </span>

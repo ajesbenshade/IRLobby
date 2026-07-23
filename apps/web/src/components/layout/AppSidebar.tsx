@@ -56,13 +56,13 @@ export default function AppSidebar() {
   const { user } = useAuth();
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/80">
       <SidebarHeader className="px-3 py-4">
         <Link to="/app" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-secondary text-white shadow-sm shadow-primary/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-deep text-white shadow-float">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
+          <span className="font-display text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
             IRLobby
           </span>
         </Link>
@@ -77,7 +77,7 @@ export default function AppSidebar() {
                   asChild
                   isActive={isActive(location.pathname, '/app/create')}
                   tooltip="Create activity"
-                  className="bg-gradient-to-r from-primary to-secondary text-white shadow-sm shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 hover:text-white data-[active=true]:from-primary data-[active=true]:to-secondary data-[active=true]:text-white"
+                  className="rounded-xl bg-gradient-to-r from-primary to-primary-deep text-white shadow-float hover:opacity-95 hover:text-white data-[active=true]:from-primary data-[active=true]:to-primary-deep data-[active=true]:text-white"
                 >
                   <Link to="/app/create">
                     <Plus className="h-4 w-4" />

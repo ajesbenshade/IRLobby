@@ -64,28 +64,30 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {greeting}, {user?.firstName ?? 'there'} 👋
+    <div className="space-y-8">
+      <div className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight">
+          {greeting}, {user?.firstName ?? 'there'}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           Here&apos;s what&apos;s happening in your IRLobby world.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
             <Link key={s.label} to={s.to} className="block">
-              <Card className="transition-colors hover:bg-muted/40">
-                <CardContent className="flex items-center justify-between p-4">
+              <Card className="transition-all duration-fast hover:bg-muted/30 hover:shadow-card">
+                <CardContent className="flex items-center justify-between p-5">
                   <div>
-                    <div className="text-2xl font-semibold">{s.value}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                    <div className="font-display text-3xl font-bold tracking-tight">{s.value}</div>
+                    <div className="text-xs font-medium text-muted-foreground mt-1">{s.label}</div>
                   </div>
-                  <Icon className="h-5 w-5 text-primary" />
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
                 </CardContent>
               </Card>
             </Link>

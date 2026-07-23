@@ -5,46 +5,48 @@
 @tailwind utilities;
 
 :root {
-  /* Electric Midnight (light surface for some components) */
-  --background: 240 20% 97%;
-  --foreground: 245 20% 12%;
-  --muted: 245 15% 94%;
-  --muted-foreground: 245 12% 45%;
+  /* Soft light theme — Electric Midnight hierarchy */
+  --background: 250 33% 97%; /* #F7F6FB */
+  --foreground: 248 30% 14%; /* #1A1730 */
+  --muted: 250 30% 95%; /* #F0EEF7 */
+  --muted-foreground: 248 14% 41%; /* #5C5878 */
   --popover: 0 0% 100%;
-  --popover-foreground: 245 20% 12%;
+  --popover-foreground: 248 30% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 245 20% 12%;
-  --border: 245 15% 88%;
-  --input: 245 15% 88%;
+  --card-foreground: 248 30% 14%;
+  --border: 250 28% 91%; /* #E4E0F0 */
+  --input: 250 28% 91%;
   --primary: 248 100% 65%; /* #5B4BFF */
   --primary-foreground: 0 0% 100%;
-  --secondary: 295 81% 47%; /* #C026D3 */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 188 100% 56%; /* #1EE8FF */
-  --accent-foreground: 245 20% 12%;
+  --primary-deep: 295 81% 47%; /* #C026D3 fuchsia */
+  --primary-deep-foreground: 0 0% 100%;
+  --secondary: 188 100% 56%; /* #1EE8FF cyan — matches shared secondary */
+  --secondary-foreground: 248 30% 14%;
+  --accent: 45 75% 68%; /* #E8C872 gold — matches shared accent */
+  --accent-foreground: 248 30% 14%;
   --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 100%;
   --ring: 248 100% 65%;
   --chart-1: 248 100% 65%;
   --chart-2: 295 81% 47%;
   --chart-3: 188 100% 56%;
-  --chart-4: 45 75% 68%; /* gold */
+  --chart-4: 45 75% 68%;
   --chart-5: 38 92% 50%;
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 245 20% 12%;
+  --sidebar-foreground: 248 30% 14%;
   --sidebar-primary: 248 100% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 248 40% 94%;
+  --sidebar-accent: 248 40% 96%;
   --sidebar-accent-foreground: 248 100% 40%;
-  --sidebar-border: 245 15% 88%;
+  --sidebar-border: 250 28% 91%;
   --sidebar-ring: 248 100% 65%;
-  --radius: 0.5rem;
+  --radius: 1rem; /* 16px — calmer, more modern cards */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
-  /* Electric Midnight — primary dark premium experience */
+  /* Electric Midnight — flagship dark canvas */
   --background: 245 25% 6%; /* #0A0814 */
   --foreground: 245 25% 97%; /* #F4F3FA */
   --muted: 245 20% 12%;
@@ -57,27 +59,29 @@
   --input: 245 18% 18%;
   --primary: 248 100% 65%; /* #5B4BFF */
   --primary-foreground: 0 0% 100%;
-  --secondary: 295 81% 47%; /* #C026D3 */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 188 100% 56%; /* #1EE8FF */
-  --accent-foreground: 245 25% 97%;
+  --primary-deep: 295 81% 47%; /* #C026D3 */
+  --primary-deep-foreground: 0 0% 100%;
+  --secondary: 188 100% 56%; /* #1EE8FF */
+  --secondary-foreground: 245 25% 6%;
+  --accent: 45 75% 68%; /* #E8C872 */
+  --accent-foreground: 245 25% 6%;
   --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 98%;
   --ring: 248 100% 65%;
   --chart-1: 248 100% 65%;
   --chart-2: 295 81% 47%;
   --chart-3: 188 100% 56%;
-  --chart-4: 45 75% 68%; /* gold */
+  --chart-4: 45 75% 68%;
   --chart-5: 38 92% 50%;
-  --sidebar-background: 245 22% 9%;
+  --sidebar-background: 245 22% 7%;
   --sidebar-foreground: 245 25% 97%;
   --sidebar-primary: 248 100% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 245 18% 14%;
+  --sidebar-accent: 245 18% 12%;
   --sidebar-accent-foreground: 245 25% 97%;
-  --sidebar-border: 245 18% 18%;
+  --sidebar-border: 245 18% 14%;
   --sidebar-ring: 248 100% 65%;
-  --radius: 0.5rem;
+  --radius: 1rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
@@ -204,7 +208,8 @@ html {
   background: rgba(255, 255, 255, 0.04);
   -webkit-backdrop-filter: blur(22px);
   backdrop-filter: blur(22px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
 }
 
 .public-text-gradient {
@@ -215,15 +220,15 @@ html {
 }
 
 .public-card-hover {
-  transition: transform 220ms ease, background-color 220ms ease, border-color 220ms ease,
-    box-shadow 220ms ease;
+  transition: transform 250ms ease, background-color 250ms ease, border-color 250ms ease,
+    box-shadow 250ms ease;
 }
 
 .public-card-hover:hover {
-  transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.045);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 18px 50px rgba(91, 75, 255, 0.14);
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 50px rgba(91, 75, 255, 0.16);
 }
 
 .public-phone-shadow {
@@ -328,7 +333,7 @@ html {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #7c3aed;
+    border: 2px solid #5B4BFF;
     border-radius: 8px;
   }
 
@@ -406,7 +411,7 @@ html {
     -webkit-appearance: none;
     appearance: none;
     outline: none;
-    border: 2px solid #7c3aed;
+    border: 2px solid #5B4BFF;
     border-radius: 8px;
   }
 

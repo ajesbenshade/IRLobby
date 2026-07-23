@@ -10,8 +10,21 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 12px)",
+      },
+      transitionDuration: {
+        fast: "150ms",
+        base: "250ms",
+        slow: "400ms",
+      },
+      boxShadow: {
+        card: "0 8px 24px rgba(0, 0, 0, 0.18)",
+        float: "0 14px 40px rgba(91, 75, 255, 0.22)",
+        pop: "0 6px 18px rgba(192, 38, 211, 0.28)",
+        soft: "0 4px 16px rgba(0, 0, 0, 0.08)",
       },
       colors: {
         background: "hsl(var(--background))",
@@ -27,6 +40,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          deep: "hsl(var(--primary-deep))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

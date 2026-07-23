@@ -515,7 +515,7 @@ const AuthForm = ({
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto border-border/70 bg-card/80 backdrop-blur-xl shadow-float">
       <CardHeader>
         <CardTitle className="text-2xl text-center">Welcome to IRLobby</CardTitle>
         <CardDescription className="text-center">

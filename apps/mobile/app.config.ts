@@ -19,11 +19,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0A0814',
     dark: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#0F172A',
+      backgroundColor: '#0A0814',
     },
   },
   updates: {
@@ -77,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#7C3AED',
+      backgroundColor: '#0A0814',
     },
   },
   plugins: [
@@ -85,7 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/icon.png',
-        color: '#7C3AED',
+        color: '#5B4BFF',
       },
     ],
     'expo-font',

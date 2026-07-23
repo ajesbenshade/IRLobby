@@ -242,7 +242,7 @@ export default memo(function SwipeCard({
         </div>
 
         {/* Activity Image */}
-        <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-secondary/20 dark:from-primary/30 dark:to-secondary/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
+        <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-primary-deep/20 dark:from-primary/30 dark:to-primary-deep/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
           {activity.images && activity.images.length > 0 ? (
             <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
           ) : (
@@ -260,32 +260,32 @@ export default memo(function SwipeCard({
         <div className="p-4">
           {/* Title and Category */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate flex-1 mr-2">
+            <h3 className="text-lg font-bold text-foreground truncate flex-1 mr-2">
               {safeTitle}
             </h3>
             <Badge
               variant="secondary"
-              className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 flex-shrink-0"
+              className="flex-shrink-0"
             >
               {safeTags.length > 0 ? safeTags[0] : 'Activity'}
             </Badge>
           </div>
 
           {/* Location */}
-          <div className="flex items-center text-gray-600 dark:text-gray-300 mb-2">
+          <div className="flex items-center text-muted-foreground mb-2">
             <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="text-sm truncate">{activity.location}</span>
           </div>
 
           {/* Date/Time */}
-          <div className="flex items-center text-gray-600 dark:text-gray-300 mb-3">
+          <div className="flex items-center text-muted-foreground mb-3">
             <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="text-sm">{formattedActivityTime}</span>
           </div>
 
           {/* Description */}
           {activity.description && (
-            <p className="text-gray-700 dark:text-gray-200 text-sm mb-4 line-clamp-2">
+            <p className="text-foreground/80 text-sm mb-4 line-clamp-2">
               {activity.description}
             </p>
           )}
@@ -293,15 +293,15 @@ export default memo(function SwipeCard({
           {/* Participants */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
-              <Users className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">
+              <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
                 {activity.participant_count || 0}/{activity.capacity} people
               </span>
             </div>
           </div>
 
           {/* Host Info */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center">
+          <div className="pt-4 border-t border-border flex items-center">
             <Avatar className="w-10 h-10 mr-3">
               <AvatarImage src={activity.host?.profileImageUrl} />
               <AvatarFallback className="text-sm">{hostInitials}</AvatarFallback>

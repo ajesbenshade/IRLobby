@@ -561,8 +561,8 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     gap: 12,
-    backgroundColor: '#fff7df',
-    borderColor: '#ffe0a3',
+    backgroundColor: 'rgba(232, 200, 114, 0.12)',
+    borderColor: 'rgba(232, 200, 114, 0.28)',
   },
   summaryTopRow: {
     flexDirection: 'row',
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffe3ec',
+    backgroundColor: 'rgba(192, 38, 211, 0.16)',
     borderWidth: 1,
     borderColor: '#ffc6d7',
   },
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f3e2ea',
+    borderTopColor: appColors.line,
     paddingTop: 12,
   },
   metaText: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     borderColor: '#f0dfe7',
   },
   messageBubbleOwn: {
-    backgroundColor: '#ffe7f0',
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
     borderColor: '#ffc9da',
   },
   messageAuthor: {
@@ -700,9 +700,9 @@ const styles = StyleSheet.create({
   typingIndicator: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#fff7df',
+    backgroundColor: 'rgba(232, 200, 114, 0.12)',
     borderWidth: 1,
-    borderColor: '#ffe0a3',
+    borderColor: 'rgba(232, 200, 114, 0.28)',
     paddingHorizontal: 12,
     paddingVertical: 6,
   },

@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   personBubbleWarm: {
-    backgroundColor: '#ffefcf',
+    backgroundColor: 'rgba(232, 200, 114, 0.14)',
   },
   personInitial: {
     color: appColors.primaryDeep,

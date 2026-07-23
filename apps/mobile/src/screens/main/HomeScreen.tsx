@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#ffe4ee',
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   snapshotCard: {
     gap: 8,
     backgroundColor: '#fffaf0',
-    borderColor: '#ffe0a3',
+    borderColor: 'rgba(232, 200, 114, 0.28)',
   },
   snapshotEyebrow: {
     color: appColors.softInk,

@@ -22,14 +22,14 @@ export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
   const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('') || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
       <SidebarTrigger className="-ml-1 hidden md:flex" />
       <Separator orientation="vertical" className="hidden h-6 md:block" />
 
       <button
         type="button"
         onClick={onOpenCommandPalette}
-        className="hidden md:flex h-9 flex-1 max-w-md items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
+        className="hidden md:flex h-10 flex-1 max-w-md items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 text-sm text-muted-foreground transition-colors duration-fast hover:bg-muted/50"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search activities, people, places…</span>

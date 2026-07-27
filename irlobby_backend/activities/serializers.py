@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from utils.sanitize import strip_html
@@ -117,9 +118,9 @@ class ActivitySerializer(serializers.ModelSerializer):
         is_ticketed = attrs.get("is_ticketed", getattr(self.instance, "is_ticketed", False))
         ticket_price = attrs.get("ticket_price", getattr(self.instance, "ticket_price", 0))
         max_tickets = attrs.get("max_tickets", getattr(self.instance, "max_tickets", 0))
-        platform_fee_percent = attrs.get(
-            "platform_fee_percent", getattr(self.instance, "platform_fee_percent", 10)
-        )
+
+        # Platform fee is fixed by IRLobby policy (default 10%).
+        attrs["platform_fee_percent"] = getattr(settings, "STRIPE_PLATFORM_FEE_PERCENT", 10)
 
         if is_ticketed:
             if ticket_price <= 0:
@@ -133,10 +134,22 @@ class ActivitySerializer(serializers.ModelSerializer):
                     {"max_tickets": "Ticketed activities require a positive ticket quantity."}
                 )
 
-        if platform_fee_percent < 0 or platform_fee_percent > 100:
-            raise serializers.ValidationError(
-                {"platform_fee_percent": "Platform fee must be between 0 and 100."}
-            )
+            request = self.context.get("request")
+            host = getattr(request, "user", None) if request else None
+            if self.instance is not None:
+                host = self.instance.host
+            if host is not None and getattr(host, "is_authenticated", False):
+                from users.stripe_connect import host_can_receive_payouts
+
+                if not host_can_receive_payouts(host):
+                    raise serializers.ValidationError(
+                        {
+                            "is_ticketed": (
+                                "Connect a payout account before creating a ticketed event. "
+                                "Open Profile → Payout setup to finish Stripe Connect."
+                            )
+                        }
+                    )
 
         return attrs
 

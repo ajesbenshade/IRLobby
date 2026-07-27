@@ -533,6 +533,17 @@ ACTIVITY_NEARBY_CACHE_TTL_SECONDS = config(
 
 STRIPE_API_KEY = config("STRIPE_API_KEY", default="")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
-STRIPE_SUCCESS_URL = config("STRIPE_SUCCESS_URL", default="http://localhost:3000/tickets/success")
-STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL", default="http://localhost:3000/tickets/cancel")
+STRIPE_CONNECT_WEBHOOK_SECRET = config("STRIPE_CONNECT_WEBHOOK_SECRET", default="")
+STRIPE_SUCCESS_URL = config(
+    "STRIPE_SUCCESS_URL", default="irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}"
+)
+STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL", default="irlobby://tickets/cancel")
+STRIPE_CONNECT_RETURN_URL = config(
+    "STRIPE_CONNECT_RETURN_URL", default="irlobby://stripe/connect/return"
+)
+STRIPE_CONNECT_REFRESH_URL = config(
+    "STRIPE_CONNECT_REFRESH_URL", default="irlobby://stripe/connect/refresh"
+)
+STRIPE_PLATFORM_FEE_PERCENT = config("STRIPE_PLATFORM_FEE_PERCENT", default=10.0, cast=float)
+STRIPE_CONNECT_COUNTRY = config("STRIPE_CONNECT_COUNTRY", default="US")
 ENABLE_TICKETING = config("ENABLE_TICKETING", default=True, cast=bool)

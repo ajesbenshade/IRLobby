@@ -22,6 +22,11 @@ class User(AbstractUser):
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
     privacy_accepted_at = models.DateTimeField(null=True, blank=True)
 
+    # Stripe Connect (marketplace host payouts)
+    stripe_connect_account_id = models.CharField(max_length=255, blank=True, default="")
+    stripe_connect_payouts_enabled = models.BooleanField(default=False)
+    stripe_connect_details_submitted = models.BooleanField(default=False)
+
     class Meta:
         # Add unique constraint on email to prevent duplicates
         constraints = [models.UniqueConstraint(fields=["email"], name="unique_user_email")]

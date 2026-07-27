@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useState } from 'react';
@@ -8,8 +8,13 @@ import { Button, HelperText, Switch, Text } from 'react-native-paper';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
 import { TextInput } from '@components/PaperCompat';
 import { Image, View } from '@components/RNCompat';
+import { useAuth } from '@hooks/useAuth';
 import { createActivity } from '@services/activityService';
 import type { CreateActivityPayload } from '@services/activityService';
+import {
+  fetchStripeConnectStatus,
+  openStripeConnectOnboarding,
+} from '@services/paymentService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -30,6 +35,9 @@ type ActivityFormState = {
   ageRestriction: string;
   equipmentRequired: string;
   weatherDependent: boolean;
+  isTicketed: boolean;
+  ticketPrice: string;
+  maxTickets: string;
   imageUris: string[];
 };
 
@@ -58,6 +66,9 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   ageRestriction: 'All Ages',
   equipmentRequired: '',
   weatherDependent: false,
+  isTicketed: false,
+  ticketPrice: '',
+  maxTickets: '',
   imageUris: [],
 };
 
@@ -65,6 +76,7 @@ const VALID_VISIBILITY = ['everyone', 'friends', 'friendsOfFriends'] as const;
 
 export const CreateActivityScreen = () => {
   const queryClient = useQueryClient();
+  const { user, refreshProfile } = useAuth();
 
   const [form, setForm] = useState<ActivityFormState>(INITIAL_FORM_STATE);
   const [timeError, setTimeError] = useState<string | null>(null);
@@ -78,17 +90,39 @@ export const CreateActivityScreen = () => {
     endTime,
     equipmentRequired,
     imageUris,
+    isTicketed,
     latitude,
     location,
     longitude,
+    maxTickets,
     requiresApproval,
     skillLevel,
     tags,
+    ticketPrice,
     time,
     title,
     visibility,
     weatherDependent,
   } = form;
+
+  const connectStatusQuery = useQuery({
+    queryKey: ['stripe-connect-status'],
+    queryFn: fetchStripeConnectStatus,
+    staleTime: 30_000,
+  });
+
+  const canSellTickets =
+    Boolean(user?.canSellTickets) ||
+    Boolean(connectStatusQuery.data?.payoutsEnabled) ||
+    Boolean(connectStatusQuery.data?.onboardingComplete);
+
+  const onboardMutation = useMutation({
+    mutationFn: openStripeConnectOnboarding,
+    onSuccess: async () => {
+      await connectStatusQuery.refetch();
+      await refreshProfile();
+    },
+  });
 
   const updateForm = <Key extends keyof ActivityFormState>(key: Key, value: ActivityFormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -118,7 +152,8 @@ export const CreateActivityScreen = () => {
     description.trim().length > 0 &&
     location.trim().length > 0 &&
     time.trim().length > 0 &&
-    Number(capacity) > 0;
+    Number(capacity) > 0 &&
+    (!isTicketed || (canSellTickets && Number(ticketPrice) > 0 && Number(maxTickets) > 0));
 
   const clearTimeError = () => {
     if (timeError) {
@@ -184,6 +219,9 @@ export const CreateActivityScreen = () => {
           .map((item) => item.trim())
           .filter(Boolean),
         images: imageUris,
+        is_ticketed: isTicketed,
+        ticket_price: isTicketed ? Number(ticketPrice) : undefined,
+        max_tickets: isTicketed ? Number(maxTickets) : undefined,
       },
     };
   };
@@ -421,6 +459,74 @@ export const CreateActivityScreen = () => {
             <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
           </View>
         </View>
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Tickets"
+          title="Charge for this event"
+          subtitle="IRLobby takes a 10% platform fee. The rest goes to your connected payout account."
+        />
+        <View style={styles.preferenceCard}>
+          <View style={styles.switchRow}>
+            <View style={styles.switchCopy}>
+              <Text style={styles.switchTitle}>Ticketed event</Text>
+              <Text style={styles.switchSubtitle}>
+                Guests buy a ticket in the app before they can attend.
+              </Text>
+            </View>
+            <Switch
+              value={isTicketed}
+              onValueChange={(value) => {
+                updateForm('isTicketed', value);
+                if (value && !maxTickets) {
+                  updateForm('maxTickets', capacity || '6');
+                }
+              }}
+            />
+          </View>
+        </View>
+        {isTicketed ? (
+          <>
+            {!canSellTickets ? (
+              <HelperText type="info" visible>
+                Finish payout setup with Stripe before you can sell tickets.
+              </HelperText>
+            ) : null}
+            {!canSellTickets ? (
+              <Button
+                mode="contained"
+                onPress={() => onboardMutation.mutate()}
+                loading={onboardMutation.isPending}
+                style={styles.inlineButton}
+              >
+                Set up payouts
+              </Button>
+            ) : (
+              <HelperText type="info" visible>
+                Payouts are ready. Ticket sales will send 90% to you and 10% to IRLobby.
+              </HelperText>
+            )}
+            <View style={styles.row}>
+              <TextInput
+                label="Ticket price (USD)"
+                value={ticketPrice}
+                onChangeText={updateTextField('ticketPrice')}
+                keyboardType="decimal-pad"
+                mode="outlined"
+                style={[styles.input, styles.half]}
+              />
+              <TextInput
+                label="Tickets available"
+                value={maxTickets}
+                onChangeText={updateTextField('maxTickets')}
+                keyboardType="number-pad"
+                mode="outlined"
+                style={[styles.input, styles.half]}
+              />
+            </View>
+          </>
+        ) : null}
       </PanelCard>
 
       <PanelCard>

@@ -28,6 +28,7 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
+import { openTicketCheckout } from '@services/paymentService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -41,6 +42,20 @@ type DiscoverNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Discover'>,
   NativeStackNavigationProp<MainStackParamList>
 >;
+
+const isActivityTicketed = (activity: {
+  isTicketed?: boolean;
+  is_ticketed?: boolean;
+}) => Boolean(activity.isTicketed || activity.is_ticketed);
+
+const activityTicketPrice = (activity: {
+  ticketPrice?: number | string | null;
+  ticket_price?: number | string | null;
+}) => {
+  const raw = activity.ticketPrice ?? activity.ticket_price;
+  const value = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(value) ? value : null;
+};
 
 export const DiscoverScreen = () => {
   const navigation = useNavigation<DiscoverNavigationProp>();
@@ -178,8 +193,15 @@ export const DiscoverScreen = () => {
     },
   });
 
+  const ticketPurchaseMutation = useMutation({
+    mutationFn: (activityId: number | string) => openTicketCheckout(activityId),
+  });
+
   const currentActivity = activities[currentIndex];
-  const isBusy = swipeMutation.isPending || participationMutation.isPending;
+  const isBusy =
+    swipeMutation.isPending ||
+    participationMutation.isPending ||
+    ticketPurchaseMutation.isPending;
   const activeFilterCount = useMemo(
     () =>
       [
@@ -340,6 +362,8 @@ export const DiscoverScreen = () => {
   const currentTimeLabel = currentActivity?.time
     ? new Date(currentActivity.time).toLocaleString()
     : 'Time TBD';
+  const ticketed = currentActivity ? isActivityTicketed(currentActivity) : false;
+  const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
 
   return (
     <>
@@ -587,6 +611,12 @@ export const DiscoverScreen = () => {
                       👥 {currentActivity.participant_count ?? 0}
                       {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
                     </Text>
+                    {ticketed ? (
+                      <Text style={styles.metaLine}>
+                        🎟 Ticketed
+                        {ticketPrice != null ? ` · $${ticketPrice.toFixed(2)}` : ''}
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={styles.hostRow}>
                     <View style={styles.hostAvatar}>
@@ -639,6 +669,15 @@ export const DiscoverScreen = () => {
                     👥 {currentActivity.participant_count ?? 0}
                     {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
                   </Text>
+                  {ticketed ? (
+                    <Text style={styles.metaLine}>
+                      🎟 Ticket
+                      {ticketPrice != null ? ` · $${ticketPrice.toFixed(2)}` : ''}
+                      {currentActivity.ticketsAvailable != null
+                        ? ` · ${currentActivity.ticketsAvailable} left`
+                        : ''}
+                    </Text>
+                  ) : null}
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
                   ) : null}
@@ -660,10 +699,34 @@ export const DiscoverScreen = () => {
                       Report / block host
                     </Button>
                   ) : null}
+                  {ticketPurchaseMutation.error ? (
+                    <HelperText type="error" visible>
+                      {getErrorMessage(
+                        ticketPurchaseMutation.error,
+                        'Unable to start ticket checkout.'
+                      )}
+                    </HelperText>
+                  ) : null}
                   <View style={styles.modalActions}>
                     <Button mode="outlined" onPress={() => setShowDetails(false)}>
                       Close
                     </Button>
+                    {ticketed ? (
+                      <Button
+                        mode="contained"
+                        buttonColor={appColors.primary}
+                        loading={ticketPurchaseMutation.isPending}
+                        disabled={
+                          ticketPurchaseMutation.isPending ||
+                          Boolean(currentActivity.isSoldOut)
+                        }
+                        onPress={() =>
+                          ticketPurchaseMutation.mutate(currentActivity.id)
+                        }
+                      >
+                        {currentActivity.isSoldOut ? 'Sold out' : 'Buy ticket'}
+                      </Button>
+                    ) : null}
                     <Button
                       mode="outlined"
                       disabled={participationMutation.isPending}
@@ -682,7 +745,7 @@ export const DiscoverScreen = () => {
                     </Button>
                     <Button
                       mode="contained-tonal"
-                      disabled={participationMutation.isPending}
+                      disabled={participationMutation.isPending || ticketed}
                       loading={
                         participationMutation.isPending &&
                         participationMutation.variables?.action === 'join'
@@ -694,7 +757,7 @@ export const DiscoverScreen = () => {
                         })
                       }
                     >
-                      Join
+                      {ticketed ? 'Ticket required' : 'Join'}
                     </Button>
                     <Button
                       mode="contained"

@@ -50,6 +50,10 @@ export interface AuthUser {
   swipesRemainingToday?: number | null;
   vibe?: VibeUserPayload;
   reliability?: ReliabilitySummary;
+  stripeConnectAccountId?: string | null;
+  stripeConnectPayoutsEnabled?: boolean;
+  stripeConnectDetailsSubmitted?: boolean;
+  canSellTickets?: boolean;
 }
 
 export interface LoginPayload {

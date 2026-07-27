@@ -58,6 +58,13 @@ export interface CreateActivityPayload {
   weather_dependent?: boolean;
   tags?: string[];
   images?: string[];
+  is_ticketed?: boolean;
+  isTicketed?: boolean;
+  ticket_price?: number;
+  ticketPrice?: number;
+  max_tickets?: number;
+  maxTickets?: number;
+  platform_fee_percent?: number;
 }
 
 export const createActivity = async (

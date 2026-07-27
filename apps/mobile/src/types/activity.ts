@@ -26,6 +26,17 @@ export interface Activity {
   isPrivate?: boolean;
   requiresApproval?: boolean;
   autoApprove?: boolean;
+  isTicketed?: boolean;
+  is_ticketed?: boolean;
+  ticketPrice?: number | string | null;
+  ticket_price?: number | string | null;
+  maxTickets?: number | null;
+  max_tickets?: number | null;
+  ticketsSold?: number | null;
+  tickets_sold?: number | null;
+  ticketsAvailable?: number | null;
+  isSoldOut?: boolean;
+  platformFeePercent?: number | string | null;
 }
 
 export interface Participant {

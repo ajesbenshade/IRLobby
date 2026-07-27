@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,11 +23,68 @@ import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
 import { api } from "@services/apiClient";
 import { updateOnboarding } from "@services/authService";
+import {
+  fetchStripeConnectStatus,
+  openStripeConnectOnboarding,
+} from "@services/paymentService";
 import { appColors, appTypography, palette, radii } from "@theme/index";
 import { getErrorMessage } from "@utils/error";
 import { imageAssetToUploadDataUrl } from "@utils/profileImages";
 
 import type { MainStackParamList } from "@navigation/types";
+
+const PayoutSetupCard = () => {
+  const { user, refreshProfile } = useAuth();
+  const statusQuery = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+  });
+  const onboardMutation = useMutation({
+    mutationFn: openStripeConnectOnboarding,
+    onSuccess: async () => {
+      await statusQuery.refetch();
+      await refreshProfile();
+    },
+  });
+
+  const ready =
+    Boolean(user?.canSellTickets) ||
+    Boolean(statusQuery.data?.payoutsEnabled) ||
+    Boolean(statusQuery.data?.onboardingComplete);
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={{ color: appColors.mutedInk, lineHeight: 20 }}>
+        {ready
+          ? "Your payout account is connected. Ticketed events will send 90% to you."
+          : "Connect a Stripe payout account to sell tickets for your events."}
+      </Text>
+      {statusQuery.error ? (
+        <HelperText type="error" visible>
+          {getErrorMessage(statusQuery.error, "Unable to load payout status.")}
+        </HelperText>
+      ) : null}
+      {onboardMutation.error ? (
+        <HelperText type="error" visible>
+          {getErrorMessage(onboardMutation.error, "Unable to open Stripe onboarding.")}
+        </HelperText>
+      ) : null}
+      <Button
+        mode={ready ? "outlined" : "contained"}
+        loading={onboardMutation.isPending || statusQuery.isFetching}
+        onPress={() => {
+          if (ready) {
+            void statusQuery.refetch();
+            return;
+          }
+          onboardMutation.mutate();
+        }}
+      >
+        {ready ? "Refresh payout status" : "Set up payouts with Stripe"}
+      </Button>
+    </View>
+  );
+};
 
 export const ProfileScreen = () => {
   const MAX_INTERESTS = 20;
@@ -438,6 +495,15 @@ export const ProfileScreen = () => {
             description="Add a couple from Profile when you’re ready — not required to start discovering."
           />
         )}
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Payouts"
+          title="Get paid for ticketed events"
+          subtitle="Connect Stripe once. IRLobby keeps 10% of each ticket; you receive the rest."
+        />
+        <PayoutSetupCard />
       </PanelCard>
 
       <PanelCard>

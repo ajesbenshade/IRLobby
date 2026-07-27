@@ -185,6 +185,20 @@ const normalizeUser = (
     isHost: Boolean(userRecord.isHost ?? userRecord.is_host ?? userRecord.host),
     vibe,
     reliability: normalizeReliability(userRecord.reliability),
+    stripeConnectAccountId: (userRecord.stripeConnectAccountId ??
+      userRecord.stripe_connect_account_id ??
+      null) as string | null,
+    stripeConnectPayoutsEnabled: Boolean(
+      userRecord.stripeConnectPayoutsEnabled ??
+        userRecord.stripe_connect_payouts_enabled
+    ),
+    stripeConnectDetailsSubmitted: Boolean(
+      userRecord.stripeConnectDetailsSubmitted ??
+        userRecord.stripe_connect_details_submitted
+    ),
+    canSellTickets: Boolean(
+      userRecord.canSellTickets ?? userRecord.can_sell_tickets
+    ),
   };
 };
 

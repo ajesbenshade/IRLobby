@@ -464,6 +464,58 @@ def auth_status(request):
     return Response({"authenticated": False, "user": None}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def stripe_connect_status(request):
+    """Return the host's Stripe Connect payout readiness."""
+    from .stripe_connect import StripeConnectError, sync_connect_account_status
+
+    try:
+        status_payload = sync_connect_account_status(request.user)
+    except StripeConnectError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception as exc:  # noqa: BLE001 - surface Stripe API errors cleanly
+        return Response(
+            {"error": f"Unable to refresh Stripe Connect status: {exc}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    request.user.refresh_from_db()
+    status_payload["user"] = UserSerializer(request.user).data
+    return Response(status_payload)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def stripe_connect_onboard(request):
+    """Create/continue Stripe Connect onboarding for ticketed event hosts."""
+    from .stripe_connect import StripeConnectError, create_connect_onboarding_link
+
+    return_url = request.data.get("returnUrl") or request.data.get("return_url")
+    refresh_url = request.data.get("refreshUrl") or request.data.get("refresh_url")
+
+    try:
+        onboarding_url = create_connect_onboarding_link(
+            request.user,
+            return_url=return_url,
+            refresh_url=refresh_url,
+        )
+    except StripeConnectError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception as exc:  # noqa: BLE001
+        return Response(
+            {"error": f"Unable to start Stripe Connect onboarding: {exc}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    return Response(
+        {
+            "url": onboarding_url,
+            "accountId": request.user.stripe_connect_account_id,
+        }
+    )
+
+
 # old simple password reset helper removed; logic below handles requests and email delivery
 #
 # The previous implementation above generated a token and sent mail directly using

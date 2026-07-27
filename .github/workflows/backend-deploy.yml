@@ -23,6 +23,10 @@ jobs:
       GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
       GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
       GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+      STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_CONNECT_WEBHOOK_SECRET: ${{ secrets.STRIPE_CONNECT_WEBHOOK_SECRET }}
+      STRIPE_PLATFORM_FEE_PERCENT: ${{ vars.STRIPE_PLATFORM_FEE_PERCENT || '10' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -42,6 +46,10 @@ jobs:
           GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
           GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_CONNECT_WEBHOOK_SECRET: ${{ secrets.STRIPE_CONNECT_WEBHOOK_SECRET }}
+          STRIPE_PLATFORM_FEE_PERCENT: ${{ vars.STRIPE_PLATFORM_FEE_PERCENT || '10' }}
         run: |
           set -euo pipefail
 
@@ -176,6 +184,29 @@ jobs:
             fi
             echo "Set GOOGLE_OAUTH_CLIENT_IDS from GitHub variable."
           fi
+
+          upsert_env() {
+            local key="$1"
+            local value="$2"
+            [ -n "${value}" ] || return 0
+            if grep -q "^${key}=" .env.production; then
+              sed -i "s|^${key}=.*|${key}=${value}|" .env.production
+            else
+              printf '\n%s=%s\n' "${key}" "${value}" >> .env.production
+            fi
+            echo "Set ${key} from GitHub secrets/vars."
+          }
+
+          upsert_env STRIPE_API_KEY "${STRIPE_API_KEY:-}"
+          upsert_env STRIPE_WEBHOOK_SECRET "${STRIPE_WEBHOOK_SECRET:-}"
+          upsert_env STRIPE_CONNECT_WEBHOOK_SECRET "${STRIPE_CONNECT_WEBHOOK_SECRET:-}"
+          upsert_env STRIPE_PLATFORM_FEE_PERCENT "${STRIPE_PLATFORM_FEE_PERCENT:-10}"
+          upsert_env STRIPE_SUCCESS_URL "irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}"
+          upsert_env STRIPE_CANCEL_URL "irlobby://tickets/cancel"
+          upsert_env STRIPE_CONNECT_RETURN_URL "irlobby://stripe/connect/return"
+          upsert_env STRIPE_CONNECT_REFRESH_URL "irlobby://stripe/connect/refresh"
+          upsert_env ENABLE_TICKETING "True"
+          upsert_env STRIPE_CONNECT_COUNTRY "US"
 
           chmod 600 .env.production
 

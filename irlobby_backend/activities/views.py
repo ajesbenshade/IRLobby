@@ -257,10 +257,41 @@ class ActivityTicketPurchaseView(APIView):
         serializer = TicketPurchaseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        host = activity.host
+        from users.stripe_connect import (
+            StripeConnectError,
+            host_can_receive_payouts,
+            platform_fee_amount_cents,
+        )
+
+        if not host_can_receive_payouts(host):
+            return Response(
+                {
+                    "message": "This host has not finished payout setup, so tickets cannot be purchased yet."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         success_url = serializer.validated_data.get("successUrl") or settings.STRIPE_SUCCESS_URL
         cancel_url = serializer.validated_data.get("cancelUrl") or settings.STRIPE_CANCEL_URL
 
+        unit_amount = int(activity.ticket_price * 100)
+        fee_percent = activity.platform_fee_percent or settings.STRIPE_PLATFORM_FEE_PERCENT
+        application_fee_amount = platform_fee_amount_cents(activity.ticket_price, fee_percent)
+        if application_fee_amount < 0 or application_fee_amount >= unit_amount:
+            return Response(
+                {"message": "Invalid platform fee configuration for this ticket."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         stripe.api_key = settings.STRIPE_API_KEY
+        if not (settings.STRIPE_API_KEY or "").strip():
+            return Response(
+                {"message": "Payments are temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        ticket = None
         try:
             ticket = Ticket.objects.create(
                 buyer=request.user,
@@ -269,7 +300,6 @@ class ActivityTicketPurchaseView(APIView):
             )
 
             session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
                 mode="payment",
                 line_items=[
                     {
@@ -277,16 +307,29 @@ class ActivityTicketPurchaseView(APIView):
                             "currency": activity.currency.lower(),
                             "product_data": {
                                 "name": f"Ticket for {activity.title}",
-                                "description": activity.description[:200],
+                                "description": (activity.description or "")[:200],
                             },
-                            "unit_amount": int(activity.ticket_price * 100),
+                            "unit_amount": unit_amount,
                         },
                         "quantity": 1,
                     }
                 ],
+                payment_intent_data={
+                    "application_fee_amount": application_fee_amount,
+                    "transfer_data": {
+                        "destination": host.stripe_connect_account_id,
+                    },
+                    "metadata": {
+                        "ticket_id": str(ticket.ticket_id),
+                        "activity_id": str(activity.id),
+                        "host_id": str(host.id),
+                    },
+                },
                 metadata={
                     "ticket_id": str(ticket.ticket_id),
                     "activity_id": str(activity.id),
+                    "host_id": str(host.id),
+                    "platform_fee_percent": str(fee_percent),
                 },
                 success_url=success_url,
                 cancel_url=cancel_url,
@@ -294,10 +337,26 @@ class ActivityTicketPurchaseView(APIView):
             ticket.stripe_session_id = session["id"]
             ticket.save(update_fields=["stripe_session_id"])
 
-            return Response({"session_id": session["id"]}, status=status.HTTP_201_CREATED)
+            return Response(
+                {
+                    "session_id": session["id"],
+                    "sessionId": session["id"],
+                    "url": session.get("url"),
+                    "checkoutUrl": session.get("url"),
+                    "platformFeePercent": float(fee_percent),
+                    "platformFeeAmountCents": application_fee_amount,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except StripeConnectError as exc:
+            if ticket is not None:
+                ticket.status = "cancelled"
+                ticket.save(update_fields=["status"])
+            return Response({"message": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except stripe.error.StripeError as exc:
-            ticket.status = "cancelled"
-            ticket.save(update_fields=["status"])  # Keep the pending record for audit.
+            if ticket is not None:
+                ticket.status = "cancelled"
+                ticket.save(update_fields=["status"])  # Keep the pending record for audit.
             return Response({"message": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
@@ -309,11 +368,27 @@ class StripeWebhookView(APIView):
         signature = request.headers.get("Stripe-Signature", "")
         stripe.api_key = settings.STRIPE_API_KEY
 
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, signature, settings.STRIPE_WEBHOOK_SECRET
+        secrets = [
+            s
+            for s in (
+                getattr(settings, "STRIPE_WEBHOOK_SECRET", "") or "",
+                getattr(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "") or "",
             )
-        except (ValueError, stripe.error.SignatureVerificationError):
+            if s.strip()
+        ]
+        event = None
+        last_error = None
+        for secret in secrets:
+            try:
+                event = stripe.Webhook.construct_event(payload, signature, secret)
+                break
+            except ValueError as exc:
+                last_error = exc
+                break
+            except stripe.error.SignatureVerificationError as exc:
+                last_error = exc
+                continue
+        if event is None:
             return Response(
                 {"message": "Invalid webhook payload."}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -339,6 +414,24 @@ class StripeWebhookView(APIView):
                 from .tasks import generate_ticket_qr_code
 
                 generate_ticket_qr_code.delay(ticket.id)
+
+        elif event["type"] in {
+            "account.updated",
+            "v2.core.account.updated",
+            "account.application.authorized",
+        }:
+            account_data = event["data"]["object"]
+            account_id = account_data.get("id")
+            if account_id:
+                from users.models import User
+                from users.stripe_connect import sync_connect_account_status
+
+                host = User.objects.filter(stripe_connect_account_id=account_id).first()
+                if host:
+                    try:
+                        sync_connect_account_status(host)
+                    except Exception:  # noqa: BLE001
+                        pass
 
         return Response({"success": True})
 

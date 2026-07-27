@@ -297,11 +297,25 @@ class TicketingTests(APITestCase):
             is_ticketed=True,
             ticket_price=25.00,
             max_tickets=3,
+            platform_fee_percent=10,
+        )
+        self.host.stripe_connect_account_id = "acct_test_host"
+        self.host.stripe_connect_payouts_enabled = True
+        self.host.stripe_connect_details_submitted = True
+        self.host.save(
+            update_fields=[
+                "stripe_connect_account_id",
+                "stripe_connect_payouts_enabled",
+                "stripe_connect_details_submitted",
+            ]
         )
 
     @patch("activities.views.stripe.checkout.Session.create")
     def test_create_ticket_checkout_session(self, mock_session_create):
-        mock_session_create.return_value = {"id": "cs_test_123"}
+        mock_session_create.return_value = {
+            "id": "cs_test_123",
+            "url": "https://checkout.stripe.com/c/pay/cs_test_123",
+        }
 
         self.client.force_authenticate(self.buyer)
         url = reverse("activity-ticket-buy", args=[self.activity.id])
@@ -309,9 +323,29 @@ class TicketingTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["session_id"], "cs_test_123")
+        self.assertEqual(response.data["url"], "https://checkout.stripe.com/c/pay/cs_test_123")
         ticket = Ticket.objects.get(activity=self.activity, buyer=self.buyer)
         self.assertEqual(ticket.status, "pending")
         self.assertEqual(ticket.stripe_session_id, "cs_test_123")
+
+        kwargs = mock_session_create.call_args.kwargs
+        self.assertNotIn("payment_method_types", kwargs)
+        self.assertEqual(
+            kwargs["payment_intent_data"]["transfer_data"]["destination"],
+            "acct_test_host",
+        )
+        # $25 ticket * 10% = $2.50 = 250 cents
+        self.assertEqual(kwargs["payment_intent_data"]["application_fee_amount"], 250)
+
+    def test_cannot_buy_when_host_not_connected(self):
+        self.host.stripe_connect_payouts_enabled = False
+        self.host.save(update_fields=["stripe_connect_payouts_enabled"])
+
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(reverse("activity-ticket-buy", args=[self.activity.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("payout setup", response.data.get("message", "").lower())
 
     def test_cannot_buy_non_ticketed_activity(self):
         self.activity.is_ticketed = False

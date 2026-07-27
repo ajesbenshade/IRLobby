@@ -26,6 +26,16 @@ class UserSerializer(serializers.ModelSerializer):
     reliability = serializers.SerializerMethodField()
     swipes_remaining_today = serializers.SerializerMethodField()
     swipesRemainingToday = serializers.SerializerMethodField()
+    stripeConnectAccountId = serializers.CharField(
+        source="stripe_connect_account_id", read_only=True
+    )
+    stripeConnectPayoutsEnabled = serializers.BooleanField(
+        source="stripe_connect_payouts_enabled", read_only=True
+    )
+    stripeConnectDetailsSubmitted = serializers.BooleanField(
+        source="stripe_connect_details_submitted", read_only=True
+    )
+    canSellTickets = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -58,8 +68,17 @@ class UserSerializer(serializers.ModelSerializer):
             "reliability",
             "swipes_remaining_today",
             "swipesRemainingToday",
+            "stripeConnectAccountId",
+            "stripeConnectPayoutsEnabled",
+            "stripeConnectDetailsSubmitted",
+            "canSellTickets",
         )
         read_only_fields = ("id",)
+
+    def get_canSellTickets(self, obj):
+        from .stripe_connect import host_can_receive_payouts
+
+        return host_can_receive_payouts(obj)
 
     def get_interests(self, obj):
         return (obj.preferences or {}).get("interests", [])

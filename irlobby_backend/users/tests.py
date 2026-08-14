@@ -828,6 +828,31 @@ class OnboardingAndInviteTests(APITestCase):
         self.assertEqual(self.user.location, "Austin")
         self.assertFalse(self.user.preferences.get("onboarding_completed", False))
 
+    def test_onboarding_completion_allows_skipped_vibe_quiz_with_legal(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.patch(
+            reverse("user-onboarding"),
+            {
+                "activity_preferences": {"vibe": {"vibeQuizSkipped": True}},
+                "terms_accepted": True,
+                "privacy_accepted": True,
+                "onboarding_completed": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.preferences.get("onboarding_completed"))
+        self.assertTrue(
+            (self.user.preferences.get("activity_preferences") or {})
+            .get("vibe", {})
+            .get("vibeQuizSkipped")
+        )
+        self.assertIsNotNone(self.user.terms_accepted_at)
+        self.assertIsNotNone(self.user.privacy_accepted_at)
+
     def test_onboarding_completion_requires_required_fields_and_legal_acceptance(self):
         self.client.force_authenticate(self.user)
         response = self.client.patch(
@@ -840,6 +865,7 @@ class OnboardingAndInviteTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("detail", response.data)
+        self.assertIn("terms of service", str(response.data["detail"]).lower())
         self.user.refresh_from_db()
         self.assertFalse(self.user.preferences.get("onboarding_completed", False))
         self.assertIsNone(self.user.terms_accepted_at)

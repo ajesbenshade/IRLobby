@@ -223,21 +223,48 @@ class UserOnboardingSerializer(serializers.Serializer):
             timestamp_attr="privacy_accepted_at",
         )
 
-        has_preferences = bool(interests) or any(
-            bool(value) for value in (activity_preferences or {}).values()
+        has_preferences = self._has_onboarding_preferences(
+            interests=interests,
+            activity_preferences=activity_preferences,
         )
 
-        if has_preferences and terms_accepted and privacy_accepted:
+        missing = []
+        if not has_preferences:
+            missing.append("choose interests or activity preferences (or skip the vibe quiz)")
+        if not terms_accepted:
+            missing.append("accept the terms of service")
+        if not privacy_accepted:
+            missing.append("accept the privacy policy")
+
+        if not missing:
             return attrs
 
         raise serializers.ValidationError(
             {
                 "detail": (
-                    "Choose interests or activity preferences, and accept the terms and "
-                    "privacy policy before finishing onboarding."
+                    "Before finishing onboarding, please "
+                    + ", ".join(missing)
+                    + "."
                 )
             }
         )
+
+    def _has_onboarding_preferences(self, interests, activity_preferences) -> bool:
+        if interests:
+            return True
+
+        preferences = activity_preferences or {}
+        if not isinstance(preferences, dict):
+            return bool(preferences)
+
+        for value in preferences.values():
+            if isinstance(value, dict):
+                if value.get("vibeQuizSkipped") or any(bool(item) for item in value.values()):
+                    return True
+                continue
+            if value:
+                return True
+        return False
 
     def _is_acceptance_satisfied(self, instance, accepted_in_request, timestamp_attr):
         existing_timestamp = getattr(instance, timestamp_attr, None) if instance else None

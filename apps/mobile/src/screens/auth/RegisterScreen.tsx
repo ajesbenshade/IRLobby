@@ -1,4 +1,3 @@
-import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
@@ -6,10 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
+import { GoogleSignInButton } from '@components/GoogleSignInButton';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Field } from '@components/ui/Field';
-import { config } from '@constants/config';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import { updateOnboarding } from '@services/authService';
@@ -60,26 +59,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
       acceptedLegal,
     [acceptedLegal, email, firstName, lastName, passwordsMatch, username],
   );
-
-  const isGoogleConfigured = useMemo(
-    () =>
-      Boolean(
-        config.googleExpoClientId ||
-          config.googleIosClientId ||
-          config.googleAndroidClientId ||
-          config.googleWebClientId,
-      ),
-    [],
-  );
-
-  const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    clientId: config.googleExpoClientId,
-    iosClientId: config.googleIosClientId,
-    androidClientId: config.googleAndroidClientId,
-    webClientId: config.googleWebClientId,
-    scopes: ['profile', 'email'],
-    selectAccount: true,
-  });
 
   useEffect(() => {
     let isMounted = true;
@@ -133,21 +112,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
     isPending: isGooglePending,
     error: googleError,
   } = useMutation({
-    mutationFn: async () => {
-      if (!isGoogleConfigured || !googleRequest) {
-        throw new Error(authCopy.register.googleNotConfigured);
-      }
-
-      const authResult = await promptGoogleAsync();
-      if (authResult.type !== 'success') {
-        throw new Error('Google sign-in was cancelled.');
-      }
-
-      const idToken = authResult.params?.id_token;
-      if (typeof idToken !== 'string' || !idToken) {
-        throw new Error('Google sign-in did not return an identity token.');
-      }
-
+    mutationFn: async (idToken: string) => {
       const result = await signInWithGoogleIdToken(idToken);
       await persistLegalAcceptance();
       return result;
@@ -212,14 +177,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
     await signInWithTwitterAsync();
   }, [acceptedLegal, isBusy, signInWithTwitterAsync]);
-
-  const handleGoogleSignIn = useCallback(async () => {
-    if (isBusy || !acceptedLegal) {
-      return;
-    }
-
-    await signInWithGoogleAsync();
-  }, [acceptedLegal, isBusy, signInWithGoogleAsync]);
 
   const handleAppleSignIn = useCallback(async () => {
     if (isBusy || !acceptedLegal) {
@@ -343,17 +300,12 @@ export const RegisterScreen = ({ navigation }: Props) => {
           >
             {authCopy.register.twitterCta}
           </AppButton>
-          <AppButton
-            variant="social"
-            onPress={handleGoogleSignIn}
-            disabled={isBusy || !acceptedLegal || !isGoogleConfigured || !googleRequest}
-            loading={isGooglePending}
-          >
-            {authCopy.register.googleCta}
-          </AppButton>
-          {!isGoogleConfigured ? (
-            <Text style={styles.hintText}>{authCopy.register.googleNotConfigured}</Text>
-          ) : null}
+          <GoogleSignInButton
+            disabled={isBusy || !acceptedLegal}
+            label={authCopy.register.googleCta}
+            notConfiguredHint={authCopy.register.googleNotConfigured}
+            onIdToken={(idToken) => signInWithGoogleAsync(idToken)}
+          />
           {isAppleAvailable ? (
             <AppButton
               variant="social"

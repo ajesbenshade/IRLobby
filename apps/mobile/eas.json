@@ -26,6 +26,21 @@
     },
     "production-no-submit": {
       "extends": "production"
+    },
+    "revyl-build": {
+      "distribution": "internal",
+      "environment": "production",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.irlobby.com",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://api.irlobby.com",
+        "EXPO_PUBLIC_TWITTER_REDIRECT_URI": "irlobby://auth/twitter"
+      }
     }
   },
   "submit": {

@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, StyleSheet } from 'react-native';
-import { Button, HelperText, Modal, Portal, Snackbar, Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Animated, Image, PanResponder, StyleSheet } from 'react-native';
+import { Modal, Portal, Snackbar, Text } from 'react-native-paper';
 
 import {
   AccentPill,
@@ -17,8 +19,10 @@ import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
 import { MatchCelebration } from '@components/MatchCelebration';
 import { ActivityCardSkeleton } from '@components/skeletons';
-import { TextInput } from '@components/PaperCompat';
-import { RefreshControl, ScrollView, Text as NativeText, View } from '@components/RNCompat';
+import { RefreshControl, ScrollView, View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Chip } from '@components/ui/Chip';
+import { Field } from '@components/ui/Field';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import {
@@ -29,7 +33,7 @@ import {
   type ActivityFetchFilters,
 } from '@services/activityService';
 import { openTicketCheckout } from '@services/paymentService';
-import { appColors } from '@theme/index';
+import { appColors, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -55,6 +59,23 @@ const activityTicketPrice = (activity: {
   const raw = activity.ticketPrice ?? activity.ticket_price;
   const value = typeof raw === 'number' ? raw : Number(raw);
   return Number.isFinite(value) ? value : null;
+};
+
+const formatActivityTime = (value?: string) => {
+  if (!value) {
+    return 'Time TBD';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Time TBD';
+  }
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 };
 
 export const DiscoverScreen = () => {
@@ -359,11 +380,10 @@ export const DiscoverScreen = () => {
         : [currentActivity.host.firstName, currentActivity.host.lastName].filter(Boolean).join(' ') ||
           currentActivity.host.email ||
           'Community host';
-  const currentTimeLabel = currentActivity?.time
-    ? new Date(currentActivity.time).toLocaleString()
-    : 'Time TBD';
+  const currentTimeLabel = formatActivityTime(currentActivity?.time);
   const ticketed = currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
+  const coverImage = currentActivity?.images?.[0];
 
   return (
     <>
@@ -376,9 +396,9 @@ export const DiscoverScreen = () => {
         title="Plans worth leaving for"
         subtitle="Swipe through what's happening near you tonight."
         rightContent={
-          <Button compact mode="text" onPress={() => navigation.navigate('Notifications')}>
+          <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
             Pings
-          </Button>
+          </AppButton>
         }
       />
 
@@ -391,28 +411,36 @@ export const DiscoverScreen = () => {
             Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your energy.
           </Text>
           <View style={styles.vibeReminderActions}>
-            <Button mode="text" compact onPress={() => setVibeReminderDismissed(true)}>
+            <AppButton compact variant="ghost" onPress={() => setVibeReminderDismissed(true)}>
               Not now
-            </Button>
-            <Button
-              mode="contained"
-              compact
-              onPress={() => navigation.navigate('VibeQuizModal')}
-            >
+            </AppButton>
+            <AppButton compact onPress={() => navigation.navigate('VibeQuizModal')}>
               Take the quiz
-            </Button>
+            </AppButton>
           </View>
         </PanelCard>
       ) : null}
 
       <View style={styles.toolbar}>
-            <Button mode={showFilters ? 'contained-tonal' : 'outlined'} onPress={() => setShowFilters((previous) => !previous)}>
-              {showFilters ? 'Hide vibe filters' : `Vibe filters${activeFilterCount ? ` (${activeFilterCount})` : ''}`}
-            </Button>
-            <Button mode={showMap ? 'contained-tonal' : 'outlined'} onPress={() => setShowMap((previous) => !previous)}>
-              {showMap ? 'Hide map' : 'Map view'}
-            </Button>
-            <AccentPill tone="secondary">{activities.length} live now</AccentPill>
+            <Chip
+              label={showFilters ? 'Hide filters' : `Filters${activeFilterCount ? ` · ${activeFilterCount}` : ''}`}
+              selected={showFilters}
+              onPress={() => setShowFilters((previous) => !previous)}
+            />
+            <Chip
+              label={showMap ? 'Hide map' : 'Map'}
+              selected={showMap}
+              onPress={() => setShowMap((previous) => !previous)}
+            />
+            <Chip
+              label="Tonight"
+              selected={tonightOnly}
+              onPress={() => {
+                setTonightOnly((previous) => !previous);
+                setCurrentIndex(0);
+              }}
+            />
+            <AccentPill tone="neutral">{activities.length} nearby</AccentPill>
           </View>
 
           {showFilters ? (
@@ -420,59 +448,82 @@ export const DiscoverScreen = () => {
               <View style={styles.filterHeader}>
                 <View style={styles.filterHeaderCopy}>
                   <Text variant="titleMedium" style={styles.filterTitle}>
-                    Tune your vibe
+                    Tune the deck
                   </Text>
-                  <Text style={styles.filterSubtitle}>Tighten the deck without leaving the moment.</Text>
+                  <Text style={styles.filterSubtitle}>Keep it simple. The feed should stay scannable.</Text>
                 </View>
-                <Button mode="text" compact onPress={resetFilters}>
+                <AppButton compact variant="ghost" onPress={resetFilters}>
                   Clear
-                </Button>
+                </AppButton>
               </View>
-              <TextInput label="Category (tag)" value={categoryFilter} onChangeText={setCategoryFilter} mode="outlined" style={styles.input} />
-              <TextInput label="Location" value={locationFilter} onChangeText={setLocationFilter} mode="outlined" style={styles.input} />
-              <TextInput label="Tags (comma separated)" value={tagFilter} onChangeText={setTagFilter} mode="outlined" style={styles.input} />
-              <TextInput
-                label="Max distance (km)"
-                value={distanceFilter}
-                onChangeText={setDistanceFilter}
-                keyboardType="numeric"
-                mode="outlined"
-                style={styles.input}
+              <View style={styles.chipRow}>
+                {[
+                  { label: 'Nearby', value: '5' },
+                  { label: '10 km', value: '10' },
+                  { label: '25 km', value: '25' },
+                ].map((option) => (
+                  <Chip
+                    key={option.value}
+                    label={option.label}
+                    selected={distanceFilter === option.value}
+                    onPress={() => {
+                      setDistanceFilter((current) =>
+                        current === option.value ? '' : option.value,
+                      );
+                      setCurrentIndex(0);
+                    }}
+                  />
+                ))}
+              </View>
+              <View style={styles.chipRow}>
+                {[
+                  { label: 'Everyone', value: 'everyone' },
+                  { label: 'Friends', value: 'friends' },
+                ].map((option) => (
+                  <Chip
+                    key={option.value}
+                    label={option.label}
+                    selected={visibilityFilter === option.value}
+                    onPress={() => {
+                      setVisibilityFilter((current) =>
+                        current === option.value ? '' : option.value,
+                      );
+                      setCurrentIndex(0);
+                    }}
+                  />
+                ))}
+              </View>
+              <Field
+                label="Category"
+                value={categoryFilter}
+                onChangeText={setCategoryFilter}
+                placeholder="Music, food, outdoors…"
               />
-              <TextInput label="Skill level" value={skillFilter} onChangeText={setSkillFilter} mode="outlined" style={styles.input} />
-              <TextInput label="Age restriction" value={ageFilter} onChangeText={setAgeFilter} mode="outlined" style={styles.input} />
-              <TextInput
-                label="Visibility (everyone/friends/friendsOfFriends)"
-                value={visibilityFilter}
-                onChangeText={setVisibilityFilter}
-                mode="outlined"
-                style={styles.input}
+              <Field
+                label="Neighborhood"
+                value={locationFilter}
+                onChangeText={setLocationFilter}
+                placeholder="City or area"
               />
-              <Button
-                mode={tonightOnly ? 'contained' : 'outlined'}
-                onPress={() => {
-                  setTonightOnly((previous) => !previous);
-                  setCurrentIndex(0);
-                }}
-                style={styles.input}
-              >
-                {tonightOnly ? 'Tonight (next 8 hours) · on' : 'Tonight filter · off'}
-              </Button>
+              <Field
+                label="Tags"
+                value={tagFilter}
+                onChangeText={setTagFilter}
+                placeholder="Low-key, rooftop, hike"
+              />
               {!tonightOnly ? (
                 <>
-                  <TextInput
-                    label="Date from (YYYY-MM-DD or ISO)"
+                  <Field
+                    label="Starts after"
                     value={dateFromFilter}
                     onChangeText={setDateFromFilter}
-                    mode="outlined"
-                    style={styles.input}
+                    placeholder="e.g. 2026-08-14"
                   />
-                  <TextInput
-                    label="Date to (YYYY-MM-DD or ISO)"
+                  <Field
+                    label="Ends before"
                     value={dateToFilter}
                     onChangeText={setDateToFilter}
-                    mode="outlined"
-                    style={styles.input}
+                    placeholder="e.g. 2026-08-16"
                   />
                 </>
               ) : null}
@@ -522,22 +573,22 @@ export const DiscoverScreen = () => {
 
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>
-              <HelperText type="error" visible>
+              <Text style={styles.errorText}>
                 {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
-              </HelperText>
-              <Button mode="outlined" onPress={() => void refetch()} disabled={isRefetching}>
+              </Text>
+              <AppButton variant="outline" onPress={() => void refetch()} disabled={isRefetching}>
                 {isRefetching ? 'Retrying...' : 'Retry'}
-              </Button>
+              </AppButton>
             </View>
           ) : null}
 
           {participationMutation.error ? (
-            <HelperText type="error" visible>
+            <Text style={styles.errorText}>
               {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
-            </HelperText>
+            </Text>
           ) : null}
 
-          {!isLoading && activities.length === 0 ? (
+          {!isLoading && !error && activities.length === 0 ? (
             <EmptyStatePanel
               title={tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
               description={
@@ -548,23 +599,21 @@ export const DiscoverScreen = () => {
               action={
                 <View style={styles.emptyActions}>
                   {tonightOnly ? (
-                    <Button
-                      mode="contained"
-                      buttonColor={appColors.primary}
+                    <AppButton
                       onPress={() => {
                         setTonightOnly(false);
                         setCurrentIndex(0);
                       }}
                     >
                       Show all times
-                    </Button>
+                    </AppButton>
                   ) : null}
-                  <Button mode="outlined" onPress={resetDeck}>
+                  <AppButton variant="outline" onPress={resetDeck}>
                     Refresh deck
-                  </Button>
-                  <Button mode="text" onPress={() => navigation.navigate('Create')}>
+                  </AppButton>
+                  <AppButton variant="ghost" onPress={() => navigation.navigate('Create')}>
                     Host a plan
-                  </Button>
+                  </AppButton>
                 </View>
               }
             />
@@ -576,12 +625,12 @@ export const DiscoverScreen = () => {
               description="You’ve seen this round. Refresh for anything new, or host a plan so others can find you."
               action={
                 <View style={styles.emptyActions}>
-                  <Button mode="outlined" onPress={resetDeck}>
+                  <AppButton variant="outline" onPress={resetDeck}>
                     Reload deck
-                  </Button>
-                  <Button mode="text" onPress={() => navigation.navigate('Create')}>
+                  </AppButton>
+                  <AppButton variant="ghost" onPress={() => navigation.navigate('Create')}>
                     Host a plan
-                  </Button>
+                  </AppButton>
                 </View>
               }
             />
@@ -589,66 +638,67 @@ export const DiscoverScreen = () => {
 
           {currentActivity ? (
             <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
-              <PanelCard style={styles.card}>
-                <View style={styles.cardHero}>
-                  <AccentPill tone="secondary">{currentTag}</AccentPill>
-                  <Text style={styles.cardHeroLetter}>{currentActivity.title.charAt(0).toUpperCase()}</Text>
-                  <Text style={styles.cardHeroText}>Swipe right if you would actually pull up. Left if it is not your scene.</Text>
-                </View>
-                <View style={styles.cardContent}>
-                  <Text variant="headlineSmall" style={styles.cardTitle}>
-                    {currentActivity.title}
-                  </Text>
-                  {currentActivity.description ? (
-                    <NativeText style={styles.cardDescription} numberOfLines={3}>
-                      {currentActivity.description}
-                    </NativeText>
-                  ) : null}
-                  <View style={styles.metaStack}>
-                    <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
-                    <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
-                    <Text style={styles.metaLine}>
-                      👥 {currentActivity.participant_count ?? 0}
-                      {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
+              <View style={[styles.photoCard, ticketed ? styles.photoCardTicketed : null]}>
+                {coverImage ? (
+                  <Image source={{ uri: coverImage }} style={styles.photo} />
+                ) : (
+                  <LinearGradient
+                    colors={[appColors.primary, appColors.primaryDeep]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.photo}
+                  >
+                    <Text style={styles.photoLetter}>
+                      {currentActivity.title.charAt(0).toUpperCase()}
                     </Text>
+                  </LinearGradient>
+                )}
+                <LinearGradient
+                  colors={['transparent', 'rgba(10, 8, 20, 0.92)']}
+                  style={styles.photoScrim}
+                >
+                  <View style={styles.photoChipRow}>
+                    <AccentPill tone="neutral">{currentTag}</AccentPill>
                     {ticketed ? (
-                      <Text style={styles.metaLine}>
-                        🎟 Ticketed
-                        {ticketPrice != null ? ` · $${ticketPrice.toFixed(2)}` : ''}
-                      </Text>
+                      <AccentPill tone="gold">
+                        Ticket{ticketPrice != null ? ` · $${ticketPrice.toFixed(2)}` : ''}
+                      </AccentPill>
                     ) : null}
                   </View>
-                  <View style={styles.hostRow}>
-                    <View style={styles.hostAvatar}>
-                      <Text style={styles.hostAvatarText}>{currentHostName.charAt(0).toUpperCase()}</Text>
+                  <Text style={styles.photoTitle}>{currentActivity.title}</Text>
+                  <View style={styles.photoMeta}>
+                    <View style={styles.metaItem}>
+                      <MaterialCommunityIcons name="map-marker-outline" size={16} color={appColors.mutedInk} />
+                      <Text style={styles.metaText}>{currentActivity.location || 'Location TBD'}</Text>
                     </View>
-                    <View style={styles.hostCopy}>
-                      <Text style={styles.hostName}>{currentHostName}</Text>
-                      <Text style={styles.hostLabel}>Hosting</Text>
+                    <View style={styles.metaItem}>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color={appColors.mutedInk} />
+                      <Text style={styles.metaText}>{currentTimeLabel}</Text>
                     </View>
-                    <Button mode="text" compact onPress={() => setShowDetails(true)}>
-                      Details
-                    </Button>
+                    <View style={styles.metaItem}>
+                      <MaterialCommunityIcons name="account-group-outline" size={16} color={appColors.mutedInk} />
+                      <Text style={styles.metaText}>
+                        {currentActivity.participant_count ?? 0}
+                        {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </PanelCard>
+                </LinearGradient>
+              </View>
             </AnimatedView>
           ) : null}
 
           {currentActivity ? (
             <View style={styles.actions}>
-              <Button mode="outlined" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
+              <AppButton variant="outline" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
                 Pass
-              </Button>
-              <Button
-                mode="contained"
-                onPress={() => handleSwipe('right')}
-                disabled={isBusy}
-                style={styles.actionButton}
-                buttonColor={appColors.primary}
-              >
+              </AppButton>
+              <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
+                Details
+              </AppButton>
+              <AppButton onPress={() => handleSwipe('right')} disabled={isBusy} style={styles.actionButton}>
                 I’m down
-              </Button>
+              </AppButton>
             </View>
           ) : null}
 
@@ -656,27 +706,36 @@ export const DiscoverScreen = () => {
             <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
               {currentActivity ? (
                 <ScrollView contentContainerStyle={styles.detailsScroll}>
-                  <AccentPill tone="secondary">{currentTag}</AccentPill>
+                  <AccentPill tone={ticketed ? 'gold' : 'neutral'}>{currentTag}</AccentPill>
                   <Text variant="headlineSmall" style={styles.detailsTitle}>
                     {currentActivity.title}
                   </Text>
                   <Text variant="bodyMedium" style={styles.detailsText}>
                     {currentActivity.description || 'No description provided.'}
                   </Text>
-                  <Text style={styles.metaLine}>📍 {currentActivity.location || 'Location TBD'}</Text>
-                  <Text style={styles.metaLine}>🕒 {currentTimeLabel}</Text>
-                  <Text style={styles.metaLine}>
-                    👥 {currentActivity.participant_count ?? 0}
-                    {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
-                  </Text>
+                  <View style={styles.metaItem}>
+                    <MaterialCommunityIcons name="map-marker-outline" size={16} color={appColors.mutedInk} />
+                    <Text style={styles.metaText}>{currentActivity.location || 'Location TBD'}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <MaterialCommunityIcons name="clock-outline" size={16} color={appColors.mutedInk} />
+                    <Text style={styles.metaText}>{currentTimeLabel}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <MaterialCommunityIcons name="account-group-outline" size={16} color={appColors.mutedInk} />
+                    <Text style={styles.metaText}>
+                      {currentActivity.participant_count ?? 0}
+                      {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''} people
+                    </Text>
+                  </View>
                   {ticketed ? (
-                    <Text style={styles.metaLine}>
-                      🎟 Ticket
+                    <AccentPill tone="gold">
+                      Ticket
                       {ticketPrice != null ? ` · $${ticketPrice.toFixed(2)}` : ''}
                       {currentActivity.ticketsAvailable != null
                         ? ` · ${currentActivity.ticketsAvailable} left`
                         : ''}
-                    </Text>
+                    </AccentPill>
                   ) : null}
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
@@ -684,8 +743,8 @@ export const DiscoverScreen = () => {
                   {typeof currentActivity.host !== 'string' &&
                   currentActivity.host &&
                   typeof (currentActivity.host as { id?: number | string }).id !== 'undefined' ? (
-                    <Button
-                      mode="text"
+                    <AppButton
+                      variant="ghost"
                       onPress={() => {
                         const host = currentActivity.host as { id?: number | string };
                         if (!host?.id) {
@@ -697,24 +756,22 @@ export const DiscoverScreen = () => {
                       }}
                     >
                       Report / block host
-                    </Button>
+                    </AppButton>
                   ) : null}
                   {ticketPurchaseMutation.error ? (
-                    <HelperText type="error" visible>
+                    <Text style={styles.errorText}>
                       {getErrorMessage(
                         ticketPurchaseMutation.error,
                         'Unable to start ticket checkout.'
                       )}
-                    </HelperText>
+                    </Text>
                   ) : null}
                   <View style={styles.modalActions}>
-                    <Button mode="outlined" onPress={() => setShowDetails(false)}>
+                    <AppButton variant="outline" onPress={() => setShowDetails(false)}>
                       Close
-                    </Button>
+                    </AppButton>
                     {ticketed ? (
-                      <Button
-                        mode="contained"
-                        buttonColor={appColors.primary}
+                      <AppButton
                         loading={ticketPurchaseMutation.isPending}
                         disabled={
                           ticketPurchaseMutation.isPending ||
@@ -725,10 +782,10 @@ export const DiscoverScreen = () => {
                         }
                       >
                         {currentActivity.isSoldOut ? 'Sold out' : 'Buy ticket'}
-                      </Button>
+                      </AppButton>
                     ) : null}
-                    <Button
-                      mode="outlined"
+                    <AppButton
+                      variant="outline"
                       disabled={participationMutation.isPending}
                       loading={
                         participationMutation.isPending &&
@@ -742,9 +799,9 @@ export const DiscoverScreen = () => {
                       }
                     >
                       Leave
-                    </Button>
-                    <Button
-                      mode="contained-tonal"
+                    </AppButton>
+                    <AppButton
+                      variant="social"
                       disabled={participationMutation.isPending || ticketed}
                       loading={
                         participationMutation.isPending &&
@@ -758,17 +815,15 @@ export const DiscoverScreen = () => {
                       }
                     >
                       {ticketed ? 'Ticket required' : 'Join'}
-                    </Button>
-                    <Button
-                      mode="contained"
-                      buttonColor={appColors.primary}
+                    </AppButton>
+                    <AppButton
                       onPress={() => {
                         setShowDetails(false);
                         handleSwipe('right');
                       }}
                     >
                       I’m down
-                    </Button>
+                    </AppButton>
                   </View>
                 </ScrollView>
               ) : null}
@@ -809,7 +864,7 @@ export const DiscoverScreen = () => {
       duration={3500}
       action={{ label: 'Got it', onPress: () => setVibeToastVisible(false) }}
     >
-      Personalized feed unlocked! 🎉
+      Personalized feed unlocked.
     </Snackbar>
     </>
   );
@@ -824,7 +879,7 @@ const styles = StyleSheet.create({
   },
   vibeReminderTitle: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   vibeReminderSubtitle: {
     color: appColors.mutedInk,
@@ -863,27 +918,22 @@ const styles = StyleSheet.create({
   },
   filterTitle: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   filterSubtitle: {
     color: appColors.mutedInk,
   },
-  input: {
-    backgroundColor: appColors.card,
-  },
-  filterRow: {
+  chipRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-  },
-  halfInput: {
-    flex: 1,
   },
   mapCard: {
     gap: 10,
   },
   mapTitle: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   mapSubtitle: {
     color: appColors.mutedInk,
@@ -895,87 +945,74 @@ const styles = StyleSheet.create({
   errorContainer: {
     gap: 8,
   },
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   emptyActions: {
     gap: 8,
   },
   animatedCard: {
     width: '100%',
   },
-  card: {
-    padding: 0,
+  photoCard: {
     overflow: 'hidden',
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+    backgroundColor: appColors.card,
   },
-  cardHero: {
-    backgroundColor: 'rgba(91, 75, 255, 0.14)',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-    gap: 14,
+  photoCardTicketed: {
+    borderColor: appColors.accent,
   },
-  cardHeroLetter: {
-    color: appColors.primaryGlow,
-    fontSize: 46,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  cardHeroText: {
-    color: appColors.mutedInk,
-    lineHeight: 22,
-  },
-  cardContent: {
-    gap: 14,
-    padding: 20,
-  },
-  cardTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-  },
-  cardDescription: {
-    color: appColors.mutedInk,
-    lineHeight: 22,
-  },
-  metaStack: {
-    gap: 8,
-  },
-  metaLine: {
-    color: appColors.ink,
-  },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: appColors.line,
-    paddingTop: 14,
-  },
-  hostAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  photo: {
+    width: '100%',
+    height: 420,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(192, 38, 211, 0.18)',
   },
-  hostAvatarText: {
-    color: appColors.primaryGlow,
-    fontWeight: '900',
-    fontSize: 16,
+  photoLetter: {
+    color: appColors.white,
+    fontSize: 72,
+    fontWeight: '600',
+    opacity: 0.35,
   },
-  hostCopy: {
-    flex: 1,
+  photoScrim: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    padding: 20,
+    gap: 8,
   },
-  hostName: {
+  photoChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoTitle: {
     color: appColors.ink,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '600',
+    letterSpacing: -0.5,
   },
-  hostLabel: {
+  photoMeta: {
+    gap: 6,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaText: {
     color: appColors.mutedInk,
-    marginTop: 2,
+    fontSize: 14,
+    flex: 1,
   },
   actions: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 4,
+    alignItems: 'center',
   },
   actionButton: {
     flex: 1,
@@ -994,7 +1031,7 @@ const styles = StyleSheet.create({
   },
   detailsTitle: {
     color: appColors.ink,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   detailsText: {
     marginVertical: 8,

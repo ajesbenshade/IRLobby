@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
+import { isAllowedTwitterOAuthUrl } from '../lib/safeUrl';
 import { apiRequest, extractApiErrorMessage } from '../lib/queryClient';
 
 interface AuthFormProps {
@@ -340,7 +341,7 @@ const AuthForm = ({
       const authUrl = data.auth_url;
       const stateToken = data.state ?? null;
 
-      if (!authUrl || authUrl === '#' || authUrl.startsWith('#')) {
+      if (!authUrl || authUrl === '#' || authUrl.startsWith('#') || !isAllowedTwitterOAuthUrl(authUrl)) {
         throw new Error('Invalid OAuth response from server');
       }
 

@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { API_ROUTES } from '@shared/schema';
 
 import { config } from '@constants/config';
+import { isAllowedTwitterOAuthUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
 import { authStorage } from './authStorage';
@@ -284,7 +285,7 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
   );
 
   const authUrl = oauthUrlResponse.data?.auth_url;
-  if (!authUrl) {
+  if (!authUrl || !isAllowedTwitterOAuthUrl(authUrl)) {
     throw new Error('Unable to start X/Twitter login. Please try again.');
   }
 

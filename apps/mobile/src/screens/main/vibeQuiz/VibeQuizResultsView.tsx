@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   badgeEyebrow: {
-    color: '#cbd5ff',
+    color: 'rgba(244, 243, 250, 0.72)',
     textTransform: 'uppercase',
     letterSpacing: 1.4,
     fontWeight: '700',
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   badgeTagline: {
-    color: '#dbe1ff',
+    color: 'rgba(244, 243, 250, 0.78)',
     textAlign: 'center',
     fontSize: 14,
     lineHeight: 20,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   tagChip: {
     borderRadius: radii.pill,
-    backgroundColor: appColors.primarySoft,
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
     paddingHorizontal: 14,
     paddingVertical: 8,
   },

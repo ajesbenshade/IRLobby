@@ -101,13 +101,13 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
-        <header className="flex items-center justify-between bg-white p-4 shadow-sm dark:bg-gray-800">
+      <div className="min-h-screen bg-background pb-20">
+        <header className="flex items-center justify-between bg-card p-4 shadow-sm">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-foreground">
               {showUserActivities ? 'My Activities' : 'Matches'}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {showUserActivities ? "Activities you've joined" : 'People who matched with you'}
             </p>
           </div>
@@ -127,19 +127,19 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
         onAction={() => void refetch()}
         isActionLoading={isRefetching}
         tone="danger"
-        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+        className="min-h-screen bg-background"
       />
     );
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 pb-20 min-h-screen">
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
+    <div className="bg-background pb-20 min-h-screen">
+      <header className="bg-card shadow-sm p-4 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+          <h2 className="text-xl font-bold text-foreground">
             {showUserActivities ? 'My Activities' : 'Matches'}
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {showUserActivities ? "Activities you've joined" : 'People who matched with you'}
           </p>
         </div>
@@ -168,11 +168,11 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
           matchItems.map((match) => (
             <Card
               key={match.id}
-              className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-shadow"
+              className="bg-card shadow-sm hover:shadow-md transition-shadow"
             >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 overflow-hidden">
                     {match.activity.imageUrl ? (
                       <img
                         src={match.activity.imageUrl}
@@ -189,8 +189,8 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-800 truncate">{match.activity.title}</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-foreground truncate">{match.activity.title}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {format(new Date(match.activity.dateTime), 'MMM d, h:mm a')}
                     </p>
                     <div className="mt-1">{getStatusBadge(match.status)}</div>
@@ -207,8 +207,8 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
                         <MessageCircle className="w-5 h-5 text-white" />
                       </Button>
                     ) : (
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-gray-400" />
+                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-muted-foreground" />
                       </div>
                     )}
                   </div>
@@ -238,10 +238,9 @@ export default function Matches({ showUserActivities = false }: MatchesProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-900">
+                  <h4 className="text-sm font-medium text-foreground">
                     {participant.firstName} {participant.lastName}
                   </h4>
-                  <p className="text-sm text-gray-500">{participant.email}</p>
                 </div>
                 <Button onClick={() => sendFriendRequest(participant.id)} size="sm">
                   Add Friend

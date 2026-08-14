@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, SegmentedButtons, Text } from 'react-native-paper';
+import { Pressable, StyleSheet } from 'react-native';
+import { Button, Text } from 'react-native-paper';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchMatches } from '@services/matchService';
@@ -112,22 +113,46 @@ export const MyEventsScreen = () => {
               : 'Matches gives you a cleaner follow-up lane when discovery starts converting.'}
           </Text>
         </View>
-        <SegmentedButtons
-          value={activeSegment}
-          onValueChange={(value) => setActiveSegment(value as 'events' | 'matches')}
-          buttons={[
+        <View style={styles.segmentRow}>
+          {([
             { value: 'events', label: 'My Events' },
             { value: 'matches', label: 'Matches' },
-          ]}
-          style={styles.segmentedControl}
-        />
+          ] as const).map((segment) => {
+            const selected = activeSegment === segment.value;
+            return (
+              <Pressable
+                key={segment.value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                onPress={() => setActiveSegment(segment.value)}
+                style={[styles.segmentTab, selected ? styles.segmentTabSelected : null]}
+              >
+                <Text style={[styles.segmentTabLabel, selected ? styles.segmentTabLabelSelected : null]}>
+                  {segment.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </PanelCard>
 
-      {(hostedError || matchesError) && (
-        <HelperText type="error" visible>
-          {getErrorMessage(hostedError ?? matchesError, 'Unable to load your events.')}
-        </HelperText>
-      )}
+      {(hostedError || matchesError) ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            {getErrorMessage(hostedError ?? matchesError, 'Unable to load your events.')}
+          </Text>
+          <AppButton
+            variant="outline"
+            onPress={() => {
+              void refetchHosted();
+              void refetchMatches();
+            }}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? 'Retrying...' : 'Retry'}
+          </AppButton>
+        </View>
+      ) : null}
 
       {activeSegment === 'events' ? (
         <>
@@ -189,7 +214,7 @@ export const MyEventsScreen = () => {
                   </View>
                 ))}
               </View>
-            ) : (
+            ) : hostedError ? null : (
               <EmptyStatePanel
                 title="No hosted plans yet"
                 description="Post something for tonight. Nearby people will see it in Discover."
@@ -243,7 +268,7 @@ export const MyEventsScreen = () => {
                 </PanelCard>
               ))}
             </View>
-          ) : (
+          ) : matchesError ? null : (
             <EmptyStatePanel
               title="No matches yet"
               description="Swipe right on plans you want. Matches show up here so you can message and meet."
@@ -275,8 +300,39 @@ const styles = StyleSheet.create({
     color: appColors.mutedInk,
     lineHeight: 20,
   },
-  segmentedControl: {
-    marginBottom: 0,
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  segmentTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: appColors.lineStrong,
+    backgroundColor: appColors.cardStrong,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  segmentTabSelected: {
+    backgroundColor: appColors.primary,
+    borderColor: appColors.primary,
+  },
+  segmentTabLabel: {
+    color: appColors.ink,
+    fontWeight: '700',
+  },
+  segmentTabLabelSelected: {
+    color: appColors.white,
+  },
+  errorContainer: {
+    gap: 8,
+  },
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
   statsRow: {
     flexDirection: 'row',
@@ -312,8 +368,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#e8edf5',
-    backgroundColor: '#f9fbff',
+    borderColor: appColors.line,
+    backgroundColor: appColors.cardStrong,
     padding: spacing.md,
   },
   matchRow: {
@@ -322,8 +378,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#e8edf5',
-    backgroundColor: '#f9fbff',
+    borderColor: appColors.line,
+    backgroundColor: appColors.cardStrong,
     padding: spacing.md,
   },
   eventPrimary: {
@@ -380,7 +436,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#ebefff',
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -404,7 +460,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#eef2f7',
+    borderTopColor: appColors.line,
     paddingTop: 14,
   },
   metaLabel: {

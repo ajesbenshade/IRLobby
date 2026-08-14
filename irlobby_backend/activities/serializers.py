@@ -1,6 +1,8 @@
 from django.conf import settings
 from rest_framework import serializers
 
+from utils.client_urls import is_allowed_client_return_url
+from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
 from .models import Activity, ActivityParticipant, Ticket
@@ -153,6 +155,9 @@ class ActivitySerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def validate_images(self, images):
+        return validate_image_reference_list(images, max_items=5, field_name="images")
+
     def get_ticketsAvailable(self, obj):
         return obj.tickets_available
 
@@ -213,8 +218,18 @@ class TicketSerializer(serializers.ModelSerializer):
 
 
 class TicketPurchaseSerializer(serializers.Serializer):
-    successUrl = serializers.URLField(required=False)
-    cancelUrl = serializers.URLField(required=False)
+    successUrl = serializers.CharField(required=False, allow_blank=True, max_length=2048)
+    cancelUrl = serializers.CharField(required=False, allow_blank=True, max_length=2048)
+
+    def validate_successUrl(self, value):
+        if value and not is_allowed_client_return_url(value):
+            raise serializers.ValidationError("Invalid success URL.")
+        return value
+
+    def validate_cancelUrl(self, value):
+        if value and not is_allowed_client_return_url(value):
+            raise serializers.ValidationError("Invalid cancel URL.")
+        return value
 
 
 class TicketValidationSerializer(serializers.Serializer):

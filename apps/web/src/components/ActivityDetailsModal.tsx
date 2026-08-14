@@ -84,7 +84,7 @@ export default function ActivityDetailsModal({
 
         {/* Title and Category */}
         <div className="flex items-start justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex-1 mr-2">{safeTitle}</h2>
+          <h2 className="text-2xl font-bold text-foreground flex-1 mr-2">{safeTitle}</h2>
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
             {safeTags.length > 0 ? safeTags[0] : 'Activity'}
           </Badge>
@@ -92,12 +92,12 @@ export default function ActivityDetailsModal({
 
         {/* Activity Details */}
         <div className="space-y-3 mb-6">
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <MapPin className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>{activity.location}</span>
           </div>
 
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
               {hasValidDate && parsedActivityDate
@@ -114,7 +114,7 @@ export default function ActivityDetailsModal({
             </span>
           </div>
 
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <Users className="w-5 h-5 mr-3 flex-shrink-0" />
             <span>
               {activity.participant_count || 0} of {activity.capacity || 0} spots filled
@@ -125,15 +125,15 @@ export default function ActivityDetailsModal({
         {/* Description */}
         {activity.description && (
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-800 mb-2">What to expect</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">{activity.description}</p>
+            <h3 className="font-semibold text-foreground mb-2">What to expect</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">{activity.description}</p>
           </div>
         )}
 
         {/* Tags */}
         {safeTags.length > 0 && (
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-800 mb-3">Tags</h3>
+            <h3 className="font-semibold text-foreground mb-3">Tags</h3>
             <div className="flex flex-wrap gap-2">
               {safeTags.map((tag, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
@@ -145,23 +145,23 @@ export default function ActivityDetailsModal({
         )}
 
         {/* Host Information */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-          <h3 className="font-semibold text-gray-800 mb-3">Hosted by</h3>
+        <div className="mb-6 p-4 bg-muted/40 rounded-xl">
+          <h3 className="font-semibold text-foreground mb-3">Hosted by</h3>
           <div className="flex items-center">
             <Avatar className="w-12 h-12 mr-3">
               <AvatarImage src={activity.host?.profileImageUrl} />
               <AvatarFallback>{hostInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="font-medium text-gray-800">{hostName}</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-foreground">{hostName}</p>
+              <p className="text-sm text-muted-foreground">
                 {activity.host?.eventsHosted || 0} events hosted
               </p>
             </div>
             {activity.host?.rating && (
               <div className="flex items-center">
                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-foreground">
                   {activity.host.rating.toFixed(1)}
                 </span>
               </div>

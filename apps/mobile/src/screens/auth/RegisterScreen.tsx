@@ -3,18 +3,19 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, Platform, StyleSheet } from 'react-native';
-import { Button, Checkbox, Divider, HelperText, Text } from 'react-native-paper';
+import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Field } from '@components/ui/Field';
 import { config } from '@constants/config';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import { updateOnboarding } from '@services/authService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -22,6 +23,14 @@ const TERMS_URL = 'https://irlobby.com/terms-of-service';
 const PRIVACY_URL = 'https://irlobby.com/privacy-policy';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
+
+const persistLegalAcceptance = async () => {
+  try {
+    await updateOnboarding({ terms_accepted: true, privacy_accepted: true });
+  } catch {
+    // Non-fatal: legal can be re-prompted later.
+  }
+};
 
 export const RegisterScreen = ({ navigation }: Props) => {
   const {
@@ -102,14 +111,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         username: username.trim(),
         password,
       });
-      // Persist legal acceptance immediately so new users don't have to
-      // re-accept inside onboarding.
-      try {
-        await updateOnboarding({ terms_accepted: true, privacy_accepted: true });
-      } catch {
-        // Non-fatal: the user is already created; legal will be re-prompted
-        // by the backend or in settings if needed.
-      }
+      await persistLegalAcceptance();
       return user;
     },
   });
@@ -119,7 +121,11 @@ export const RegisterScreen = ({ navigation }: Props) => {
     isPending: isTwitterPending,
     error: twitterError,
   } = useMutation({
-    mutationFn: () => signInWithTwitter(),
+    mutationFn: async () => {
+      const result = await signInWithTwitter();
+      await persistLegalAcceptance();
+      return result;
+    },
   });
 
   const {
@@ -142,7 +148,9 @@ export const RegisterScreen = ({ navigation }: Props) => {
         throw new Error('Google sign-in did not return an identity token.');
       }
 
-      return signInWithGoogleIdToken(idToken);
+      const result = await signInWithGoogleIdToken(idToken);
+      await persistLegalAcceptance();
+      return result;
     },
   });
 
@@ -167,12 +175,14 @@ export const RegisterScreen = ({ navigation }: Props) => {
         throw new Error('Apple sign-in did not return an identity token.');
       }
 
-      return signInWithAppleIdentityToken({
+      const result = await signInWithAppleIdentityToken({
         identityToken: credential.identityToken,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
       });
+      await persistLegalAcceptance();
+      return result;
     },
   });
 
@@ -181,6 +191,9 @@ export const RegisterScreen = ({ navigation }: Props) => {
   const authError = error ?? twitterError ?? googleError ?? appleError;
 
   const openLegalUrl = (url: string) => {
+    if (!isAllowedIrlobbyUrl(url)) {
+      return;
+    }
     void Linking.openURL(url).catch(() => undefined);
   };
 
@@ -223,170 +236,134 @@ export const RegisterScreen = ({ navigation }: Props) => {
       subtitle={authCopy.register.subtitle}
       footer={
         <View style={styles.footer}>
-          <Text variant="bodyMedium" style={styles.footerText}>
-            {authCopy.register.footerPrompt}
-          </Text>
-          <Button
-            mode="text"
+          <Text style={styles.footerText}>{authCopy.register.footerPrompt}</Text>
+          <AppButton
+            variant="ghost"
+            compact
             onPress={() => navigation.navigate('Login')}
             disabled={isBusy}
-            compact
           >
             {authCopy.register.footerCta}
-          </Button>
+          </AppButton>
         </View>
       }
     >
       <AccentPill tone="secondary">Real plans, real fast</AccentPill>
 
       <View style={styles.form}>
-        <TextInput
+        <Field
           label="First name"
           value={firstName}
           onChangeText={setFirstName}
           autoCapitalize="words"
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Last name"
           value={lastName}
           onChangeText={setLastName}
           autoCapitalize="words"
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Username"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
           autoComplete="username"
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           autoCapitalize="none"
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Confirm password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
           autoCapitalize="none"
-          mode="outlined"
-          style={styles.input}
+          error={
+            !passwordsMatch && confirmPassword.length > 0
+              ? 'Passwords do not match.'
+              : undefined
+          }
         />
-        {!passwordsMatch && confirmPassword.length > 0 && (
-          <HelperText type="error" visible>
-            Passwords do not match.
-          </HelperText>
-        )}
-        {authError && (
-          <HelperText type="error" visible>
+        {authError ? (
+          <Text style={styles.errorText}>
             {getErrorMessage(authError, authCopy.register.fallbackError)}
-          </HelperText>
-        )}
+          </Text>
+        ) : null}
 
-        <View style={styles.legalRow}>
-          <Checkbox
-            status={acceptedLegal ? 'checked' : 'unchecked'}
-            onPress={() => setAcceptedLegal((prev) => !prev)}
-            color={appColors.primary}
-          />
-          <View style={styles.legalCopy}>
-            <Text style={styles.legalText}>
-              I agree to the{' '}
-              <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
-                Terms of Service
-              </Text>{' '}
-              and{' '}
-              <Text
-                style={styles.legalLink}
-                onPress={() => openLegalUrl(PRIVACY_URL)}
-              >
-                Privacy Policy
-              </Text>
-              .
-            </Text>
-          </View>
-        </View>
-
-        {!acceptedLegal && (
-          <HelperText type="info" visible>
-            {authCopy.register.legalRequired}
-          </HelperText>
-        )}
-
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          disabled={!isFormValid || isBusy}
-          loading={isPending}
-          style={styles.submitButton}
-          contentStyle={styles.submitButtonContent}
-          buttonColor={appColors.primary}
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: acceptedLegal }}
+          onPress={() => setAcceptedLegal((prev) => !prev)}
+          style={styles.legalRow}
         >
+          <View style={[styles.checkBox, acceptedLegal ? styles.checkBoxOn : null]}>
+            {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
+          </View>
+          <Text style={styles.legalText}>
+            I agree to the{' '}
+            <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
+              Terms of Service
+            </Text>{' '}
+            and{' '}
+            <Text style={styles.legalLink} onPress={() => openLegalUrl(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </Pressable>
+
+        {!acceptedLegal ? (
+          <Text style={styles.hintText}>{authCopy.register.legalRequired}</Text>
+        ) : null}
+
+        <AppButton onPress={handleSubmit} disabled={!isFormValid || isBusy} loading={isPending}>
           {authCopy.register.primaryCta}
-        </Button>
+        </AppButton>
 
         <View style={styles.oauthSection}>
-          <Divider />
-          <Button
-            mode="outlined"
+          <View style={styles.divider} />
+          <AppButton
+            variant="social"
             onPress={handleTwitterSignIn}
             disabled={isBusy || !acceptedLegal}
             loading={isTwitterPending}
-            style={styles.oauthButton}
           >
             {authCopy.register.twitterCta}
-          </Button>
-          <Button
-            mode="outlined"
+          </AppButton>
+          <AppButton
+            variant="social"
             onPress={handleGoogleSignIn}
-            disabled={
-              isBusy ||
-              !acceptedLegal ||
-              !isGoogleConfigured ||
-              !googleRequest
-            }
+            disabled={isBusy || !acceptedLegal || !isGoogleConfigured || !googleRequest}
             loading={isGooglePending}
-            style={styles.oauthButton}
           >
             {authCopy.register.googleCta}
-          </Button>
-          {!isGoogleConfigured && (
-            <HelperText type="info" visible>
-              {authCopy.register.googleNotConfigured}
-            </HelperText>
-          )}
-          {isAppleAvailable && (
-            <Button
-              mode="outlined"
+          </AppButton>
+          {!isGoogleConfigured ? (
+            <Text style={styles.hintText}>{authCopy.register.googleNotConfigured}</Text>
+          ) : null}
+          {isAppleAvailable ? (
+            <AppButton
+              variant="social"
               onPress={handleAppleSignIn}
               disabled={isBusy || !acceptedLegal}
               loading={isApplePending}
-              style={styles.oauthButton}
             >
               {authCopy.register.appleCta}
-            </Button>
-          )}
+            </AppButton>
+          ) : null}
         </View>
       </View>
     </AuthShell>
@@ -397,39 +374,57 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
   },
-  input: {
-    backgroundColor: appColors.card,
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  submitButton: {
-    marginTop: 12,
-    borderRadius: 18,
-  },
-  submitButtonContent: {
-    minHeight: 52,
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
   },
   oauthSection: {
     marginTop: 4,
     gap: 12,
   },
-  oauthButton: {
-    borderRadius: 999,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: appColors.line,
   },
   legalRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 4,
+    gap: 12,
     marginTop: 4,
   },
-  legalCopy: {
-    flex: 1,
-    paddingTop: 8,
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.lineStrong,
+    backgroundColor: appColors.cardStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkBoxOn: {
+    backgroundColor: appColors.primary,
+    borderColor: appColors.primary,
+  },
+  checkMark: {
+    color: appColors.white,
+    fontSize: 13,
+    fontWeight: '700',
   },
   legalText: {
+    flex: 1,
     color: appColors.mutedInk,
     lineHeight: 20,
   },
   legalLink: {
-    color: appColors.primary,
+    color: appColors.primaryGlow,
     fontWeight: '600',
   },
   footer: {

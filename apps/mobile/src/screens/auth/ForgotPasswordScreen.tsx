@@ -1,12 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, Text } from 'react-native-paper';
+import { StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Field } from '@components/ui/Field';
 import { useAuth } from '@hooks/useAuth';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -39,50 +39,45 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
       subtitle="Enter the email tied to your profile and we’ll send reset instructions if the account exists."
       footer={
         <View style={styles.footer}>
-          <Button mode="text" onPress={() => navigation.goBack()} disabled={isPending} compact>
+          <AppButton variant="ghost" compact onPress={() => navigation.goBack()} disabled={isPending}>
             Back to sign in
-          </Button>
-          <Button mode="text" onPress={() => navigation.navigate('ResetPassword')} disabled={isPending} compact>
+          </AppButton>
+          <AppButton
+            variant="ghost"
+            compact
+            onPress={() => navigation.navigate('ResetPassword')}
+            disabled={isPending}
+          >
             I have a token
-          </Button>
+          </AppButton>
         </View>
       }
     >
       <AccentPill tone="neutral">Password support</AccentPill>
 
       <View style={styles.form}>
-          <TextInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            mode="outlined"
-            style={styles.input}
-          />
-          {error && (
-            <HelperText type="error" visible>
-              {getErrorMessage(error, 'Could not send reset email. Please try again.')}
-            </HelperText>
-          )}
-          {isSuccess && (
-            <HelperText type="info" visible>
-              If an account exists for this email, a reset link is on the way.
-            </HelperText>
-          )}
+        <Field
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+        />
+        {error ? (
+          <Text style={styles.errorText}>
+            {getErrorMessage(error, 'Could not send reset email. Please try again.')}
+          </Text>
+        ) : null}
+        {isSuccess ? (
+          <Text style={styles.hintText}>
+            If an account exists for this email, a reset link is on the way.
+          </Text>
+        ) : null}
 
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            disabled={!isFormValid}
-            loading={isPending}
-            style={styles.submitButton}
-            contentStyle={styles.submitButtonContent}
-            buttonColor={appColors.primary}
-          >
-            Send reset link
-          </Button>
+        <AppButton onPress={handleSubmit} disabled={!isFormValid} loading={isPending}>
+          Send reset link
+        </AppButton>
       </View>
     </AuthShell>
   );
@@ -92,15 +87,15 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
   },
-  input: {
-    backgroundColor: appColors.card,
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  submitButton: {
-    marginTop: 12,
-    borderRadius: 18,
-  },
-  submitButtonContent: {
-    minHeight: 52,
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
   },
   footer: {
     gap: 8,

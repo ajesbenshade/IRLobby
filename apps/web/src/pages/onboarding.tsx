@@ -281,7 +281,7 @@ export default function Onboarding() {
 
   if (step === 'vibe') {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-3xl mx-auto">
           <VibeQuiz
             existingActivityPreferences={user?.activityPreferences}
@@ -298,7 +298,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>
           <CardHeader>
@@ -410,7 +410,7 @@ export default function Onboarding() {
                   title="Upload photo album images"
                   className="block w-full text-sm"
                 />
-                <span className="text-sm text-gray-500">{photoAlbum.length}/12</span>
+                <span className="text-sm text-muted-foreground">{photoAlbum.length}/12</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {photoAlbum.map((photoUrl, index) => (

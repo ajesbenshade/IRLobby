@@ -194,7 +194,7 @@ export default memo(function SwipeCard({
   return (
     <Card
       ref={cardRef}
-      className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-gray-900/50 cursor-grab active:cursor-grabbing select-none outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-gray-50 dark:focus-visible:ring-offset-gray-900 ${
+      className={`relative bg-card rounded-2xl border border-border cursor-grab active:cursor-grabbing select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
         disabled ? 'pointer-events-none opacity-80' : ''
       } ${className}`}
       style={{
@@ -307,8 +307,8 @@ export default memo(function SwipeCard({
               <AvatarFallback className="text-sm">{hostInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{hostName}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-sm font-medium text-foreground">{hostName}</p>
+              <p className="text-xs text-muted-foreground">
                 Host{' '}
                 <span aria-hidden="true" className="mx-1">
                   &bull;
@@ -319,14 +319,14 @@ export default memo(function SwipeCard({
             {activity.host?.rating && (
               <div className="flex items-center">
                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                <span className="text-sm font-medium text-foreground">
                   {activity.host.rating.toFixed(1)}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 dark:border-gray-700">
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4">
             <Button
               type="button"
               variant="outline"

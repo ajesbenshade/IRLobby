@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#ebefff',
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#eef2f7',
+    borderTopColor: appColors.line,
     paddingTop: 14,
   },
   metaLabel: {

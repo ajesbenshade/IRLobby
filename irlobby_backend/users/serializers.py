@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
 
+from utils.media import validate_image_reference, validate_image_reference_list
 from utils.sanitize import strip_html
 
 from .models import Invite, PushDeviceToken, User
@@ -251,9 +252,12 @@ class UserOnboardingSerializer(serializers.Serializer):
         return cleaned
 
     def validate_photo_album(self, value):
-        if len(value) > 12:
-            raise serializers.ValidationError("Maximum 12 photos allowed.")
-        return value
+        return validate_image_reference_list(value, max_items=12, field_name="photo_album")
+
+    def validate_avatar_url(self, value):
+        if not value:
+            return value
+        return validate_image_reference(value, field_name="avatar_url")
 
     def update(self, instance, validated_data):
         preferences = dict(instance.preferences or {})

@@ -42,7 +42,7 @@ export default function Chat() {
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const { data: conversations = [], isLoading: isLoadingConversations } = useQuery<
     ConversationItem[] | PaginatedResponse<ConversationItem>
@@ -189,7 +189,7 @@ export default function Chat() {
   };
 
   const chatHeader = (
-    <header className="flex items-center space-x-3 border-b border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+    <header className="flex items-center space-x-3 border-b border-border bg-background p-4">
       <Button
         variant="ghost"
         size="sm"
@@ -200,10 +200,10 @@ export default function Chat() {
         <ArrowLeft className="w-5 h-5" />
       </Button>
       <div className="flex-1">
-        <h2 className="font-semibold text-gray-800 truncate dark:text-gray-100">
+        <h2 className="font-semibold text-foreground truncate">
           {selectedConversation?.match ?? 'Chat'}
         </h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           Live conversations and messaging.
         </p>
       </div>
@@ -216,7 +216,7 @@ export default function Chat() {
 
   if (!selectedConversation) {
     return (
-      <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
+      <div className="flex h-screen flex-col bg-background">
         {chatHeader}
         <PageState
           icon={MessageCircle}
@@ -235,7 +235,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-950">
+    <div className="flex flex-col h-screen bg-background">
       {chatHeader}
 
       {error && (
@@ -262,15 +262,24 @@ export default function Chat() {
           />
         ) : (
           messageItems.map((msg) => {
-            const senderName = msg.user?.firstName || msg.user?.email?.split('@')[0] || 'User';
+            const isOwn = user?.id != null && String(msg.userId) === String(user.id);
+            const senderName = isOwn
+              ? 'You'
+              : msg.user?.firstName || 'Them';
 
             return (
-              <div key={msg.id} className="flex justify-start">
+              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                 <div className="flex items-end space-x-2 max-w-xs">
-                  <div className="rounded-2xl px-4 py-2 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                  <div
+                    className={`rounded-2xl px-4 py-2 ${
+                      isOwn
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-border bg-card text-foreground'
+                    }`}
+                  >
                     <p className="text-xs opacity-70 mb-1">{senderName}</p>
                     <p className="text-sm">{msg.message}</p>
-                    <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                    <p className={`text-xs mt-1 ${isOwn ? 'opacity-70' : 'text-muted-foreground'}`}>
                       {format(new Date(msg.createdAt), 'h:mm a')}
                     </p>
                   </div>
@@ -282,7 +291,7 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+      <div className="border-t border-border bg-background/80 p-4 backdrop-blur">
         <div className="flex items-center space-x-2">
           <Input
             value={message}

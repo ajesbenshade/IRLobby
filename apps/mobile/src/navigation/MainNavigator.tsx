@@ -83,7 +83,7 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
       >
         <MaterialCommunityIcons
           name={iconName}
-          size={isCreateRoute ? size + 6 : size}
+          size={size}
           color={isCreateRoute ? appColors.white : color}
         />
       </View>
@@ -100,29 +100,24 @@ const MainTabs = () => (
       tabBarInactiveTintColor: appColors.softInk,
       tabBarStyle: {
         position: 'absolute',
-        left: 12,
-        right: 12,
+        left: 16,
+        right: 16,
         bottom: 12,
-        height: 64,
+        height: 62,
         borderTopWidth: 0,
         borderRadius: 20,
         paddingTop: 8,
         paddingBottom: 8,
-        paddingHorizontal: 8,
+        paddingHorizontal: 6,
         backgroundColor: appColors.card,
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: appColors.line,
-        shadowColor: appColors.primary,
-        shadowOpacity: 0.16,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 8,
       },
       tabBarLabelStyle: {
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.1,
-        marginTop: route.name === 'Create' ? 12 : 2,
+        marginTop: route.name === 'Create' ? 4 : 2,
       },
       tabBarItemStyle: {
         marginHorizontal: 2,
@@ -136,7 +131,7 @@ const MainTabs = () => (
           routeName={route.name as keyof MainTabParamList}
         />
       ),
-      tabBarIconStyle: route.name === 'Create' ? { marginTop: -8 } : undefined,
+      tabBarIconStyle: undefined,
       tabBarLabelPosition: 'below-icon',
     })}
   >
@@ -154,7 +149,7 @@ export const MainNavigator = () => (
       headerShadowVisible: false,
       headerStyle: { backgroundColor: appColors.background },
       headerTintColor: appColors.ink,
-      headerTitleStyle: { fontWeight: '800' },
+      headerTitleStyle: { fontWeight: '600' },
       contentStyle: { backgroundColor: appColors.background },
     }}
   >
@@ -212,18 +207,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   tabIconWrapFocused: {
-    backgroundColor: appColors.primarySoft,
+    backgroundColor: 'rgba(91, 75, 255, 0.16)',
   },
   createIconWrap: {
-    minWidth: 56,
-    minHeight: 56,
-    borderRadius: 28,
+    minWidth: 36,
+    minHeight: 36,
+    borderRadius: 16,
     backgroundColor: appColors.primary,
-    borderWidth: 0,
-    shadowColor: appColors.primaryDeep,
-    shadowOpacity: 0.26,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
   },
 });

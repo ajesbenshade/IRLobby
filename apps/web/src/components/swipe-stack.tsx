@@ -262,9 +262,9 @@ export function SwipeStack({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-500 mb-2">No more activities</h3>
-          <p className="text-gray-400">Check back later for new events!</p>
+          <Heart className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">No more activities</h3>
+          <p className="text-muted-foreground">Check back later for new events!</p>
         </div>
       </div>
     );
@@ -274,9 +274,9 @@ export function SwipeStack({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-500 mb-2">You&apos;re all caught up!</h3>
-          <p className="text-gray-400">Check back later for new activities.</p>
+          <Heart className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">You&apos;re all caught up!</h3>
+          <p className="text-muted-foreground">Check back later for new activities.</p>
         </div>
       </div>
     );
@@ -363,7 +363,7 @@ export function SwipeStack({
         <Button
           onClick={() => onActivitySelect(activities[currentIndex])}
           disabled={swipeMutation.isPending}
-          className="w-12 h-12 rounded-full bg-white border-2 border-gray-300 text-gray-600 hover:bg-gray-50 shadow-lg"
+          className="w-12 h-12 rounded-full bg-card border-2 border-border text-muted-foreground hover:bg-muted shadow-lg"
         >
           <Info className="h-4 w-4" />
         </Button>

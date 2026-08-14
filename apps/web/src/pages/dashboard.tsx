@@ -70,9 +70,26 @@ export default function DashboardPage() {
           {greeting}, {user?.firstName ?? 'there'}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Here&apos;s what&apos;s happening in your IRLobby world.
+          What&apos;s on tonight — and who you might meet around it.
         </p>
       </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Compass className="h-4 w-4 text-primary" />
+            Tonight nearby
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Open Discover and filter to the next eight hours. The feed is built for plans you can actually make.
+          </p>
+          <Button asChild size="sm">
+            <Link to="/app/discovery">See tonight</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((s) => {
@@ -99,23 +116,6 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Compass className="h-4 w-4 text-primary" />
-              Discover something new
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Swipe through fresh activities curated for your vibe.
-            </p>
-            <Button asChild size="sm">
-              <Link to="/app/discovery">Open discovery</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
               <Plus className="h-4 w-4 text-primary" />
               Host an activity
             </CardTitle>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />

@@ -207,18 +207,18 @@ export default function Discovery() {
         onAction={() => void handleRefresh()}
         isActionLoading={isRefreshing}
         tone="danger"
-        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+        className="min-h-screen bg-background"
       />
     );
   }
 
   if (noActivities || deckCleared) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between">
+      <div className="min-h-screen bg-background">
+        <header className="bg-card shadow-sm p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-xl font-bold text-foreground">Discover Events</h2>
+            <p className="text-sm text-muted-foreground">
               {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
             </p>
           </div>
@@ -289,21 +289,21 @@ export default function Discovery() {
   return (
     <div
       ref={containerRef}
-      className="bg-gray-50 dark:bg-gray-900 min-h-screen relative overflow-hidden pb-[calc(var(--bottom-nav-offset)+0.5rem)]"
+      className="bg-background min-h-screen relative overflow-hidden pb-[calc(var(--bottom-nav-offset)+0.5rem)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Pull to refresh indicator */}
       {pullDistance > 0 && (
-        <div className="absolute top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm transition-transform duration-200">
+        <div className="absolute top-0 left-0 right-0 z-50 bg-card shadow-sm transition-transform duration-200">
           <div className="flex items-center justify-center py-4">
             <RefreshCw
               className={`w-6 h-6 text-primary transition-transform duration-200 ${
                 pullDistance > 50 ? 'rotate-180' : ''
               } ${isRefreshing ? 'animate-spin' : ''}`}
             />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+            <span className="ml-2 text-sm text-muted-foreground">
               {pullDistance > 50 ? 'Release to refresh' : 'Pull to refresh'}
             </span>
           </div>
@@ -311,10 +311,10 @@ export default function Discovery() {
       )}
 
       {/* Header with refresh indicator */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
+      <header className="bg-card shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Discover Events</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h2 className="text-xl font-bold text-foreground">Discover Events</h2>
+          <p className="text-sm text-muted-foreground">
             {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
           </p>
         </div>
@@ -336,7 +336,7 @@ export default function Discovery() {
             onClick={() => setShowNotifications(true)}
             aria-label="Open notifications"
           >
-            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <Bell className="w-5 h-5 text-muted-foreground" />
           </Button>
           <Button
             variant="ghost"
@@ -345,7 +345,7 @@ export default function Discovery() {
             onClick={() => setShowMapView(true)}
             aria-label="Open map view"
           >
-            <Map className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <Map className="w-5 h-5 text-muted-foreground" />
           </Button>
           <Button
             variant="ghost"
@@ -354,7 +354,7 @@ export default function Discovery() {
             onClick={() => setShowFilterModal(true)}
             aria-label="Open discovery filters"
           >
-            <Filter className="w-5 h-5 text-gray-600" />
+            <Filter className="w-5 h-5 text-muted-foreground" />
           </Button>
           <Button
             variant="ghost"
@@ -364,17 +364,17 @@ export default function Discovery() {
             disabled={isRefreshing}
             aria-label="Refresh activities"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </header>
 
       {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
-        <div className="mx-4 mt-4 rounded-xl border bg-white dark:bg-gray-800 p-4 shadow-sm">
+        <div className="mx-4 mt-4 rounded-xl border bg-card p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
             <div className="flex-1 space-y-2">
-              <p className="font-medium text-gray-900 dark:text-gray-100">
+              <p className="font-medium text-foreground">
                 Want a feed that actually fits?
               </p>
               <p className="text-sm text-muted-foreground">
@@ -406,7 +406,7 @@ export default function Discovery() {
               } ${index === 0 ? 'top-4' : 'top-6'}`}
             >
               <CardContent className="p-0">
-                <div className="w-full h-48 bg-gray-200 rounded-t-2xl"></div>
+                <div className="w-full h-48 bg-muted rounded-t-2xl"></div>
               </CardContent>
             </Card>
           ))}
@@ -440,7 +440,7 @@ export default function Discovery() {
             variant="outline"
             size="sm"
             onClick={() => setShowDetailsModal(true)}
-            className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-50 shadow-lg bg-white"
+            className="w-12 h-12 rounded-full border-2 border-border text-muted-foreground hover:bg-muted shadow-lg bg-card"
             aria-label="View activity details"
           >
             <Info className="h-4 w-4" />

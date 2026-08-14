@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import { setAnalyticsUser, track } from '@services/analytics';
+import { setSessionExpiredHandler } from '@services/apiClient';
 import { deactivatePushTokens } from '@services/pushNotificationService';
 import {
   fetchProfile,
@@ -86,6 +87,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setUser(null);
+      setAnalyticsUser(null);
+    });
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   // Tag/untag the Sentry user whenever auth state flips. Safe no-op when Sentry

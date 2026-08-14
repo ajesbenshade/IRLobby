@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, Switch, Text } from 'react-native-paper';
+import { StyleSheet, Switch, Text } from 'react-native';
 
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { Image, View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Chip } from '@components/ui/Chip';
+import { Field } from '@components/ui/Field';
 import { useAuth } from '@hooks/useAuth';
 import { createActivity } from '@services/activityService';
 import type { CreateActivityPayload } from '@services/activityService';
@@ -17,6 +18,7 @@ import {
 } from '@services/paymentService';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
 type ActivityFormState = {
   title: string;
@@ -74,6 +76,12 @@ const INITIAL_FORM_STATE: ActivityFormState = {
 
 const VALID_VISIBILITY = ['everyone', 'friends', 'friendsOfFriends'] as const;
 
+const VISIBILITY_OPTIONS: Array<{ value: (typeof VALID_VISIBILITY)[number]; label: string }> = [
+  { value: 'everyone', label: 'Everyone' },
+  { value: 'friends', label: 'Friends' },
+  { value: 'friendsOfFriends', label: 'Friends of friends' },
+];
+
 export const CreateActivityScreen = () => {
   const queryClient = useQueryClient();
   const { user, refreshProfile } = useAuth();
@@ -111,10 +119,12 @@ export const CreateActivityScreen = () => {
     staleTime: 30_000,
   });
 
+  const stripeConnectUnavailable = connectStatusQuery.data?.available === false;
   const canSellTickets =
-    Boolean(user?.canSellTickets) ||
-    Boolean(connectStatusQuery.data?.payoutsEnabled) ||
-    Boolean(connectStatusQuery.data?.onboardingComplete);
+    !stripeConnectUnavailable &&
+    (Boolean(user?.canSellTickets) ||
+      Boolean(connectStatusQuery.data?.payoutsEnabled) ||
+      Boolean(connectStatusQuery.data?.onboardingComplete));
 
   const onboardMutation = useMutation({
     mutationFn: openStripeConnectOnboarding,
@@ -177,11 +187,11 @@ export const CreateActivityScreen = () => {
     const normalizedEndTime = normalizeDateTime(endTime);
 
     if (!normalizedStartTime) {
-      return { error: 'Start time format is invalid. Use ISO or YYYY-MM-DD HH:mm.' };
+      return { error: 'Start time looks off. Use YYYY-MM-DD HH:mm.' };
     }
 
     if (endTime.trim() && !normalizedEndTime) {
-      return { error: 'End time format is invalid. Use ISO or YYYY-MM-DD HH:mm.' };
+      return { error: 'End time looks off. Use YYYY-MM-DD HH:mm.' };
     }
 
     if (normalizedEndTime && new Date(normalizedEndTime).getTime() <= new Date(normalizedStartTime).getTime()) {
@@ -235,20 +245,15 @@ export const CreateActivityScreen = () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      base64: true,
       quality: 0.7,
       selectionLimit: 5,
     });
 
     if (!result.canceled) {
-      const selected = result.assets.flatMap((asset) => {
-        if (!asset.base64) {
-          return [];
-        }
-
-        const mimeType = asset.mimeType || 'image/jpeg';
-        return [`data:${mimeType};base64,${asset.base64}`];
-      });
+      const prepared = await Promise.all(
+        result.assets.map((asset) => imageAssetToUploadDataUrl(asset).catch(() => null)),
+      );
+      const selected = prepared.filter((item): item is string => Boolean(item));
       setForm((current) => ({
         ...current,
         imageUris: [...current.imageUris, ...selected].slice(0, 5),
@@ -322,7 +327,7 @@ export const CreateActivityScreen = () => {
 
       <PanelCard style={styles.heroCard}>
         <AccentPill tone="secondary">Production flow</AccentPill>
-        <Text variant="titleLarge" style={styles.heroTitle}>
+        <Text style={styles.heroTitle}>
           Publish something people can commit to fast.
         </Text>
         <Text style={styles.heroSubtitle}>
@@ -336,18 +341,22 @@ export const CreateActivityScreen = () => {
           title="What is this activity?"
           subtitle="Start with the event identity people use to decide if it’s worth a closer look."
         />
-        <TextInput label="Title" value={title} onChangeText={updateTextField('title')} mode="outlined" style={styles.input} />
-        <TextInput
+        <Field label="Title" value={title} onChangeText={updateTextField('title')} />
+        <Field
           label="Description"
           value={description}
           onChangeText={updateTextField('description')}
           multiline
-          mode="outlined"
-          style={styles.input}
+          numberOfLines={4}
+          style={styles.multiline}
         />
         <View style={styles.row}>
-          <TextInput label="Category" value={category} onChangeText={updateTextField('category')} mode="outlined" style={[styles.input, styles.half]} />
-          <TextInput label="Tags (comma separated)" value={tags} onChangeText={updateTextField('tags')} mode="outlined" style={[styles.input, styles.half]} />
+          <View style={styles.half}>
+            <Field label="Category" value={category} onChangeText={updateTextField('category')} />
+          </View>
+          <View style={styles.half}>
+            <Field label="Tags" value={tags} onChangeText={updateTextField('tags')} placeholder="music, rooftop" />
+          </View>
         </View>
       </PanelCard>
 
@@ -357,54 +366,48 @@ export const CreateActivityScreen = () => {
           title="When and where does it happen?"
           subtitle="Make timing and location concrete so people can say yes quickly."
         />
-        <TextInput label="Location" value={location} onChangeText={updateTextField('location')} mode="outlined" style={styles.input} />
-        <Button mode="outlined" onPress={fillCurrentLocation} loading={isLocating} style={styles.inlineButton}>
+        <Field label="Location" value={location} onChangeText={updateTextField('location')} />
+        <AppButton variant="outline" onPress={fillCurrentLocation} loading={isLocating} style={styles.inlineButton}>
           Use current location
-        </Button>
-        <TextInput
-          label="Start date & time (ISO or YYYY-MM-DD HH:mm)"
+        </AppButton>
+        <Field
+          label="Starts"
           value={time}
           onChangeText={(value: string) => {
             updateForm('time', value);
             clearTimeError();
           }}
-          mode="outlined"
-          style={styles.input}
+          placeholder="2026-08-14 19:00"
           autoCapitalize="none"
+          error={timeError ?? undefined}
         />
-        <TextInput
-          label="End date & time (optional)"
+        <Field
+          label="Ends (optional)"
           value={endTime}
           onChangeText={(value: string) => {
             updateForm('endTime', value);
             clearTimeError();
           }}
-          mode="outlined"
-          style={styles.input}
+          placeholder="2026-08-14 21:00"
           autoCapitalize="none"
         />
-        {timeError ? (
-          <HelperText type="error" visible>
-            {timeError}
-          </HelperText>
-        ) : null}
         <View style={styles.row}>
-          <TextInput
-            label="Latitude"
-            value={latitude}
-            onChangeText={updateTextField('latitude')}
-            keyboardType="decimal-pad"
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
-          <TextInput
-            label="Longitude"
-            value={longitude}
-            onChangeText={updateTextField('longitude')}
-            keyboardType="decimal-pad"
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
+          <View style={styles.half}>
+            <Field
+              label="Latitude"
+              value={latitude}
+              onChangeText={updateTextField('latitude')}
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.half}>
+            <Field
+              label="Longitude"
+              value={longitude}
+              onChangeText={updateTextField('longitude')}
+              keyboardType="decimal-pad"
+            />
+          </View>
         </View>
       </PanelCard>
 
@@ -414,33 +417,36 @@ export const CreateActivityScreen = () => {
           title="Who is this for?"
           subtitle="Set boundaries and expectations without burying people in admin."
         />
-        <View style={styles.row}>
-          <TextInput
-            label="Capacity (1-10)"
-            value={capacity}
-            onChangeText={updateTextField('capacity')}
-            keyboardType="number-pad"
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
-          <TextInput
-            label="Visibility"
-            value={visibility}
-            onChangeText={updateTextField('visibility')}
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
+        <Field
+          label="Capacity (1–10)"
+          value={capacity}
+          onChangeText={updateTextField('capacity')}
+          keyboardType="number-pad"
+        />
+        <Text style={styles.chipLabel}>Visibility</Text>
+        <View style={styles.chipRow}>
+          {VISIBILITY_OPTIONS.map((option) => (
+            <Chip
+              key={option.value}
+              label={option.label}
+              selected={visibility === option.value}
+              tone="primary"
+              onPress={() => updateForm('visibility', option.value)}
+            />
+          ))}
         </View>
         <View style={styles.row}>
-          <TextInput label="Skill level" value={skillLevel} onChangeText={updateTextField('skillLevel')} mode="outlined" style={[styles.input, styles.half]} />
-          <TextInput label="Age restriction" value={ageRestriction} onChangeText={updateTextField('ageRestriction')} mode="outlined" style={[styles.input, styles.half]} />
+          <View style={styles.half}>
+            <Field label="Skill level" value={skillLevel} onChangeText={updateTextField('skillLevel')} />
+          </View>
+          <View style={styles.half}>
+            <Field label="Age restriction" value={ageRestriction} onChangeText={updateTextField('ageRestriction')} />
+          </View>
         </View>
-        <TextInput
+        <Field
           label="Equipment required"
           value={equipmentRequired}
           onChangeText={updateTextField('equipmentRequired')}
-          mode="outlined"
-          style={styles.input}
         />
         <View style={styles.preferenceCard}>
           <View style={styles.switchRow}>
@@ -477,6 +483,7 @@ export const CreateActivityScreen = () => {
             </View>
             <Switch
               value={isTicketed}
+              disabled={stripeConnectUnavailable}
               onValueChange={(value) => {
                 updateForm('isTicketed', value);
                 if (value && !maxTickets) {
@@ -486,44 +493,43 @@ export const CreateActivityScreen = () => {
             />
           </View>
         </View>
-        {isTicketed ? (
+        {stripeConnectUnavailable ? (
+          <Text style={styles.hintText}>
+            Ticket sales aren’t live on this server yet. You can still host a free plan.
+          </Text>
+        ) : isTicketed ? (
           <>
             {!canSellTickets ? (
-              <HelperText type="info" visible>
+              <Text style={styles.hintText}>
                 Finish payout setup with Stripe before you can sell tickets.
-              </HelperText>
+              </Text>
             ) : null}
             {!canSellTickets ? (
-              <Button
-                mode="contained"
-                onPress={() => onboardMutation.mutate()}
-                loading={onboardMutation.isPending}
-                style={styles.inlineButton}
-              >
+              <AppButton onPress={() => onboardMutation.mutate()} loading={onboardMutation.isPending} style={styles.inlineButton}>
                 Set up payouts
-              </Button>
+              </AppButton>
             ) : (
-              <HelperText type="info" visible>
+              <Text style={styles.hintText}>
                 Payouts are ready. Ticket sales will send 90% to you and 10% to IRLobby.
-              </HelperText>
+              </Text>
             )}
             <View style={styles.row}>
-              <TextInput
-                label="Ticket price (USD)"
-                value={ticketPrice}
-                onChangeText={updateTextField('ticketPrice')}
-                keyboardType="decimal-pad"
-                mode="outlined"
-                style={[styles.input, styles.half]}
-              />
-              <TextInput
-                label="Tickets available"
-                value={maxTickets}
-                onChangeText={updateTextField('maxTickets')}
-                keyboardType="number-pad"
-                mode="outlined"
-                style={[styles.input, styles.half]}
-              />
+              <View style={styles.half}>
+                <Field
+                  label="Ticket price (USD)"
+                  value={ticketPrice}
+                  onChangeText={updateTextField('ticketPrice')}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.half}>
+                <Field
+                  label="Tickets available"
+                  value={maxTickets}
+                  onChangeText={updateTextField('maxTickets')}
+                  keyboardType="number-pad"
+                />
+              </View>
             </View>
           </>
         ) : null}
@@ -535,16 +541,16 @@ export const CreateActivityScreen = () => {
           title="Show the vibe"
           subtitle="A few good images make the event feel real before anyone opens the details sheet."
         />
-        <Button mode="outlined" onPress={handlePickImages} style={styles.inlineButton}>
+        <AppButton variant="outline" onPress={handlePickImages} style={styles.inlineButton}>
           Pick up to 5 images
-        </Button>
+        </AppButton>
         {imageUris.length > 0 ? (
           <View style={styles.mediaGrid}>
             {imageUris.map((uri, index) => (
               <View key={`${index}-${uri.slice(0, 16)}`} style={styles.mediaTile}>
                 <Image source={{ uri }} style={styles.mediaImage} />
-                <Button
-                  mode="text"
+                <AppButton
+                  variant="ghost"
                   compact
                   onPress={() => {
                     setForm((current) => ({
@@ -554,7 +560,7 @@ export const CreateActivityScreen = () => {
                   }}
                 >
                   Remove
-                </Button>
+                </AppButton>
               </View>
             ))}
           </View>
@@ -567,9 +573,9 @@ export const CreateActivityScreen = () => {
       </PanelCard>
 
       {createMutation.error ? (
-        <HelperText type="error" visible>
+        <Text style={styles.errorText}>
           {getErrorMessage(createMutation.error, 'Unable to create activity.')}
-        </HelperText>
+        </Text>
       ) : null}
 
       {createMutation.isSuccess ? (
@@ -580,18 +586,13 @@ export const CreateActivityScreen = () => {
       ) : null}
 
       <PanelCard style={styles.submitCard}>
-        <Text variant="titleMedium" style={styles.submitTitle}>
-          Ready to publish?
-        </Text>
+        <Text style={styles.submitTitle}>Ready to publish?</Text>
         <Text style={styles.submitSubtitle}>
           We’ll validate timing and coordinates before this goes live in discovery.
         </Text>
-        <Button
-          mode="contained"
-          buttonColor={appColors.primary}
+        <AppButton
           loading={createMutation.isPending}
           disabled={!canSubmit || createMutation.isPending || isLocating}
-          contentStyle={styles.submitButtonContent}
           onPress={() => {
             const { error, payload } = buildPayload();
 
@@ -605,7 +606,7 @@ export const CreateActivityScreen = () => {
           }}
         >
           Create activity
-        </Button>
+        </AppButton>
       </PanelCard>
     </AppScrollView>
   );
@@ -630,22 +631,44 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 8,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   half: {
     flex: 1,
   },
-  input: {
-    backgroundColor: appColors.card,
+  multiline: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+  chipLabel: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   inlineButton: {
     alignSelf: 'flex-start',
   },
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   preferenceCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#edf1f7',
-    backgroundColor: '#fbfcff',
+    borderColor: appColors.line,
+    backgroundColor: appColors.card,
     overflow: 'hidden',
   },
   switchRow: {
@@ -670,7 +693,7 @@ const styles = StyleSheet.create({
   },
   switchDivider: {
     height: 1,
-    backgroundColor: '#edf1f7',
+    backgroundColor: appColors.line,
   },
   mediaGrid: {
     flexDirection: 'row',
@@ -685,7 +708,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 18,
-    backgroundColor: '#edf2f8',
+    backgroundColor: appColors.cardStrong,
   },
   successText: {
     color: appColors.ink,
@@ -701,8 +724,5 @@ const styles = StyleSheet.create({
   submitSubtitle: {
     color: appColors.mutedInk,
     lineHeight: 22,
-  },
-  submitButtonContent: {
-    minHeight: 52,
   },
 });

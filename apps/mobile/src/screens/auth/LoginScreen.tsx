@@ -3,12 +3,12 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
-import { Button, Divider, HelperText, Text } from 'react-native-paper';
+import { Platform, StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Field } from '@components/ui/Field';
 import { config } from '@constants/config';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
@@ -184,17 +184,17 @@ export const LoginScreen = ({ navigation }: Props) => {
       subtitle={authCopy.login.subtitle}
       footer={
         <View style={styles.footer}>
-          <Text variant="bodyMedium" style={styles.footerText}>
+          <Text style={styles.footerText}>
             {authCopy.login.footerPrompt}
           </Text>
-          <Button
-            mode="text"
+          <AppButton
+            variant="ghost"
+            compact
             onPress={() => navigation.navigate('Register')}
             disabled={isBusy}
-            compact
           >
             {authCopy.login.footerCta}
-          </Button>
+          </AppButton>
         </View>
       }
     >
@@ -203,95 +203,80 @@ export const LoginScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.form}>
-        <TextInput
+        <Field
           label="Email"
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Password"
           secureTextEntry
           autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
-          mode="outlined"
-          style={styles.input}
         />
-        {authError && (
-          <HelperText type="error" visible>
+        {authError ? (
+          <Text style={styles.errorText}>
             {getErrorMessage(authError, 'Unable to sign in. Please try again.')}
-          </HelperText>
-        )}
+          </Text>
+        ) : null}
 
-        {config.isUsingFallbackApiBaseUrl && (
-          <HelperText type="info" visible>
-            Using default backend URL: {config.apiBaseUrl}
-          </HelperText>
-        )}
+        {config.isUsingFallbackApiBaseUrl ? (
+          <Text style={styles.hintText}>Using default backend URL: {config.apiBaseUrl}</Text>
+        ) : null}
 
-        <Button
-          mode="contained"
+        <AppButton
           onPress={handleSubmit}
           disabled={!isFormValid || isBusy}
           loading={isPending}
-          style={styles.submitButton}
-          contentStyle={styles.submitButtonContent}
-          buttonColor={appColors.primary}
         >
           {authCopy.login.primaryCta}
-        </Button>
+        </AppButton>
 
         <View style={styles.oauthSection}>
-          <Divider />
-          {isAppleAvailable && (
-            <Button
-              mode="outlined"
+          <View style={styles.divider} />
+          {isAppleAvailable ? (
+            <AppButton
+              variant="social"
               onPress={handleAppleSignIn}
               disabled={isBusy}
               loading={isApplePending}
-              style={styles.oauthButton}
             >
               {authCopy.login.appleCta}
-            </Button>
-          )}
-          <Button
-            mode="outlined"
+            </AppButton>
+          ) : null}
+          <AppButton
+            variant="social"
             onPress={handleGoogleSignIn}
             disabled={isBusy || !isGoogleConfigured || !googleRequest}
             loading={isGooglePending}
-            style={styles.oauthButton}
           >
             {authCopy.login.googleCta}
-          </Button>
-          {!isGoogleConfigured && (
-            <HelperText type="info" visible>
-              {authCopy.login.googleNotConfigured}
-            </HelperText>
-          )}
-          <Button
-            mode="outlined"
+          </AppButton>
+          {!isGoogleConfigured ? (
+            <Text style={styles.hintText}>{authCopy.login.googleNotConfigured}</Text>
+          ) : null}
+          <AppButton
+            variant="social"
             onPress={handleTwitterSignIn}
             disabled={isBusy}
             loading={isTwitterPending}
-            style={styles.oauthButton}
           >
             {authCopy.login.twitterCta}
-          </Button>
+          </AppButton>
         </View>
 
-        <Button
-          mode="text"
+        <AppButton
+          variant="ghost"
           onPress={() => navigation.navigate('ForgotPassword')}
           disabled={isBusy}
           style={styles.linkButton}
         >
           {authCopy.login.forgotPassword}
-        </Button>
+        </AppButton>
       </View>
     </AuthShell>
   );
@@ -304,15 +289,15 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
   },
-  input: {
-    backgroundColor: appColors.card,
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  submitButton: {
-    marginTop: 12,
-    borderRadius: 999,
-  },
-  submitButtonContent: {
-    minHeight: 54,
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
   },
   linkButton: {
     alignSelf: 'flex-start',
@@ -321,8 +306,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 12,
   },
-  oauthButton: {
-    borderRadius: 999,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: appColors.line,
   },
   footer: {
     flexDirection: 'row',

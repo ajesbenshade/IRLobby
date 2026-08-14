@@ -494,6 +494,13 @@ def stripe_connect_onboard(request):
     return_url = request.data.get("returnUrl") or request.data.get("return_url")
     refresh_url = request.data.get("refreshUrl") or request.data.get("refresh_url")
 
+    from utils.client_urls import is_allowed_client_return_url
+
+    if return_url and not is_allowed_client_return_url(return_url):
+        return Response({"error": "Invalid return URL."}, status=status.HTTP_400_BAD_REQUEST)
+    if refresh_url and not is_allowed_client_return_url(refresh_url):
+        return Response({"error": "Invalid refresh URL."}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         onboarding_url = create_connect_onboarding_link(
             request.user,

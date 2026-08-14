@@ -3,6 +3,15 @@ import type { ImagePickerAsset } from "expo-image-picker";
 
 const MAX_UPLOAD_IMAGE_EDGE = 900;
 const UPLOAD_IMAGE_QUALITY = 0.72;
+const MAX_DATA_URL_CHARS = 1_200_000;
+const ALLOWED_PICKER_MIMES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
 
 const buildResizeAction = (
   asset: ImagePickerAsset
@@ -28,6 +37,14 @@ const buildResizeAction = (
 export const imageAssetToUploadDataUrl = async (
   asset: ImagePickerAsset
 ): Promise<string> => {
+  const mime = (asset.mimeType || "").toLowerCase();
+  if (mime === "image/svg+xml" || mime === "image/gif" || mime === "text/html") {
+    throw new Error("That file type is not allowed.");
+  }
+  if (mime && !ALLOWED_PICKER_MIMES.has(mime) && !mime.startsWith("image/")) {
+    throw new Error("That file type is not allowed.");
+  }
+
   const resizeAction = buildResizeAction(asset);
   const result = await ImageManipulator.manipulateAsync(
     asset.uri,
@@ -43,5 +60,10 @@ export const imageAssetToUploadDataUrl = async (
     throw new Error("Selected image could not be prepared for upload.");
   }
 
-  return `data:image/jpeg;base64,${result.base64}`;
+  const dataUrl = `data:image/jpeg;base64,${result.base64}`;
+  if (dataUrl.length > MAX_DATA_URL_CHARS) {
+    throw new Error("Image is too large. Try a smaller photo.");
+  }
+
+  return dataUrl;
 };

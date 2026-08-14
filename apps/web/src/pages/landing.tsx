@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
-const activityTags = ['tonight', 'low-key', '0.8 mi'];
-
 const proofPoints = [
   { label: 'Vibe Quiz', value: '5 questions' },
   { label: 'Discovery', value: 'plans nearby' },
@@ -65,76 +63,65 @@ const featureHighlights = [
 function PhonePreview() {
   return (
     <div className="relative mx-auto w-full max-w-[342px] sm:max-w-[380px] lg:max-w-[404px]">
-      <div className="public-phone-shadow rounded-[42px] border border-white/12 bg-[#f7f7fa] p-3">
-        <div className="overflow-hidden rounded-[32px] bg-[#f8fafc] text-[#0f172a]">
-          <div className="flex items-center justify-between px-6 pt-5 text-xs font-bold">
+      <div className="public-phone-shadow rounded-[42px] border border-white/12 bg-[#0A0814] p-3">
+        <div className="overflow-hidden rounded-[32px] bg-[#0A0814] text-[#F4F3FA]">
+          <div className="flex items-center justify-between px-6 pt-5 text-xs font-semibold text-[#A5A1C2]">
             <span>9:41</span>
-            <span className="rounded-full bg-[#0f172a] px-2 py-0.5 text-white">100</span>
+            <span>Tonight</span>
           </div>
-          <div className="relative min-h-[690px] px-5 pb-5 pt-8">
-            <div className="absolute -right-28 -top-24 h-64 w-64 rounded-full bg-[#f1e8ff]" />
-            <div className="absolute -left-28 top-24 h-52 w-52 rounded-full bg-[#fce7f3]" />
-            <div className="absolute -right-28 bottom-20 h-56 w-56 rounded-full bg-[#cffafe]" />
-
+          <div className="relative min-h-[690px] px-5 pb-5 pt-6">
             <div className="relative">
-              <p className="text-sm font-extrabold text-[#5B4BFF]">For you</p>
-              <h2 className="mt-4 max-w-[260px] font-display text-4xl font-black leading-[0.98] text-[#0f172a]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A5A1C2]">
+                For you
+              </p>
+              <h2 className="mt-3 max-w-[260px] font-display text-3xl font-semibold leading-[1.05] text-[#F4F3FA]">
                 Plans worth leaving for
               </h2>
-              <p className="mt-4 max-w-[260px] text-base leading-relaxed text-[#64748b]">
+              <p className="mt-3 max-w-[260px] text-sm leading-relaxed text-[#A5A1C2]">
                 Swipe through what is happening near you tonight.
               </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <span className="rounded-full border border-[#e2e8f0] bg-white/72 px-4 py-2 text-sm font-bold text-[#5B4BFF] shadow-sm">
-                  Vibe filters
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F4F3FA]">
+                  Tonight
                 </span>
-                <span className="rounded-full border border-[#e2e8f0] bg-white/72 px-4 py-2 text-sm font-bold text-[#5B4BFF] shadow-sm">
-                  Map view
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#A5A1C2]">
+                  Filters
                 </span>
               </div>
             </div>
 
-            <div className="relative mt-8 rounded-[30px] bg-[#0f172a] p-4 text-white shadow-[0_26px_60px_rgba(15,23,42,0.18)]">
-              <div className="rounded-[24px] bg-gradient-to-br from-[#5B4BFF] via-[#C026D3] to-[#1EE8FF] p-[1px]">
-                <div className="rounded-[23px] bg-[#111827]/86 p-4 backdrop-blur">
-                  <div className="flex items-center justify-between text-xs text-white/58">
-                    <span>Tonight · 7:30 PM</span>
-                    <span>live now</span>
-                  </div>
-                  <h3 className="mt-4 font-display text-2xl font-black leading-tight">
-                    Rooftop sunset hang
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/66">
-                    Casual drinks, city views, and people who actually want to make plans.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {activityTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+            <div className="relative mt-6 overflow-hidden rounded-[28px] border border-[#E8C872]/40">
+              <div className="h-72 bg-gradient-to-br from-[#5B4BFF] to-[#C026D3]" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0A0814] via-[#0A0814]/80 to-transparent p-4">
+                <div className="mb-2 flex gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-medium">
+                    rooftop
+                  </span>
+                  <span className="rounded-full border border-[#E8C872]/40 bg-[#E8C872]/15 px-3 py-1 text-[11px] font-medium text-[#E8C872]">
+                    Ticket · $24
+                  </span>
                 </div>
-              </div>
-              <div className="mt-5 flex items-center justify-center gap-4">
-                <span className="grid h-14 w-14 place-items-center rounded-full border border-white/12 bg-white/8 text-lg text-white/52">
-                  x
-                </span>
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-[#5B4BFF] text-3xl font-light text-white shadow-[0_18px_44px_rgba(91,75,255,0.38)]">
-                  +
-                </span>
+                <h3 className="font-display text-xl font-semibold leading-tight">
+                  Rooftop sunset hang
+                </h3>
+                <p className="mt-1 text-xs text-[#A5A1C2]">Downtown · Tonight, 7:30 PM</p>
               </div>
             </div>
 
-            <div className="absolute bottom-5 left-5 right-5 rounded-[28px] border border-[#e2e8f0] bg-white/88 px-4 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-              <div className="grid grid-cols-5 items-end gap-1 text-center text-[11px] font-bold text-[#94a3b8]">
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <span className="grid h-11 w-24 place-items-center rounded-full border border-white/12 text-sm font-medium text-[#F4F3FA]">
+                Pass
+              </span>
+              <span className="grid h-11 w-24 place-items-center rounded-full bg-[#5B4BFF] text-sm font-medium text-white">
+                I&apos;m down
+              </span>
+            </div>
+
+            <div className="absolute bottom-5 left-5 right-5 rounded-[20px] border border-white/10 bg-[#161330]/92 px-4 py-3 backdrop-blur-xl">
+              <div className="grid grid-cols-5 items-center gap-1 text-center text-[11px] font-medium text-[#7A7599]">
                 <span className="text-[#5B4BFF]">Discover</span>
                 <span>Events</span>
-                <span className="mx-auto grid h-12 w-12 -translate-y-3 place-items-center rounded-full bg-[#5B4BFF] text-3xl font-light text-white shadow-[0_14px_32px_rgba(91,75,255,0.34)]">
+                <span className="mx-auto grid h-8 w-8 place-items-center rounded-xl bg-[#5B4BFF] text-white">
                   +
                 </span>
                 <span>Chat</span>

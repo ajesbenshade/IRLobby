@@ -1,12 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, Text } from 'react-native-paper';
+import { StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Field } from '@components/ui/Field';
 import { useAuth } from '@hooks/useAuth';
 import { appColors } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -46,71 +46,65 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
       title="Choose a fresh password."
       subtitle="Paste the reset token from email and set a new password for your account."
       footer={
-        <Button mode="text" onPress={() => navigation.navigate('Login')} disabled={isPending} compact>
+        <AppButton
+          variant="ghost"
+          compact
+          onPress={() => navigation.navigate('Login')}
+          disabled={isPending}
+        >
           Back to sign in
-        </Button>
+        </AppButton>
       }
     >
       <AccentPill tone="secondary">Token-based reset</AccentPill>
 
       <View style={styles.form}>
-          <TextInput
-            label="Reset token"
-            value={token}
-            onChangeText={setToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="New password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Confirm new password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            mode="outlined"
-            style={styles.input}
-          />
+        <Field
+          label="Reset token"
+          value={token}
+          onChangeText={setToken}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="off"
+          textContentType="oneTimeCode"
+        />
+        <Field
+          label="New password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        <Field
+          label="Confirm new password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          error={
+            !passwordsMatch && confirmPassword.length > 0
+              ? 'Passwords do not match.'
+              : undefined
+          }
+        />
 
-          {!passwordsMatch && confirmPassword.length > 0 && (
-            <HelperText type="error" visible>
-              Passwords do not match.
-            </HelperText>
-          )}
+        {error ? (
+          <Text style={styles.errorText}>
+            {getErrorMessage(error, 'Could not reset password. Please try again.')}
+          </Text>
+        ) : null}
 
-          {error && (
-            <HelperText type="error" visible>
-              {getErrorMessage(error, 'Could not reset password. Please try again.')}
-            </HelperText>
-          )}
+        {isSuccess ? (
+          <Text style={styles.hintText}>Password updated successfully. You can sign in now.</Text>
+        ) : null}
 
-          {isSuccess && (
-            <HelperText type="info" visible>
-              Password updated successfully. You can sign in now.
-            </HelperText>
-          )}
-
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            disabled={!isFormValid || isPending}
-            loading={isPending}
-            style={styles.submitButton}
-            contentStyle={styles.submitButtonContent}
-            buttonColor={appColors.primary}
-          >
-            Update password
-          </Button>
+        <AppButton
+          onPress={handleSubmit}
+          disabled={!isFormValid || isPending}
+          loading={isPending}
+        >
+          Update password
+        </AppButton>
       </View>
     </AuthShell>
   );
@@ -120,14 +114,14 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
   },
-  input: {
-    backgroundColor: appColors.card,
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  submitButton: {
-    marginTop: 12,
-    borderRadius: 18,
-  },
-  submitButtonContent: {
-    minHeight: 52,
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

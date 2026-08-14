@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, Text } from 'react-native-paper';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
-import { TextInput } from '@components/PaperCompat';
-import { FlatList, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { FlatList, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainTabParamList } from '@navigation/types';
@@ -319,25 +318,26 @@ export const ChatScreen = () => {
 
   if (selectedConversationId !== null) {
     return (
+      <KeyboardAvoidingView style={styles.threadFlex} behavior="padding">
       <AppScreenContainer style={styles.threadContainer}>
         <View style={styles.threadHeader}>
-          <Button mode="text" onPress={() => setSelectedConversationId(null)} compact>
+          <AppButton variant="ghost" compact onPress={() => setSelectedConversationId(null)}>
             Back
-          </Button>
+          </AppButton>
           <View style={styles.headerTextWrap}>
-            <Text variant="titleMedium" style={styles.headerTitle}>
+            <Text style={styles.headerTitle}>
               {selectedConversation?.match ?? 'Your spark'}
             </Text>
-            <Text variant="bodySmall" style={styles.subtitleText}>
+            <Text style={styles.subtitleText}>
               {otherTypingCount > 0
                 ? 'Typing...'
                 : otherOnlineCount > 0
-                  ? 'Online now. Keep the plan moving while it is warm.'
-                  : 'Keep the energy moving while the plan is still warm.'}
+                  ? 'Online now'
+                  : 'Keep the plan moving'}
             </Text>
           </View>
-          <Button
-            mode="text"
+          <AppButton
+            variant="ghost"
             compact
             disabled={!selectedConversation?.otherUserId}
             onPress={() => {
@@ -346,17 +346,17 @@ export const ChatScreen = () => {
             }}
           >
             Safety
-          </Button>
+          </AppButton>
         </View>
 
         {messagesError && (
           <View style={styles.errorContainer}>
-            <HelperText type="error" visible>
+            <Text style={styles.errorText}>
               {getErrorMessage(messagesError, 'Unable to load messages.')}
-            </HelperText>
-            <Button mode="outlined" onPress={() => void refetchMessages()} disabled={messagesRefetching}>
+            </Text>
+            <AppButton variant="outline" onPress={() => void refetchMessages()} disabled={messagesRefetching}>
               {messagesRefetching ? 'Retrying...' : 'Retry'}
-            </Button>
+            </AppButton>
           </View>
         )}
 
@@ -373,12 +373,14 @@ export const ChatScreen = () => {
             return (
               <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
                 <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
-                  <Text variant="labelSmall" style={styles.messageAuthor}>
-                    {item.user?.firstName || item.user?.email || 'User'}
-                  </Text>
+                  {!isOwnMessage ? (
+                    <Text style={styles.messageAuthor}>
+                      {item.user?.firstName || 'Them'}
+                    </Text>
+                  ) : null}
                   <Text style={[styles.messageText, isOwnMessage ? styles.messageTextOwn : null]}>{item.message}</Text>
-                  <Text variant="bodySmall" style={[styles.messageTimestamp, isOwnMessage ? styles.messageTimestampOwn : null]}>
-                    {new Date(item.createdAt).toLocaleString()}
+                  <Text style={[styles.messageTimestamp, isOwnMessage ? styles.messageTimestampOwn : null]}>
+                    {new Date(item.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                   </Text>
                 </View>
               </View>
@@ -396,30 +398,30 @@ export const ChatScreen = () => {
           }
         />
 
-        {sendMutation.error && (
-          <HelperText type="error" visible>
+        {sendMutation.error ? (
+          <Text style={styles.errorText}>
             {getErrorMessage(sendMutation.error, 'Unable to send message.')}
-          </HelperText>
-        )}
+          </Text>
+        ) : null}
 
         <View style={styles.composeRow}>
           <TextInput
-            mode="outlined"
             placeholder="Keep it light. Make the plan."
+            placeholderTextColor={appColors.softInk}
             value={draft}
             onChangeText={handleDraftChange}
             style={styles.composeInput}
+            multiline
           />
-          <Button
-            mode="contained"
+          <AppButton
             onPress={() => void sendMutation.mutate()}
             loading={sendMutation.isPending}
             disabled={!draft.trim() || sendMutation.isPending}
-            buttonColor={appColors.primary}
+            compact
             style={styles.sendButton}
           >
-            Send it
-          </Button>
+            Send
+          </AppButton>
         </View>
 
         <SafetyActionsModal
@@ -437,6 +439,7 @@ export const ChatScreen = () => {
           }}
         />
       </AppScreenContainer>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -459,7 +462,7 @@ export const ChatScreen = () => {
           <AccentPill tone="secondary">{sparkCount} new</AccentPill>
           <AccentPill tone="neutral">{activeThreads} active</AccentPill>
         </View>
-        <Text variant="titleMedium" style={styles.summaryTitle}>
+        <Text style={styles.summaryTitle}>
           {freshSparkCount > 0
             ? `${freshSparkCount} new match${freshSparkCount === 1 ? '' : 'es'} today.`
             : 'Match with someone to start a chat.'}
@@ -471,67 +474,70 @@ export const ChatScreen = () => {
 
       {conversationsError && (
         <View style={styles.errorContainer}>
-          <HelperText type="error" visible>
+          <Text style={styles.errorText}>
             {getErrorMessage(conversationsError, 'Unable to load conversations.')}
-          </HelperText>
-          <Button
-            mode="outlined"
+          </Text>
+          <AppButton
+            variant="outline"
             onPress={() => void refetchConversations()}
             disabled={conversationsRefetching}
           >
             {conversationsRefetching ? 'Retrying...' : 'Retry'}
-          </Button>
+          </AppButton>
         </View>
       )}
 
       {conversationsLoading && <Text style={styles.loadingText}>Loading your chats…</Text>}
 
-      {!conversationsLoading && conversations.length === 0 ? (
+      {!conversationsLoading && !conversationsError && conversations.length === 0 ? (
         <EmptyStatePanel
           title="No chats yet"
           description="Match on a plan first — then message here to lock in the details."
           action={
-            <Button mode="contained" buttonColor={appColors.primary} onPress={() => navigation.navigate('Discover')}>
+            <AppButton onPress={() => navigation.navigate('Discover')}>
               Find a plan
-            </Button>
+            </AppButton>
           }
         />
       ) : null}
 
       {conversations.map((item) => {
         const conversationMessages = getConversationMessages(item);
-        const lastMessage = conversationMessages[conversationMessages.length - 1];
+        const lastMessage = conversationMessages[conversationMessages.length - 1] as
+          | { message?: string; createdAt?: string }
+          | undefined;
         const matchedRecord = matches.find((match) => match.activity === item.match);
         const isFreshSpark = matchedRecord
           ? Date.now() - new Date(matchedRecord.created_at).getTime() < 1000 * 60 * 60 * 24
           : false;
         return (
-          <PanelCard key={item.id} style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardTopRow}>
-                <View style={styles.matchAvatar}>
-                  <Text style={styles.matchAvatarText}>{String(item.match).charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={styles.cardTextBlock}>
-                  <View style={styles.cardBadgeRow}>
-                    <AccentPill tone={isFreshSpark ? 'secondary' : 'neutral'}>
-                      {isFreshSpark ? 'Fresh spark' : 'Open chat'}
-                    </AccentPill>
+          <Pressable key={item.id} onPress={() => setSelectedConversationId(item.id)}>
+            <PanelCard style={styles.card}>
+              <View style={styles.cardContent}>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.matchAvatar}>
+                    <Text style={styles.matchAvatarText}>{String(item.match).charAt(0).toUpperCase()}</Text>
                   </View>
-                  <Text variant="titleMedium" style={styles.cardTitle}>{item.match}</Text>
-                  <NativeText style={styles.cardSubtitle} numberOfLines={2}>
-                    {lastMessage?.message ?? 'No messages yet.'}
-                  </NativeText>
+                  <View style={styles.cardTextBlock}>
+                    <View style={styles.cardBadgeRow}>
+                      <AccentPill tone={isFreshSpark ? 'secondary' : 'neutral'}>
+                        {isFreshSpark ? 'Fresh spark' : 'Open chat'}
+                      </AccentPill>
+                    </View>
+                    <Text style={styles.cardTitle}>{item.match}</Text>
+                    <NativeText style={styles.cardSubtitle} numberOfLines={2}>
+                      {lastMessage?.message ?? 'No messages yet.'}
+                    </NativeText>
+                  </View>
                 </View>
+                <Text style={styles.metaText}>
+                  {lastMessage?.createdAt
+                    ? new Date(lastMessage.createdAt).toLocaleString()
+                    : 'Waiting for the first move'}
+                </Text>
               </View>
-              <View style={styles.cardFooter}>
-                <Text style={styles.metaText}>{lastMessage ? new Date(lastMessage.createdAt).toLocaleString() : 'Waiting for the first move'}</Text>
-                <Button mode="text" compact onPress={() => setSelectedConversationId(item.id)}>
-                  Jump in
-                </Button>
-              </View>
-            </View>
-          </PanelCard>
+            </PanelCard>
+          </Pressable>
         );
       })}
     </AppScrollView>
@@ -597,7 +603,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(192, 38, 211, 0.16)',
     borderWidth: 1,
-    borderColor: '#ffc6d7',
+    borderColor: appColors.line,
   },
   matchAvatarText: {
     color: appColors.primaryDeep,
@@ -631,8 +637,12 @@ const styles = StyleSheet.create({
     color: appColors.softInk,
     fontSize: 12,
   },
+  threadFlex: {
+    flex: 1,
+  },
   threadContainer: {
     gap: 14,
+    flex: 1,
   },
   threadHeader: {
     flexDirection: 'row',
@@ -673,11 +683,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: appColors.card,
     borderWidth: 1,
-    borderColor: '#f0dfe7',
+    borderColor: appColors.line,
   },
   messageBubbleOwn: {
     backgroundColor: 'rgba(91, 75, 255, 0.16)',
-    borderColor: '#ffc9da',
+    borderColor: 'rgba(91, 75, 255, 0.28)',
   },
   messageAuthor: {
     color: appColors.primaryDeep,
@@ -695,7 +705,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   messageTimestampOwn: {
-    color: '#6874d8',
+    color: appColors.primaryGlow,
   },
   typingIndicator: {
     alignSelf: 'flex-start',
@@ -713,18 +723,35 @@ const styles = StyleSheet.create({
   },
   composeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
     marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: appColors.line,
   },
   composeInput: {
     flex: 1,
-    backgroundColor: appColors.card,
+    minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: appColors.cardStrong,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+    color: appColors.ink,
+    fontSize: 16,
   },
   sendButton: {
-    borderRadius: 999,
+    minWidth: 72,
   },
   errorContainer: {
     gap: 8,
+  },
+  errorText: {
+    color: appColors.danger,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

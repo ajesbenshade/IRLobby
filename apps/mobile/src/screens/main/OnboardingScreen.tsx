@@ -1,8 +1,7 @@
 import * as Location from 'expo-location';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Button, HelperText, Switch, Text } from 'react-native-paper';
+import { StyleSheet, Switch, Text } from 'react-native';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -13,8 +12,9 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
-import { TextInput } from '@components/PaperCompat';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { Field } from '@components/ui/Field';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/apiClient';
 import { track } from '@services/analytics';
@@ -221,20 +221,18 @@ export const OnboardingScreen = () => {
         title="Share location or type your city"
         subtitle="IRLobby is built for plans within a few miles. Location makes the feed useful on day one."
       />
-      <Button mode="contained" buttonColor={appColors.primary} onPress={() => void requestLocationPermission()}>
+      <AppButton onPress={() => void requestLocationPermission()}>
         {locationStatus === 'granted' ? 'Location enabled' : 'Use my location'}
-      </Button>
+      </AppButton>
       {locationStatus === 'denied' ? (
-        <HelperText type="info" visible>
+        <Text style={styles.hintText}>
           No problem — type your city below so Discover still has a place to start.
-        </HelperText>
+        </Text>
       ) : null}
-      <TextInput
-        mode="outlined"
+      <Field
         label="City"
         value={city}
         onChangeText={setCity}
-        style={styles.input}
         autoCapitalize="words"
       />
     </PanelCard>
@@ -323,7 +321,7 @@ export const OnboardingScreen = () => {
 
     return (
       <PanelCard tone="dark" style={styles.footerCard}>
-        <Text variant="titleLarge" style={styles.footerTitle}>
+        <Text style={styles.footerTitle}>
           {currentStep === 'notifications' ? 'Almost there.' : 'Find something to do tonight.'}
         </Text>
         <Text style={styles.footerSubtitle}>
@@ -331,18 +329,14 @@ export const OnboardingScreen = () => {
             ? 'You can polish your profile anytime after you see live plans.'
             : 'Get into Discover fast. Profile polish can wait.'}
         </Text>
-        {stepError ? (
-          <HelperText type="error" visible style={styles.footerError}>
-            {stepError}
-          </HelperText>
-        ) : null}
+        {stepError ? <Text style={styles.footerError}>{stepError}</Text> : null}
         <View style={styles.footerActions}>
-          <Button mode="text" textColor={appColors.white} onPress={secondaryAction} disabled={isSaving}>
+          <AppButton variant="ghost" onPress={secondaryAction} disabled={isSaving} textColor={appColors.white}>
             {secondaryLabel}
-          </Button>
-          <Button mode="contained" onPress={() => void primaryAction()} loading={isSaving}>
+          </AppButton>
+          <AppButton onPress={() => void primaryAction()} loading={isSaving}>
             {primaryLabel}
-          </Button>
+          </AppButton>
         </View>
       </PanelCard>
     );
@@ -377,9 +371,10 @@ const styles = StyleSheet.create({
     color: appColors.mutedInk,
     lineHeight: 20,
   },
-  input: {
-    backgroundColor: appColors.card,
-    marginTop: spacing.sm,
+  hintText: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
   },
   footerCard: {
     gap: spacing.sm,
@@ -389,11 +384,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   footerSubtitle: {
-    color: '#d6ddf4',
+    color: appColors.mutedInk,
     lineHeight: 21,
   },
   footerError: {
-    color: '#ffd0d8',
+    color: appColors.danger,
   },
   footerActions: {
     flexDirection: 'row',

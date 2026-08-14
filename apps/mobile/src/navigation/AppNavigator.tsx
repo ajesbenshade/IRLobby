@@ -1,7 +1,7 @@
-import { NavigationContainer, DefaultTheme, type LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
-import { ActivityIndicator } from 'react-native-paper';
+import { ActivityIndicator } from 'react-native';
 
 import { View } from '@components/RNCompat';
 import { useAuth } from '@hooks/useAuth';
@@ -10,6 +10,7 @@ import {
   useNavigationContainerRef,
   usePushNotificationNavigation,
 } from '@services/pushNotificationNavigation';
+import { appColors } from '@theme/index';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import type { RootStackParamList } from './types';
@@ -48,6 +49,19 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
+const navigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: appColors.primary,
+    background: appColors.background,
+    card: appColors.card,
+    text: appColors.ink,
+    border: appColors.line,
+    notification: appColors.secondary,
+  },
+};
+
 export const AppNavigator = () => {
   const { isAuthenticated, isInitializing, user } = useAuth();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
@@ -61,15 +75,16 @@ export const AppNavigator = () => {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundColor: appColors.background,
         }}
       >
-        <ActivityIndicator animating size="large" />
+        <ActivityIndicator size="large" color={appColors.primaryGlow} />
       </View>
     );
   }
 
   return (
-    <NavigationContainer ref={navigationRef} theme={DefaultTheme} linking={linking}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           user?.onboardingCompleted === false ? (

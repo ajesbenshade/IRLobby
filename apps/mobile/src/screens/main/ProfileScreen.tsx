@@ -16,8 +16,9 @@ import {
   PanelCard,
   SectionIntro,
 } from "@components/AppChrome";
-import { TextInput } from "@components/PaperCompat";
 import { Image, Text as NativeText, View } from "@components/RNCompat";
+import { AppButton } from "@components/ui/Button";
+import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
@@ -30,6 +31,7 @@ import {
 import { appColors, appTypography, palette, radii } from "@theme/index";
 import { getErrorMessage } from "@utils/error";
 import { imageAssetToUploadDataUrl } from "@utils/profileImages";
+import { parseHttpsUrl } from "@utils/safeUrl";
 
 import type { MainStackParamList } from "@navigation/types";
 
@@ -47,6 +49,7 @@ const PayoutSetupCard = () => {
     },
   });
 
+  const unavailable = statusQuery.data?.available === false;
   const ready =
     Boolean(user?.canSellTickets) ||
     Boolean(statusQuery.data?.payoutsEnabled) ||
@@ -55,11 +58,13 @@ const PayoutSetupCard = () => {
   return (
     <View style={{ gap: 10 }}>
       <Text style={{ color: appColors.mutedInk, lineHeight: 20 }}>
-        {ready
-          ? "Your payout account is connected. Ticketed events will send 90% to you."
-          : "Connect a Stripe payout account to sell tickets for your events."}
+        {unavailable
+          ? "Payouts aren’t live on this server yet. You can still host free plans."
+          : ready
+            ? "Your payout account is connected. Ticketed events will send 90% to you."
+            : "Connect a Stripe payout account to sell tickets for your events."}
       </Text>
-      {statusQuery.error ? (
+      {!unavailable && statusQuery.error ? (
         <HelperText type="error" visible>
           {getErrorMessage(statusQuery.error, "Unable to load payout status.")}
         </HelperText>
@@ -69,19 +74,21 @@ const PayoutSetupCard = () => {
           {getErrorMessage(onboardMutation.error, "Unable to open Stripe onboarding.")}
         </HelperText>
       ) : null}
-      <Button
-        mode={ready ? "outlined" : "contained"}
-        loading={onboardMutation.isPending || statusQuery.isFetching}
-        onPress={() => {
-          if (ready) {
-            void statusQuery.refetch();
-            return;
-          }
-          onboardMutation.mutate();
-        }}
-      >
-        {ready ? "Refresh payout status" : "Set up payouts with Stripe"}
-      </Button>
+      {unavailable ? null : (
+        <AppButton
+          variant={ready ? "outline" : "contained"}
+          loading={onboardMutation.isPending || statusQuery.isFetching}
+          onPress={() => {
+            if (ready) {
+              void statusQuery.refetch();
+              return;
+            }
+            onboardMutation.mutate();
+          }}
+        >
+          {ready ? "Refresh payout status" : "Set up payouts with Stripe"}
+        </AppButton>
+      )}
     </View>
   );
 };
@@ -165,8 +172,13 @@ export const ProfileScreen = () => {
     if (!next || photoAlbum.length >= MAX_PHOTOS) {
       return;
     }
+    if (!parseHttpsUrl(next)) {
+      setImageError("Photos from a URL must use https.");
+      return;
+    }
     setPhotoAlbum((previous) => [...previous, next]);
     setPhotoInput("");
+    setImageError(null);
   };
 
   const removePhotoAt = (index: number) => {
@@ -358,35 +370,33 @@ export const ProfileScreen = () => {
           subtitle="How you show up across plans and chats."
         />
         <View style={styles.row}>
-          <TextInput
-            label="First name"
-            value={firstName}
-            onChangeText={setFirstName}
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
-          <TextInput
-            label="Last name"
-            value={lastName}
-            onChangeText={setLastName}
-            mode="outlined"
-            style={[styles.input, styles.half]}
-          />
+          <View style={styles.half}>
+            <Field
+              label="First name"
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+          </View>
+          <View style={styles.half}>
+            <Field
+              label="Last name"
+              value={lastName}
+              onChangeText={setLastName}
+            />
+          </View>
         </View>
-        <TextInput
+        <Field
           label="City"
           value={city}
           onChangeText={setCity}
-          mode="outlined"
-          style={styles.input}
         />
-        <TextInput
+        <Field
           label="Bio"
           value={bio}
           onChangeText={setBio}
           multiline
-          mode="outlined"
-          style={styles.input}
+          numberOfLines={4}
+          style={{ minHeight: 96, textAlignVertical: "top" }}
         />
       </PanelCard>
 
@@ -397,20 +407,20 @@ export const ProfileScreen = () => {
           subtitle="Keep these short and specific so the app can surface better plans and more compatible people."
         />
         <View style={styles.row}>
-          <TextInput
-            label="Add interest"
-            value={interestInput}
-            onChangeText={setInterestInput}
-            mode="outlined"
-            style={[styles.input, styles.flexInput]}
-          />
-          <Button
-            mode="outlined"
+          <View style={styles.flexInput}>
+            <Field
+              label="Add interest"
+              value={interestInput}
+              onChangeText={setInterestInput}
+            />
+          </View>
+          <AppButton
+            variant="outline"
             onPress={addInterest}
             disabled={!interestInput.trim()}
           >
             Add
-          </Button>
+          </AppButton>
         </View>
         {interests.length > 0 ? (
           <View style={styles.inlineWrap}>
@@ -442,21 +452,22 @@ export const ProfileScreen = () => {
           subtitle="Give people a sense of who you are before they open the chat or show up to the plan."
         />
         <View style={styles.row}>
-          <TextInput
-            label="Photo URL"
-            value={photoInput}
-            onChangeText={setPhotoInput}
-            autoCapitalize="none"
-            mode="outlined"
-            style={[styles.input, styles.flexInput]}
-          />
-          <Button
-            mode="outlined"
+          <View style={styles.flexInput}>
+            <Field
+              label="Photo URL"
+              value={photoInput}
+              onChangeText={setPhotoInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <AppButton
+            variant="outline"
             onPress={addPhotoByUrl}
             disabled={!photoInput.trim()}
           >
             Add
-          </Button>
+          </AppButton>
         </View>
         <Button
           mode="outlined"
@@ -614,7 +625,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     gap: 12,
-    borderColor: "#bff0e6",
+    borderColor: appColors.line,
   },
   heroShell: {
     borderRadius: radii.xl,
@@ -683,7 +694,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(91, 75, 255, 0.16)',
     borderWidth: 1,
-    borderColor: "#ffc9da",
+    borderColor: appColors.line,
     paddingLeft: 14,
     paddingRight: 4,
     paddingVertical: 4,
@@ -755,7 +766,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#edf2f8",
+    backgroundColor: appColors.cardStrong,
   },
   defaultAvatarText: {
     color: "rgba(255,255,255,0.9)",
@@ -770,9 +781,9 @@ const styles = StyleSheet.create({
   albumTile: {
     width: "47%",
     gap: 6,
-    backgroundColor: "#fffafc",
+    backgroundColor: appColors.card,
     borderWidth: 1,
-    borderColor: "#f3dfe8",
+    borderColor: appColors.line,
     borderRadius: 20,
     padding: 8,
   },
@@ -780,7 +791,7 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 1,
     borderRadius: 18,
-    backgroundColor: "#edf2f8",
+    backgroundColor: appColors.cardStrong,
   },
   albumText: {
     color: appColors.mutedInk,

@@ -77,7 +77,7 @@ export default function AppSidebar() {
                   asChild
                   isActive={isActive(location.pathname, '/app/create')}
                   tooltip="Create activity"
-                  className="rounded-xl bg-gradient-to-r from-primary to-primary-deep text-white shadow-float hover:opacity-95 hover:text-white data-[active=true]:from-primary data-[active=true]:to-primary-deep data-[active=true]:text-white"
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                 >
                   <Link to="/app/create">
                     <Plus className="h-4 w-4" />

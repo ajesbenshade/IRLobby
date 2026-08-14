@@ -1,4 +1,10 @@
-import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+} from 'axios';
 import { API_ROUTES } from '@shared/schema';
 
 import { config } from '@constants/config';
@@ -8,8 +14,25 @@ import type { AuthTokens } from '../types/auth';
 
 const API_TIMEOUT = 15000;
 
+const SKIP_REFRESH_PATHS = [
+  API_ROUTES.AUTH_REFRESH,
+  API_ROUTES.AUTH_TOKEN,
+  API_ROUTES.USER_LOGIN,
+  API_ROUTES.USER_REGISTER,
+  API_ROUTES.AUTH_GOOGLE_MOBILE,
+  API_ROUTES.AUTH_APPLE_MOBILE,
+  API_ROUTES.AUTH_TWITTER_CALLBACK,
+  API_ROUTES.AUTH_REQUEST_PASSWORD_RESET,
+  API_ROUTES.AUTH_RESET_PASSWORD,
+];
+
 let isRefreshing = false;
 let pendingRequests: Array<(token: string | null) => void> = [];
+let onSessionExpired: (() => void) | null = null;
+
+export const setSessionExpiredHandler = (handler: (() => void) | null) => {
+  onSessionExpired = handler;
+};
 
 const queuePendingRequest = (callback: (token: string | null) => void) => {
   pendingRequests.push(callback);
@@ -19,6 +42,40 @@ const resolvePendingRequests = (token: string | null) => {
   pendingRequests.forEach((callback) => callback(token));
   pendingRequests = [];
 };
+
+const expireSession = async () => {
+  await authStorage.clearTokens();
+  onSessionExpired?.();
+};
+
+const getHeaderValue = (
+  headers: AxiosRequestConfig['headers'] | undefined,
+  name: string,
+) => {
+  if (!headers) {
+    return undefined;
+  }
+  if (typeof (headers as AxiosHeaders).get === 'function') {
+    const value = (headers as AxiosHeaders).get(name);
+    return typeof value === 'string' && value ? value : undefined;
+  }
+  const record = headers as Record<string, unknown>;
+  const value = record[name] ?? record[name.toLowerCase()];
+  return typeof value === 'string' && value ? value : undefined;
+};
+
+const setAuthorizationHeader = (
+  headers: AxiosRequestConfig['headers'] | undefined,
+  token: string,
+): AxiosHeaders => {
+  const nextHeaders =
+    headers instanceof AxiosHeaders ? headers : new AxiosHeaders(headers as never);
+  nextHeaders.set('Authorization', `Bearer ${token}`);
+  return nextHeaders;
+};
+
+const shouldSkipRefresh = (url?: string) =>
+  Boolean(url && SKIP_REFRESH_PATHS.some((route) => url.includes(route)));
 
 const refreshAccessToken = async (): Promise<string | null> => {
   if (isRefreshing) {
@@ -50,7 +107,8 @@ const refreshAccessToken = async (): Promise<string | null> => {
       refresh,
     } = response.data;
 
-    const resolvedAccessToken = typeof directAccess === 'string' ? directAccess : typeof access === 'string' ? access : '';
+    const resolvedAccessToken =
+      typeof directAccess === 'string' ? directAccess : typeof access === 'string' ? access : '';
     const resolvedRefreshToken =
       typeof directRefresh === 'string'
         ? directRefresh
@@ -61,6 +119,8 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const tokens: AuthTokens = {
       accessToken: resolvedAccessToken,
       refreshToken: resolvedRefreshToken,
+      access: resolvedAccessToken,
+      refresh: resolvedRefreshToken,
       expiresIn,
     };
 
@@ -73,7 +133,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
     return resolvedAccessToken;
   } catch (error) {
     console.warn('[apiClient] Token refresh failed', error);
-    await authStorage.clearTokens();
+    await expireSession();
     resolvePendingRequests(null);
     return null;
   } finally {
@@ -90,8 +150,8 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   async (request) => {
     const token = await getAccessToken();
-    if (token && request.headers) {
-      request.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      request.headers = setAuthorizationHeader(request.headers, token);
     }
     return request;
   },
@@ -103,15 +163,25 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !shouldSkipRefresh(originalRequest.url)
+    ) {
       originalRequest._retry = true;
+      const existingToken = await getAccessToken();
+      const sentAuthorization = getHeaderValue(originalRequest.headers, 'Authorization');
+
+      if (existingToken && !sentAuthorization) {
+        originalRequest.headers = setAuthorizationHeader(originalRequest.headers, existingToken);
+        return api(originalRequest);
+      }
+
       const newToken = await refreshAccessToken();
 
       if (newToken) {
-        originalRequest.headers = {
-          ...originalRequest.headers,
-          Authorization: `Bearer ${newToken}`,
-        };
+        originalRequest.headers = setAuthorizationHeader(originalRequest.headers, newToken);
         return api(originalRequest);
       }
     }

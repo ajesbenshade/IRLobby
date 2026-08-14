@@ -62,23 +62,23 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
 
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-bold text-gray-800 truncate">{activity.title}</h3>
+          <h3 className="text-lg font-semibold text-foreground truncate">{activity.title}</h3>
         </div>
 
         <div className="space-y-2 mb-3">
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="text-sm truncate">{activity.location}</span>
           </div>
 
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
               {activity.dateTime ? format(new Date(activity.dateTime), 'MMM d, h:mm a') : ''}
             </span>
           </div>
 
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-muted-foreground">
             <Users className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
               {participantCount}/{maxParticipants} people
@@ -86,7 +86,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
           </div>
         </div>
 
-        <p className="text-gray-700 text-sm mb-4 line-clamp-3">{activity.description}</p>
+        <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{activity.description}</p>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -97,7 +97,7 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
                   .map((participant: Participant, index: number) => (
                     <div
                       key={index}
-                      className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center overflow-hidden"
+                      className="w-8 h-8 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden"
                     >
                       {participant.user?.profileImageUrl ? (
                         <img
@@ -106,15 +106,15 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-xs font-medium text-gray-600">
+                        <span className="text-xs font-medium text-muted-foreground">
                           {participant.user?.firstName?.charAt(0) || '?'}
                         </span>
                       )}
                     </div>
                   ))}
                 {activity.participants.length > 3 && (
-                  <div className="w-8 h-8 bg-gray-200 rounded-full border-2 border-white flex items-center justify-center">
-                    <span className="text-xs font-medium text-gray-600">
+                  <div className="w-8 h-8 bg-muted rounded-full border-2 border-background flex items-center justify-center">
+                    <span className="text-xs font-medium text-muted-foreground">
                       +{activity.participants.length - 3}
                     </span>
                   </div>
@@ -126,13 +126,13 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
           {activity.host && (
             <div className="flex items-center">
               <Star className="h-4 w-4 text-accent mr-1" />
-              <span className="text-sm font-medium text-gray-700">{hostRating.toFixed(1)}</span>
+              <span className="text-sm font-medium text-foreground">{hostRating.toFixed(1)}</span>
             </div>
           )}
         </div>
 
         {activity.host && (
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center">
+          <div className="mt-4 pt-4 border-t border-border flex items-center">
             <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
               {activity.host.profileImageUrl ? (
                 <img
@@ -149,12 +149,12 @@ export function ActivityCard({ activity, onClick, className = '' }: ActivityCard
               )}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-800">
+              <p className="text-sm font-medium text-foreground">
                 {activity.host.firstName && activity.host.lastName
                   ? `${activity.host.firstName} ${activity.host.lastName}`
                   : activity.host.email?.split('@')[0] || 'Host'}
               </p>
-              <p className="text-xs text-gray-500">Host</p>
+              <p className="text-xs text-muted-foreground">Host</p>
             </div>
           </div>
         )}

@@ -1,8 +1,10 @@
+import axios from 'axios';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import { api } from './apiClient';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
+import { isAllowedStripeUrl } from '@utils/safeUrl';
 
 export interface StripeConnectStatus {
   connected: boolean;
@@ -10,6 +12,7 @@ export interface StripeConnectStatus {
   detailsSubmitted: boolean;
   accountId?: string | null;
   onboardingComplete: boolean;
+  available?: boolean;
 }
 
 export interface TicketPurchaseResponse {
@@ -21,11 +24,30 @@ export interface TicketPurchaseResponse {
   platformFeeAmountCents?: number;
 }
 
+const isStripeConnectUnavailable = (error: unknown) =>
+  axios.isAxiosError(error) &&
+  (error.response?.status === 404 ||
+    error.response?.status === 501 ||
+    error.response?.status === 503);
+
 export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
-  const response = await api.get<StripeConnectStatus>(
-    API_ROUTES.USER_STRIPE_CONNECT_STATUS
-  );
-  return response.data;
+  try {
+    const response = await api.get<StripeConnectStatus>(
+      API_ROUTES.USER_STRIPE_CONNECT_STATUS
+    );
+    return { ...response.data, available: true };
+  } catch (error) {
+    if (isStripeConnectUnavailable(error)) {
+      return {
+        connected: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        onboardingComplete: false,
+        available: false,
+      };
+    }
+    throw error;
+  }
 }
 
 export async function startStripeConnectOnboarding(): Promise<string> {
@@ -39,8 +61,8 @@ export async function startStripeConnectOnboarding(): Promise<string> {
     }
   );
   const url = response.data?.url;
-  if (!url) {
-    throw new Error('Stripe did not return an onboarding link.');
+  if (!url || !isAllowedStripeUrl(url)) {
+    throw new Error('Stripe did not return a trusted onboarding link.');
   }
   return url;
 }
@@ -71,8 +93,8 @@ export async function openTicketCheckout(
 ): Promise<void> {
   const purchase = await purchaseActivityTicket(activityId);
   const checkoutUrl = purchase.url || purchase.checkoutUrl;
-  if (!checkoutUrl) {
-    throw new Error('Checkout URL was missing from the payment response.');
+  if (!checkoutUrl || !isAllowedStripeUrl(checkoutUrl)) {
+    throw new Error('Checkout URL was missing or not a trusted Stripe link.');
   }
   await WebBrowser.openBrowserAsync(checkoutUrl);
 }

@@ -72,7 +72,6 @@ type DetailRowProps = {
 
 export const AppScrollView = ({ children, contentContainerStyle, refreshControl }: AppScrollViewProps) => (
   <View style={styles.screenRoot}>
-    <DecorativeBackdrop />
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
@@ -86,7 +85,6 @@ export const AppScrollView = ({ children, contentContainerStyle, refreshControl 
 
 export const AppScreenContainer = ({ children, style }: AppScreenContainerProps) => (
   <View style={styles.screenRoot}>
-    <DecorativeBackdrop />
     <SafeAreaView style={[styles.screenContainer, style]} edges={['top', 'bottom']}>
       {children}
     </SafeAreaView>
@@ -153,15 +151,27 @@ export const StatCard = ({ label, value, detail, tone = 'primary' }: StatCardPro
   </PanelCard>
 );
 
-export const AccentPill = ({ children, tone = 'primary' }: PropsWithChildren<{ tone?: 'primary' | 'secondary' | 'neutral' }>) => (
+export const AccentPill = ({
+  children,
+  tone = 'primary',
+}: PropsWithChildren<{ tone?: 'primary' | 'secondary' | 'neutral' | 'gold' }>) => (
   <View
     style={[
       styles.pill,
       tone === 'secondary' ? styles.pillSecondary : null,
       tone === 'neutral' ? styles.pillNeutral : null,
+      tone === 'gold' ? styles.pillGold : null,
     ]}
   >
-    <Text style={[styles.pillText, tone === 'neutral' ? styles.pillTextNeutral : null]}>{children}</Text>
+    <Text
+      style={[
+        styles.pillText,
+        tone === 'neutral' ? styles.pillTextNeutral : null,
+        tone === 'gold' ? styles.pillTextGold : null,
+      ]}
+    >
+      {children}
+    </Text>
   </View>
 );
 
@@ -196,7 +206,6 @@ export const EmptyStatePanel = ({
   return (
     <AnimatedView style={{ opacity: fade, transform: [{ translateY: lift }] }}>
       <PanelCard style={styles.emptyCard}>
-        <AccentPill tone="neutral">Fresh space</AccentPill>
         <Text variant="titleMedium" style={styles.emptyTitle}>
           {title}
         </Text>
@@ -216,15 +225,13 @@ export const AuthShell = ({ eyebrow, title, subtitle, footer, children }: AuthSh
       <DecorativeBackdrop />
       <SafeAreaView style={styles.authSafeArea} edges={[ 'top', 'bottom' ]}>
         <View style={styles.authCenterWrap}>
-          <PanelCard style={styles.authCard} tone="default">
-            {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-            <Text variant="headlineMedium" style={styles.authTitle}>
-              {title}
-            </Text>
-            <Text style={styles.authSubtitle}>{subtitle}</Text>
-            <View style={styles.authContent}>{children}</View>
-            {footer ? <View style={styles.authFooter}>{footer}</View> : null}
-          </PanelCard>
+          {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+          <Text variant="headlineMedium" style={styles.authTitle}>
+            {title}
+          </Text>
+          <Text style={styles.authSubtitle}>{subtitle}</Text>
+          <View style={styles.authContent}>{children}</View>
+          {footer ? <View style={styles.authFooter}>{footer}</View> : null}
         </View>
       </SafeAreaView>
     </View>
@@ -287,18 +294,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   eyebrow: {
-    color: appColors.primary,
+    color: appColors.mutedInk,
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   pageTitle: {
     color: appColors.ink,
-    fontFamily: appTypography.headingDisplay,
-    fontWeight: '800',
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -1.1,
+    fontFamily: appTypography.heading,
+    fontWeight: '600',
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.6,
   },
   pageSubtitle: {
     color: appColors.mutedInk,
@@ -320,9 +328,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: appColors.ink,
     fontFamily: appTypography.heading,
-    fontWeight: '800',
-    fontSize: 21,
-    letterSpacing: -0.5,
+    fontWeight: '600',
+    fontSize: 20,
+    letterSpacing: -0.4,
   },
   sectionSubtitle: {
     color: appColors.mutedInk,
@@ -395,10 +403,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     color: appColors.ink,
-    fontFamily: appTypography.headingDisplay,
-    fontSize: 38,
-    fontWeight: '800',
-    letterSpacing: -1.4,
+    fontFamily: appTypography.heading,
+    fontSize: 32,
+    fontWeight: '600',
+    letterSpacing: -0.8,
   },
   statDetail: {
     color: appColors.mutedInk,
@@ -428,8 +436,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+  pillGold: {
+    backgroundColor: 'rgba(232, 200, 114, 0.14)',
+    borderColor: 'rgba(232, 200, 114, 0.4)',
+  },
   pillTextNeutral: {
     color: appColors.mutedInk,
+  },
+  pillTextGold: {
+    color: appColors.accent,
   },
   emptyCard: {
     alignItems: 'flex-start',
@@ -438,8 +453,8 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: appColors.ink,
     fontFamily: appTypography.heading,
-    fontWeight: '800',
-    letterSpacing: -0.4,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   emptyDescription: {
     color: appColors.mutedInk,
@@ -464,25 +479,20 @@ const styles = StyleSheet.create({
   },
   authCenterWrap: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
-  },
-  authCard: {
     maxWidth: 460,
-    alignSelf: 'center',
     width: '100%',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radii.xl,
+    alignSelf: 'center',
   },
   authTitle: {
     color: appColors.ink,
-    fontFamily: appTypography.headingDisplay,
-    fontWeight: '800',
+    fontFamily: appTypography.heading,
+    fontWeight: '600',
     fontSize: 32,
-    lineHeight: 36,
-    letterSpacing: -1,
+    lineHeight: 38,
+    letterSpacing: -0.8,
     marginTop: spacing.xs,
   },
   authSubtitle: {

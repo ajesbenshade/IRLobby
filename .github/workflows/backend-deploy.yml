@@ -102,7 +102,7 @@ jobs:
             ./irlobby_backend/ \
             "${EFFECTIVE_USER}@${SSH_HOST}:${REMOTE_DIR}/"
 
-          connect "${EFFECTIVE_USER}" 'mkdir -p /opt/irlobby/web || sudo mkdir -p /opt/irlobby/web'
+          connect "${EFFECTIVE_USER}" 'mkdir -p /opt/irlobby/web /var/www/certbot || sudo mkdir -p /opt/irlobby/web /var/www/certbot'
           rsync -az \
             --exclude '.htaccess' \
             ./site/ \
@@ -219,7 +219,6 @@ jobs:
           if [ "${DEPLOY_MODE}" = "hotpatch" ] && [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
             echo "=== recreating web/ws to load updated Google OAuth env ==="
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate web ws
-            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
             sleep 8
           fi
 
@@ -255,7 +254,6 @@ jobs:
               sleep 5
             done
             docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate ws celery_worker celery_beat
-            docker restart irlobby_backend-nginx-1 || docker compose -f docker-compose.oracle.yml --env-file .env.production restart nginx
           else
             web_cid="$(docker ps -q -f name=irlobby_backend-web-1 | head -1 || true)"
             ws_cid="$(docker ps -q -f name=irlobby_backend-ws-1 | head -1 || true)"
@@ -298,12 +296,15 @@ jobs:
             sleep 8
           fi
 
-          echo "=== publishing legal pages and recreating nginx ==="
-          mkdir -p /opt/irlobby/web
+          echo "=== publishing legal pages ==="
+          mkdir -p /opt/irlobby/web /var/www/certbot
           cp -f ./deploy/oracle/legal/*.html /opt/irlobby/web/
+
+          echo "=== nginx -t on new config (running proxy stays up if this fails) ==="
+          bash ./deploy/oracle/validate-nginx.sh docker-compose.oracle.yml .env.production
+
+          echo "=== recreating nginx after successful nginx -t ==="
           docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate nginx
-          sleep 3
-          docker compose -f docker-compose.oracle.yml --env-file .env.production exec -T nginx nginx -t
 
           echo "=== container status ==="
           docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20

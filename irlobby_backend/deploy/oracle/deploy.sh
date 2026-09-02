@@ -82,7 +82,7 @@ fi
 bash "${ROOT_DIR}/deploy/oracle/validate-redis-ports.sh" "${COMPOSE_FILE}"
 
 echo "Publishing App Store legal pages to /opt/irlobby/web..."
-sudo mkdir -p /opt/irlobby/web
+sudo mkdir -p /opt/irlobby/web /var/www/certbot
 sudo cp -f "${ROOT_DIR}/deploy/oracle/legal/"*.html /opt/irlobby/web/
 SITE_DIR="$(cd "${ROOT_DIR}/.." && pwd)/site"
 if [[ -d "${SITE_DIR}" ]]; then
@@ -105,6 +105,12 @@ fi
 
 echo "Building backend images..."
 "${DOCKER_CMD[@]}" compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "${PROFILE_ARGS[@]}" build
+
+if "${DOCKER_CMD[@]}" compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
+    ps --status running -q nginx 2>/dev/null | grep -q .; then
+  echo "Validating nginx config before updating the running proxy..."
+  bash "${ROOT_DIR}/deploy/oracle/validate-nginx.sh" "${COMPOSE_FILE}" "${ENV_FILE}"
+fi
 
 echo "Starting services..."
 "${DOCKER_CMD[@]}" compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "${PROFILE_ARGS[@]}" up -d

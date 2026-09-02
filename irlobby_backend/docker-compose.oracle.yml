@@ -144,7 +144,10 @@ services:
       - ./deploy/oracle/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./deploy/oracle/nginx/legal-locations.inc:/etc/nginx/legal-locations.inc:ro
       - ./deploy/oracle/nginx/enabled:/etc/nginx/conf.d/enabled:ro
-      - ./deploy/oracle/certbot-webroot:/var/www/certbot
+      # Host ACME webroot at the same path inside nginx. Host certbot must use
+      # `certbot certonly --webroot -w /var/www/certbot`. Do not use
+      # deploy/oracle/certbot-webroot (that directory is not served).
+      - /var/www/certbot:/var/www/certbot
       - /opt/irlobby/web:/usr/share/nginx/html:ro
     depends_on:
       web:

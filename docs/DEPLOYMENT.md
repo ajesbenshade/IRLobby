@@ -75,7 +75,14 @@ Human steps after this code is deployed (do not run these from CI unless you int
 1. Run the **Backend Deploy** workflow so nginx, `/opt/irlobby/web`, and Django pick up the pages.
 2. Confirm `https://api.irlobby.com/privacy` and `https://api.irlobby.com/support` return the real documents (the workflow already checks this).
 3. Point the `irlobby.com` and `www.irlobby.com` A records from `162.0.209.170` to `5.75.156.23`. Do not change `api.irlobby.com`.
-4. Issue a certificate: `certbot certonly --webroot -w /var/www/certbot -d irlobby.com -d www.irlobby.com` (the HTTP vhost already serves ACME challenges).
+4. On the VPS **host** (not inside the nginx container), issue an apex certificate. `/var/www/certbot` is bind-mounted into nginx at the same path, and the HTTP vhost serves `/.well-known/acme-challenge/` from there:
+
+   ```bash
+   sudo mkdir -p /var/www/certbot
+   sudo certbot certonly --webroot -w /var/www/certbot -d irlobby.com -d www.irlobby.com
+   ```
+
+   Do not pass `-w deploy/oracle/certbot-webroot` (that directory is not served). Do not renew or replace the existing `api.irlobby.com` certificate.
 5. On the VPS, run `bash deploy/oracle/enable-marketing-tls.sh` so nginx serves HTTPS for the apex without touching the `api.irlobby.com` server block.
 6. Confirm `https://irlobby.com/privacy` and `https://irlobby.com/support`.
 7. Confirm `support@irlobby.com` (and `ajesbenshade@gmail.com` as backup) can receive mail. App Store Connect URLs stay as they are; this change does not submit the app.

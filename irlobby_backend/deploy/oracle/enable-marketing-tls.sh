@@ -13,8 +13,9 @@ ENV_FILE="${ROOT_DIR}/.env.production"
 if [[ ! -f "${CERT_LIVE}/fullchain.pem" || ! -f "${CERT_LIVE}/privkey.pem" ]]; then
   echo "Missing Let's Encrypt files under ${CERT_LIVE}." >&2
   echo "Point irlobby.com and www.irlobby.com at this host, then issue:" >&2
-  echo "  certbot certonly --webroot -w ${ROOT_DIR}/deploy/oracle/certbot-webroot -d irlobby.com -d www.irlobby.com" >&2
-  echo "The nginx HTTP vhost already serves /.well-known/acme-challenge/ from /var/www/certbot." >&2
+  echo "  sudo mkdir -p /var/www/certbot" >&2
+  echo "  sudo certbot certonly --webroot -w /var/www/certbot -d irlobby.com -d www.irlobby.com" >&2
+  echo "Run certbot on the host, not inside the nginx container. /var/www/certbot is bind-mounted into nginx at the same path; that is the ACME webroot the HTTP vhost serves. Do not use deploy/oracle/certbot-webroot. Do not renew or replace the existing api.irlobby.com certificate." >&2
   exit 1
 fi
 

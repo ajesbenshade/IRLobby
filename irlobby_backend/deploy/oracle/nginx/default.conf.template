@@ -34,6 +34,7 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # HTTP-01: host certbot --webroot -w /var/www/certbot (bind-mounted at this path).
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }

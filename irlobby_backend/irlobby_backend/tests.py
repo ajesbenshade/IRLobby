@@ -122,3 +122,29 @@ class LegalPageTests(TestCase):
         self.assertIn("legal-locations.inc", default_conf)
         self.assertIn("server_name irlobby.com www.irlobby.com", default_conf)
         self.assertIn("location /api/health/", default_conf)
+        self.assertIn("location /ws/", default_conf)
+
+    def test_certbot_webroot_is_the_host_path_nginx_serves(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        compose = (Path(settings.BASE_DIR) / "docker-compose.oracle.yml").read_text(
+            encoding="utf-8"
+        )
+        enable_tls = (
+            Path(settings.BASE_DIR) / "deploy" / "oracle" / "enable-marketing-tls.sh"
+        ).read_text(encoding="utf-8")
+        deploy_docs = (repo_root / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
+        backend_deploy = (repo_root / ".github" / "workflows" / "backend-deploy.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("- /var/www/certbot:/var/www/certbot", compose)
+        self.assertNotIn("certbot-webroot:/var/www/certbot", compose)
+        self.assertIn("--webroot -w /var/www/certbot", enable_tls)
+        self.assertNotIn("certbot-webroot -d irlobby.com", enable_tls)
+        self.assertIn("--webroot -w /var/www/certbot", deploy_docs)
+        self.assertIn(
+            "Do not renew or replace the existing `api.irlobby.com` certificate", deploy_docs
+        )
+        self.assertIn("validate-nginx.sh", backend_deploy)
+        validate_idx = backend_deploy.index("validate-nginx.sh")
+        recreate_idx = backend_deploy.index("up -d --no-deps --force-recreate nginx")
+        self.assertLess(validate_idx, recreate_idx)

@@ -61,6 +61,9 @@ tar -cz \
   docker-compose.oracle.yml \
   .env.oracle.example \
   deploy/oracle/nginx/default.conf.template \
+  deploy/oracle/nginx/legal-locations.inc \
+  deploy/oracle/legal/privacy.html \
+  deploy/oracle/legal/support.html \
   | encrypt_stream "${BACKUP_DIR}/config_${TIMESTAMP}.tar.gz"
 
 if [[ "${BACKUP_RETENTION_DAYS:-30}" =~ ^[0-9]+$ ]]; then

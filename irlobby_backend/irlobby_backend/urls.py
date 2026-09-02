@@ -27,6 +27,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
 
+from irlobby_backend.legal_pages import privacy_policy, support_page
 from users.oauth_views import apple_mobile_login, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
@@ -168,6 +169,12 @@ admin_url_path = getattr(settings, "ADMIN_URL_PATH", "admin/").strip("/") or "ad
 
 urlpatterns = [
     path("", home, name="home"),
+    path("privacy", privacy_policy, name="privacy-policy"),
+    path("privacy/", privacy_policy, name="privacy-policy-slash"),
+    path("privacy-policy", privacy_policy, name="privacy-policy-alias"),
+    path("privacy-policy/", privacy_policy, name="privacy-policy-alias-slash"),
+    path("support", support_page, name="support"),
+    path("support/", support_page, name="support-slash"),
     path(f"{admin_url_path}/", admin.site.urls),
     path("api/health/", health_check, name="health"),
     path("api/health/dashboard/", health_dashboard, name="health-dashboard"),

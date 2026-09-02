@@ -81,6 +81,15 @@ fi
 
 bash "${ROOT_DIR}/deploy/oracle/validate-redis-ports.sh" "${COMPOSE_FILE}"
 
+echo "Publishing App Store legal pages to /opt/irlobby/web..."
+sudo mkdir -p /opt/irlobby/web
+sudo cp -f "${ROOT_DIR}/deploy/oracle/legal/"*.html /opt/irlobby/web/
+SITE_DIR="$(cd "${ROOT_DIR}/.." && pwd)/site"
+if [[ -d "${SITE_DIR}" ]]; then
+  sudo cp -f "${SITE_DIR}/"*.html /opt/irlobby/web/ || true
+  sudo cp -f "${SITE_DIR}/robots.txt" "${SITE_DIR}/sitemap.xml" /opt/irlobby/web/ 2>/dev/null || true
+fi
+
 cd "${ROOT_DIR}"
 
 DOCKER_CMD=(docker)

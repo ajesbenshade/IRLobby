@@ -142,6 +142,8 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./deploy/oracle/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/oracle/nginx/legal-locations.inc:/etc/nginx/legal-locations.inc:ro
+      - ./deploy/oracle/nginx/enabled:/etc/nginx/conf.d/enabled:ro
       - ./deploy/oracle/certbot-webroot:/var/www/certbot
       - /opt/irlobby/web:/usr/share/nginx/html:ro
     depends_on:

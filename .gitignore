@@ -108,8 +108,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Generated on the VPS after Let's Encrypt for irlobby.com
+irlobby_backend/deploy/oracle/nginx/enabled/irlobby.com.conf
+
 # Django
-*.log
 local_settings.py
 .env.twitter
 .python-version

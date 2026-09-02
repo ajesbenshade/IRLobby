@@ -171,6 +171,11 @@ export const supportFaqs = [
       'Make sure location access is enabled, then widen your distance filter. If your area is quiet, creating an activity is often the fastest way to get momentum going.',
   },
   {
+    question: 'How do I export a copy of my data?',
+    answer:
+      'In the app: Settings, then export. That downloads a JSON copy of your profile, activities, swipes, matches, and reviews. You can also email support@irlobby.com.',
+  },
+  {
     question: 'How do I report a person or activity?',
     answer:
       'Use the overflow menu from a profile, activity, or chat thread. You can block, report, or do both depending on the situation.',

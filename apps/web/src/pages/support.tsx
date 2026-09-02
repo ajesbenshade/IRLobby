@@ -55,6 +55,10 @@ export default function SupportPage() {
             <a href="/privacy" className="text-[#ec4899] hover:underline">
               Privacy Policy
             </a>
+            . Operator contact:{' '}
+            <a href="mailto:ajesbenshade@gmail.com" className="text-[#ec4899] hover:underline">
+              ajesbenshade@gmail.com
+            </a>
             .
           </p>
           <p className="mt-2 text-xs text-white/45">

@@ -167,7 +167,7 @@ Privacy questionnaire reference: [`store/metadata/privacy-questionnaire.md`](./s
 
 Reviewer demo account (App Privacy → Sign-In Information): [`store/metadata/reviewer-demo-account.md`](./store/metadata/reviewer-demo-account.md).
 
-Privacy Policy and Support pages are committed at `site/privacy.html` and `site/support.html`. Host them at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
+Privacy Policy and Support pages are committed at `site/privacy.html` and `site/support.html`. The Hetzner nginx/Docker stack serves them at `/privacy` and `/support` so `https://irlobby.com/privacy` and `https://irlobby.com/support` work after the apex DNS A records point at that host and TLS is issued. See [docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md). Do not rely on the leftover Namecheap shared-hosting site.
 
 Screenshot capture guide: [`store/screenshots/README.md`](./store/screenshots/README.md).
 

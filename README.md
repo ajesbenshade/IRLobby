@@ -73,7 +73,7 @@ These packages are active and supported:
 - `irlobby_backend` — Django REST, WebSocket, Celery, and deployment code
 - `packages/shared` — shared schema and utility code
 - `docs` — release, parity, deployment, email, and brand documentation
-- `site` — static legal and support pages for hosted marketing surfaces
+- `site` — static marketing and App Store legal pages (`/privacy`, `/support`) served from the Hetzner nginx stack
 
 ## Quick start
 

@@ -102,6 +102,12 @@ jobs:
             ./irlobby_backend/ \
             "${EFFECTIVE_USER}@${SSH_HOST}:${REMOTE_DIR}/"
 
+          connect "${EFFECTIVE_USER}" 'mkdir -p /opt/irlobby/web || sudo mkdir -p /opt/irlobby/web'
+          rsync -az \
+            --exclude '.htaccess' \
+            ./site/ \
+            "${EFFECTIVE_USER}@${SSH_HOST}:/opt/irlobby/web/"
+
           ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new \
             "${EFFECTIVE_USER}@${SSH_HOST}" \
             "REMOTE_DIR='${REMOTE_DIR}' ENSURE_APPLE_AUDIENCE='${ENSURE_APPLE_AUDIENCE}' DEPLOY_MODE='${DEPLOY_MODE}' GOOGLE_OAUTH_CLIENT_IDS='${GOOGLE_OAUTH_CLIENT_IDS}' bash -s" <<'REMOTE'
@@ -264,11 +270,16 @@ jobs:
             docker cp ./users/social_auth.py "${web_cid}:/app/users/social_auth.py"
             docker cp ./users/oauth_urls.py "${web_cid}:/app/users/oauth_urls.py"
             docker cp ./irlobby_backend/urls.py "${web_cid}:/app/irlobby_backend/urls.py"
+            docker cp ./irlobby_backend/legal_pages.py "${web_cid}:/app/irlobby_backend/legal_pages.py"
+            docker exec "${web_cid}" mkdir -p /app/deploy/oracle/legal
+            docker cp ./deploy/oracle/legal/privacy.html "${web_cid}:/app/deploy/oracle/legal/privacy.html"
+            docker cp ./deploy/oracle/legal/support.html "${web_cid}:/app/deploy/oracle/legal/support.html"
             if [ -n "${ws_cid}" ]; then
               docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
               docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"
               docker cp ./users/oauth_urls.py "${ws_cid}:/app/users/oauth_urls.py"
               docker cp ./irlobby_backend/urls.py "${ws_cid}:/app/irlobby_backend/urls.py"
+              docker cp ./irlobby_backend/legal_pages.py "${ws_cid}:/app/irlobby_backend/legal_pages.py"
             fi
 
             if [ "${ENSURE_APPLE_AUDIENCE}" = "true" ]; then
@@ -286,6 +297,13 @@ jobs:
             fi
             sleep 8
           fi
+
+          echo "=== publishing legal pages and recreating nginx ==="
+          mkdir -p /opt/irlobby/web
+          cp -f ./deploy/oracle/legal/*.html /opt/irlobby/web/
+          docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate nginx
+          sleep 3
+          docker compose -f docker-compose.oracle.yml --env-file .env.production exec -T nginx nginx -t
 
           echo "=== container status ==="
           docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
@@ -356,5 +374,25 @@ jobs:
             echo "Apple mobile returned HTML instead of JSON" >&2
             exit 1
           fi
+
+          echo "=== legal pages (must be real HTML, not the irlobby.com redirect stub) ==="
+          for path in /privacy /privacy/ /support /support/; do
+            code="$(curl -sS -o /tmp/legal.html -w "%{http_code}" --max-time 20 "https://api.irlobby.com${path}")"
+            echo "${path}: HTTP ${code}"
+            if [ "${code}" != "200" ]; then
+              echo "Legal page ${path} failed" >&2
+              head -c 400 /tmp/legal.html || true
+              exit 1
+            fi
+            if grep -q 'Redirecting to' /tmp/legal.html; then
+              echo "Legal page ${path} is still the API redirect stub" >&2
+              exit 1
+            fi
+            if ! grep -qE 'Privacy Policy|Support' /tmp/legal.html; then
+              echo "Legal page ${path} missing expected title text" >&2
+              head -c 400 /tmp/legal.html || true
+              exit 1
+            fi
+          done
 
           echo "Auth route verification passed."

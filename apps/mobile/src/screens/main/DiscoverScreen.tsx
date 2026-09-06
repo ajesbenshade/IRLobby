@@ -23,6 +23,7 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import { paywall as paywallCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import {
@@ -175,6 +176,12 @@ export const DiscoverScreen = () => {
   const swipeMutation = useMutation({
     mutationFn: ({ activityId, direction }: { activityId: number | string; direction: 'left' | 'right' }) =>
       swipeActivity(activityId, direction),
+    onError: (swipeError) => {
+      const message = getErrorMessage(swipeError);
+      if (/daily swipe limit/i.test(message)) {
+        navigation.navigate('Paywall', { frame: 'swipeCap' });
+      }
+    },
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
         void safeNotificationHaptic('success');
@@ -265,9 +272,16 @@ export const DiscoverScreen = () => {
     [pan],
   );
 
+  const atSwipeCap = user?.swipesRemainingToday === 0;
+
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
       if (!currentActivity || isBusy) {
+        return;
+      }
+
+      if (atSwipeCap) {
+        navigation.navigate('Paywall', { frame: 'swipeCap' });
         return;
       }
 
@@ -280,7 +294,7 @@ export const DiscoverScreen = () => {
         });
       });
     },
-    [animateSwipe, currentActivity, isBusy, swipeMutation],
+    [animateSwipe, atSwipeCap, currentActivity, isBusy, navigation, swipeMutation],
   );
 
   const panResponder = useMemo(
@@ -401,6 +415,22 @@ export const DiscoverScreen = () => {
           </AppButton>
         }
       />
+
+      {atSwipeCap ? (
+        <PanelCard style={styles.vibeReminderCard}>
+          <Text variant="titleMedium" style={styles.vibeReminderTitle}>
+            {paywallCopy.swipeCapCta}
+          </Text>
+          <Text style={styles.vibeReminderSubtitle}>
+            Free swipes are done for today. Plus keeps the deck open.
+          </Text>
+          <View style={styles.vibeReminderActions}>
+            <AppButton compact onPress={() => navigation.navigate('Paywall', { frame: 'swipeCap' })}>
+              {paywallCopy.plusValueCta}
+            </AppButton>
+          </View>
+        </PanelCard>
+      ) : null}
 
       {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
         <PanelCard style={styles.vibeReminderCard}>
@@ -614,6 +644,14 @@ export const DiscoverScreen = () => {
                   <AppButton variant="ghost" onPress={() => navigation.navigate('Create')}>
                     Host a plan
                   </AppButton>
+                  {tonightOnly ? (
+                    <AppButton
+                      variant="ghost"
+                      onPress={() => navigation.navigate('Paywall', { frame: 'boostNudge' })}
+                    >
+                      {paywallCopy.boostCta}
+                    </AppButton>
+                  ) : null}
                 </View>
               }
             />

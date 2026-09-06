@@ -19,6 +19,7 @@ import { SettingsScreen } from '@screens/main/SettingsScreen';
 import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
 import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
 import { WebContentScreen } from '@screens/main/WebContentScreen';
+import { PaywallScreen } from '@screens/paywall/PaywallScreen';
 import { appColors } from '@theme/index';
 
 import type { MainStackParamList, MainTabParamList } from './types';
@@ -194,6 +195,11 @@ export const MainNavigator = () => (
       name="VibeQuizResults"
       component={VibeQuizResultsScreen}
       options={{ title: 'Your Vibe' }}
+    />
+    <Stack.Screen
+      name="Paywall"
+      component={PaywallScreen}
+      options={{ presentation: 'modal', title: 'IRLobby Plus' }}
     />
   </Stack.Navigator>
 );

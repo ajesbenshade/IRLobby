@@ -43,6 +43,7 @@ const linking: LinkingOptions<RootStackParamList> = {
             },
           },
           Notifications: 'notifications',
+          Paywall: 'paywall/:frame',
         },
       },
     },

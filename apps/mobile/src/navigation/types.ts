@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { VibeProfile, VibeTag } from '@shared/schema';
+import type { PaywallFrame } from '@constants/iap';
 
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
@@ -39,4 +40,5 @@ export type MainStackParamList = {
     discoverTags: string[];
   };
   VibeQuizModal: undefined;
+  Paywall: { frame: PaywallFrame };
 };

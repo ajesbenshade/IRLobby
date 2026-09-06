@@ -14,6 +14,7 @@ declare global {
       EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?: string;
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string;
       EXPO_PUBLIC_SENTRY_DSN?: string;
+      EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?: string;
       EAS_PROJECT_ID?: string;
     }
   }

@@ -20,6 +20,7 @@ import { Image, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
+import { paywall as paywallCopy } from "@constants/copy";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
 import { api } from "@services/apiClient";
@@ -506,6 +507,22 @@ export const ProfileScreen = () => {
             description="Add a couple from Profile when you’re ready — not required to start discovering."
           />
         )}
+      </PanelCard>
+
+      <PanelCard style={{ gap: 10 }}>
+        <SectionIntro
+          eyebrow="IRLobby Plus"
+          title="Free vs Plus"
+          subtitle="Digital Plus and boosts are a vNext Apple IAP stub. Ticketed events still check out on Stripe."
+        />
+        <Text style={{ color: appColors.mutedInk, lineHeight: 20 }}>
+          $4.99/mo or $39.99/yr. Prototype only — no live charges.
+        </Text>
+        <AppButton
+          onPress={() => navigation.navigate("Paywall", { frame: "plusValue" })}
+        >
+          {paywallCopy.plusValueCta}
+        </AppButton>
       </PanelCard>
 
       <PanelCard>

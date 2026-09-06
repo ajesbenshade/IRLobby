@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState, type ComponentType } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
@@ -120,14 +120,14 @@ export const DoorScanScreen = () => {
         </View>
         <Text style={styles.scanHint}>Scan guest ticket</Text>
 
-        {!permission?.granted && cameraModule ? (
+        {!permission?.granted && cameraModule && Platform.OS !== 'web' ? (
           <Pressable style={styles.permissionBtn} onPress={() => void requestPermission()}>
             <Text style={styles.permissionLabel}>Enable camera</Text>
           </Pressable>
         ) : null}
 
-        {!cameraModule ? (
-          <Pressable style={styles.permissionBtn} onPress={() => handleScan(scannedLabel)}>
+        {!cameraReady || Platform.OS === 'web' ? (
+          <Pressable style={styles.permissionBtn} onPress={() => handleScan(`${scannedLabel}-${admitted}`)}>
             <Text style={styles.permissionLabel}>Simulate scan (prototype)</Text>
           </Pressable>
         ) : null}
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingBottom: 88,
     gap: 16,
   },
   handle: {

@@ -80,7 +80,7 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   equipmentRequired: '',
   weatherDependent: false,
   isTicketed: true,
-  ticketPrice: '',
+  ticketPrice: '15',
   maxTickets: '40',
   requireQrCheckIn: true,
   imageUris: [],

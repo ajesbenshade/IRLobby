@@ -301,10 +301,11 @@ jobs:
           cp -f ./deploy/oracle/legal/*.html /opt/irlobby/web/
 
           echo "=== nginx -t on new config (running proxy stays up if this fails) ==="
-          bash ./deploy/oracle/validate-nginx.sh docker-compose.oracle.yml .env.production
+          # Close stdin so docker compose run cannot consume this bash -s heredoc.
+          bash ./deploy/oracle/validate-nginx.sh docker-compose.oracle.yml .env.production </dev/null
 
           echo "=== recreating nginx after successful nginx -t ==="
-          docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate nginx
+          docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate nginx </dev/null
 
           echo "=== container status ==="
           docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20

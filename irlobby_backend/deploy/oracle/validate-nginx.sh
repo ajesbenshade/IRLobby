@@ -19,7 +19,12 @@ mkdir -p /var/www/certbot /opt/irlobby/web 2>/dev/null \
 # compose run does not publish 80/443 unless --service-ports is set.
 # The official image entrypoint envsubst's the bind-mounted template, then
 # execs `nginx -t` against that generated config (including SSL cert paths).
+#
+# MUST use -T and stdin from /dev/null. `docker compose run` attaches stdin by
+# default; without -T it also allocates a TTY. Backend Deploy SSHs with
+# `bash -s` and a heredoc, so an attached stdin consumes the rest of the remote
+# script and skips `docker compose ... --force-recreate nginx`.
 echo "Validating nginx config in a throwaway container (live proxy unchanged)..."
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
-  run --rm --no-deps --name "irlobby-nginx-configtest-$$" \
-  nginx nginx -t
+  run --rm --no-deps -T --name "irlobby-nginx-configtest-$$" \
+  nginx nginx -t </dev/null

@@ -148,3 +148,34 @@ class LegalPageTests(TestCase):
         validate_idx = backend_deploy.index("validate-nginx.sh")
         recreate_idx = backend_deploy.index("up -d --no-deps --force-recreate nginx")
         self.assertLess(validate_idx, recreate_idx)
+        # Call site must close stdin so compose run cannot eat the SSH heredoc.
+        validate_line = next(
+            line for line in backend_deploy.splitlines() if "validate-nginx.sh" in line
+        )
+        self.assertIn("</dev/null", validate_line)
+
+    def test_validate_nginx_does_not_steal_ssh_heredoc_stdin(self):
+        script = (
+            Path(settings.BASE_DIR) / "deploy" / "oracle" / "validate-nginx.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("run --rm --no-deps -T", script)
+        self.assertIn("</dev/null", script)
+
+    def test_nginx_recreate_workflow_force_recreates_without_compose_run(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        workflow = (repo_root / ".github" / "workflows" / "nginx-recreate.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("HETZNER_SSH_KEY", workflow)
+        self.assertIn("HETZNER_HOST", workflow)
+        self.assertIn(
+            "docker compose -f docker-compose.oracle.yml --env-file .env.production"
+            " up -d --no-deps --force-recreate nginx",
+            workflow,
+        )
+        self.assertIn("docker ps", workflow)
+        self.assertIn("logs --tail=40 nginx", workflow)
+        self.assertIn("http://127.0.0.1/api/health/", workflow)
+        self.assertNotIn("docker compose run", workflow)
+        self.assertNotIn("bash -s", workflow)

@@ -64,7 +64,7 @@ describe('ChatScreen', () => {
     renderScreen();
 
     expect(await screen.findByText('Your conversations')).toBeTruthy();
-    expect(screen.getByText('No chats yet')).toBeTruthy();
+    expect(await screen.findByText('No chats yet')).toBeTruthy();
   });
 
   it('does not throw when matches is a DRF page object instead of an array', async () => {
@@ -77,11 +77,11 @@ describe('ChatScreen', () => {
 
     renderScreen();
 
+    expect(await screen.findByText('Your conversations')).toBeTruthy();
     await waitFor(() => {
       expect(fetchMatches).toHaveBeenCalled();
     });
-
-    expect(await screen.findByText('Your conversations')).toBeTruthy();
+    expect(await screen.findByText('No chats yet')).toBeTruthy();
     expect(screen.queryByText('Hiccup detected')).toBeNull();
   });
 });

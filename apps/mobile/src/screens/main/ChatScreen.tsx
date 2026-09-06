@@ -71,12 +71,14 @@ export const ChatScreen = () => {
     queryFn: fetchMatches,
   });
 
+  const conversationItems = Array.isArray(conversations) ? conversations : [];
+  const matchItems = Array.isArray(matches) ? matches : [];
   const selectedConversation = useMemo(
-    () => (Array.isArray(conversations) ? conversations.find((item) => item.id === selectedConversationId) : undefined),
-    [conversations, selectedConversationId],
+    () => conversationItems.find((item) => item.id === selectedConversationId),
+    [conversationItems, selectedConversationId],
   );
-  const sparkCount = matches.length;
-  const activeThreads = conversations.length;
+  const sparkCount = matchItems.length;
+  const activeThreads = conversationItems.length;
   const currentUserId = user?.id == null ? null : String(user.id);
   const otherOnlineCount = useMemo(
     () => Array.from(onlineUserIds).filter((id) => id !== currentUserId).length,
@@ -88,8 +90,8 @@ export const ChatScreen = () => {
   );
   const freshSparkCount = useMemo(
     () =>
-      matches.filter((match) => Date.now() - new Date(match.created_at).getTime() < 1000 * 60 * 60 * 24).length,
-    [matches],
+      matchItems.filter((match) => Date.now() - new Date(match.created_at).getTime() < 1000 * 60 * 60 * 24).length,
+    [matchItems],
   );
 
   const {
@@ -491,7 +493,7 @@ export const ChatScreen = () => {
 
       {conversationsLoading && <Text style={styles.loadingText}>Loading your chats…</Text>}
 
-      {!conversationsLoading && !conversationsError && conversations.length === 0 ? (
+      {!conversationsLoading && !conversationsError && conversationItems.length === 0 ? (
         <EmptyStatePanel
           title="No chats yet"
           description="Match on a plan first — then message here to lock in the details."
@@ -503,12 +505,12 @@ export const ChatScreen = () => {
         />
       ) : null}
 
-      {conversations.map((item) => {
+      {conversationItems.map((item) => {
         const conversationMessages = getConversationMessages(item);
         const lastMessage = conversationMessages[conversationMessages.length - 1] as
           | { message?: string; createdAt?: string }
           | undefined;
-        const matchedRecord = matches.find((match) => match.activity === item.match);
+        const matchedRecord = matchItems.find((match) => match.activity === item.match);
         const isFreshSpark = matchedRecord
           ? Date.now() - new Date(matchedRecord.created_at).getTime() < 1000 * 60 * 60 * 24
           : false;

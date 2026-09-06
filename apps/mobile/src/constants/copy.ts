@@ -142,3 +142,13 @@ export const store = {
   description:
     `${brand.name} — ${tagline} Find real plans nearby, host your own, and turn scrolling into a night out.`,
 };
+
+export const paywall = {
+  swipeCapCta: 'Keep swiping with Plus',
+  plusValueCta: 'See Plus',
+  boostCta: 'Boost this night',
+  plusWordmark: 'IRLobby Plus',
+  fundTheServers: 'Fund the servers',
+  boostChipLabel: 'boost_pack · $2.99',
+  prototypeNote: 'Prototype billing. No live charges.',
+};

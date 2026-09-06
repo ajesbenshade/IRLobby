@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@tanstack/.*|nativewind|react-native-css-interop|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|react-native-paper|react-native-vector-icons|react-native-svg|react-native-modal|react-native-maps|react-native-webview)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@tanstack/.*|nativewind|react-native-css-interop|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|react-native-paper|react-native-vector-icons|react-native-svg|react-native-modal|react-native-maps|react-native-webview|react-native-purchases)',
   ],
   moduleNameMapper: {
     '^react-native-css-interop/jsx-runtime$': '<rootDir>/node_modules/react-native-css-interop/jsx-runtime',

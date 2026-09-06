@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@providers/ErrorBoundary';
 import { initAnalytics, trackAppOpen, wrapWithAnalytics } from '@services/analytics';
+import { initPurchases } from '@services/purchasesClient';
 import { darkTheme, lightTheme, palette } from '@theme/index';
 import { StoreScreenshotStudio } from './src/screenshots/StoreScreenshotStudio';
 import { initMonitoring } from './src/lib/monitoring';
@@ -39,6 +40,7 @@ function App() {
 
   useEffect(() => {
     void trackAppOpen();
+    void initPurchases();
   }, []);
 
   const AppNavigator = screenshotMode

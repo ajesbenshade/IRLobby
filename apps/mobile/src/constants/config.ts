@@ -44,4 +44,6 @@ export const config = {
   googleWebClientId: extra.googleWebClientId as string | undefined,
   mapboxPublicToken: extra.mapboxPublicToken as string | undefined,
   sentryDsn: extra.sentryDsn as string | undefined,
+  // Public RevenueCat iOS SDK key. Empty on purpose for this vNext stub.
+  revenueCatIosApiKey: (extra.revenueCatIosApiKey as string | undefined)?.trim() ?? '',
 };

@@ -23,8 +23,11 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import { paywall as paywallCopy } from '@constants/copy';
+import type { PaywallFrame } from '@constants/iap';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
+import { PaywallSheet } from '@screens/paywall/PaywallSheet';
 import {
   fetchActivities,
   joinActivity,
@@ -101,6 +104,8 @@ export const DiscoverScreen = () => {
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
   const [tonightOnly, setTonightOnly] = useState(true);
+  const [paywallFrame, setPaywallFrame] = useState<PaywallFrame | null>(null);
+  const [swipeCapBannerDismissed, setSwipeCapBannerDismissed] = useState(false);
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -175,6 +180,12 @@ export const DiscoverScreen = () => {
   const swipeMutation = useMutation({
     mutationFn: ({ activityId, direction }: { activityId: number | string; direction: 'left' | 'right' }) =>
       swipeActivity(activityId, direction),
+    onError: (swipeError) => {
+      const message = getErrorMessage(swipeError);
+      if (/daily swipe limit/i.test(message)) {
+        setPaywallFrame('swipeCap');
+      }
+    },
     onSuccess: async (data, variables) => {
       if (variables.direction === 'right' && data.matched) {
         void safeNotificationHaptic('success');
@@ -265,9 +276,16 @@ export const DiscoverScreen = () => {
     [pan],
   );
 
+  const atSwipeCap = user?.swipesRemainingToday === 0;
+
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
       if (!currentActivity || isBusy) {
+        return;
+      }
+
+      if (atSwipeCap) {
+        setPaywallFrame('swipeCap');
         return;
       }
 
@@ -280,7 +298,7 @@ export const DiscoverScreen = () => {
         });
       });
     },
-    [animateSwipe, currentActivity, isBusy, swipeMutation],
+    [animateSwipe, atSwipeCap, currentActivity, isBusy, swipeMutation],
   );
 
   const panResponder = useMemo(
@@ -386,7 +404,7 @@ export const DiscoverScreen = () => {
   const coverImage = currentActivity?.images?.[0];
 
   return (
-    <>
+    <View style={styles.screenRoot}>
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
@@ -401,6 +419,25 @@ export const DiscoverScreen = () => {
           </AppButton>
         }
       />
+
+      {atSwipeCap && !swipeCapBannerDismissed ? (
+        <PanelCard style={styles.vibeReminderCard}>
+          <Text variant="titleMedium" style={styles.vibeReminderTitle}>
+            {paywallCopy.swipeCapCta}
+          </Text>
+          <Text style={styles.vibeReminderSubtitle}>
+            Free swipes are done for today. Plus keeps the deck open.
+          </Text>
+          <View style={styles.vibeReminderActions}>
+            <AppButton compact variant="ghost" onPress={() => setSwipeCapBannerDismissed(true)}>
+              Not now
+            </AppButton>
+            <AppButton compact onPress={() => setPaywallFrame('swipeCap')}>
+              {paywallCopy.plusValueCta}
+            </AppButton>
+          </View>
+        </PanelCard>
+      ) : null}
 
       {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
         <PanelCard style={styles.vibeReminderCard}>
@@ -614,6 +651,11 @@ export const DiscoverScreen = () => {
                   <AppButton variant="ghost" onPress={() => navigation.navigate('Create')}>
                     Host a plan
                   </AppButton>
+                  {tonightOnly ? (
+                    <AppButton variant="ghost" onPress={() => setPaywallFrame('boostNudge')}>
+                      {paywallCopy.boostCta}
+                    </AppButton>
+                  ) : null}
                 </View>
               }
             />
@@ -866,11 +908,19 @@ export const DiscoverScreen = () => {
     >
       Personalized feed unlocked.
     </Snackbar>
-    </>
+    <PaywallSheet
+      visible={paywallFrame != null}
+      frame={paywallFrame ?? 'swipeCap'}
+      onDismiss={() => setPaywallFrame(null)}
+    />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+  },
   container: {
     gap: 16,
   },

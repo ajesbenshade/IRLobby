@@ -199,7 +199,13 @@ export const MainNavigator = () => (
     <Stack.Screen
       name="Paywall"
       component={PaywallScreen}
-      options={{ presentation: 'modal', title: 'IRLobby Plus' }}
+      options={{
+        presentation: 'transparentModal',
+        animation: 'slide_from_bottom',
+        headerShown: false,
+        gestureEnabled: true,
+        title: 'IRLobby Plus',
+      }}
     />
   </Stack.Navigator>
 );

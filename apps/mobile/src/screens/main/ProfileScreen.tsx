@@ -23,6 +23,7 @@ import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { paywall as paywallCopy } from "@constants/copy";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
+import { PaywallSheet } from "@screens/paywall/PaywallSheet";
 import { api } from "@services/apiClient";
 import { updateOnboarding } from "@services/authService";
 import {
@@ -112,6 +113,7 @@ export const ProfileScreen = () => {
   const [photoInput, setPhotoInput] = useState("");
   const [photoAlbum, setPhotoAlbum] = useState<string[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [showPlusWall, setShowPlusWall] = useState(false);
 
   useEffect(() => {
     setFirstName(user?.firstName ?? "");
@@ -264,6 +266,7 @@ export const ProfileScreen = () => {
   };
 
   return (
+    <View style={styles.screenRoot}>
     <AppScrollView contentContainerStyle={styles.container}>
       <PageHeader
         eyebrow="Your vibe"
@@ -518,9 +521,7 @@ export const ProfileScreen = () => {
         <Text style={{ color: appColors.mutedInk, lineHeight: 20 }}>
           $4.99/mo or $39.99/yr. Prototype only — no live charges.
         </Text>
-        <AppButton
-          onPress={() => navigation.navigate("Paywall", { frame: "plusValue" })}
-        >
+        <AppButton onPress={() => setShowPlusWall(true)}>
           {paywallCopy.plusValueCta}
         </AppButton>
       </PanelCard>
@@ -633,10 +634,19 @@ export const ProfileScreen = () => {
         </Button>
       </PanelCard>
     </AppScrollView>
+    <PaywallSheet
+      visible={showPlusWall}
+      frame="plusValue"
+      onDismiss={() => setShowPlusWall(false)}
+    />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+  },
   container: {
     gap: 16,
   },

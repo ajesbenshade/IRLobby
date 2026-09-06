@@ -147,5 +147,8 @@ export const paywall = {
   swipeCapCta: 'Keep swiping with Plus',
   plusValueCta: 'See Plus',
   boostCta: 'Boost this night',
+  plusWordmark: 'IRLobby Plus',
+  fundTheServers: 'Fund the servers',
+  boostChipLabel: 'boost_pack · $2.99',
   prototypeNote: 'Prototype billing. No live charges.',
 };

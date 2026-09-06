@@ -16,13 +16,20 @@ Source of truth in the app: `src/constants/iap.ts`.
 
 ## Paywall frames
 
-| Frame | Route | Trigger | Product focus |
-|---|---|---|---|
-| `swipeCap` | `Paywall` `{ frame: 'swipeCap' }` | Discover daily swipe cap | `plus_monthly` |
-| `plusValue` | `Paywall` `{ frame: 'plusValue' }` | Profile → Free vs Plus | `$4.99` / `$39.99` |
-| `boostNudge` | `Paywall` `{ frame: 'boostNudge' }` | Discover quiet-night empty state | `boost_pack` |
+Design-locked UX (Aaron / Design sign-off):
 
-Deep link (after auth): `irlobby://paywall/swipeCap` (also `plusValue`, `boostNudge`).
+| Frame | Presentation | Trigger | Product focus |
+|---|---|---|---|
+| `swipeCap` | Dismissible sheet over Discover | Daily swipe cap | `plus_monthly` |
+| `plusValue` | Dismissible sheet; Free vs Plus **side-by-side** | Profile → See Plus | `$4.99` / `$39.99` |
+| `boostNudge` | Dismissible sheet; **one** `$2.99` chip | Quiet-night empty state | `boost_pack` only |
+
+- Soft gate never hard-blocks Home / tab navigation. Backdrop, Close, and Not now dismiss the sheet. The floating tab bar stays tappable.
+- Value wall wordmark is **IRLobby Plus** with **Fund the servers** directly under the title.
+- Boost is a single `boost_pack · $2.99` chip. There is no `$0.99` single-boost SKU.
+- Tickets / PassKit / QR stay out of this stub (Stripe Connect later).
+
+Deep link (after auth): `irlobby://paywall/swipeCap` (also `plusValue`, `boostNudge`) opens the same content as a transparent modal.
 
 ## Client stub
 
@@ -61,5 +68,6 @@ Do this on a **new** iOS build, not the 1.0 review binary.
 
 - Live Stripe digital IAP
 - Changes to Stripe Connect ticket checkout
+- PassKit / QR / ticket scanner (tickets stay Stripe Connect; design-first)
 - App Store submit workflow / EAS production submit
 - Production env values or secrets

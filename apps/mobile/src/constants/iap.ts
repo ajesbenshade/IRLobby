@@ -82,7 +82,7 @@ export const PAYWALL_FRAMES: Record<
   },
   plusValue: {
     frame: 'plusValue',
-    eyebrow: 'IRLobby Plus',
+    eyebrow: 'Compare',
     title: 'Free vs Plus',
     subtitle: 'Same real plans. Plus just keeps you in the deck longer.',
     products: [IAP_PRODUCT_IDS.plusMonthly, IAP_PRODUCT_IDS.plusYearly],

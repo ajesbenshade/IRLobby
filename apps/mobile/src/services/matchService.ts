@@ -19,7 +19,26 @@ export interface MatchItem {
   created_at: string;
 }
 
+const pickMatchArray = (payload: unknown): unknown[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && typeof payload === 'object') {
+    const results = (payload as { results?: unknown }).results;
+    if (Array.isArray(results)) {
+      return results;
+    }
+  }
+
+  return [];
+};
+
+const isMatchItem = (item: unknown): item is MatchItem => (
+  Boolean(item) && typeof item === 'object' && Number.isFinite(Number((item as { id?: unknown }).id))
+);
+
 export const fetchMatches = async (): Promise<MatchItem[]> => {
-  const response = await api.get<MatchItem[]>(API_ROUTES.MATCHES);
-  return response.data;
+  const response = await api.get<MatchItem[] | { results?: MatchItem[] }>(API_ROUTES.MATCHES);
+  return pickMatchArray(response.data).filter(isMatchItem);
 };

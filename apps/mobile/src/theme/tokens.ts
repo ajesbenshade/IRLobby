@@ -15,58 +15,66 @@ import {
  * IRLobby mobile design tokens.
  * Tagline: "Get out. Get together."
  *
- * Electric Midnight — shared source: packages/shared/design-tokens.ts
+ * Coral + white sheets — locked to Design frames A–D.
+ * Shared Electric Midnight tokens stay the web source of truth.
  */
 
+const coral = {
+  primary: '#FF6B4A',
+  primaryDeep: '#E25438',
+  primarySoft: '#FFE3DA',
+  primaryGlow: '#FF8B70',
+} as const;
+
 export const palette = {
-  primary: brandPalette.primary,
-  primaryDeep: brandPalette.primaryDeep,
-  primarySoft: brandPalette.primarySoft,
-  primaryGlow: brandPalette.primaryGlow,
+  primary: coral.primary,
+  primaryDeep: coral.primaryDeep,
+  primarySoft: coral.primarySoft,
+  primaryGlow: coral.primaryGlow,
 
-  secondary: brandPalette.secondary,
-  secondaryDeep: brandPalette.secondaryDeep,
-  secondarySoft: brandPalette.secondarySoft,
+  secondary: coral.primaryDeep,
+  secondaryDeep: '#C6452C',
+  secondarySoft: '#FFD2C6',
 
-  accent: brandPalette.accent,
-  accentDeep: brandPalette.accentDeep,
-  accentSoft: brandPalette.accentSoft,
+  accent: coral.primary,
+  accentDeep: coral.primaryDeep,
+  accentSoft: coral.primarySoft,
 
   success: brandPalette.success,
   warning: brandPalette.warning,
   danger: brandPalette.danger,
 
-  ink: brandPalette.ink,
-  mutedInk: brandPalette.mutedInk,
-  softInk: brandPalette.softInk,
-  line: brandPalette.line,
-  lineStrong: brandPalette.lineStrong,
-  surface: brandPalette.surface,
-  surfaceMuted: brandPalette.surfaceMuted,
-  background: brandPalette.background,
-  overlay: brandPalette.overlay,
-  glass: brandPalette.glass,
-  glassBorder: brandPalette.glassBorder,
+  ink: brandPalette.lightInk,
+  mutedInk: brandPalette.lightMutedInk,
+  softInk: brandPalette.lightSoftInk,
+  line: '#EDE4E0',
+  lineStrong: '#D9CDC7',
+  surface: brandPalette.white,
+  surfaceMuted: '#FFF0EA',
+  background: '#FFF6F2',
+  overlay: 'rgba(28, 21, 32, 0.48)',
+  glass: 'rgba(255, 255, 255, 0.72)',
+  glassBorder: 'rgba(255, 107, 74, 0.16)',
   white: brandPalette.white,
   black: brandPalette.black,
 
-  darkBackground: brandPalette.darkBackground,
-  darkSurface: brandPalette.darkSurface,
-  darkSurfaceMuted: brandPalette.darkSurfaceMuted,
-  darkLine: brandPalette.darkLine,
-  darkInk: brandPalette.darkInk,
-  darkMutedInk: brandPalette.darkMutedInk,
-  darkSoftInk: brandPalette.darkSoftInk,
+  darkBackground: '#1A1412',
+  darkSurface: '#2A2320',
+  darkSurfaceMuted: '#3A312D',
+  darkLine: '#4A403B',
+  darkInk: '#FFF6F2',
+  darkMutedInk: '#C4B6B0',
+  darkSoftInk: '#8E827C',
 
-  lightBackground: brandPalette.lightBackground,
-  lightSurface: brandPalette.lightSurface,
-  lightSurfaceMuted: brandPalette.lightSurfaceMuted,
+  lightBackground: '#FFF6F2',
+  lightSurface: brandPalette.white,
+  lightSurfaceMuted: '#FFF0EA',
   lightInk: brandPalette.lightInk,
   lightMutedInk: brandPalette.lightMutedInk,
   lightSoftInk: brandPalette.lightSoftInk,
-  lightLine: brandPalette.lightLine,
-  lightLineStrong: brandPalette.lightLineStrong,
-  lightOverlay: brandPalette.lightOverlay,
+  lightLine: '#EDE4E0',
+  lightLineStrong: '#D9CDC7',
+  lightOverlay: 'rgba(28, 21, 32, 0.48)',
 } as const;
 
 export const radii = {
@@ -117,29 +125,29 @@ export const lineHeight = {
 export const shadows = {
   card: {
     shadowColor: brandElevation.card.shadowColor,
-    shadowOpacity: brandElevation.card.shadowOpacity,
-    shadowRadius: brandElevation.card.shadowRadius,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
     shadowOffset: brandElevation.card.shadowOffset,
     elevation: brandElevation.card.elevation,
   },
   float: {
-    shadowColor: brandElevation.float.shadowColor,
-    shadowOpacity: brandElevation.float.shadowOpacity,
-    shadowRadius: brandElevation.float.shadowRadius,
+    shadowColor: coral.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
     shadowOffset: brandElevation.float.shadowOffset,
     elevation: brandElevation.float.elevation,
   },
   pop: {
-    shadowColor: brandElevation.pop.shadowColor,
-    shadowOpacity: brandElevation.pop.shadowOpacity,
-    shadowRadius: brandElevation.pop.shadowRadius,
+    shadowColor: coral.primaryDeep,
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
     shadowOffset: brandElevation.pop.shadowOffset,
     elevation: brandElevation.pop.elevation,
   },
   soft: {
     shadowColor: brandElevation.soft.shadowColor,
-    shadowOpacity: brandElevation.soft.shadowOpacity,
-    shadowRadius: brandElevation.soft.shadowRadius,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     shadowOffset: brandElevation.soft.shadowOffset,
     elevation: brandElevation.soft.elevation,
   },

@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     height: 180,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(91, 75, 255, 0.18)',
+    backgroundColor: appColors.primaryWash,
   },
   tonightCoverLetter: {
     color: appColors.primaryGlow,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
+    backgroundColor: appColors.primaryWash,
     alignItems: 'center',
     justifyContent: 'center',
   },

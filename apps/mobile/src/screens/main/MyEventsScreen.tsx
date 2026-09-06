@@ -7,13 +7,15 @@ import { Button, Text } from 'react-native-paper';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
-import type { MainTabParamList } from '@navigation/types';
+import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchMatches } from '@services/matchService';
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const formatDateLabel = (value?: string) => {
   if (!value) {
@@ -50,7 +52,12 @@ const formatHostLabel = (host: unknown) => {
 };
 
 export const MyEventsScreen = () => {
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const navigation = useNavigation<
+    CompositeNavigationProp<
+      BottomTabNavigationProp<MainTabParamList, 'Activity'>,
+      NativeStackNavigationProp<MainStackParamList>
+    >
+  >();
   const [activeSegment, setActiveSegment] = useState<'events' | 'matches'>('events');
   const {
     data: hosted = [],
@@ -210,6 +217,20 @@ export const MyEventsScreen = () => {
                     <View style={styles.eventAside}>
                       <AccentPill tone="secondary">{activity.participant_count ?? 0} going</AccentPill>
                       {activity.category ? <Text style={styles.eventAsideCopy}>{activity.category}</Text> : null}
+                      <AppButton
+                        compact
+                        variant="outline"
+                        onPress={() =>
+                          navigation.navigate('DoorScan', {
+                            activityId: activity.id,
+                            title: activity.title,
+                            admitted: activity.participant_count ?? 0,
+                            capacity: activity.maxTickets ?? activity.max_tickets ?? activity.capacity ?? 40,
+                          })
+                        }
+                      >
+                        Door scan
+                      </AppButton>
                     </View>
                   </View>
                 ))}
@@ -436,7 +457,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
+    backgroundColor: appColors.primaryWash,
     alignItems: 'center',
     justifyContent: 'center',
   },

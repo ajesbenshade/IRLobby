@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   tagChip: {
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
+    backgroundColor: appColors.primaryWash,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },

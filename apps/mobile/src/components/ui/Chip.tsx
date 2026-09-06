@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     borderColor: appColors.line,
   },
   selected: {
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
-    borderColor: 'rgba(91, 75, 255, 0.4)',
+    backgroundColor: appColors.primaryWash,
+    borderColor: appColors.primaryWashStrong,
   },
   selectedPrimary: {
     backgroundColor: appColors.primary,

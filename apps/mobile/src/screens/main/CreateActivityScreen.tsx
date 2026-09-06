@@ -1,14 +1,24 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { useState } from 'react';
-import { StyleSheet, Switch, Text } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro } from '@components/AppChrome';
-import { Image, View } from '@components/RNCompat';
+import { AccentPill, EmptyStatePanel, PanelCard, SectionIntro } from '@components/AppChrome';
+import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
+import { Image, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import {
+  formatEventDateLabel,
+  formatEventTimeLabel,
+  hostFeePreviewCopy,
+  parseTicketPrice,
+  PROTOTYPE_FOOTER_HOST,
+} from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
 import { createActivity } from '@services/activityService';
 import type { CreateActivityPayload } from '@services/activityService';
@@ -16,7 +26,7 @@ import {
   fetchStripeConnectStatus,
   openStripeConnectOnboarding,
 } from '@services/paymentService';
-import { appColors } from '@theme/index';
+import { appColors, appTypography, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
@@ -40,6 +50,7 @@ type ActivityFormState = {
   isTicketed: boolean;
   ticketPrice: string;
   maxTickets: string;
+  requireQrCheckIn: boolean;
   imageUris: string[];
 };
 
@@ -68,9 +79,10 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   ageRestriction: 'All Ages',
   equipmentRequired: '',
   weatherDependent: false,
-  isTicketed: false,
+  isTicketed: true,
   ticketPrice: '',
-  maxTickets: '',
+  maxTickets: '40',
+  requireQrCheckIn: true,
   imageUris: [],
 };
 
@@ -103,6 +115,7 @@ export const CreateActivityScreen = () => {
     location,
     longitude,
     maxTickets,
+    requireQrCheckIn,
     requiresApproval,
     skillLevel,
     tags,
@@ -157,13 +170,18 @@ export const CreateActivityScreen = () => {
     },
   });
 
+  const ticketAmount = parseTicketPrice(ticketPrice);
+  const feePreview = useMemo(() => hostFeePreviewCopy(ticketAmount), [ticketAmount]);
+  const dateLabel = time.trim() ? formatEventDateLabel(time) : 'Sat, Jun 7, 2025';
+  const timeLabel = time.trim() ? formatEventTimeLabel(time) : '7:00 PM';
+
   const canSubmit =
     title.trim().length > 0 &&
     description.trim().length > 0 &&
     location.trim().length > 0 &&
     time.trim().length > 0 &&
     Number(capacity) > 0 &&
-    (!isTicketed || (canSellTickets && Number(ticketPrice) > 0 && Number(maxTickets) > 0));
+    (!isTicketed || (ticketAmount > 0 && Number(maxTickets) > 0));
 
   const clearTimeError = () => {
     if (timeError) {
@@ -317,316 +335,444 @@ export const CreateActivityScreen = () => {
     }
   };
 
+  const publishEvent = () => {
+    const { error, payload } = buildPayload();
+
+    if (error) {
+      setTimeError(error);
+      return;
+    }
+
+    setTimeError(null);
+    createMutation.mutate(payload!);
+  };
+
   return (
-    <AppScrollView contentContainerStyle={styles.container}>
-      <PageHeader
-        eyebrow="Host"
-        title="Create activity"
-        subtitle="Shape the plan before anyone sees it. Lead with the essentials, then layer in the details that make the event feel worth showing up for."
-      />
-
-      <PanelCard style={styles.heroCard}>
-        <AccentPill tone="secondary">Production flow</AccentPill>
-        <Text style={styles.heroTitle}>
-          Publish something people can commit to fast.
-        </Text>
-        <Text style={styles.heroSubtitle}>
-          Strong title, clear timing, real location, and a few images do most of the work.
-        </Text>
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Core"
-          title="What is this activity?"
-          subtitle="Start with the event identity people use to decide if it’s worth a closer look."
-        />
-        <Field label="Title" value={title} onChangeText={updateTextField('title')} />
-        <Field
-          label="Description"
-          value={description}
-          onChangeText={updateTextField('description')}
-          multiline
-          numberOfLines={4}
-          style={styles.multiline}
-        />
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Field label="Category" value={category} onChangeText={updateTextField('category')} />
-          </View>
-          <View style={styles.half}>
-            <Field label="Tags" value={tags} onChangeText={updateTextField('tags')} placeholder="music, rooftop" />
+    <View style={styles.frameRoot}>
+      <SafeAreaView edges={['top']} style={styles.coralHeader}>
+        <View style={styles.headerIcons}>
+          <MaterialCommunityIcons name="white-balance-sunny" size={22} color={appColors.white} />
+          <IrlobbyWordmark color={appColors.white} size="sm" />
+          <View style={styles.sparkRow}>
+            <MaterialCommunityIcons name="star-four-points" size={12} color={appColors.white} />
+            <MaterialCommunityIcons name="star-four-points" size={10} color={appColors.white} />
+            <MaterialCommunityIcons name="star-four-points" size={12} color={appColors.white} />
           </View>
         </View>
-      </PanelCard>
+      </SafeAreaView>
 
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Schedule & place"
-          title="When and where does it happen?"
-          subtitle="Make timing and location concrete so people can say yes quickly."
+      <ScrollView
+        style={styles.sheet}
+        contentContainerStyle={styles.sheetContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Field
+          accentLabel
+          label="Event title"
+          value={title}
+          onChangeText={updateTextField('title')}
+          placeholder="Rooftop sunset hang"
         />
-        <Field label="Location" value={location} onChangeText={updateTextField('location')} />
-        <AppButton variant="outline" onPress={fillCurrentLocation} loading={isLocating} style={styles.inlineButton}>
+
+        <Text style={styles.accentLabel}>Date & time</Text>
+        <View style={styles.splitField}>
+          <View style={styles.splitSide}>
+            <MaterialCommunityIcons name="calendar" size={18} color={appColors.primary} />
+            <TextInput
+              value={time}
+              placeholder={dateLabel}
+              placeholderTextColor={appColors.softInk}
+              onChangeText={(value) => {
+                updateForm('time', value);
+                clearTimeError();
+              }}
+              style={styles.inlineInput}
+            />
+          </View>
+          <View style={styles.splitDivider} />
+          <View style={styles.splitSide}>
+            <Text style={styles.splitTime}>{time.trim() ? timeLabel : '7:00 PM'}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={18} color={appColors.softInk} />
+          </View>
+        </View>
+        {timeError ? <Text style={styles.errorText}>{timeError}</Text> : null}
+
+        <Text style={styles.accentLabel}>Location</Text>
+        <View style={styles.singleField}>
+          <MaterialCommunityIcons name="map-marker" size={18} color={appColors.primary} />
+          <TextInput
+            value={location}
+            placeholder="Mission Dolores"
+            placeholderTextColor={appColors.softInk}
+            onChangeText={updateTextField('location')}
+            style={styles.inlineInput}
+          />
+          <MaterialCommunityIcons name="chevron-right" size={18} color={appColors.softInk} />
+        </View>
+        <AppButton variant="ghost" compact onPress={fillCurrentLocation} loading={isLocating} style={styles.inlineButton}>
           Use current location
         </AppButton>
-        <Field
-          label="Starts"
-          value={time}
-          onChangeText={(value: string) => {
-            updateForm('time', value);
-            clearTimeError();
-          }}
-          placeholder="2026-08-14 19:00"
-          autoCapitalize="none"
-          error={timeError ?? undefined}
-        />
-        <Field
-          label="Ends (optional)"
-          value={endTime}
-          onChangeText={(value: string) => {
-            updateForm('endTime', value);
-            clearTimeError();
-          }}
-          placeholder="2026-08-14 21:00"
-          autoCapitalize="none"
-        />
+
         <View style={styles.row}>
           <View style={styles.half}>
             <Field
-              label="Latitude"
-              value={latitude}
-              onChangeText={updateTextField('latitude')}
-              keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={styles.half}>
-            <Field
-              label="Longitude"
-              value={longitude}
-              onChangeText={updateTextField('longitude')}
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Attendance"
-          title="Who is this for?"
-          subtitle="Set boundaries and expectations without burying people in admin."
-        />
-        <Field
-          label="Capacity (1–10)"
-          value={capacity}
-          onChangeText={updateTextField('capacity')}
-          keyboardType="number-pad"
-        />
-        <Text style={styles.chipLabel}>Visibility</Text>
-        <View style={styles.chipRow}>
-          {VISIBILITY_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              selected={visibility === option.value}
-              tone="primary"
-              onPress={() => updateForm('visibility', option.value)}
-            />
-          ))}
-        </View>
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Field label="Skill level" value={skillLevel} onChangeText={updateTextField('skillLevel')} />
-          </View>
-          <View style={styles.half}>
-            <Field label="Age restriction" value={ageRestriction} onChangeText={updateTextField('ageRestriction')} />
-          </View>
-        </View>
-        <Field
-          label="Equipment required"
-          value={equipmentRequired}
-          onChangeText={updateTextField('equipmentRequired')}
-        />
-        <View style={styles.preferenceCard}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <Text style={styles.switchTitle}>Requires approval</Text>
-              <Text style={styles.switchSubtitle}>Review attendees before they join.</Text>
-            </View>
-            <Switch value={requiresApproval} onValueChange={updateToggleField('requiresApproval')} />
-          </View>
-          <View style={styles.switchDivider} />
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <Text style={styles.switchTitle}>Weather dependent</Text>
-              <Text style={styles.switchSubtitle}>Signal that outdoor conditions can change the plan.</Text>
-            </View>
-            <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
-          </View>
-        </View>
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Tickets"
-          title="Charge for this event"
-          subtitle="IRLobby takes a 10% platform fee. The rest goes to your connected payout account."
-        />
-        <View style={styles.preferenceCard}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <Text style={styles.switchTitle}>Ticketed event</Text>
-              <Text style={styles.switchSubtitle}>
-                Guests buy a ticket in the app before they can attend.
-              </Text>
-            </View>
-            <Switch
-              value={isTicketed}
-              disabled={stripeConnectUnavailable}
-              onValueChange={(value) => {
-                updateForm('isTicketed', value);
-                if (value && !maxTickets) {
-                  updateForm('maxTickets', capacity || '6');
-                }
+              accentLabel
+              label="Ticket price"
+              value={ticketPrice}
+              onChangeText={(value) => {
+                updateForm('isTicketed', true);
+                updateTextField('ticketPrice')(value);
               }}
+              placeholder="$15"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.half}>
+            <Field
+              accentLabel
+              label="Capacity"
+              value={maxTickets}
+              onChangeText={(value) => {
+                updateTextField('maxTickets')(value);
+                updateForm('capacity', value);
+              }}
+              placeholder="40"
+              keyboardType="number-pad"
             />
           </View>
         </View>
+
+        <View style={styles.feePreview}>
+          <MaterialCommunityIcons name="information" size={18} color={appColors.primary} />
+          <Text style={styles.feePreviewText}>{feePreview}</Text>
+        </View>
+
+        <View style={styles.checkInRow}>
+          <Text style={styles.checkInLabel}>Require QR check-in</Text>
+          <Switch
+            value={requireQrCheckIn}
+            onValueChange={updateToggleField('requireQrCheckIn')}
+            trackColor={{ false: appColors.line, true: appColors.primary }}
+            thumbColor={appColors.white}
+          />
+        </View>
+
+        {createMutation.error ? (
+          <Text style={styles.errorText}>
+            {getErrorMessage(createMutation.error, 'Unable to create activity.')}
+          </Text>
+        ) : null}
+
+        {createMutation.isSuccess ? (
+          <PanelCard tone="accent">
+            <AccentPill tone="secondary">Saved</AccentPill>
+            <Text style={styles.successText}>Activity created successfully.</Text>
+          </PanelCard>
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={!canSubmit || createMutation.isPending || isLocating}
+          onPress={publishEvent}
+          style={[styles.publishBtn, (!canSubmit || createMutation.isPending || isLocating) && styles.publishDisabled]}
+        >
+          <Text style={styles.publishLabel}>
+            {createMutation.isPending ? 'Publishing…' : 'Publish & enable tickets'}
+          </Text>
+          <MaterialCommunityIcons name="ticket-confirmation-outline" size={20} color={appColors.white} />
+        </Pressable>
+
+        {!canSellTickets && !stripeConnectUnavailable ? (
+          <AppButton variant="outline" onPress={() => onboardMutation.mutate()} loading={onboardMutation.isPending}>
+            Set up payouts
+          </AppButton>
+        ) : null}
         {stripeConnectUnavailable ? (
           <Text style={styles.hintText}>
-            Ticket sales aren’t live on this server yet. You can still host a free plan.
+            Ticket sales stay in prototype mode on this server — no live Stripe charge.
           </Text>
-        ) : isTicketed ? (
-          <>
-            {!canSellTickets ? (
-              <Text style={styles.hintText}>
-                Finish payout setup with Stripe before you can sell tickets.
-              </Text>
-            ) : null}
-            {!canSellTickets ? (
-              <AppButton onPress={() => onboardMutation.mutate()} loading={onboardMutation.isPending} style={styles.inlineButton}>
-                Set up payouts
-              </AppButton>
-            ) : (
-              <Text style={styles.hintText}>
-                Payouts are ready. Ticket sales will send 90% to you and 10% to IRLobby.
-              </Text>
-            )}
-            <View style={styles.row}>
-              <View style={styles.half}>
-                <Field
-                  label="Ticket price (USD)"
-                  value={ticketPrice}
-                  onChangeText={updateTextField('ticketPrice')}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.half}>
-                <Field
-                  label="Tickets available"
-                  value={maxTickets}
-                  onChangeText={updateTextField('maxTickets')}
-                  keyboardType="number-pad"
-                />
-              </View>
-            </View>
-          </>
         ) : null}
-      </PanelCard>
 
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Media"
-          title="Show the vibe"
-          subtitle="A few good images make the event feel real before anyone opens the details sheet."
-        />
-        <AppButton variant="outline" onPress={handlePickImages} style={styles.inlineButton}>
-          Pick up to 5 images
-        </AppButton>
-        {imageUris.length > 0 ? (
-          <View style={styles.mediaGrid}>
-            {imageUris.map((uri, index) => (
-              <View key={`${index}-${uri.slice(0, 16)}`} style={styles.mediaTile}>
-                <Image source={{ uri }} style={styles.mediaImage} />
-                <AppButton
-                  variant="ghost"
-                  compact
-                  onPress={() => {
-                    setForm((current) => ({
-                      ...current,
-                      imageUris: current.imageUris.filter((_, currentIndex) => currentIndex !== index),
-                    }));
-                  }}
-                >
-                  Remove
-                </AppButton>
-              </View>
+        <View style={styles.footerRow}>
+          <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primaryDeep} />
+          <Text style={styles.footerText}>{PROTOTYPE_FOOTER_HOST}</Text>
+        </View>
+
+        <PanelCard>
+          <SectionIntro
+            eyebrow="More details"
+            title="What is this activity?"
+            subtitle="Keep the Frame A ticket fields above. These extras still publish with the event."
+          />
+          <Field
+            label="Description"
+            value={description}
+            onChangeText={updateTextField('description')}
+            multiline
+            numberOfLines={4}
+            style={styles.multiline}
+          />
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <Field label="Category" value={category} onChangeText={updateTextField('category')} />
+            </View>
+            <View style={styles.half}>
+              <Field label="Tags" value={tags} onChangeText={updateTextField('tags')} placeholder="music, rooftop" />
+            </View>
+          </View>
+          <Field
+            label="Ends (optional)"
+            value={endTime}
+            onChangeText={(value: string) => {
+              updateForm('endTime', value);
+              clearTimeError();
+            }}
+            placeholder="2026-08-14 21:00"
+            autoCapitalize="none"
+          />
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <Field label="Latitude" value={latitude} onChangeText={updateTextField('latitude')} keyboardType="decimal-pad" />
+            </View>
+            <View style={styles.half}>
+              <Field
+                label="Longitude"
+                value={longitude}
+                onChangeText={updateTextField('longitude')}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+          <Text style={styles.chipLabel}>Visibility</Text>
+          <View style={styles.chipRow}>
+            {VISIBILITY_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                selected={visibility === option.value}
+                tone="primary"
+                onPress={() => updateForm('visibility', option.value)}
+              />
             ))}
           </View>
-        ) : (
-          <EmptyStatePanel
-            title="No media selected yet"
-            description="Add a few images so the card feels alive when it appears in discovery."
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <Field label="Skill level" value={skillLevel} onChangeText={updateTextField('skillLevel')} />
+            </View>
+            <View style={styles.half}>
+              <Field label="Age restriction" value={ageRestriction} onChangeText={updateTextField('ageRestriction')} />
+            </View>
+          </View>
+          <Field
+            label="Equipment required"
+            value={equipmentRequired}
+            onChangeText={updateTextField('equipmentRequired')}
           />
-        )}
-      </PanelCard>
-
-      {createMutation.error ? (
-        <Text style={styles.errorText}>
-          {getErrorMessage(createMutation.error, 'Unable to create activity.')}
-        </Text>
-      ) : null}
-
-      {createMutation.isSuccess ? (
-        <PanelCard tone="accent">
-          <AccentPill tone="secondary">Saved</AccentPill>
-          <Text style={styles.successText}>Activity created successfully.</Text>
+          <View style={styles.preferenceCard}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchTitle}>Requires approval</Text>
+                <Text style={styles.switchSubtitle}>Review attendees before they join.</Text>
+              </View>
+              <Switch value={requiresApproval} onValueChange={updateToggleField('requiresApproval')} />
+            </View>
+            <View style={styles.switchDivider} />
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchTitle}>Weather dependent</Text>
+                <Text style={styles.switchSubtitle}>Signal that outdoor conditions can change the plan.</Text>
+              </View>
+              <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
+            </View>
+            <View style={styles.switchDivider} />
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchTitle}>Ticketed event</Text>
+                <Text style={styles.switchSubtitle}>Guests buy a ticket before they can attend.</Text>
+              </View>
+              <Switch
+                value={isTicketed}
+                onValueChange={(value) => {
+                  updateForm('isTicketed', value);
+                  if (value && !maxTickets) {
+                    updateForm('maxTickets', capacity || '40');
+                  }
+                }}
+              />
+            </View>
+          </View>
+          <AppButton variant="outline" onPress={handlePickImages} style={styles.inlineButton}>
+            Pick up to 5 images
+          </AppButton>
+          {imageUris.length > 0 ? (
+            <View style={styles.mediaGrid}>
+              {imageUris.map((uri, index) => (
+                <View key={`${index}-${uri.slice(0, 16)}`} style={styles.mediaTile}>
+                  <Image source={{ uri }} style={styles.mediaImage} />
+                  <AppButton
+                    variant="ghost"
+                    compact
+                    onPress={() => {
+                      setForm((current) => ({
+                        ...current,
+                        imageUris: current.imageUris.filter((_, currentIndex) => currentIndex !== index),
+                      }));
+                    }}
+                  >
+                    Remove
+                  </AppButton>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <EmptyStatePanel
+              title="No media selected yet"
+              description="Add a few images so the card feels alive when it appears in discovery."
+            />
+          )}
         </PanelCard>
-      ) : null}
-
-      <PanelCard style={styles.submitCard}>
-        <Text style={styles.submitTitle}>Ready to publish?</Text>
-        <Text style={styles.submitSubtitle}>
-          We’ll validate timing and coordinates before this goes live in discovery.
-        </Text>
-        <AppButton
-          loading={createMutation.isPending}
-          disabled={!canSubmit || createMutation.isPending || isLocating}
-          onPress={() => {
-            const { error, payload } = buildPayload();
-
-            if (error) {
-              setTimeError(error);
-              return;
-            }
-
-            setTimeError(null);
-            createMutation.mutate(payload!);
-          }}
-        >
-          Create activity
-        </AppButton>
-      </PanelCard>
-    </AppScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 16,
+  frameRoot: {
+    flex: 1,
+    backgroundColor: appColors.primary,
   },
-  heroCard: {
+  coralHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sparkRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  sheet: {
+    flex: 1,
+    backgroundColor: appColors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  sheetContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: 120,
+    gap: 14,
+  },
+  accentLabel: {
+    color: appColors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  splitField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: appColors.line,
+    backgroundColor: appColors.white,
+    overflow: 'hidden',
+  },
+  splitSide: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  splitDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: appColors.line,
+  },
+  splitTime: {
+    flex: 1,
+    color: appColors.ink,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  singleField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: appColors.line,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  inlineInput: {
+    flex: 1,
+    color: appColors.ink,
+    fontSize: 16,
+    paddingVertical: 12,
+  },
+  feePreview: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+    borderRadius: radii.md,
+    backgroundColor: appColors.primarySoft,
+    borderWidth: 1,
+    borderColor: appColors.primary,
+  },
+  feePreviewText: {
+    flex: 1,
+    color: appColors.primaryDeep,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  checkInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  checkInLabel: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  publishBtn: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: appColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
   },
-  heroTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+  publishDisabled: {
+    opacity: 0.45,
   },
-  heroSubtitle: {
-    color: appColors.mutedInk,
-    lineHeight: 22,
+  publishLabel: {
+    color: appColors.white,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingBottom: 8,
+  },
+  footerText: {
+    color: appColors.primaryDeep,
+    fontSize: 12,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',

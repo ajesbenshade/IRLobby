@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
+import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { FlatList, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
@@ -455,6 +456,7 @@ export const ChatScreen = () => {
         eyebrow="Chat"
         title="Your conversations"
         subtitle="New matches and active chats live here."
+        rightContent={<IrlobbyWordmark size="sm" />}
       />
 
       <PanelCard style={styles.summaryCard} tone="warm">
@@ -686,8 +688,8 @@ const styles = StyleSheet.create({
     borderColor: appColors.line,
   },
   messageBubbleOwn: {
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
-    borderColor: 'rgba(91, 75, 255, 0.28)',
+    backgroundColor: appColors.primaryWash,
+    borderColor: appColors.primaryWashStrong,
   },
   messageAuthor: {
     color: appColors.primaryDeep,

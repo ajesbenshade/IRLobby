@@ -1,4 +1,4 @@
-import { NavigationContainer, DarkTheme, type LinkingOptions } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import { ActivityIndicator } from 'react-native';
@@ -43,6 +43,9 @@ const linking: LinkingOptions<RootStackParamList> = {
             },
           },
           Notifications: 'notifications',
+          BuyTicket: 'tickets/buy/:activityId',
+          TicketWallet: 'tickets/success',
+          DoorScan: 'tickets/scan',
         },
       },
     },
@@ -50,9 +53,9 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 const navigationTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     primary: appColors.primary,
     background: appColors.background,
     card: appColors.card,

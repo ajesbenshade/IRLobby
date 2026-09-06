@@ -14,6 +14,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
@@ -32,7 +33,6 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
-import { openTicketCheckout } from '@services/paymentService';
 import { appColors, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -214,15 +214,8 @@ export const DiscoverScreen = () => {
     },
   });
 
-  const ticketPurchaseMutation = useMutation({
-    mutationFn: (activityId: number | string) => openTicketCheckout(activityId),
-  });
-
   const currentActivity = activities[currentIndex];
-  const isBusy =
-    swipeMutation.isPending ||
-    participationMutation.isPending ||
-    ticketPurchaseMutation.isPending;
+  const isBusy = swipeMutation.isPending || participationMutation.isPending;
   const activeFilterCount = useMemo(
     () =>
       [
@@ -396,9 +389,12 @@ export const DiscoverScreen = () => {
         title="Plans worth leaving for"
         subtitle="Swipe through what's happening near you tonight."
         rightContent={
-          <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
-            Pings
-          </AppButton>
+          <View style={{ alignItems: 'flex-end', gap: 8 }}>
+            <IrlobbyWordmark size="sm" />
+            <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
+              Pings
+            </AppButton>
+          </View>
         }
       />
 
@@ -668,16 +664,16 @@ export const DiscoverScreen = () => {
                   <Text style={styles.photoTitle}>{currentActivity.title}</Text>
                   <View style={styles.photoMeta}>
                     <View style={styles.metaItem}>
-                      <MaterialCommunityIcons name="map-marker-outline" size={16} color={appColors.mutedInk} />
-                      <Text style={styles.metaText}>{currentActivity.location || 'Location TBD'}</Text>
+                      <MaterialCommunityIcons name="map-marker-outline" size={16} color="rgba(255,255,255,0.86)" />
+                      <Text style={styles.photoMetaText}>{currentActivity.location || 'Location TBD'}</Text>
                     </View>
                     <View style={styles.metaItem}>
-                      <MaterialCommunityIcons name="clock-outline" size={16} color={appColors.mutedInk} />
-                      <Text style={styles.metaText}>{currentTimeLabel}</Text>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color="rgba(255,255,255,0.86)" />
+                      <Text style={styles.photoMetaText}>{currentTimeLabel}</Text>
                     </View>
                     <View style={styles.metaItem}>
-                      <MaterialCommunityIcons name="account-group-outline" size={16} color={appColors.mutedInk} />
-                      <Text style={styles.metaText}>
+                      <MaterialCommunityIcons name="account-group-outline" size={16} color="rgba(255,255,255,0.86)" />
+                      <Text style={styles.photoMetaText}>
                         {currentActivity.participant_count ?? 0}
                         {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}
                       </Text>
@@ -758,28 +754,26 @@ export const DiscoverScreen = () => {
                       Report / block host
                     </AppButton>
                   ) : null}
-                  {ticketPurchaseMutation.error ? (
-                    <Text style={styles.errorText}>
-                      {getErrorMessage(
-                        ticketPurchaseMutation.error,
-                        'Unable to start ticket checkout.'
-                      )}
-                    </Text>
-                  ) : null}
                   <View style={styles.modalActions}>
                     <AppButton variant="outline" onPress={() => setShowDetails(false)}>
                       Close
                     </AppButton>
                     {ticketed ? (
                       <AppButton
-                        loading={ticketPurchaseMutation.isPending}
-                        disabled={
-                          ticketPurchaseMutation.isPending ||
-                          Boolean(currentActivity.isSoldOut)
-                        }
-                        onPress={() =>
-                          ticketPurchaseMutation.mutate(currentActivity.id)
-                        }
+                        disabled={Boolean(currentActivity.isSoldOut)}
+                        onPress={() => {
+                          setShowDetails(false);
+                          navigation.navigate('BuyTicket', {
+                            activityId: currentActivity.id,
+                            title: currentActivity.title,
+                            location: currentActivity.location,
+                            time: currentActivity.time,
+                            ticketPrice,
+                            imageUri: coverImage,
+                            ticketsAvailable: currentActivity.ticketsAvailable,
+                            isSoldOut: currentActivity.isSoldOut,
+                          });
+                        }}
                       >
                         {currentActivity.isSoldOut ? 'Sold out' : 'Buy ticket'}
                       </AppButton>
@@ -964,7 +958,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.card,
   },
   photoCardTicketed: {
-    borderColor: appColors.accent,
+    borderColor: appColors.primary,
   },
   photo: {
     width: '100%',
@@ -990,7 +984,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   photoTitle: {
-    color: appColors.ink,
+    color: appColors.white,
     fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
@@ -1005,6 +999,11 @@ const styles = StyleSheet.create({
   },
   metaText: {
     color: appColors.mutedInk,
+    fontSize: 14,
+    flex: 1,
+  },
+  photoMetaText: {
+    color: 'rgba(255,255,255,0.86)',
     fontSize: 14,
     flex: 1,
   },

@@ -37,12 +37,12 @@ Keep Redis private to Docker networking in production.
 - From an external network, verify that a connection to Redis/TCP `6379` is refused or times out.
 - Confirm that worker and web containers can still reach Redis internally.
 
-If Redis/TCP `6379` is already reachable publicly:
+If Redis/TCP `6379` is already reachable publicly, use the firewall-only runbook at [REDIS_FIREWALL_LOCKDOWN.md](REDIS_FIREWALL_LOCKDOWN.md):
 
-1. Close the provider firewall rule first.
-2. Run `sudo bash deploy/oracle/contain-redis-exposure.sh <public-host>` on the backend host as an emergency containment step.
-3. Rotate Redis credentials.
-4. Redeploy.
+1. Attach a Hetzner Cloud Firewall that allows inbound TCP `22`, `80`, and `443` only. Do not allow TCP `6379`. This is the preferred P0 and does not need SSH.
+2. Optional host-side defense: run the **Redis Firewall Deny** workflow, or `sudo bash deploy/oracle/contain-redis-exposure.sh <public-host>`.
+3. Confirm `https://api.irlobby.com/api/health/` still returns HTTP `200`.
+4. HOLD `REDIS_PASSWORD` rotation and app-container redeploy until Aaron or CoS authorizes SSH / billing is fixed.
 
 ## Web deployment notes
 

@@ -109,7 +109,7 @@ echo "Building backend images..."
 if "${DOCKER_CMD[@]}" compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
     ps --status running -q nginx 2>/dev/null | grep -q .; then
   echo "Validating nginx config before updating the running proxy..."
-  bash "${ROOT_DIR}/deploy/oracle/validate-nginx.sh" "${COMPOSE_FILE}" "${ENV_FILE}"
+  bash "${ROOT_DIR}/deploy/oracle/validate-nginx.sh" "${COMPOSE_FILE}" "${ENV_FILE}" </dev/null
 fi
 
 echo "Starting services..."

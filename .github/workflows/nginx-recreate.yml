@@ -1,0 +1,82 @@
+name: Nginx Recreate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recreate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Force-recreate nginx
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          connect() {
+            local user="$1"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu opc admin deploy; do
+            if connect "${candidate}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+          if [ -z "${EFFECTIVE_USER}" ]; then
+            echo "SSH failed for all attempted users" >&2
+            exit 1
+          fi
+          echo "Connected as ${EFFECTIVE_USER}"
+
+          # Command is an SSH argv string, not a stdin-fed remote script, so
+          # a later compose attach cannot consume leftover deploy commands.
+          REMOTE_CMD=$(cat <<'REMOTE'
+          set -euo pipefail
+          cd /opt/irlobby/irlobby_backend
+          echo "=== force-recreate nginx (refresh upstream IPs) ==="
+          docker compose -f docker-compose.oracle.yml --env-file .env.production up -d --no-deps --force-recreate nginx </dev/null
+          echo "=== docker ps ==="
+          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+          echo "=== nginx logs (tail 40) ==="
+          docker compose -f docker-compose.oracle.yml --env-file .env.production logs --tail=40 nginx </dev/null
+          echo "=== localhost HTTP health ==="
+          curl -sS -D - -o /tmp/health-http.body --max-time 15 -H 'Host: api.irlobby.com' http://127.0.0.1/api/health/ || true
+          echo ""
+          echo "=== localhost HTTPS health ==="
+          curl -skS -D - -o /tmp/health-https.body --max-time 15 -H 'Host: api.irlobby.com' https://127.0.0.1/api/health/ || true
+          echo ""
+          echo "=== HTTPS body ==="
+          cat /tmp/health-https.body || true
+          echo ""
+          REMOTE
+          )
+
+          ssh -o BatchMode=yes -o ConnectTimeout=90 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" "${REMOTE_CMD}"
+
+      - name: Public health check
+        run: |
+          set -euo pipefail
+          code=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
+            echo "health attempt ${attempt}: HTTP ${code}"
+            head -c 200 /tmp/health.json || true
+            echo ""
+            if [ "${code}" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Public https://api.irlobby.com/api/health/ still failing" >&2
+          exit 1

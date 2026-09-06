@@ -8,14 +8,14 @@ import {
 } from '@expo-google-fonts/outfit';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@providers/ErrorBoundary';
 import { initAnalytics, trackAppOpen, wrapWithAnalytics } from '@services/analytics';
-import { darkTheme, lightTheme, palette } from '@theme/index';
+import { lightTheme, palette } from '@theme/index';
+import { DesignFramesStudio } from './src/screenshots/DesignFramesStudio';
 import { StoreScreenshotStudio } from './src/screenshots/StoreScreenshotStudio';
 import { initMonitoring } from './src/lib/monitoring';
 
@@ -31,11 +31,12 @@ function App() {
     Outfit_800ExtraBold,
   });
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const theme = isDark ? darkTheme : lightTheme;
-  const backgroundColor = isDark ? palette.darkBackground : palette.background;
+  const theme = lightTheme;
+  const backgroundColor = palette.background;
   const screenshotMode = process.env.EXPO_PUBLIC_SCREENSHOT_MODE === '1';
+  const screenshotScene = process.env.EXPO_PUBLIC_SCREENSHOT_SCENE ?? '';
+  const designFramesMode =
+    screenshotMode && (screenshotScene === 'design-frames' || screenshotScene.startsWith('frame-'));
 
   useEffect(() => {
     void trackAppOpen();
@@ -63,12 +64,12 @@ function App() {
             {screenshotMode ? (
               <>
                 <StatusBar style="dark" backgroundColor={palette.background} />
-                <StoreScreenshotStudio />
+                {designFramesMode ? <DesignFramesStudio /> : <StoreScreenshotStudio />}
               </>
             ) : (
               <QueryProvider>
                 <AuthProvider>
-                  <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={backgroundColor} />
+                  <StatusBar style="dark" backgroundColor={backgroundColor} />
                   <AppNavigator />
                 </AuthProvider>
               </QueryProvider>

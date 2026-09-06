@@ -267,21 +267,21 @@ const styles = StyleSheet.create({
     height: 280,
     top: -90,
     right: -60,
-    backgroundColor: 'rgba(91, 75, 255, 0.22)',
+    backgroundColor: 'rgba(255, 107, 74, 0.22)',
   },
   glowOrbWarm: {
     width: 200,
     height: 200,
     top: 180,
     left: -80,
-    backgroundColor: 'rgba(192, 38, 211, 0.14)',
+    backgroundColor: 'rgba(255, 139, 112, 0.16)',
   },
   glowOrbSoft: {
     width: 240,
     height: 240,
     bottom: 80,
     right: -100,
-    backgroundColor: 'rgba(30, 232, 255, 0.08)',
+    backgroundColor: 'rgba(255, 227, 218, 0.55)',
   },
   headerRow: {
     flexDirection: 'row',
@@ -380,8 +380,8 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   panelAccent: {
-    backgroundColor: 'rgba(91, 75, 255, 0.12)',
-    borderColor: 'rgba(91, 75, 255, 0.28)',
+    backgroundColor: 'rgba(255, 107, 74, 0.12)',
+    borderColor: 'rgba(255, 107, 74, 0.28)',
   },
   panelWarm: {
     backgroundColor: 'rgba(232, 200, 114, 0.1)',
@@ -416,15 +416,15 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: 'flex-start',
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
+    backgroundColor: 'rgba(255, 107, 74, 0.16)',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(91, 75, 255, 0.28)',
+    borderColor: 'rgba(255, 107, 74, 0.28)',
   },
   pillSecondary: {
-    backgroundColor: 'rgba(30, 232, 255, 0.12)',
-    borderColor: 'rgba(30, 232, 255, 0.28)',
+    backgroundColor: 'rgba(255, 227, 218, 0.9)',
+    borderColor: 'rgba(255, 107, 74, 0.28)',
   },
   pillNeutral: {
     backgroundColor: appColors.cardStrong,

@@ -15,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',
   userInterfaceStyle: 'automatic',
-  primaryColor: '#5B4BFF',
+  primaryColor: '#FF6B4A',
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
@@ -56,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     infoPlist: {
       NSCameraUsageDescription:
-        'IRLobby needs access to your camera to capture photos for activities and profile updates.',
+        'IRLobby uses the camera to scan guest tickets at the door and to capture photos for activities and profile updates.',
       NSLocationWhenInUseUsageDescription:
         'IRLobby uses your location to show relevant nearby activities.',
       NSPhotoLibraryUsageDescription:
@@ -85,7 +85,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/icon.png',
-        color: '#5B4BFF',
+        color: '#FF6B4A',
+      },
+    ],
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'IRLobby uses the camera to scan guest tickets at the door and to capture photos for activities and profile updates.',
+        recordAudioAndroid: false,
       },
     ],
     'expo-font',

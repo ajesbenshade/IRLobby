@@ -11,22 +11,22 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#5B4BFF',     // primary
-          deep: '#C026D3',        // primaryDeep
-          soft: '#D9D3F5',
-          glow: '#7C6CFF',
-          gold: '#E8C872',        // new premium accent
-          goldSoft: '#FDF4D9',
-          cyan: '#1EE8FF',
-          cyanSoft: '#CFF9FF',
-          ink: '#F4F3FA',
-          muted: '#A5A1C2',
-          line: '#2A2548',
-          lineStrong: '#3D3659',
-          surface: '#161330',
-          surfaceMuted: '#110D24',
-          canvas: '#0A0814',
-          card: '#161330',
+          DEFAULT: '#FF6B4A',
+          deep: '#E25438',
+          soft: '#FFE3DA',
+          glow: '#FF8B70',
+          gold: '#FF6B4A',
+          goldSoft: '#FFE3DA',
+          cyan: '#E25438',
+          cyanSoft: '#FFD2C6',
+          ink: '#1A1730',
+          muted: '#5C5878',
+          line: '#EDE4E0',
+          lineStrong: '#D9CDC7',
+          surface: '#FFFFFF',
+          surfaceMuted: '#FFF0EA',
+          canvas: '#FFF6F2',
+          card: '#FFFFFF',
         },
       },
       fontFamily: {
@@ -47,7 +47,7 @@ module.exports = {
       },
       boxShadow: {
         card: '0px 6px 16px rgba(10, 8, 20, 0.2)',
-        float: '0px 12px 24px rgba(91, 75, 255, 0.22)',
+        float: '0px 12px 24px rgba(255, 107, 74, 0.22)',
         pop: '0px 6px 12px rgba(192, 38, 211, 0.28)',
       },
       spacing: {

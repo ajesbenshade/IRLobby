@@ -25,6 +25,8 @@ export const appColors = {
   primaryDeep: palette.primaryDeep,
   primarySoft: palette.primarySoft,
   primaryGlow: palette.primaryGlow,
+  primaryWash: 'rgba(255, 107, 74, 0.14)',
+  primaryWashStrong: 'rgba(255, 107, 74, 0.28)',
   secondary: palette.secondary,
   secondaryDeep: palette.secondaryDeep,
   secondarySoft: palette.secondarySoft,

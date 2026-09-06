@@ -39,4 +39,32 @@ export type MainStackParamList = {
     discoverTags: string[];
   };
   VibeQuizModal: undefined;
+  BuyTicket: {
+    activityId: number | string;
+    title: string;
+    location?: string | null;
+    time?: string;
+    ticketPrice?: number | string | null;
+    imageUri?: string;
+    ticketsAvailable?: number | null;
+    isSoldOut?: boolean;
+  };
+  TicketWallet: {
+    activityId?: number | string;
+    title: string;
+    location?: string | null;
+    time?: string;
+    ticketId: string;
+    quantity?: number;
+    ticketPrice?: number | null;
+    imageUri?: string;
+  };
+  DoorScan: {
+    activityId?: number | string;
+    title?: string;
+    admitted?: number;
+    capacity?: number;
+    guestName?: string;
+    quantity?: number;
+  };
 };

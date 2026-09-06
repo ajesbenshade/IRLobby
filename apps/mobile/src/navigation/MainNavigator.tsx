@@ -10,6 +10,9 @@ import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
 import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
 import { DiscoverScreen } from '@screens/main/DiscoverScreen';
+import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
+import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
+import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
@@ -195,6 +198,21 @@ export const MainNavigator = () => (
       component={VibeQuizResultsScreen}
       options={{ title: 'Your Vibe' }}
     />
+    <Stack.Screen
+      name="BuyTicket"
+      component={BuyTicketScreen}
+      options={{ headerShown: false, title: 'Buy ticket' }}
+    />
+    <Stack.Screen
+      name="TicketWallet"
+      component={TicketWalletScreen}
+      options={{ headerShown: false, title: 'Your ticket' }}
+    />
+    <Stack.Screen
+      name="DoorScan"
+      component={DoorScanScreen}
+      options={{ headerShown: false, title: 'Door scan' }}
+    />
   </Stack.Navigator>
 );
 
@@ -207,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   tabIconWrapFocused: {
-    backgroundColor: 'rgba(91, 75, 255, 0.16)',
+    backgroundColor: appColors.primaryWash,
   },
   createIconWrap: {
     minWidth: 36,

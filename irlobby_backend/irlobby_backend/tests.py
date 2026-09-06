@@ -1,5 +1,7 @@
+from pathlib import Path
 from unittest.mock import Mock, patch
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
@@ -78,3 +80,71 @@ class HealthDashboardAccessTests(TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "degraded")
         self.assertEqual(response.json()["checks"]["celery"], "error")
+
+
+class LegalPageTests(TestCase):
+    def test_privacy_and_support_are_real_html_documents(self):
+        for path in ("/privacy", "/privacy/", "/privacy-policy", "/support", "/support/"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("text/html", response["Content-Type"])
+                body = response.content.decode("utf-8")
+                self.assertNotIn("Redirecting to", body)
+                self.assertIn("support@irlobby.com", body)
+                if "privacy" in path:
+                    self.assertIn("Privacy Policy", body)
+                    self.assertIn("location", body.lower())
+                    self.assertIn("chat", body.lower())
+                else:
+                    self.assertIn("Support", body)
+
+    def test_site_legal_html_matches_backend_deploy_copies(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        site_dir = repo_root / "site"
+        legal_dir = Path(settings.BASE_DIR) / "deploy" / "oracle" / "legal"
+        self.assertTrue(legal_dir.is_dir())
+        if not site_dir.is_dir():
+            self.skipTest("site/ is not present in this checkout")
+        for name in ("privacy.html", "support.html"):
+            self.assertEqual(
+                (site_dir / name).read_bytes(),
+                (legal_dir / name).read_bytes(),
+                f"{name} in site/ and deploy/oracle/legal/ must stay identical",
+            )
+
+    def test_nginx_templates_route_legal_pages(self):
+        nginx_dir = Path(settings.BASE_DIR) / "deploy" / "oracle" / "nginx"
+        include_text = (nginx_dir / "legal-locations.inc").read_text(encoding="utf-8")
+        self.assertIn("location = /privacy", include_text)
+        self.assertIn("location = /support", include_text)
+        default_conf = (nginx_dir / "default.conf.template").read_text(encoding="utf-8")
+        self.assertIn("legal-locations.inc", default_conf)
+        self.assertIn("server_name irlobby.com www.irlobby.com", default_conf)
+        self.assertIn("location /api/health/", default_conf)
+        self.assertIn("location /ws/", default_conf)
+
+    def test_certbot_webroot_is_the_host_path_nginx_serves(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        compose = (Path(settings.BASE_DIR) / "docker-compose.oracle.yml").read_text(
+            encoding="utf-8"
+        )
+        enable_tls = (
+            Path(settings.BASE_DIR) / "deploy" / "oracle" / "enable-marketing-tls.sh"
+        ).read_text(encoding="utf-8")
+        deploy_docs = (repo_root / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
+        backend_deploy = (repo_root / ".github" / "workflows" / "backend-deploy.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("- /var/www/certbot:/var/www/certbot", compose)
+        self.assertNotIn("certbot-webroot:/var/www/certbot", compose)
+        self.assertIn("--webroot -w /var/www/certbot", enable_tls)
+        self.assertNotIn("certbot-webroot -d irlobby.com", enable_tls)
+        self.assertIn("--webroot -w /var/www/certbot", deploy_docs)
+        self.assertIn(
+            "Do not renew or replace the existing `api.irlobby.com` certificate", deploy_docs
+        )
+        self.assertIn("validate-nginx.sh", backend_deploy)
+        validate_idx = backend_deploy.index("validate-nginx.sh")
+        recreate_idx = backend_deploy.index("up -d --no-deps --force-recreate nginx")
+        self.assertLess(validate_idx, recreate_idx)

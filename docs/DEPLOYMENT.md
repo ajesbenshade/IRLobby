@@ -58,6 +58,37 @@ cPanel deploys by copying the prebuilt `apps/web/dist` tree (see `.cpanel.yml`).
 
 Use `VITE_LOG_CONFIG=true` only while you diagnose startup config. Do not leave config logging enabled for normal production builds.
 
+## App Store legal pages (`/privacy` and `/support`)
+
+Apple review requires working HTTPS URLs at `https://irlobby.com/privacy` and `https://irlobby.com/support`.
+
+**What is live today:** `irlobby.com` still points at leftover Namecheap shared hosting (`162.0.209.170`) with a `*.web-hosting.com` certificate mismatch and a cPanel default page. Those paths 404. Do **not** treat that host as the marketing site.
+
+**What should serve the pages:** the Hetzner VPS that already runs `api.irlobby.com` (`5.75.156.23`, nginx 1.27 in Docker). This repo:
+
+- Stores the HTML in `site/privacy.html` and `site/support.html` (copies also live in `irlobby_backend/deploy/oracle/legal/` so the backend image can serve them).
+- Serves `/privacy` and `/support` (with and without a trailing slash) from nginx when the files exist under `/opt/irlobby/web`, and from Django as a fallback.
+- Adds an HTTP vhost for `irlobby.com` / `www.irlobby.com` so a later DNS A-record change is enough for HTTP. HTTPS on the apex needs a Let's Encrypt cert after DNS moves.
+
+Human steps after this code is deployed (do not run these from CI unless you intend to):
+
+1. Run the **Backend Deploy** workflow so nginx, `/opt/irlobby/web`, and Django pick up the pages.
+2. Confirm `https://api.irlobby.com/privacy` and `https://api.irlobby.com/support` return the real documents (the workflow already checks this).
+3. Point the `irlobby.com` and `www.irlobby.com` A records from `162.0.209.170` to `5.75.156.23`. Do not change `api.irlobby.com`.
+4. On the VPS **host** (not inside the nginx container), issue an apex certificate. `/var/www/certbot` is bind-mounted into nginx at the same path, and the HTTP vhost serves `/.well-known/acme-challenge/` from there:
+
+   ```bash
+   sudo mkdir -p /var/www/certbot
+   sudo certbot certonly --webroot -w /var/www/certbot -d irlobby.com -d www.irlobby.com
+   ```
+
+   Do not pass `-w deploy/oracle/certbot-webroot` (that directory is not served). Do not renew or replace the existing `api.irlobby.com` certificate.
+5. On the VPS, run `bash deploy/oracle/enable-marketing-tls.sh` so nginx serves HTTPS for the apex without touching the `api.irlobby.com` server block.
+6. Confirm `https://irlobby.com/privacy` and `https://irlobby.com/support`.
+7. Confirm `support@irlobby.com` (and `ajesbenshade@gmail.com` as backup) can receive mail. App Store Connect URLs stay as they are; this change does not submit the app.
+
+`ALLOWED_HOSTS` on the VPS must include `irlobby.com` and `www.irlobby.com` so the Django fallback accepts those `Host` headers.
+
 ## Mobile release notes
 
 Coordinate mobile production builds through EAS and GitHub Actions.

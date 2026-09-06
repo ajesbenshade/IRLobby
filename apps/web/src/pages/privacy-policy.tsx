@@ -6,13 +6,13 @@ export default function PrivacyPolicy() {
     <PublicSiteLayout activePath="/privacy">
       <PublicMetadata
         title="IRLobby Privacy Policy"
-        description="Read how IRLobby collects, uses, and protects your data, including account, location, and communication details."
+        description="How IRLobby collects and uses account, location, chat, and diagnostic data, and how to export or delete your account."
         canonicalPath="/privacy"
       />
       <PublicHeroHeader
         eyebrow="Privacy"
         title={<>Privacy Policy</>}
-        description="Last updated: September 8, 2025"
+        description="Last updated: September 2, 2026"
       />
 
       <section className="px-6 pb-24">
@@ -20,128 +20,144 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">1. Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
-              Welcome to IRLobby (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We are
-              committed to protecting your privacy and ensuring the security of your personal
-              information. This Privacy Policy explains how we collect, use, disclose, and safeguard
-              your information when you use our IRLobby application and services.
+              IRLobby (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) is an activity-first
+              social matching product. Users create accounts, discover nearby activities, match
+              with people who want the same plan, and chat to coordinate. This policy describes how
+              we handle information in the iOS app (bundle com.irlobby.app), the website, and the
+              api.irlobby.com backend.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">2. Information We Collect</h2>
+            <h2 className="text-2xl font-semibold text-primary mb-4">2. Information we collect</h2>
 
-            <h3 className="text-xl font-medium mb-2">2.1 Personal Information</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              We may collect the following personal information:
-            </p>
+            <h3 className="text-xl font-medium mb-2">2.1 Account and profile</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4">
-              <li>Name and contact information (email address)</li>
-              <li>Username and profile information</li>
-              <li>Location data (with your permission)</li>
-              <li>Activity preferences and interests</li>
-              <li>Communication data (messages, chat history)</li>
+              <li>Email address, password (stored hashed), display name, and username</li>
+              <li>
+                Profile photo and optional activity photos you upload (camera or photo library, only
+                when you choose to upload)
+              </li>
+              <li>Vibe-quiz answers and activity preferences used to rank nearby plans</li>
+              <li>Legal acceptance timestamps when you accept the terms and this policy</li>
             </ul>
 
-            <h3 className="text-xl font-medium mb-2">2.2 Information from Third Parties</h3>
+            <h3 className="text-xl font-medium mb-2">2.2 Location</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
-              When you connect with X (formerly Twitter), we may receive:
+              With permission, the mobile app reads location while it is in use so we can show
+              activities near you. iOS uses a while-using prompt. We do not request always-on
+              background location in the current app. You can deny or later disable location in
+              system settings; discovery quality drops because nearby ranking is core to the
+              product.
             </p>
+
+            <h3 className="text-xl font-medium mb-2">2.3 Activity, matching, and chat</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4">
-              <li>Your X username and profile information</li>
-              <li>Email address (if you grant permission)</li>
-              <li>Public profile data</li>
+              <li>
+                Activities you host or join (title, description, time, place, coordinates when
+                provided, tags, capacity, images)
+              </li>
+              <li>Swipes, matches, and reviews (ratings and comments)</li>
+              <li>
+                Chat messages between matched users, stored on the IRLobby backend so history works
+                across devices. We do not send message bodies to a third-party chat vendor.
+              </li>
+              <li>Block and report submissions used for moderation</li>
+            </ul>
+
+            <h3 className="text-xl font-medium mb-2">2.4 Optional sign-in, payments, diagnostics</h3>
+            <ul className="list-disc pl-6 text-gray-700 mb-4">
+              <li>
+                Apple, Google, or X (Twitter) identifiers and profile fields if you use that
+                sign-in
+              </li>
+              <li>
+                Stripe identifiers for paid activities only. We do not store full card numbers on
+                IRLobby servers.
+              </li>
+              <li>Crash and performance diagnostics via Sentry when configured</li>
+              <li>Expo push tokens when you enable notifications</li>
+              <li>Website authentication cookies, including a refresh cookie</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">
-              3. How We Use Your Information
-            </h2>
-            <p className="text-gray-700 leading-relaxed mb-4">We use your information to:</p>
+            <h2 className="text-2xl font-semibold text-primary mb-4">3. How we use it</h2>
             <ul className="list-disc pl-6 text-gray-700">
-              <li>Provide and maintain our services</li>
-              <li>Create and manage your account</li>
-              <li>Connect you with other users for activities</li>
-              <li>Send you important updates and notifications</li>
-              <li>Improve our services and develop new features</li>
-              <li>Ensure platform security and prevent fraud</li>
-              <li>Comply with legal obligations</li>
+              <li>Create and authenticate your account</li>
+              <li>Operate discovery, matching, chat, reviews, and activity hosting</li>
+              <li>Show map tiles for nearby activities (Mapbox)</li>
+              <li>Prevent abuse and review reports</li>
+              <li>Send transactional email such as password reset when SMTP is configured</li>
+              <li>Debug crashes and improve reliability</li>
+              <li>Process paid-activity payments through Stripe when that feature is used</li>
             </ul>
+            <p className="text-gray-700 leading-relaxed mt-4">
+              We do not use your data to run third-party advertising networks, and we do not sell
+              personal information.
+            </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">4. Information Sharing</h2>
+            <h2 className="text-2xl font-semibold text-primary mb-4">4. Sharing</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              We do not sell, trade, or rent your personal information to third parties. We may
-              share your information only in the following circumstances:
+              We share information only as needed to run the product: other users (profile and
+              activity details required to match and chat), our hosting provider, Sentry, Mapbox,
+              Stripe for paid activities, Apple/Google/X if you use that sign-in, and the SMTP
+              provider for transactional mail. We may also share information when required by law
+              or to protect people from abuse.
             </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-primary mb-4">5. Your choices</h2>
             <ul className="list-disc pl-6 text-gray-700">
-              <li>With other users as necessary for activity coordination</li>
-              <li>With service providers who help us operate our platform</li>
-              <li>When required by law or to protect our rights</li>
-              <li>With your explicit consent</li>
+              <li>
+                Export: Settings includes an export that returns a JSON copy of profile, hosted
+                activities, participations, swipes, matches, and reviews.
+              </li>
+              <li>
+                Delete account: Settings → Delete account permanently removes the user record and
+                associated data. This cannot be undone.
+              </li>
+              <li>Location: iOS Settings → Privacy → Location Services → IRLobby</li>
+              <li>Notifications: disable in the app settings and/or iOS notification settings</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">5. Data Security</h2>
+            <h2 className="text-2xl font-semibold text-primary mb-4">6. Children</h2>
             <p className="text-gray-700 leading-relaxed">
-              We implement appropriate technical and organizational measures to protect your
-              personal information against unauthorized access, alteration, disclosure, or
-              destruction. However, no method of transmission over the internet is 100% secure.
+              IRLobby is a social networking product rated 17+ on the App Store. It is not directed
+              at children under 17, and we do not knowingly collect personal information from them.
+              If you believe a person under 17 has an account, email us and we will delete it.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">6. Your Rights</h2>
-            <p className="text-gray-700 leading-relaxed mb-4">You have the right to:</p>
-            <ul className="list-disc pl-6 text-gray-700">
-              <li>Access and update your personal information</li>
-              <li>Request deletion of your account and data</li>
-              <li>Opt out of marketing communications</li>
-              <li>Request data portability</li>
-              <li>Withdraw consent for data processing</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">7. Cookies and Tracking</h2>
+            <h2 className="text-2xl font-semibold text-primary mb-4">7. Changes</h2>
             <p className="text-gray-700 leading-relaxed">
-              We use cookies and similar technologies to enhance your experience, analyze usage
-              patterns, and provide personalized content. You can control cookie settings through
-              your browser preferences.
+              We will update the date at the top when this policy changes. Material changes will
+              also be posted on this page.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">8. Children&apos;s Privacy</h2>
+            <h2 className="text-2xl font-semibold text-primary mb-4">8. Contact</h2>
             <p className="text-gray-700 leading-relaxed">
-              Our services are not intended for children under 13 years of age. We do not knowingly
-              collect personal information from children under 13. If we become aware that we have
-              collected such information, we will delete it immediately.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">9. Changes to This Policy</h2>
-            <p className="text-gray-700 leading-relaxed">
-              We may update this Privacy Policy from time to time. We will notify you of any
-              material changes by posting the new policy on this page and updating the &ldquo;Last
-              updated&rdquo; date.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">10. Contact Us</h2>
-            <p className="text-gray-700 leading-relaxed">
-              If you have any questions about this Privacy Policy or our data practices, please
-              contact us at:
+              Privacy and support requests:
             </p>
             <div className="bg-gray-50 p-4 rounded-lg mt-4">
               <p className="text-gray-700">
-                <strong>Email:</strong> privacy@irlobby.com
+                <strong>Email:</strong>{' '}
+                <a href="mailto:support@irlobby.com" className="text-primary hover:underline">
+                  support@irlobby.com
+                </a>
                 <br />
-                <strong>Address:</strong> IRLobby Privacy Team
+                <strong>Operator:</strong>{' '}
+                <a href="mailto:ajesbenshade@gmail.com" className="text-primary hover:underline">
+                  ajesbenshade@gmail.com
+                </a>
               </p>
             </div>
           </section>

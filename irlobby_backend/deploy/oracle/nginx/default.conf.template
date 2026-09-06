@@ -6,6 +6,8 @@ upstream django_ws {
     server ws:8001;
 }
 
+include /etc/nginx/conf.d/enabled/*.conf;
+
 server {
     listen 80;
     listen [::]:80;
@@ -17,6 +19,39 @@ server {
 
     location / {
         return 301 https://$host$request_uri;
+    }
+}
+
+# Marketing/legal HTTP vhost. After the irlobby.com A record points here,
+# Apple can fetch /privacy and /support over HTTP immediately; HTTPS needs
+# a Let's Encrypt cert and deploy/oracle/enable-marketing-tls.sh.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name irlobby.com www.irlobby.com;
+
+    client_max_body_size 25m;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # HTTP-01: host certbot --webroot -w /var/www/certbot (bind-mounted at this path).
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    include /etc/nginx/legal-locations.inc;
+
+    location @django {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri.html $uri/ @django;
     }
 }
 
@@ -33,13 +68,14 @@ server {
     ssl_session_cache shared:SSL:10m;
 
     client_max_body_size 25m;
+    root /usr/share/nginx/html;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self)" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.irlobby.com wss://api.irlobby.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.irlobby.com wss://api.irlobby.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     location = /ws {
         return 301 /ws/;
@@ -55,6 +91,17 @@ server {
         proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 600s;
         proxy_send_timeout 600s;
+    }
+
+    include /etc/nginx/legal-locations.inc;
+
+    location @django {
+        proxy_pass http://django_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
     }
 
     location /api/health/ {

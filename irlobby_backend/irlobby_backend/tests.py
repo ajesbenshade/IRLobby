@@ -133,6 +133,9 @@ class LegalPageTests(TestCase):
             Path(settings.BASE_DIR) / "deploy" / "oracle" / "enable-marketing-tls.sh"
         ).read_text(encoding="utf-8")
         deploy_docs = (repo_root / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
+        enable_tls_workflow = (
+            repo_root / ".github" / "workflows" / "enable-marketing-tls.yml"
+        ).read_text(encoding="utf-8")
         backend_deploy = (repo_root / ".github" / "workflows" / "backend-deploy.yml").read_text(
             encoding="utf-8"
         )
@@ -141,6 +144,7 @@ class LegalPageTests(TestCase):
         self.assertIn("--webroot -w /var/www/certbot", enable_tls)
         self.assertNotIn("certbot-webroot -d irlobby.com", enable_tls)
         self.assertIn("--webroot -w /var/www/certbot", deploy_docs)
+        self.assertIn("--webroot -w /var/www/certbot", enable_tls_workflow)
         self.assertIn(
             "Do not renew or replace the existing `api.irlobby.com` certificate", deploy_docs
         )
@@ -179,3 +183,34 @@ class LegalPageTests(TestCase):
         self.assertIn("http://127.0.0.1/api/health/", workflow)
         self.assertNotIn("docker compose run", workflow)
         self.assertNotIn("bash -s", workflow)
+
+    def test_enable_marketing_tls_workflow_uses_argv_ssh_and_host_webroot(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        workflow = (
+            repo_root / ".github" / "workflows" / "enable-marketing-tls.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertNotIn("\n  push:", workflow)
+        self.assertNotIn("\n  pull_request:", workflow)
+        self.assertNotIn("\n  schedule:", workflow)
+        self.assertIn("HETZNER_SSH_KEY", workflow)
+        self.assertIn("HETZNER_HOST", workflow)
+        self.assertIn("HETZNER_USER", workflow)
+        self.assertIn("webfactory/ssh-agent@v0.9.0", workflow)
+        self.assertIn("cd /opt/irlobby/irlobby_backend", workflow)
+        self.assertIn("sudo mkdir -p /var/www/certbot", workflow)
+        self.assertIn("--webroot -w /var/www/certbot", workflow)
+        self.assertIn("-d irlobby.com", workflow)
+        self.assertIn("-d www.irlobby.com", workflow)
+        self.assertIn("--non-interactive", workflow)
+        self.assertIn("--agree-tos", workflow)
+        self.assertIn("--keep-until-expiring", workflow)
+        self.assertIn("--register-unsafely-without-email", workflow)
+        self.assertIn("enable-marketing-tls.sh", workflow)
+        self.assertIn("https://irlobby.com/privacy", workflow)
+        self.assertIn("https://irlobby.com/support", workflow)
+        self.assertIn('"${REMOTE_CMD}"', workflow)
+        self.assertNotIn("certbot-webroot", workflow)
+        self.assertNotIn("docker compose run", workflow)
+        self.assertNotIn("bash -s", workflow)
+        self.assertNotIn("-d api.irlobby.com", workflow)

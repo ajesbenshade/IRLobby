@@ -111,7 +111,7 @@ On the VM host:
 sudo certbot certonly --standalone -d your-domain.com -d www.your-domain.com -m you@your-domain.com --agree-tos --no-eff-email
 ```
 
-For `irlobby.com` / `www.irlobby.com` on the existing Hetzner box (nginx already bound to port 80), do **not** use `--standalone` and do **not** replace the `api.irlobby.com` certificate. Use host webroot `/var/www/certbot` as documented in [docs/DEPLOYMENT.md](../../../docs/DEPLOYMENT.md).
+For `irlobby.com` / `www.irlobby.com` on the existing Hetzner box (nginx already bound to port 80), do **not** use `--standalone` and do **not** replace the `api.irlobby.com` certificate. Use host webroot `/var/www/certbot` as documented in [docs/DEPLOYMENT.md](../../../docs/DEPLOYMENT.md). After DNS points at this host, run the **Enable Marketing TLS** GitHub Action instead of issuing the cert by hand.
 
 Test renewal:
 

@@ -1,0 +1,152 @@
+# Manual cutover: issue the irlobby.com / www.irlobby.com Let's Encrypt cert
+# on the Hetzner host and enable marketing HTTPS. Run only after the apex A
+# records point at 5.75.156.23. Does not change DNS, App Store, or the
+# api.irlobby.com certificate.
+name: Enable Marketing TLS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Issue apex cert and enable marketing TLS
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          connect() {
+            local user="$1"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu opc admin deploy; do
+            if connect "${candidate}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+          if [ -z "${EFFECTIVE_USER}" ]; then
+            echo "SSH failed for all attempted users" >&2
+            exit 1
+          fi
+          echo "Connected as ${EFFECTIVE_USER}"
+
+          # Command is an SSH argv string, not a stdin-fed remote script, so
+          # a later compose attach cannot consume leftover deploy commands.
+          REMOTE_CMD=$(cat <<'REMOTE'
+          set -euo pipefail
+          cd /opt/irlobby/irlobby_backend
+
+          if [ ! -f deploy/oracle/enable-marketing-tls.sh ]; then
+            echo "Missing deploy/oracle/enable-marketing-tls.sh; run Backend Deploy first." >&2
+            exit 1
+          fi
+          if ! command -v certbot >/dev/null 2>&1; then
+            echo "certbot is not installed on the host." >&2
+            exit 1
+          fi
+
+          echo "=== existing certificates (read-only; api.irlobby.com must stay) ==="
+          sudo certbot certificates || true
+
+          sudo mkdir -p /var/www/certbot
+
+          CERTBOT_EMAIL=""
+          if [ -d /etc/letsencrypt/accounts ]; then
+            CERTBOT_EMAIL="$(sudo grep -Rho 'mailto:[^"]*' /etc/letsencrypt/accounts 2>/dev/null | head -1 | sed 's/^mailto://' || true)"
+          fi
+          if [ -z "${CERTBOT_EMAIL}" ]; then
+            CERTBOT_EMAIL="$(sudo certbot show_account 2>/dev/null | awk -F': ' 'tolower($1) ~ /email/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' || true)"
+          fi
+
+          echo "=== issuing irlobby.com / www.irlobby.com via host webroot /var/www/certbot ==="
+          if [ -n "${CERTBOT_EMAIL}" ]; then
+            echo "Using existing Let's Encrypt account email."
+            sudo certbot certonly --webroot -w /var/www/certbot \
+              --cert-name irlobby.com \
+              -d irlobby.com -d www.irlobby.com \
+              --non-interactive --agree-tos --keep-until-expiring --no-eff-email \
+              -m "${CERTBOT_EMAIL}"
+          else
+            echo "No account email found; keeping existing registration without a new contact."
+            sudo certbot certonly --webroot -w /var/www/certbot \
+              --cert-name irlobby.com \
+              -d irlobby.com -d www.irlobby.com \
+              --non-interactive --agree-tos --keep-until-expiring --no-eff-email \
+              --register-unsafely-without-email
+          fi
+
+          echo "=== certificates after apex issue (read-only) ==="
+          sudo certbot certificates || true
+
+          echo "=== enable marketing TLS vhost ==="
+          bash deploy/oracle/enable-marketing-tls.sh
+
+          echo "=== localhost HTTPS api.irlobby.com health (must stay 200) ==="
+          api_code="$(curl -sS -o /tmp/api-health.body -w "%{http_code}" --max-time 15 \
+            --resolve api.irlobby.com:443:127.0.0.1 https://api.irlobby.com/api/health/ || true)"
+          echo "api health: HTTP ${api_code}"
+          if [ "${api_code}" != "200" ]; then
+            echo "api.irlobby.com health failed after marketing TLS enable" >&2
+            cat /tmp/api-health.body || true
+            exit 1
+          fi
+
+          echo "=== localhost HTTPS irlobby.com legal pages ==="
+          for path in /privacy /support; do
+            code="$(curl -sS -o "/tmp/apex-${path#/}.body" -w "%{http_code}" --max-time 15 \
+              --resolve irlobby.com:443:127.0.0.1 "https://irlobby.com${path}" || true)"
+            echo "localhost irlobby.com${path}: HTTP ${code}"
+            if [ "${code}" != "200" ]; then
+              echo "Expected HTTP 200 for https://irlobby.com${path} via localhost" >&2
+              cat "/tmp/apex-${path#/}.body" || true
+              exit 1
+            fi
+          done
+
+          echo "=== public HTTPS headers (best-effort if DNS is not visible here) ==="
+          curl -sSI --max-time 15 https://irlobby.com/privacy || true
+          echo ""
+          curl -sSI --max-time 15 https://irlobby.com/support || true
+          echo ""
+          REMOTE
+          )
+
+          ssh -o BatchMode=yes -o ConnectTimeout=90 -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" "${REMOTE_CMD}"
+
+      - name: Public apex HTTPS check
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            privacy="$(curl -sS -o /tmp/privacy.hdr -w "%{http_code}" --max-time 15 -I https://irlobby.com/privacy || true)"
+            support="$(curl -sS -o /tmp/support.hdr -w "%{http_code}" --max-time 15 -I https://irlobby.com/support || true)"
+            echo "attempt ${attempt}: /privacy=${privacy} /support=${support}"
+            head -c 200 /tmp/privacy.hdr || true
+            echo ""
+            if [ "${privacy}" = "200" ] && [ "${support}" = "200" ]; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "${ok}" = "1" ]; then
+            echo "Public https://irlobby.com/privacy and /support returned 200."
+            exit 0
+          fi
+          echo "Public apex HTTPS not visible from Actions yet (DNS may still be propagating)."
+          echo "Host localhost verification already passed in the SSH step."
+          exit 0

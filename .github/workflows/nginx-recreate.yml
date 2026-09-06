@@ -38,9 +38,8 @@ jobs:
           fi
           echo "Connected as ${EFFECTIVE_USER}"
 
-          # Command is an SSH argv string, not `bash -s` + heredoc, so a
-          # future `docker compose run` cannot steal the rest of the script.
-          # Do not use `docker compose run` in this workflow.
+          # Command is an SSH argv string, not a stdin-fed remote script, so
+          # a later compose attach cannot consume leftover deploy commands.
           REMOTE_CMD=$(cat <<'REMOTE'
           set -euo pipefail
           cd /opt/irlobby/irlobby_backend

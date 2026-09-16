@@ -1,6 +1,6 @@
 import type { ConfigContext } from 'expo/config';
 
-import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION } from '../../../app.config';
+import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION } from '../../app.config';
 
 const REQUIRED_LOCATION_COPY =
   'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';

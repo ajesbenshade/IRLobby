@@ -33,6 +33,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isInitializing: boolean;
   isAuthenticated: boolean;
+  accountDeleted: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
   signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
@@ -44,6 +45,8 @@ interface AuthContextValue {
   }) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
+  markAccountDeleted: () => void;
+  acknowledgeAccountDeleted: () => void;
   refreshProfile: () => Promise<AuthUser | null>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
@@ -54,6 +57,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [accountDeleted, setAccountDeleted] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -162,6 +166,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setAnalyticsUser(null);
   }, []);
 
+  const markAccountDeleted = useCallback(() => {
+    setAccountDeleted(true);
+  }, []);
+
+  const acknowledgeAccountDeleted = useCallback(() => {
+    setAccountDeleted(false);
+  }, []);
+
   const refreshProfile = useCallback(async () => {
     try {
       const profile = await fetchProfile();
@@ -189,18 +201,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       isInitializing,
       isAuthenticated: !!user,
+      accountDeleted,
       signIn,
       signInWithTwitter,
       signInWithGoogleIdToken,
       signInWithAppleIdentityToken,
       signUp,
       signOut,
+      markAccountDeleted,
+      acknowledgeAccountDeleted,
       refreshProfile,
       requestPasswordReset,
       resetPassword,
     }),
     [
+      accountDeleted,
+      acknowledgeAccountDeleted,
       isInitializing,
+      markAccountDeleted,
       refreshProfile,
       requestPasswordReset,
       resetPassword,

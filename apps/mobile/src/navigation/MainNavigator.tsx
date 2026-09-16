@@ -18,6 +18,7 @@ import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
 import { ProfileScreen } from '@screens/main/ProfileScreen';
 import { ReviewsScreen } from '@screens/main/ReviewsScreen';
+import { AccountScreen } from '@screens/main/AccountScreen';
 import { SettingsScreen } from '@screens/main/SettingsScreen';
 import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
 import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
@@ -158,6 +159,7 @@ export const MainNavigator = () => (
   >
     <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+    <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
     <Stack.Screen name="Friends" component={FriendsScreen} options={{ title: 'Connections' }} />
     <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ title: 'Reviews' }} />
     <Stack.Screen

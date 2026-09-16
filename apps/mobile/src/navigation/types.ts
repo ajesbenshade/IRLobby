@@ -5,6 +5,7 @@ export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Onboarding: undefined;
   Main: NavigatorScreenParams<MainStackParamList> | undefined;
+  AccountDeleted: undefined;
   Modal?: { screen: string; params?: Record<string, unknown> };
 };
 
@@ -26,6 +27,7 @@ export type MainTabParamList = {
 export type MainStackParamList = {
   Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Settings: undefined;
+  Account: undefined;
   Friends: undefined;
   Reviews: undefined;
   Notifications: undefined;

@@ -2,7 +2,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { AppButton } from '@components/ui/Button';
+import { SocialAuthButton } from '@components/SocialAuthButton';
 import {
   getGoogleAuthRequestConfig,
   isGoogleAuthReadyForPlatform,
@@ -27,8 +27,9 @@ const ConfiguredGoogleSignInButton = ({
   const [isPrompting, setIsPrompting] = useState(false);
 
   return (
-    <AppButton
-      variant="social"
+    <SocialAuthButton
+      provider="google"
+      label={label}
       disabled={disabled || !request || isPrompting}
       loading={isPrompting}
       onPress={async () => {
@@ -49,9 +50,7 @@ const ConfiguredGoogleSignInButton = ({
           setIsPrompting(false);
         }
       }}
-    >
-      {label}
-    </AppButton>
+    />
   );
 };
 

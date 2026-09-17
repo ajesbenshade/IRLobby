@@ -101,13 +101,27 @@ See [`EAS_ENV_SETUP.md`](EAS_ENV_SETUP.md). Summary:
 
 The mobile app uses a backend-owned Twitter OAuth flow. For standalone/TestFlight builds, the app deep link must remain `irlobby://auth/twitter`.
 
+Mobile **must** request the authorize URL with that deep link so the backend advertises the real exchange endpoint:
+
+```
+GET /api/auth/twitter/url/?mobile_redirect_uri=irlobby://auth/twitter
+```
+
+That makes the server use `https://api.irlobby.com/api/auth/twitter/callback/` as Twitter's `redirect_uri`. After X returns, the backend exchanges the code on `GET /api/auth/twitter/callback/` and deep-links back to `irlobby://auth/twitter`.
+
+Do **not** register or send users to:
+
+- `https://irlobby.com/auth/twitter/callback` (apex www-redirect stub / loop)
+- `https://api.irlobby.com/auth/twitter/callback` (missing `/api/`)
+
 Required setup:
 
 1. Set backend env vars `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
-2. Register the backend callback URL in the Twitter/X developer portal:
-	- Local example: `http://localhost:8000/api/auth/twitter/callback/`
+2. Allowlist this exact callback in the X Developer Portal:
 	- Production (required): `https://api.irlobby.com/api/auth/twitter/callback/`
-3. Set `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` for the mobile app if you want an explicit runtime value.
+	- Local example: `http://localhost:8000/api/auth/twitter/callback/`
+3. Backend should set `TWITTER_REDIRECT_URI` to that same `/api/auth/twitter/callback/` URL (tracked as a backend env fix, separate from this mobile change).
+4. `EXPO_PUBLIC_TWITTER_REDIRECT_URI=irlobby://auth/twitter` is documented for EAS, but the app always sends `irlobby://auth/twitter` and ignores a misconfigured https stub.
 
 Notes:
 

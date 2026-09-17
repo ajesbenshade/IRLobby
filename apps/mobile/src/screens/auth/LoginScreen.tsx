@@ -161,7 +161,14 @@ export const LoginScreen = ({ navigation }: Props) => {
       return;
     }
 
-    await signInWithTwitterAsync();
+    setFormError(null);
+    try {
+      await signInWithTwitterAsync();
+    } catch (twitterSignInError) {
+      setFormError(
+        getErrorMessage(twitterSignInError, authCopy.login.fallbackError),
+      );
+    }
   }, [isBusy, signInWithTwitterAsync]);
 
   const handleAppleSignIn = useCallback(async () => {
@@ -238,7 +245,18 @@ export const LoginScreen = ({ navigation }: Props) => {
                 disabled={isBusy}
                 label={authCopy.login.googleCta}
                 notConfiguredHint={authCopy.login.googleNotConfigured}
-                onIdToken={(idToken) => signInWithGoogleAsync(idToken)}
+                onIdToken={async (idToken) => {
+                  setFormError(null);
+                  await signInWithGoogleAsync(idToken);
+                }}
+                onError={(googleSignInError) => {
+                  setFormError(
+                    getErrorMessage(
+                      googleSignInError,
+                      authCopy.login.fallbackError,
+                    ),
+                  );
+                }}
               />
               <SocialAuthButton
                 provider="x"

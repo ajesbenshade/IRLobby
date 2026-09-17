@@ -4,6 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { SocialAuthButton } from '@components/SocialAuthButton';
 import {
+  completeGoogleAuthPrompt,
   getGoogleAuthRequestConfig,
   isGoogleAuthReadyForPlatform,
 } from '@lib/googleAuth';
@@ -14,12 +15,14 @@ type GoogleSignInButtonProps = {
   label: string;
   notConfiguredHint: string;
   onIdToken: (idToken: string) => Promise<unknown>;
+  onError?: (error: unknown) => void;
 };
 
 const ConfiguredGoogleSignInButton = ({
   disabled = false,
   label,
   onIdToken,
+  onError,
 }: Omit<GoogleSignInButtonProps, 'notConfiguredHint'>) => {
   const [request, , promptAsync] = Google.useIdTokenAuthRequest(
     getGoogleAuthRequestConfig(),
@@ -35,17 +38,12 @@ const ConfiguredGoogleSignInButton = ({
       onPress={async () => {
         setIsPrompting(true);
         try {
-          const authResult = await promptAsync();
-          if (authResult.type !== 'success') {
-            return;
+          await completeGoogleAuthPrompt(promptAsync, onIdToken);
+        } catch (error) {
+          onError?.(error);
+          if (!onError) {
+            throw error;
           }
-          const idToken = authResult.params?.id_token;
-          if (typeof idToken !== 'string' || !idToken) {
-            throw new Error('Google sign-in did not return an identity token.');
-          }
-          await onIdToken(idToken);
-        } catch {
-          // Parent mutations record the failure for on-screen copy.
         } finally {
           setIsPrompting(false);
         }

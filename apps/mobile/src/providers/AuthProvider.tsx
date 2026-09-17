@@ -129,6 +129,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
     const { user: nextUser } = await loginWithGoogleIdToken(idToken);
+    if (nextUser == null || nextUser.id === undefined || nextUser.id === null) {
+      throw new Error('Google sign-in did not return a user.');
+    }
     setUser(nextUser);
     setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'google' });

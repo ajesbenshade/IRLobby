@@ -6,7 +6,10 @@ import {
   getTwitterMobileRedirectUri,
   isTwitterAuthCallbackUrl,
   parseTwitterAuthCallbackUrl,
+  TWITTER_CANCELLED_MESSAGE,
+  TWITTER_NO_CALLBACK_MESSAGE,
 } from '@lib/twitterAuth';
+import { GOOGLE_MISSING_ID_TOKEN_MESSAGE } from '@lib/googleAuth';
 import { isAllowedTwitterOAuthUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
@@ -207,12 +210,57 @@ const normalizeUser = (
   };
 };
 
+const resolveAuthResponsePayload = (
+  data: AuthResponse | Record<string, unknown> | null | undefined
+): AuthResponse => {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Auth response missing authentication data');
+  }
+
+  const record = data as AuthResponse & Record<string, unknown>;
+  const tokenBag =
+    record.tokens && typeof record.tokens === 'object'
+      ? (record.tokens as Partial<AuthTokens>)
+      : {};
+
+  const normalizedTokens = normalizeTokens({
+    accessToken:
+      typeof tokenBag.accessToken === 'string' ? tokenBag.accessToken : undefined,
+    refreshToken:
+      typeof tokenBag.refreshToken === 'string' ? tokenBag.refreshToken : undefined,
+    access:
+      (typeof tokenBag.access === 'string' && tokenBag.access) ||
+      (typeof record.access === 'string' && record.access) ||
+      undefined,
+    refresh:
+      (typeof tokenBag.refresh === 'string' && tokenBag.refresh) ||
+      (typeof record.refresh === 'string' && record.refresh) ||
+      undefined,
+    expiresIn: tokenBag.expiresIn,
+  });
+
+  if (!record.user || typeof record.user !== 'object') {
+    throw new Error('Auth response missing user');
+  }
+
+  const normalizedUser = normalizeUser(record.user as AuthUser);
+  if (
+    normalizedUser.id === undefined ||
+    normalizedUser.id === null ||
+    normalizedUser.id === ''
+  ) {
+    throw new Error('Auth response missing user id');
+  }
+
+  return { user: normalizedUser, tokens: normalizedTokens };
+};
+
 const persistAuthResponse = async (
   response: AuthResponse
 ): Promise<AuthResponse> => {
-  const normalizedTokens = normalizeTokens(response.tokens);
-  await authStorage.setTokens(normalizedTokens);
-  return { user: normalizeUser(response.user), tokens: normalizedTokens };
+  const normalized = resolveAuthResponsePayload(response);
+  await authStorage.setTokens(normalized.tokens);
+  return normalized;
 };
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
@@ -256,6 +304,53 @@ interface TwitterOAuthStatusResponse {
   configured?: boolean;
 }
 
+type TwitterSessionOutcome =
+  | { source: 'url'; url: string }
+  | { source: 'cancel' }
+  | { source: 'dismiss' }
+  | { source: 'error'; message: string };
+
+type TwitterBrowserSessionResult = {
+  type: string;
+  url?: string;
+  error?: { message?: string } | string;
+  errorCode?: string | null;
+};
+
+const describeTwitterSessionResult = (
+  sessionResult: TwitterBrowserSessionResult
+): TwitterSessionOutcome => {
+  if (sessionResult.type === 'success' && sessionResult.url) {
+    return { source: 'url', url: sessionResult.url };
+  }
+
+  if (sessionResult.type === 'cancel') {
+    return { source: 'cancel' };
+  }
+
+  if (typeof sessionResult.url === 'string' && isTwitterAuthCallbackUrl(sessionResult.url)) {
+    return { source: 'url', url: sessionResult.url };
+  }
+
+  if (sessionResult.type === 'locked') {
+    return {
+      source: 'error',
+      message: 'X sign-in could not open because another auth session is already running.',
+    };
+  }
+
+  if (sessionResult.type === 'error' || sessionResult.error || sessionResult.errorCode) {
+    const message =
+      (typeof sessionResult.error === 'string' && sessionResult.error) ||
+      (typeof sessionResult.error === 'object' && sessionResult.error?.message) ||
+      sessionResult.errorCode ||
+      'X sign-in failed in the browser.';
+    return { source: 'error', message: String(message) };
+  }
+
+  return { source: 'dismiss' };
+};
+
 const collectTwitterCallbackUrl = async (
   authUrl: string,
   returnUrl: string
@@ -275,26 +370,31 @@ const collectTwitterCallbackUrl = async (
     const sessionPromise = WebBrowser.openAuthSessionAsync(
       authUrl,
       returnUrl
-    ).then((sessionResult) => {
-      if (sessionResult.type === 'success' && sessionResult.url) {
-        return sessionResult.url;
-      }
-      return null;
-    });
+    ).then((sessionResult) => describeTwitterSessionResult(sessionResult));
 
-    const first = await Promise.race([sessionPromise, linkingPromise]);
-    if (first) {
+    const first = await Promise.race([
+      sessionPromise,
+      linkingPromise.then((url) =>
+        isTwitterAuthCallbackUrl(url)
+          ? { source: 'url' as const, url }
+          : { source: 'dismiss' as const },
+      ),
+    ]);
+    if (first.source === 'url') {
       try {
         WebBrowser.dismissBrowser();
       } catch {
         // No browser session left to dismiss.
       }
-      return first;
+      return first.url;
     }
 
     const lateLink = await new Promise<string | null>((resolve) => {
       const timer = setTimeout(() => resolve(null), 400);
       void linkingPromise.then((url) => {
+        if (!isTwitterAuthCallbackUrl(url)) {
+          return;
+        }
         clearTimeout(timer);
         resolve(url);
       });
@@ -303,9 +403,17 @@ const collectTwitterCallbackUrl = async (
       return lateLink;
     }
 
-    throw new Error('X/Twitter sign-in was cancelled.');
+    if (first.source === 'cancel') {
+      throw new Error(TWITTER_CANCELLED_MESSAGE);
+    }
+    if (first.source === 'error') {
+      throw new Error(first.message);
+    }
+    throw new Error(TWITTER_NO_CALLBACK_MESSAGE);
   } finally {
     subscription.remove();
+    // Unblock the unused linking waiter so the process can exit.
+    resolveLink?.('');
   }
 };
 
@@ -355,9 +463,17 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 export async function loginWithGoogleIdToken(
   idToken: string
 ): Promise<AuthResponse> {
+  const trimmedToken = typeof idToken === 'string' ? idToken.trim() : '';
+  if (!trimmedToken) {
+    throw new Error(GOOGLE_MISSING_ID_TOKEN_MESSAGE);
+  }
+
   const response = await api.post<AuthResponse>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
-    id_token: idToken,
+    id_token: trimmedToken,
   });
+  if (!response.data || typeof response.data !== 'object') {
+    throw new Error('Google sign-in did not return authentication data.');
+  }
   return persistAuthResponse(response.data);
 }
 

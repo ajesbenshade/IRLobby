@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { auth as authCopy } from '@constants/copy';
+import { TWITTER_CANCELLED_MESSAGE, TWITTER_MISSING_ACCESS_MESSAGE } from '@lib/twitterAuth';
 import { LoginScreen } from '../LoginScreen';
 
 const mockNavigate = jest.fn();
@@ -11,6 +12,7 @@ const mockSignIn = jest.fn();
 const mockSignInWithTwitter = jest.fn();
 const mockSignInWithGoogleIdToken = jest.fn();
 const mockSignInWithAppleIdentityToken = jest.fn();
+const mockPromptAsync = jest.fn();
 
 jest.mock('@hooks/useAuth', () => ({
   useAuth: () => ({
@@ -21,13 +23,17 @@ jest.mock('@hooks/useAuth', () => ({
   }),
 }));
 
-jest.mock('@lib/googleAuth', () => ({
-  getGoogleAuthRequestConfig: () => ({ iosClientId: 'test.apps.googleusercontent.com' }),
-  isGoogleAuthReadyForPlatform: () => true,
-}));
+jest.mock('@lib/googleAuth', () => {
+  const actual = jest.requireActual('@lib/googleAuth') as typeof import('@lib/googleAuth');
+  return {
+    ...actual,
+    getGoogleAuthRequestConfig: () => ({ iosClientId: 'test.apps.googleusercontent.com' }),
+    isGoogleAuthReadyForPlatform: () => true,
+  };
+});
 
 jest.mock('expo-auth-session/providers/google', () => ({
-  useIdTokenAuthRequest: () => [{}, null, jest.fn()],
+  useIdTokenAuthRequest: () => [{ ready: true }, null, mockPromptAsync],
 }));
 
 jest.mock('expo-apple-authentication', () => ({
@@ -92,6 +98,7 @@ describe('LoginScreen dressed layout', () => {
     mockSignInWithTwitter.mockReset();
     mockSignInWithGoogleIdToken.mockReset();
     mockSignInWithAppleIdentityToken.mockReset();
+    mockPromptAsync.mockReset();
   });
 
   it('renders the dressed mark, tagline, equal-weight social stack, email, and legal footer', async () => {
@@ -139,5 +146,42 @@ describe('LoginScreen dressed layout', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Email')).toBeTruthy();
     });
+  });
+
+  it('shows the Google exchange error after authorize succeeds', async () => {
+    mockPromptAsync.mockResolvedValue({
+      type: 'success',
+      params: { id_token: 'google-id-token' },
+    });
+    mockSignInWithGoogleIdToken.mockRejectedValue(
+      new Error('Google sign-in could not be verified.'),
+    );
+
+    renderScreen();
+    fireEvent.press(screen.getByLabelText(authCopy.login.googleCta));
+
+    expect(
+      await screen.findByText('Google sign-in could not be verified.'),
+    ).toBeTruthy();
+    expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith('google-id-token');
+  });
+
+  it('shows MISSING_ACCESS copy when X returns without tokens', async () => {
+    mockSignInWithTwitter.mockRejectedValue(new Error(TWITTER_MISSING_ACCESS_MESSAGE));
+
+    renderScreen();
+    fireEvent.press(screen.getByLabelText(authCopy.login.twitterCta));
+
+    expect(await screen.findByText(/MISSING_ACCESS/)).toBeTruthy();
+    expect(screen.getByText(/api\.irlobby\.com\/api\/auth\/twitter\/callback/)).toBeTruthy();
+  });
+
+  it('shows cancelled copy when X auth is cancelled', async () => {
+    mockSignInWithTwitter.mockRejectedValue(new Error(TWITTER_CANCELLED_MESSAGE));
+
+    renderScreen();
+    fireEvent.press(screen.getByLabelText(authCopy.login.twitterCta));
+
+    expect(await screen.findByText(TWITTER_CANCELLED_MESSAGE)).toBeTruthy();
   });
 });

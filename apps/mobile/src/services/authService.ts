@@ -292,10 +292,13 @@ const collectTwitterCallbackUrl = async (
       return first;
     }
 
-    const lateLink = await Promise.race([
-      linkingPromise,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 400)),
-    ]);
+    const lateLink = await new Promise<string | null>((resolve) => {
+      const timer = setTimeout(() => resolve(null), 400);
+      void linkingPromise.then((url) => {
+        clearTimeout(timer);
+        resolve(url);
+      });
+    });
     if (lateLink) {
       return lateLink;
     }

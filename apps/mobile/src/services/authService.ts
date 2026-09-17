@@ -2,7 +2,11 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { API_ROUTES } from '@shared/schema';
 
-import { config } from '@constants/config';
+import {
+  getTwitterMobileRedirectUri,
+  isTwitterAuthCallbackUrl,
+  parseTwitterAuthCallbackUrl,
+} from '@lib/twitterAuth';
 import { isAllowedTwitterOAuthUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
@@ -252,21 +256,60 @@ interface TwitterOAuthStatusResponse {
   configured?: boolean;
 }
 
-const parseCallbackUser = (value: unknown) => {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new Error('Twitter sign-in response is missing user details.');
-  }
+const collectTwitterCallbackUrl = async (
+  authUrl: string,
+  returnUrl: string
+): Promise<string> => {
+  let resolveLink: ((url: string) => void) | undefined;
+  const linkingPromise = new Promise<string>((resolve) => {
+    resolveLink = resolve;
+  });
+
+  const subscription = Linking.addEventListener('url', (event) => {
+    if (isTwitterAuthCallbackUrl(event.url)) {
+      resolveLink?.(event.url);
+    }
+  });
 
   try {
-    return JSON.parse(value) as AuthUser;
-  } catch (error) {
-    throw new Error('Twitter sign-in response was not valid.');
+    const sessionPromise = WebBrowser.openAuthSessionAsync(
+      authUrl,
+      returnUrl
+    ).then((sessionResult) => {
+      if (sessionResult.type === 'success' && sessionResult.url) {
+        return sessionResult.url;
+      }
+      return null;
+    });
+
+    const first = await Promise.race([sessionPromise, linkingPromise]);
+    if (first) {
+      try {
+        WebBrowser.dismissBrowser();
+      } catch {
+        // No browser session left to dismiss.
+      }
+      return first;
+    }
+
+    const lateLink = await Promise.race([
+      linkingPromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 400)),
+    ]);
+    if (lateLink) {
+      return lateLink;
+    }
+
+    throw new Error('X/Twitter sign-in was cancelled.');
+  } finally {
+    subscription.remove();
   }
 };
 
 export async function loginWithTwitter(): Promise<AuthResponse> {
-  const returnUrl =
-    config.twitterRedirectUri?.trim() || Linking.createURL('auth/twitter');
+  // Always advertise the app scheme so the backend uses
+  // https://api.irlobby.com/api/auth/twitter/callback/ — never the apex stub.
+  const returnUrl = getTwitterMobileRedirectUri();
 
   const statusResponse = await api.get<TwitterOAuthStatusResponse>(
     API_ROUTES.AUTH_TWITTER_STATUS
@@ -289,40 +332,19 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
     throw new Error('Unable to start X/Twitter login. Please try again.');
   }
 
-  const authResult = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
-  if (authResult.type !== 'success' || !authResult.url) {
-    throw new Error('X/Twitter sign-in was cancelled.');
-  }
-
-  const parsedResult = Linking.parse(authResult.url);
-  const callbackParams = parsedResult.queryParams ?? {};
-
-  if (
-    typeof callbackParams.error === 'string' &&
-    callbackParams.error.length > 0
-  ) {
-    throw new Error(callbackParams.error);
-  }
-
-  const accessTokenValue = callbackParams.access;
-  const refreshTokenValue = callbackParams.refresh;
-  const userValue = callbackParams.user;
-
-  if (typeof accessTokenValue !== 'string' || !accessTokenValue) {
-    throw new Error(
-      'X/Twitter sign-in did not return an access token. Confirm the Twitter app callback URL includes https://api.irlobby.com/api/auth/twitter/callback/ and try again in a standalone build (not Expo Go).'
-    );
+  const callbackUrl = await collectTwitterCallbackUrl(authUrl, returnUrl);
+  const parsed = parseTwitterAuthCallbackUrl(callbackUrl);
+  if (!parsed.ok) {
+    throw new Error(parsed.error);
   }
 
   return persistAuthResponse({
-    user: parseCallbackUser(userValue),
+    user: parsed.user,
     tokens: {
-      accessToken: accessTokenValue,
-      access: accessTokenValue,
-      refreshToken:
-        typeof refreshTokenValue === 'string' ? refreshTokenValue : undefined,
-      refresh:
-        typeof refreshTokenValue === 'string' ? refreshTokenValue : undefined,
+      accessToken: parsed.access,
+      access: parsed.access,
+      refreshToken: parsed.refresh,
+      refresh: parsed.refresh,
     },
   });
 }

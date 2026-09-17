@@ -3,10 +3,12 @@ appId: com.irlobby.app
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Welcome back."
+    visible: "Get out. Get together. For real."
     timeout: 20000
-- assertVisible: "Email"
-- assertVisible: "Password"
+- assertVisible: "Continue with X"
+- assertVisible: "Continue with email"
+- assertVisible: "Terms"
+- assertVisible: "Privacy"
 - tapOn: "Forgot password?"
 - extendedWaitUntil:
     visible: "Reset password"

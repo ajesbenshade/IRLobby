@@ -20,6 +20,8 @@ export {
   motionTokens as motion,
 };
 
+export { loginGradients } from './tokens';
+
 export const appColors = {
   primary: palette.primary,
   primaryDeep: palette.primaryDeep,

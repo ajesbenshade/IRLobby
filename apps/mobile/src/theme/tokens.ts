@@ -170,3 +170,9 @@ export const brand = {
   name: sharedBrand.name,
   tagline: sharedBrand.tagline,
 } as const;
+
+/** Login canvas — matches Design “dressed” / X-in-progress frames. */
+export const loginGradients = {
+  dressed: ['#FFF8F4', '#FFE4DA', '#FFD4C6'] as const,
+  twitterProgress: ['#FF8B70', '#FF6B4A', '#E25438'] as const,
+} as const;

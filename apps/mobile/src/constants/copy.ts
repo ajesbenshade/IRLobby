@@ -40,6 +40,9 @@ export const auth = {
     emailRequired: 'Enter your email address to continue.',
     passwordRequired: 'Enter your password to continue.',
     fallbackError: 'Unable to sign in. Please try again.',
+    signInToastTitle: "Couldn't finish sign-in.",
+    signInToastBody: 'Try again.',
+    signInToastAction: 'Try again',
   },
   register: {
     eyebrow: brand.name,

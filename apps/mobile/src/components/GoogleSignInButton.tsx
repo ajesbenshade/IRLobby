@@ -1,5 +1,5 @@
 import * as Google from 'expo-auth-session/providers/google';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { SocialAuthButton } from '@components/SocialAuthButton';
@@ -16,6 +16,8 @@ type GoogleSignInButtonProps = {
   notConfiguredHint: string;
   onIdToken: (idToken: string) => Promise<unknown>;
   onError?: (error: unknown) => void;
+  /** Increment to re-run the Google prompt (login toast “Try again”). */
+  retryNonce?: number;
 };
 
 const ConfiguredGoogleSignInButton = ({
@@ -23,11 +25,40 @@ const ConfiguredGoogleSignInButton = ({
   label,
   onIdToken,
   onError,
+  retryNonce = 0,
 }: Omit<GoogleSignInButtonProps, 'notConfiguredHint'>) => {
   const [request, , promptAsync] = Google.useIdTokenAuthRequest(
     getGoogleAuthRequestConfig(),
   );
   const [isPrompting, setIsPrompting] = useState(false);
+  const inFlight = useRef(false);
+  const lastRetryNonce = useRef(0);
+
+  const startSignIn = useCallback(async () => {
+    if (disabled || !request || inFlight.current) {
+      return;
+    }
+
+    inFlight.current = true;
+    setIsPrompting(true);
+    try {
+      await completeGoogleAuthPrompt(promptAsync, onIdToken);
+    } catch (error) {
+      onError?.(error);
+      throw error;
+    } finally {
+      inFlight.current = false;
+      setIsPrompting(false);
+    }
+  }, [disabled, onError, onIdToken, promptAsync, request]);
+
+  useEffect(() => {
+    if (!retryNonce || retryNonce === lastRetryNonce.current) {
+      return;
+    }
+    lastRetryNonce.current = retryNonce;
+    void startSignIn().catch(() => undefined);
+  }, [retryNonce, startSignIn]);
 
   return (
     <SocialAuthButton
@@ -35,18 +66,8 @@ const ConfiguredGoogleSignInButton = ({
       label={label}
       disabled={disabled || !request || isPrompting}
       loading={isPrompting}
-      onPress={async () => {
-        setIsPrompting(true);
-        try {
-          await completeGoogleAuthPrompt(promptAsync, onIdToken);
-        } catch (error) {
-          onError?.(error);
-          if (!onError) {
-            throw error;
-          }
-        } finally {
-          setIsPrompting(false);
-        }
+      onPress={() => {
+        void startSignIn().catch(() => undefined);
       }}
     />
   );

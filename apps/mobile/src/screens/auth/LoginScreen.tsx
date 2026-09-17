@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoogleSignInButton } from '@components/GoogleSignInButton';
+import { AuthSignInToast } from '@components/AuthSignInToast';
 import { IrlobbyLoginMark } from '@components/IrlobbyLoginMark';
 import { View } from '@components/RNCompat';
 import { SocialAuthButton } from '@components/SocialAuthButton';
@@ -26,6 +27,7 @@ import { useAuth } from '@hooks/useAuth';
 import { appColors, appTypography, loginGradients, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
+import { isTwitterCancelledError } from '@lib/twitterAuth';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -54,6 +56,8 @@ export const LoginScreen = ({ navigation }: Props) => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [signInToast, setSignInToast] = useState<'google' | 'x' | null>(null);
+  const [googleRetryNonce, setGoogleRetryNonce] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -130,6 +134,26 @@ export const LoginScreen = ({ navigation }: Props) => {
     isPending || isTwitterPending || isGooglePending || isApplePending;
   const authError = error ?? twitterError ?? googleError ?? appleError;
 
+  const showSocialExchangeToast = useCallback((provider: 'google' | 'x') => {
+    setSignInToast(provider);
+  }, []);
+
+  const handleSocialExchangeError = useCallback(
+    (provider: 'google' | 'x', socialError: unknown) => {
+      if (provider === 'x' && isTwitterCancelledError(socialError)) {
+        setSignInToast(null);
+        setFormError(
+          getErrorMessage(socialError, authCopy.login.fallbackError),
+        );
+        return;
+      }
+
+      setFormError(getErrorMessage(socialError, authCopy.login.fallbackError));
+      showSocialExchangeToast(provider);
+    },
+    [showSocialExchangeToast],
+  );
+
   const handleSubmit = useCallback(async () => {
     if (isBusy) {
       return;
@@ -153,6 +177,7 @@ export const LoginScreen = ({ navigation }: Props) => {
     }
 
     setFormError(null);
+    setSignInToast(null);
     await mutateAsync();
   }, [email, isBusy, mutateAsync, password, passwordVisible]);
 
@@ -162,20 +187,32 @@ export const LoginScreen = ({ navigation }: Props) => {
     }
 
     setFormError(null);
+    setSignInToast(null);
     try {
       await signInWithTwitterAsync();
     } catch (twitterSignInError) {
-      setFormError(
-        getErrorMessage(twitterSignInError, authCopy.login.fallbackError),
-      );
+      handleSocialExchangeError('x', twitterSignInError);
     }
-  }, [isBusy, signInWithTwitterAsync]);
+  }, [handleSocialExchangeError, isBusy, signInWithTwitterAsync]);
+
+  const handleRetrySocialSignIn = useCallback(() => {
+    const provider = signInToast;
+    setSignInToast(null);
+    if (provider === 'google') {
+      setGoogleRetryNonce((nonce) => nonce + 1);
+      return;
+    }
+    if (provider === 'x') {
+      void handleTwitterSignIn();
+    }
+  }, [handleTwitterSignIn, signInToast]);
 
   const handleAppleSignIn = useCallback(async () => {
     if (isBusy) {
       return;
     }
 
+    setSignInToast(null);
     await signInWithAppleAsync();
   }, [isBusy, signInWithAppleAsync]);
 
@@ -245,17 +282,14 @@ export const LoginScreen = ({ navigation }: Props) => {
                 disabled={isBusy}
                 label={authCopy.login.googleCta}
                 notConfiguredHint={authCopy.login.googleNotConfigured}
+                retryNonce={googleRetryNonce}
                 onIdToken={async (idToken) => {
                   setFormError(null);
+                  setSignInToast(null);
                   await signInWithGoogleAsync(idToken);
                 }}
                 onError={(googleSignInError) => {
-                  setFormError(
-                    getErrorMessage(
-                      googleSignInError,
-                      authCopy.login.fallbackError,
-                    ),
-                  );
+                  handleSocialExchangeError('google', googleSignInError);
                 }}
               />
               <SocialAuthButton
@@ -372,6 +406,13 @@ export const LoginScreen = ({ navigation }: Props) => {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+      <AuthSignInToast
+        visible={signInToast !== null && !isTwitterPending}
+        title={authCopy.login.signInToastTitle}
+        body={authCopy.login.signInToastBody}
+        actionLabel={authCopy.login.signInToastAction}
+        onAction={handleRetrySocialSignIn}
+      />
     </LinearGradient>
   );
 };

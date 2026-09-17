@@ -28,6 +28,16 @@ export const TWITTER_MISSING_USER_MESSAGE =
 export const TWITTER_INVALID_USER_MESSAGE =
   'X sign-in response was not valid.';
 
+export function isTwitterCancelledError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.message === TWITTER_CANCELLED_MESSAGE ||
+    error.message.startsWith(`${TWITTER_CANCELLED_MESSAGE} (`)
+  );
+}
+
 export function getTwitterMobileRedirectUri(): string {
   return MOBILE_TWITTER_REDIRECT_URI;
 }

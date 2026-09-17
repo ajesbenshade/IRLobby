@@ -2,6 +2,7 @@ import {
   formatTwitterCallbackError,
   getTwitterMobileRedirectUri,
   isTwitterAuthCallbackUrl,
+  isTwitterCancelledError,
   MOBILE_TWITTER_REDIRECT_URI,
   parseTwitterAuthCallbackUrl,
   TWITTER_CANCELLED_MESSAGE,
@@ -121,6 +122,16 @@ describe('twitterAuth helpers', () => {
     );
     expect(formatTwitterCallbackError('server_error', 'try again')).toContain(
       'server_error: try again',
+    );
+  });
+
+  it('detects cancelled errors including the raw access_denied suffix', () => {
+    expect(isTwitterCancelledError(new Error(TWITTER_CANCELLED_MESSAGE))).toBe(true);
+    expect(
+      isTwitterCancelledError(new Error(`${TWITTER_CANCELLED_MESSAGE} (access_denied)`)),
+    ).toBe(true);
+    expect(isTwitterCancelledError(new Error(TWITTER_MISSING_ACCESS_MESSAGE))).toBe(
+      false,
     );
   });
 });

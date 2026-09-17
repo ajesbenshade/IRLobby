@@ -64,6 +64,34 @@ describe('GoogleSignInButton', () => {
     });
   });
 
+  it('re-runs the Google prompt when retryNonce increments', async () => {
+    mockPromptAsync.mockResolvedValue({ type: 'cancel' });
+    const onIdToken = jest.fn();
+
+    const { rerender } = render(
+      <GoogleSignInButton
+        label="Continue with Google"
+        notConfiguredHint="not configured"
+        onIdToken={onIdToken}
+        retryNonce={0}
+      />,
+    );
+
+    rerender(
+      <GoogleSignInButton
+        label="Continue with Google"
+        notConfiguredHint="not configured"
+        onIdToken={onIdToken}
+        retryNonce={1}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockPromptAsync).toHaveBeenCalledTimes(1);
+    });
+    expect(onIdToken).not.toHaveBeenCalled();
+  });
+
   it('exchanges authentication.idToken when params.id_token is missing', async () => {
     mockPromptAsync.mockResolvedValue({
       type: 'success',

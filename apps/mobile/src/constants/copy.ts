@@ -142,3 +142,20 @@ export const store = {
   description:
     `${brand.name} — ${tagline} Find real plans nearby, host your own, and turn scrolling into a night out.`,
 };
+
+export const account = {
+  settingsRowTitle: 'Account',
+  settingsRowSubtitle: 'Manage sign-in and permanently delete your account.',
+  screenEyebrow: 'Account',
+  screenTitle: 'Account',
+  screenSubtitle: 'Permanent delete only. This cannot be undone.',
+  deleteCta: 'Delete account',
+  confirmTitle: 'Delete your account?',
+  confirmBody: 'This permanently deletes your profile, matches, and chat. You can’t undo this.',
+  confirmPrimary: 'Delete account',
+  confirmCancel: 'Cancel',
+  deletedTitle: 'Account deleted',
+  deletedBody: 'Your IRLobby account is gone. You’re signed out.',
+  backToWelcome: 'Back to welcome',
+  deleteError: 'Unable to delete your account.',
+};

@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import { Alert, Share, StyleSheet } from 'react-native';
+import { Share, StyleSheet } from 'react-native';
 import { Button, HelperText, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
@@ -15,6 +16,7 @@ import {
   SectionIntro,
 } from '@components/AppChrome';
 import { View } from '@components/RNCompat';
+import { account as accountCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
@@ -22,7 +24,7 @@ import {
   deactivatePushTokens,
   registerCurrentDevicePushToken,
 } from '@services/pushNotificationService';
-import { appColors, radii, spacing } from '@theme/index';
+import { appColors, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 interface NotificationSettings {
@@ -138,24 +140,14 @@ export const SettingsScreen = () => {
     },
   });
 
-  const deleteAccountMutation = useMutation({
-    mutationFn: async () => {
-      await api.delete(API_ROUTES.USER_PROFILE_DELETE);
-    },
-    onSuccess: async () => {
-      await signOut();
-    },
-  });
-
   const settings = useMemo(() => data ?? defaultSettings, [data]);
   const isMutating = updateMutation.isPending;
-  const isBusy = isMutating || exportDataMutation.isPending || deleteAccountMutation.isPending;
+  const isBusy = isMutating || exportDataMutation.isPending;
 
   const messages = [
     error ? getErrorMessage(error, 'Unable to load settings.') : null,
     updateMutation.error ? getErrorMessage(updateMutation.error, 'Unable to save settings.') : null,
     exportDataMutation.error ? getErrorMessage(exportDataMutation.error, 'Unable to export your data.') : null,
-    deleteAccountMutation.error ? getErrorMessage(deleteAccountMutation.error, 'Unable to delete your account.') : null,
   ].filter((value): value is string => Boolean(value));
 
   const toggleSetting = (
@@ -236,26 +228,6 @@ export const SettingsScreen = () => {
     }
   };
 
-  const confirmDeleteAccount = () => {
-    Alert.alert(
-      'Delete account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteAccountMutation.mutate();
-          },
-        },
-      ],
-    );
-  };
-
   return (
     <AppScrollView contentContainerStyle={styles.container}>
       <PageHeader
@@ -264,13 +236,11 @@ export const SettingsScreen = () => {
         subtitle="Control how the app reaches you, what other people can see, and how your account behaves day to day."
         rightContent={
           <AccentPill tone="neutral">
-            {deleteAccountMutation.isPending
-              ? 'Deleting'
-              : exportDataMutation.isPending
-                ? 'Exporting'
-                : isLoading || isRefetching || isMutating
-                  ? 'Syncing'
-                  : 'Live'}
+            {exportDataMutation.isPending
+              ? 'Exporting'
+              : isLoading || isRefetching || isMutating
+                ? 'Syncing'
+                : 'Live'}
           </AccentPill>
         }
       />
@@ -283,6 +253,22 @@ export const SettingsScreen = () => {
         <Text style={styles.heroSubtitle}>
           Notification delivery, profile visibility, and distance preferences all update here without changing the rest of your profile flow.
         </Text>
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Account"
+          title="Your IRLobby account"
+          subtitle="Open Account to permanently delete your profile. Sign out stays here."
+        />
+        <DetailRow
+          title={accountCopy.settingsRowTitle}
+          subtitle={accountCopy.settingsRowSubtitle}
+          onPress={() => navigation.navigate('Account')}
+          accessory={
+            <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.softInk} />
+          }
+        />
       </PanelCard>
 
       {messages.length > 0 ? (
@@ -502,8 +488,8 @@ export const SettingsScreen = () => {
       <PanelCard tone="dark" style={styles.actionsCard}>
         <SectionIntro
           eyebrow="Account actions"
-          title="Export, sign out, or remove the account"
-          subtitle="Use these actions deliberately. Export is reversible. Delete is permanent."
+          title="Export or sign out"
+          subtitle="Use these actions deliberately. Export is reversible. Delete lives under Account."
         />
         <View style={styles.actionStack}>
           <Button
@@ -516,23 +502,6 @@ export const SettingsScreen = () => {
           </Button>
           <Button mode="outlined" textColor={appColors.white} onPress={() => void signOut()} disabled={isBusy}>
             Sign out
-          </Button>
-        </View>
-        <View style={styles.dangerBox}>
-          <Text variant="titleMedium" style={styles.dangerTitle}>
-            Permanent deletion
-          </Text>
-          <Text style={styles.dangerCopy}>
-            This removes your activities, swipes, matches, reviews, and account data. The action cannot be undone.
-          </Text>
-          <Button
-            mode="contained"
-            buttonColor={appColors.danger}
-            onPress={confirmDeleteAccount}
-            loading={deleteAccountMutation.isPending}
-            disabled={isBusy}
-          >
-            Delete account
           </Button>
         </View>
       </PanelCard>
@@ -568,21 +537,5 @@ const styles = StyleSheet.create({
   },
   actionStack: {
     gap: spacing.sm,
-  },
-  dangerBox: {
-    gap: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: '#6b1d25',
-    backgroundColor: '#231014',
-    padding: spacing.md,
-  },
-  dangerTitle: {
-    color: '#ffd7dc',
-    fontWeight: '800',
-  },
-  dangerCopy: {
-    color: '#f5bcc4',
-    lineHeight: 20,
   },
 });

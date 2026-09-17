@@ -5,6 +5,10 @@ const googleReversedClientIdScheme = googleIosClientId.endsWith('.apps.googleuse
   ? googleIosClientId.split('.').reverse().join('.')
   : undefined;
 
+/** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
+export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
+  'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'IRLobby',
@@ -57,8 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       NSCameraUsageDescription:
         'IRLobby uses the camera to scan guest tickets at the door and to capture photos for activities and profile updates.',
-      NSLocationWhenInUseUsageDescription:
-        'IRLobby uses your location to show relevant nearby activities.',
+      NSLocationWhenInUseUsageDescription: IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION,
       NSPhotoLibraryUsageDescription:
         'IRLobby needs access to your photo library to upload activity images.',
     },
@@ -97,7 +100,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-font',
-    'expo-location',
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission: IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION,
+      },
+    ],
     [
       'expo-secure-store',
       {

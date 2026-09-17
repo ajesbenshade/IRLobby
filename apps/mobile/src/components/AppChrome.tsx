@@ -2,6 +2,7 @@ import { useEffect, useRef, type ComponentType, type PropsWithChildren, type Rea
 import {
   Animated,
   Platform,
+  Pressable,
   StyleSheet,
   type ScrollViewProps,
   type StyleProp,
@@ -68,6 +69,7 @@ type DetailRowProps = {
   subtitle?: string;
   accessory?: ReactNode;
   danger?: boolean;
+  onPress?: () => void;
 };
 
 export const AppScrollView = ({ children, contentContainerStyle, refreshControl }: AppScrollViewProps) => (
@@ -118,15 +120,33 @@ export const SectionIntro = ({ eyebrow, title, subtitle }: SectionIntroProps) =>
   </View>
 );
 
-export const DetailRow = ({ title, subtitle, accessory, danger = false }: DetailRowProps) => (
-  <View style={[styles.detailRow, danger ? styles.detailRowDanger : null]}>
-    <View style={styles.detailTextBlock}>
-      <Text style={[styles.detailTitle, danger ? styles.detailTitleDanger : null]}>{title}</Text>
-      {subtitle ? <Text style={styles.detailSubtitle}>{subtitle}</Text> : null}
+export const DetailRow = ({
+  title,
+  subtitle,
+  accessory,
+  danger = false,
+  onPress,
+}: DetailRowProps) => {
+  const row = (
+    <View style={[styles.detailRow, danger ? styles.detailRowDanger : null]}>
+      <View style={styles.detailTextBlock}>
+        <Text style={[styles.detailTitle, danger ? styles.detailTitleDanger : null]}>{title}</Text>
+        {subtitle ? <Text style={styles.detailSubtitle}>{subtitle}</Text> : null}
+      </View>
+      {accessory ? <View style={styles.detailAccessory}>{accessory}</View> : null}
     </View>
-    {accessory ? <View style={styles.detailAccessory}>{accessory}</View> : null}
-  </View>
-);
+  );
+
+  if (!onPress) {
+    return row;
+  }
+
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
+      {row}
+    </Pressable>
+  );
+};
 
 export const PanelCard = ({ children, style, tone = 'default' }: PanelCardProps) => (
   <Surface

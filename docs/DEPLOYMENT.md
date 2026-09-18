@@ -22,7 +22,7 @@ Configure these groups with real secret values in the deployment environment. Do
 - Browser origins: `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `WEBSOCKET_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`
 - Email delivery: `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`
 - OAuth and mobile integrations: Twitter OAuth variables, Expo push variables, Mapbox public token, and platform-specific build variables
-- Payments and ticketing: Stripe API and webhook settings when paid activities are enabled
+- Payments and ticketing: Stripe **test-mode** Connect + Checkout settings (see below)
 - Monitoring: Sentry DSN, environment, and sampling variables when enabled
 
 Use [.env.example](../.env.example) for placeholder names. Use [EMAIL_SETUP.md](EMAIL_SETUP.md) for SMTP details.
@@ -123,6 +123,43 @@ After a production deploy, verify:
 - External Redis access is blocked
 - Email delivery works with the configured provider
 - Stripe webhooks are configured when ticketing is enabled
+
+## Stripe Connect ticket sales (TEST MODE)
+
+`api.irlobby.com` already exposes:
+
+- `GET /api/users/stripe/connect/status/`
+- `POST /api/users/stripe/connect/onboard/`
+- `POST /api/activities/{id}/buy-ticket/`
+- `GET /api/activities/tickets/my/`
+- `POST /api/activities/payments/webhook/`
+
+Existing design: Express-style Accounts v2 recipient onboarding, Checkout destination charges, 10% `application_fee_amount`. Do not put live keys in `.env.production` until Aaron greenlights live charges.
+
+Set these on Hetzner `.env.production` (or via GitHub Actions secrets that Backend Deploy upserts):
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `STRIPE_API_KEY` | yes | `sk_test_…` or `rk_test_…`. `STRIPE_SECRET_KEY` is an alias. |
+| `STRIPE_WEBHOOK_SECRET` | yes | `whsec_…` from the **test-mode** webhook endpoint |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | optional | second `whsec_…` if you also add a Connect webhook |
+| `STRIPE_PLATFORM_FEE_PERCENT` | no | `10` |
+| `STRIPE_CONNECT_COUNTRY` | no | `US` |
+| `STRIPE_REDIRECT_BASE_URL` | no | `https://api.irlobby.com` |
+| `STRIPE_ALLOW_LIVE_MODE` | yes (keep false) | `False` — live `sk_live_` / `rk_live_` keys are rejected |
+| `ENABLE_TICKETING` | no | `True` |
+
+Webhook endpoint URL (no nginx/DNS change):
+
+```text
+https://api.irlobby.com/api/activities/payments/webhook/
+```
+
+In [test-mode Developers → Webhooks](https://dashboard.stripe.com/test/webhooks) subscribe at least to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`, and `v2.core.account.updated`. The handler verifies `Stripe-Signature` and refuses events when no signing secret is configured.
+
+App-scheme return URLs (`irlobby://…`) are rewritten to HTTPS bounce pages on `api.irlobby.com` (`/stripe/connect/return`, `/tickets/success`, …) because Stripe Account Links and Checkout require http(s).
+
+Mobile Checkout does not need `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`; hosted Checkout uses the backend secret key. If you set a publishable key later, use `pk_test_…` only.
 
 ## Related docs
 

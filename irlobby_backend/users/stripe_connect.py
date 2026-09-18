@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal
+from urllib.parse import urlparse
 
 import stripe
 from django.conf import settings
+
+from utils.client_urls import to_stripe_https_return_url
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +18,26 @@ class StripeConnectError(Exception):
     """Raised when Connect account operations fail."""
 
 
+def _configured_stripe_api_key() -> str:
+    return (getattr(settings, "STRIPE_API_KEY", "") or "").strip()
+
+
+def assert_test_mode_api_key(api_key: str) -> None:
+    """Reject live-mode keys until STRIPE_ALLOW_LIVE_MODE is explicitly enabled."""
+    if api_key.startswith(("sk_live_", "rk_live_")) and not getattr(
+        settings, "STRIPE_ALLOW_LIVE_MODE", False
+    ):
+        raise StripeConnectError(
+            "Live Stripe keys are blocked. Set a sk_test_ / rk_test_ key "
+            "and keep STRIPE_ALLOW_LIVE_MODE=False until live charges are approved."
+        )
+
+
 def get_stripe_client() -> stripe.StripeClient:
-    api_key = (settings.STRIPE_API_KEY or "").strip()
+    api_key = _configured_stripe_api_key()
     if not api_key:
         raise StripeConnectError("Stripe is not configured (missing STRIPE_API_KEY).")
+    assert_test_mode_api_key(api_key)
     return stripe.StripeClient(api_key)
 
 
@@ -39,6 +58,18 @@ def platform_fee_amount_cents(ticket_price, fee_percent=None) -> int:
         )
     )
     return int((price * percent / Decimal("100") * Decimal("100")).quantize(Decimal("1")))
+
+
+def _require_http_url(url: str, label: str) -> str:
+    rewritten = to_stripe_https_return_url(url)
+    placeholder_safe = (rewritten or "").replace("{CHECKOUT_SESSION_ID}", "cs_placeholder")
+    parsed = urlparse(placeholder_safe)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise StripeConnectError(
+            f"{label} must be an http(s) URL for Stripe. "
+            "Use the IRLobby app scheme or https://api.irlobby.com/… bounce pages."
+        )
+    return rewritten
 
 
 def sync_connect_account_status(user) -> dict:
@@ -68,9 +99,7 @@ def sync_connect_account_status(user) -> dict:
     recipient = getattr(getattr(account, "configuration", None), "recipient", None)
     capabilities = getattr(recipient, "capabilities", None) if recipient else None
     stripe_balance = getattr(capabilities, "stripe_balance", None) if capabilities else None
-    transfers = (
-        getattr(stripe_balance, "stripe_transfers", None) if stripe_balance else None
-    )
+    transfers = getattr(stripe_balance, "stripe_transfers", None) if stripe_balance else None
     transfers_status = getattr(transfers, "status", None) if transfers else None
     payouts_enabled = transfers_status == "active"
 
@@ -142,6 +171,8 @@ def ensure_connect_account(user) -> str:
                     "capabilities": {
                         "stripe_balance": {
                             "stripe_transfers": {"requested": True},
+                            # SDK TypedDict lags Accounts v2; payouts is a valid recipient cap.
+                            "payouts": {"requested": True},  # type: ignore[typeddict-unknown-key]
                         }
                     }
                 }
@@ -168,8 +199,14 @@ def ensure_connect_account(user) -> str:
 def create_connect_onboarding_link(user, *, return_url=None, refresh_url=None) -> str:
     account_id = ensure_connect_account(user)
     client = get_stripe_client()
-    return_url = return_url or settings.STRIPE_CONNECT_RETURN_URL
-    refresh_url = refresh_url or settings.STRIPE_CONNECT_REFRESH_URL
+    return_url = _require_http_url(
+        return_url or settings.STRIPE_CONNECT_RETURN_URL,
+        "Connect return URL",
+    )
+    refresh_url = _require_http_url(
+        refresh_url or settings.STRIPE_CONNECT_REFRESH_URL,
+        "Connect refresh URL",
+    )
 
     link = client.v2.core.account_links.create(
         {
@@ -184,7 +221,64 @@ def create_connect_onboarding_link(user, *, return_url=None, refresh_url=None) -
             },
         }
     )
-    url = getattr(link, "url", None) or (link.get("url") if isinstance(link, dict) else None)
+    url = getattr(link, "url", None)
+    if not url and isinstance(link, dict):
+        url = link.get("url")
     if not url:
         raise StripeConnectError("Stripe did not return an onboarding URL.")
     return url
+
+
+def create_destination_checkout_session(
+    *,
+    activity,
+    ticket,
+    host,
+    success_url: str,
+    cancel_url: str,
+    application_fee_amount: int,
+    fee_percent,
+):
+    """Create a Checkout Session that destination-charges the connected host."""
+    client = get_stripe_client()
+    success_url = _require_http_url(success_url, "Checkout success URL")
+    cancel_url = _require_http_url(cancel_url, "Checkout cancel URL")
+    unit_amount = int((Decimal(str(activity.ticket_price)) * Decimal("100")).quantize(Decimal("1")))
+
+    return client.v1.checkout.sessions.create(
+        {
+            "mode": "payment",
+            "line_items": [
+                {
+                    "price_data": {
+                        "currency": (activity.currency or "usd").lower(),
+                        "product_data": {
+                            "name": f"Ticket for {activity.title}",
+                            "description": (activity.description or "")[:200],
+                        },
+                        "unit_amount": unit_amount,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            "payment_intent_data": {
+                "application_fee_amount": application_fee_amount,
+                "transfer_data": {
+                    "destination": host.stripe_connect_account_id,
+                },
+                "metadata": {
+                    "ticket_id": str(ticket.ticket_id),
+                    "activity_id": str(activity.id),
+                    "host_id": str(host.id),
+                },
+            },
+            "metadata": {
+                "ticket_id": str(ticket.ticket_id),
+                "activity_id": str(activity.id),
+                "host_id": str(host.id),
+                "platform_fee_percent": str(fee_percent),
+            },
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        }
+    )

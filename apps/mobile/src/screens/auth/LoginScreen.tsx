@@ -24,10 +24,9 @@ import { Field } from '@components/ui/Field';
 import { config } from '@constants/config';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
-import { appColors, appTypography, loginGradients, radii, spacing } from '@theme/index';
+import { appColors, appTypography, loginGradients, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
-import { isTwitterCancelledError } from '@lib/twitterAuth';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -49,14 +48,13 @@ export const LoginScreen = ({ navigation }: Props) => {
     signIn,
     signInWithAppleIdentityToken,
     signInWithGoogleIdToken,
-    signInWithTwitter,
   } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
-  const [signInToast, setSignInToast] = useState<'google' | 'x' | null>(null);
+  const [signInToast, setSignInToast] = useState<'google' | null>(null);
   const [googleRetryNonce, setGoogleRetryNonce] = useState(0);
 
   useEffect(() => {
@@ -82,14 +80,6 @@ export const LoginScreen = ({ navigation }: Props) => {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: () => signIn({ email: email.trim().toLowerCase(), password }),
-  });
-
-  const {
-    mutateAsync: signInWithTwitterAsync,
-    isPending: isTwitterPending,
-    error: twitterError,
-  } = useMutation({
-    mutationFn: () => signInWithTwitter(),
   });
 
   const {
@@ -130,26 +120,17 @@ export const LoginScreen = ({ navigation }: Props) => {
     },
   });
 
-  const isBusy =
-    isPending || isTwitterPending || isGooglePending || isApplePending;
-  const authError = error ?? twitterError ?? googleError ?? appleError;
+  const isBusy = isPending || isGooglePending || isApplePending;
+  const authError = error ?? googleError ?? appleError;
 
-  const showSocialExchangeToast = useCallback((provider: 'google' | 'x') => {
-    setSignInToast(provider);
+  const showSocialExchangeToast = useCallback(() => {
+    setSignInToast('google');
   }, []);
 
   const handleSocialExchangeError = useCallback(
-    (provider: 'google' | 'x', socialError: unknown) => {
-      if (provider === 'x' && isTwitterCancelledError(socialError)) {
-        setSignInToast(null);
-        setFormError(
-          getErrorMessage(socialError, authCopy.login.fallbackError),
-        );
-        return;
-      }
-
+    (socialError: unknown) => {
       setFormError(getErrorMessage(socialError, authCopy.login.fallbackError));
-      showSocialExchangeToast(provider);
+      showSocialExchangeToast();
     },
     [showSocialExchangeToast],
   );
@@ -181,31 +162,10 @@ export const LoginScreen = ({ navigation }: Props) => {
     await mutateAsync();
   }, [email, isBusy, mutateAsync, password, passwordVisible]);
 
-  const handleTwitterSignIn = useCallback(async () => {
-    if (isBusy) {
-      return;
-    }
-
-    setFormError(null);
-    setSignInToast(null);
-    try {
-      await signInWithTwitterAsync();
-    } catch (twitterSignInError) {
-      handleSocialExchangeError('x', twitterSignInError);
-    }
-  }, [handleSocialExchangeError, isBusy, signInWithTwitterAsync]);
-
   const handleRetrySocialSignIn = useCallback(() => {
-    const provider = signInToast;
     setSignInToast(null);
-    if (provider === 'google') {
-      setGoogleRetryNonce((nonce) => nonce + 1);
-      return;
-    }
-    if (provider === 'x') {
-      void handleTwitterSignIn();
-    }
-  }, [handleTwitterSignIn, signInToast]);
+    setGoogleRetryNonce((nonce) => nonce + 1);
+  }, []);
 
   const handleAppleSignIn = useCallback(async () => {
     if (isBusy) {
@@ -215,44 +175,6 @@ export const LoginScreen = ({ navigation }: Props) => {
     setSignInToast(null);
     await signInWithAppleAsync();
   }, [isBusy, signInWithAppleAsync]);
-
-  if (isTwitterPending) {
-    return (
-      <LinearGradient colors={[...loginGradients.twitterProgress]} style={styles.root}>
-        <StatusBar barStyle="light-content" />
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <View style={styles.progressInner}>
-            <Text style={styles.progressEyebrow}>{authCopy.login.eyebrow}</Text>
-            <View style={styles.progressMark}>
-              <View style={styles.smiley}>
-                <Text style={styles.smileyFace}>☺</Text>
-              </View>
-              <IrlobbyLoginMark inverted />
-              <Text style={styles.progressLockup}>Meet in real life</Text>
-            </View>
-            <View style={styles.progressCard}>
-              <View style={styles.progressCopy}>
-                <Text style={styles.progressTitle}>{authCopy.login.twitterProgressTitle}</Text>
-                <Text style={styles.progressBody}>{authCopy.login.twitterProgressBody}</Text>
-              </View>
-              <SocialAuthButton
-                provider="x"
-                label={authCopy.login.twitterCta}
-                loading
-                keepLabelWhileLoading
-                appearance="onLight"
-                style={styles.progressCta}
-              />
-            </View>
-            <View style={styles.progressNoteRow}>
-              <MaterialCommunityIcons name="lock-outline" size={14} color="rgba(255,255,255,0.86)" />
-              <Text style={styles.progressNote}>{authCopy.login.twitterProgressNote}</Text>
-            </View>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
 
   return (
     <LinearGradient colors={[...loginGradients.dressed]} style={styles.root}>
@@ -289,15 +211,8 @@ export const LoginScreen = ({ navigation }: Props) => {
                   await signInWithGoogleAsync(idToken);
                 }}
                 onError={(googleSignInError) => {
-                  handleSocialExchangeError('google', googleSignInError);
+                  handleSocialExchangeError(googleSignInError);
                 }}
-              />
-              <SocialAuthButton
-                provider="x"
-                label={authCopy.login.twitterCta}
-                onPress={handleTwitterSignIn}
-                disabled={isBusy}
-                loading={isTwitterPending}
               />
 
               <View style={styles.orRow}>
@@ -407,7 +322,7 @@ export const LoginScreen = ({ navigation }: Props) => {
         </SafeAreaView>
       </KeyboardAvoidingView>
       <AuthSignInToast
-        visible={signInToast !== null && !isTwitterPending}
+        visible={signInToast !== null}
         title={authCopy.login.signInToastTitle}
         body={
           signInToast === 'google' && formError
@@ -508,84 +423,5 @@ const styles = StyleSheet.create({
   footerPrompt: {
     color: appColors.mutedInk,
     fontSize: 14,
-  },
-  progressInner: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  progressEyebrow: {
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-  },
-  progressMark: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  smiley: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  smileyFace: {
-    fontSize: 28,
-    color: appColors.primary,
-  },
-  progressLockup: {
-    color: 'rgba(255,255,255,0.86)',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-  },
-  progressCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: 'rgba(255, 248, 244, 0.94)',
-    borderRadius: radii.xl,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  progressCopy: {
-    flex: 1,
-    gap: 6,
-  },
-  progressTitle: {
-    color: appColors.ink,
-    fontFamily: appTypography.heading,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  progressBody: {
-    color: appColors.mutedInk,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  progressCta: {
-    minWidth: 168,
-    backgroundColor: appColors.white,
-    borderWidth: 1,
-    borderColor: appColors.ink,
-  },
-  progressNoteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  progressNote: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
-    fontWeight: '600',
   },
 });

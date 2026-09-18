@@ -36,7 +36,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
     signUp,
     signInWithAppleIdentityToken,
     signInWithGoogleIdToken,
-    signInWithTwitter,
   } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -97,18 +96,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
   });
 
   const {
-    mutateAsync: signInWithTwitterAsync,
-    isPending: isTwitterPending,
-    error: twitterError,
-  } = useMutation({
-    mutationFn: async () => {
-      const result = await signInWithTwitter();
-      await persistLegalAcceptance();
-      return result;
-    },
-  });
-
-  const {
     mutateAsync: signInWithGoogleAsync,
     isPending: isGooglePending,
     error: googleError,
@@ -152,9 +139,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
     },
   });
 
-  const isBusy =
-    isPending || isTwitterPending || isGooglePending || isApplePending;
-  const authError = socialError ?? error ?? twitterError ?? googleError ?? appleError;
+  const isBusy = isPending || isGooglePending || isApplePending;
+  const authError = socialError ?? error ?? googleError ?? appleError;
 
   const openLegalUrl = (url: string) => {
     if (!isAllowedIrlobbyUrl(url)) {
@@ -170,19 +156,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
     await mutateAsync();
   }, [isFormValid, isBusy, mutateAsync]);
-
-  const handleTwitterSignIn = useCallback(async () => {
-    if (isBusy || !acceptedLegal) {
-      return;
-    }
-
-    setSocialError(null);
-    try {
-      await signInWithTwitterAsync();
-    } catch (twitterSignInError) {
-      setSocialError(twitterSignInError);
-    }
-  }, [acceptedLegal, isBusy, signInWithTwitterAsync]);
 
   const handleAppleSignIn = useCallback(async () => {
     if (isBusy || !acceptedLegal) {
@@ -298,24 +271,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
         <View style={styles.oauthSection}>
           <View style={styles.divider} />
-          <AppButton
-            variant="social"
-            onPress={handleTwitterSignIn}
-            disabled={isBusy || !acceptedLegal}
-            loading={isTwitterPending}
-          >
-            {authCopy.register.twitterCta}
-          </AppButton>
-          <GoogleSignInButton
-            disabled={isBusy || !acceptedLegal}
-            label={authCopy.register.googleCta}
-            notConfiguredHint={authCopy.register.googleNotConfigured}
-            onIdToken={async (idToken) => {
-              setSocialError(null);
-              await signInWithGoogleAsync(idToken);
-            }}
-            onError={setSocialError}
-          />
           {isAppleAvailable ? (
             <AppButton
               variant="social"
@@ -326,6 +281,16 @@ export const RegisterScreen = ({ navigation }: Props) => {
               {authCopy.register.appleCta}
             </AppButton>
           ) : null}
+          <GoogleSignInButton
+            disabled={isBusy || !acceptedLegal}
+            label={authCopy.register.googleCta}
+            notConfiguredHint={authCopy.register.googleNotConfigured}
+            onIdToken={async (idToken) => {
+              setSocialError(null);
+              await signInWithGoogleAsync(idToken);
+            }}
+            onError={setSocialError}
+          />
         </View>
       </View>
     </AuthShell>

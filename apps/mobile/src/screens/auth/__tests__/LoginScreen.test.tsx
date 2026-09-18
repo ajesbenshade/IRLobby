@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { auth as authCopy } from '@constants/copy';
-import { TWITTER_CANCELLED_MESSAGE, TWITTER_MISSING_ACCESS_MESSAGE } from '@lib/twitterAuth';
 import { LoginScreen } from '../LoginScreen';
 
 const mockNavigate = jest.fn();
@@ -116,13 +115,14 @@ describe('LoginScreen dressed layout', () => {
     mockPromptAsync.mockReset();
   });
 
-  it('renders the dressed mark, tagline, equal-weight social stack, email, and legal footer', async () => {
+  it('renders the dressed mark, tagline, Google social stack, email, and legal footer', async () => {
     renderScreen();
 
     expect(screen.getByText(authCopy.login.subtitle)).toBeTruthy();
     expect(await screen.findByLabelText(authCopy.login.appleCta)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
-    expect(screen.getByLabelText(authCopy.login.twitterCta)).toBeTruthy();
+    expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
+    expect(screen.queryByText(authCopy.login.twitterCta)).toBeNull();
     expect(screen.getByLabelText('Email')).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.primaryCta)).toBeTruthy();
     expect(screen.getByText(authCopy.login.legalTerms)).toBeTruthy();
@@ -140,27 +140,12 @@ describe('LoginScreen dressed layout', () => {
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  it('shows the X-in-progress state while Twitter auth is running', async () => {
-    let resolveTwitter: (value: unknown) => void = () => undefined;
-    mockSignInWithTwitter.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveTwitter = resolve;
-        }),
-    );
-
+  it('does not start X OAuth from the login screen', async () => {
     renderScreen();
-    fireEvent.press(screen.getByLabelText(authCopy.login.twitterCta));
 
-    expect(await screen.findByText(authCopy.login.twitterProgressTitle)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.twitterProgressBody)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.twitterProgressNote)).toBeTruthy();
-    expect(screen.queryByLabelText('Email')).toBeNull();
-
-    resolveTwitter({ id: 1, email: 'alex@irlobby.com' });
-    await waitFor(() => {
-      expect(screen.getByLabelText('Email')).toBeTruthy();
-    });
+    expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
+    expect(screen.queryByText(authCopy.login.twitterProgressTitle)).toBeNull();
+    expect(mockSignInWithTwitter).not.toHaveBeenCalled();
   });
 
   it('shows the Google 400 detail in the toast after authorize succeeds', async () => {
@@ -188,7 +173,7 @@ describe('LoginScreen dressed layout', () => {
     ).toBeTruthy();
     expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith(idToken);
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
-    expect(screen.getByLabelText(authCopy.login.twitterCta)).toBeTruthy();
+    expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
   });
 
   it('retries Google from the toast Try again action', async () => {
@@ -209,26 +194,5 @@ describe('LoginScreen dressed layout', () => {
     await waitFor(() => {
       expect(mockPromptAsync).toHaveBeenCalledTimes(2);
     });
-  });
-
-  it('shows MISSING_ACCESS copy when X returns without tokens', async () => {
-    mockSignInWithTwitter.mockRejectedValue(new Error(TWITTER_MISSING_ACCESS_MESSAGE));
-
-    renderScreen();
-    fireEvent.press(screen.getByLabelText(authCopy.login.twitterCta));
-
-    expect(await screen.findByText(authCopy.login.signInToastTitle)).toBeTruthy();
-    expect(await screen.findByText(/MISSING_ACCESS/)).toBeTruthy();
-    expect(screen.getByText(/api\.irlobby\.com\/api\/auth\/twitter\/callback/)).toBeTruthy();
-  });
-
-  it('shows cancelled copy when X auth is cancelled without the exchange toast', async () => {
-    mockSignInWithTwitter.mockRejectedValue(new Error(TWITTER_CANCELLED_MESSAGE));
-
-    renderScreen();
-    fireEvent.press(screen.getByLabelText(authCopy.login.twitterCta));
-
-    expect(await screen.findByText(TWITTER_CANCELLED_MESSAGE)).toBeTruthy();
-    expect(screen.queryByText(authCopy.login.signInToastTitle)).toBeNull();
   });
 });

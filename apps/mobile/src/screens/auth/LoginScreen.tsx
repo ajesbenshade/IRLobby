@@ -191,6 +191,7 @@ export const LoginScreen = ({ navigation }: Props) => {
             </View>
 
             <View style={styles.stack}>
+              <Text style={styles.heading}>{authCopy.login.title}</Text>
               {isAppleAvailable ? (
                 <SocialAuthButton
                   provider="apple"
@@ -281,22 +282,24 @@ export const LoginScreen = ({ navigation }: Props) => {
                 onPress={handleSubmit}
                 disabled={isBusy}
                 loading={isPending}
+                showTrailingIcon={false}
               />
 
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={authCopy.login.forgotPassword}
-                onPress={() => navigation.navigate('ForgotPassword')}
-                disabled={isBusy}
-                style={styles.forgotWrap}
-              >
-                <Text style={styles.forgotText}>{authCopy.login.forgotPassword}</Text>
-              </Pressable>
+              {passwordVisible ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={authCopy.login.forgotPassword}
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                  disabled={isBusy}
+                  style={styles.forgotWrap}
+                >
+                  <Text style={styles.forgotText}>{authCopy.login.forgotPassword}</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             <View style={styles.footer}>
               <Text style={styles.legalText}>
-                {authCopy.login.legalPrefix}{' '}
                 <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
                   {authCopy.login.legalTerms}
                 </Text>
@@ -345,24 +348,33 @@ const styles = StyleSheet.create({
   },
   dressedInner: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 28,
     paddingVertical: spacing.xl,
-    maxWidth: 460,
+    maxWidth: 420,
     width: '100%',
     alignSelf: 'center',
     justifyContent: 'center',
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   hero: {
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
   },
   tagline: {
-    color: appColors.mutedInk,
+    color: appColors.primary,
     fontFamily: appTypography.bodyMedium,
     fontSize: 16,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  heading: {
+    color: appColors.ink,
+    fontFamily: appTypography.heading,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   stack: {
     gap: 12,

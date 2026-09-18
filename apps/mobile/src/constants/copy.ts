@@ -16,7 +16,7 @@ export const tagline = brand.tagline; // "Get out. Get together."
 export const auth = {
   login: {
     eyebrow: brand.name,
-    title: 'Welcome back.',
+    title: 'Login',
     subtitle: 'Get out. Get together. For real.',
     pillText: 'Real plans, real fast',
     primaryCta: 'Continue with email',
@@ -25,7 +25,7 @@ export const auth = {
     appleCta: 'Continue with Apple',
     googleNotConfigured:
       'Google sign-in is not configured on this build yet.',
-    emailPlaceholder: 'Email address',
+    emailPlaceholder: 'Email',
     passwordPlaceholder: 'Password',
     orDivider: 'or',
     forgotPassword: 'Forgot password?',

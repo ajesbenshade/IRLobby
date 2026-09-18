@@ -115,19 +115,22 @@ describe('LoginScreen dressed layout', () => {
     mockPromptAsync.mockReset();
   });
 
-  it('renders the dressed mark, tagline, Google social stack, email, and legal footer', async () => {
+  it('renders the dressed mark, Login heading, Apple + Google + email, and Terms & Privacy', async () => {
     renderScreen();
 
     expect(screen.getByText(authCopy.login.subtitle)).toBeTruthy();
+    expect(screen.getByText(authCopy.login.title)).toBeTruthy();
     expect(await screen.findByLabelText(authCopy.login.appleCta)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
     expect(screen.queryByText(authCopy.login.twitterCta)).toBeNull();
     expect(screen.getByLabelText('Email')).toBeTruthy();
+    expect(screen.getByPlaceholderText(authCopy.login.emailPlaceholder)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.primaryCta)).toBeTruthy();
     expect(screen.getByText(authCopy.login.legalTerms)).toBeTruthy();
     expect(screen.getByText(authCopy.login.legalPrivacy)).toBeTruthy();
-    expect(screen.queryByText(authCopy.login.title)).toBeNull();
+    expect(screen.queryByText(authCopy.login.legalPrefix)).toBeNull();
+    expect(screen.queryByLabelText(authCopy.login.forgotPassword)).toBeNull();
   });
 
   it('reveals the password field after Continue with email', async () => {
@@ -137,6 +140,7 @@ describe('LoginScreen dressed layout', () => {
     fireEvent.press(screen.getByLabelText(authCopy.login.primaryCta));
 
     expect(await screen.findByLabelText('Password')).toBeTruthy();
+    expect(screen.getByLabelText(authCopy.login.forgotPassword)).toBeTruthy();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 

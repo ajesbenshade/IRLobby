@@ -75,7 +75,7 @@ Google Cloud Console setup (bundle/package `com.irlobby.app`):
 1. Create an **iOS** OAuth client (bundle ID `com.irlobby.app`).
 2. Create an **Android** OAuth client (package `com.irlobby.app` + SHA-1 from `eas credentials`).
 3. Create a **Web** OAuth client (used as `webClientId` for ID token audience).
-4. Put all three IDs into backend `GOOGLE_OAUTH_CLIENT_IDS` (comma-separated) and the matching `EXPO_PUBLIC_GOOGLE_*` vars.
+4. Put all three IDs into backend `GOOGLE_OAUTH_CLIENT_IDS` (comma-separated) **and** the matching `EXPO_PUBLIC_GOOGLE_*` vars. The mobile exchange uses the iOS/Android client as `aud` after the native code exchange, and may also use the web client ID. Missing IDs produce a toast that names the token audience.
 
 ### Production verification (2026-07-09)
 

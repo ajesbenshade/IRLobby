@@ -419,8 +419,22 @@ def google_mobile_login(request):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    if id_token_value.count(".") != 2:
+        return build_auth_error(
+            "Google identity token is malformed. Send an OpenID id_token JWT, not an access token or auth code."
+        )
+
     try:
         payload = verify_google_identity_token(id_token_value)
+    except ValueError as error:
+        logger.warning("Google mobile login failed: %s", error)
+        message = str(error).strip() or "Google sign-in could not be verified."
+        status_code = (
+            status.HTTP_401_UNAUTHORIZED
+            if "audience" in message.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        return build_auth_error(message, status_code=status_code)
     except Exception as error:
         logger.warning("Google mobile login failed: %s", error)
         return build_auth_error("Google sign-in could not be verified.")

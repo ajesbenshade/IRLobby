@@ -1,11 +1,12 @@
 import * as Google from 'expo-auth-session/providers/google';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { SocialAuthButton } from '@components/SocialAuthButton';
 import {
   completeGoogleAuthPrompt,
   getGoogleAuthRequestConfig,
+  getGoogleNativeRedirectUriOptions,
   isGoogleAuthReadyForPlatform,
 } from '@lib/googleAuth';
 import { appColors } from '@theme/index';
@@ -27,8 +28,14 @@ const ConfiguredGoogleSignInButton = ({
   onError,
   retryNonce = 0,
 }: Omit<GoogleSignInButtonProps, 'notConfiguredHint'>) => {
+  const requestConfig = useMemo(() => getGoogleAuthRequestConfig(), []);
+  const redirectUriOptions = useMemo(
+    () => getGoogleNativeRedirectUriOptions(),
+    [],
+  );
   const [request, , promptAsync] = Google.useIdTokenAuthRequest(
-    getGoogleAuthRequestConfig(),
+    requestConfig,
+    redirectUriOptions,
   );
   const [isPrompting, setIsPrompting] = useState(false);
   const inFlight = useRef(false);
@@ -42,7 +49,7 @@ const ConfiguredGoogleSignInButton = ({
     inFlight.current = true;
     setIsPrompting(true);
     try {
-      await completeGoogleAuthPrompt(promptAsync, onIdToken);
+      await completeGoogleAuthPrompt(promptAsync, onIdToken, { request });
     } catch (error) {
       onError?.(error);
       throw error;

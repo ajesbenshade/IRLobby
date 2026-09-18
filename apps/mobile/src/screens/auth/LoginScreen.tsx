@@ -409,7 +409,11 @@ export const LoginScreen = ({ navigation }: Props) => {
       <AuthSignInToast
         visible={signInToast !== null && !isTwitterPending}
         title={authCopy.login.signInToastTitle}
-        body={authCopy.login.signInToastBody}
+        body={
+          signInToast === 'google' && formError
+            ? formError
+            : authCopy.login.signInToastBody
+        }
         actionLabel={authCopy.login.signInToastAction}
         onAction={handleRetrySocialSignIn}
       />

@@ -14,6 +14,20 @@ const mockSignInWithGoogleIdToken = jest.fn();
 const mockSignInWithAppleIdentityToken = jest.fn();
 const mockPromptAsync = jest.fn();
 
+const googleIdToken = () => {
+  const encode = (value: object) =>
+    Buffer.from(JSON.stringify(value))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  return `${encode({ alg: 'none' })}.${encode({
+    iss: 'https://accounts.google.com',
+    aud: 'web.apps.googleusercontent.com',
+    sub: 'google-sub',
+  })}.sig`;
+};
+
 jest.mock('@hooks/useAuth', () => ({
   useAuth: () => ({
     signIn: mockSignIn,
@@ -28,6 +42,7 @@ jest.mock('@lib/googleAuth', () => {
   return {
     ...actual,
     getGoogleAuthRequestConfig: () => ({ iosClientId: 'test.apps.googleusercontent.com' }),
+    getGoogleNativeRedirectUriOptions: () => undefined,
     isGoogleAuthReadyForPlatform: () => true,
   };
 });
@@ -148,25 +163,30 @@ describe('LoginScreen dressed layout', () => {
     });
   });
 
-  it('shows the Google exchange error after authorize succeeds', async () => {
+  it('shows the Google 400 detail in the toast after authorize succeeds', async () => {
+    const idToken = googleIdToken();
     mockPromptAsync.mockResolvedValue({
       type: 'success',
-      params: { id_token: 'google-id-token' },
+      params: { id_token: idToken },
     });
     mockSignInWithGoogleIdToken.mockRejectedValue(
-      new Error('Google sign-in could not be verified.'),
+      new Error('Google identity token is required.'),
     );
 
     renderScreen();
     fireEvent.press(screen.getByLabelText(authCopy.login.googleCta));
 
     expect(await screen.findByText(authCopy.login.signInToastTitle)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.signInToastBody)).toBeTruthy();
+    expect(
+      screen.getAllByText('Google identity token is required.').length,
+    ).toBeGreaterThanOrEqual(2);
     expect(screen.getByLabelText(authCopy.login.signInToastAction)).toBeTruthy();
     expect(
-      await screen.findByText('Google sign-in could not be verified.'),
+      screen.getByLabelText(
+        `${authCopy.login.signInToastTitle} Google identity token is required.`,
+      ),
     ).toBeTruthy();
-    expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith('google-id-token');
+    expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith(idToken);
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.twitterCta)).toBeTruthy();
   });
@@ -174,10 +194,10 @@ describe('LoginScreen dressed layout', () => {
   it('retries Google from the toast Try again action', async () => {
     mockPromptAsync.mockResolvedValue({
       type: 'success',
-      params: { id_token: 'google-id-token' },
+      params: { id_token: googleIdToken() },
     });
     mockSignInWithGoogleIdToken.mockRejectedValue(
-      new Error('Google sign-in could not be verified.'),
+      new Error('Google identity token is required.'),
     );
 
     renderScreen();

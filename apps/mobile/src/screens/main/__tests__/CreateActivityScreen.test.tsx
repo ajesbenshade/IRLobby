@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { CreateActivityScreen } from '../CreateActivityScreen';
@@ -51,7 +51,7 @@ jest.mock('@expo/vector-icons', () => ({
 
 const renderScreen = () => {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false, gcTime: 0, enabled: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
@@ -61,10 +61,11 @@ const renderScreen = () => {
 };
 
 describe('CreateActivityScreen ticketed toggle', () => {
-  it('defaults to a non-ticketed event with ticket fields hidden and Publish as the CTA', () => {
+  it('defaults to a non-ticketed event with ticket fields hidden and Publish as the CTA', async () => {
     renderScreen();
 
-    expect(screen.getByLabelText('Ticketed event')).toHaveProp('value', false);
+    const ticketedToggle = await screen.findByLabelText('Ticketed event');
+    expect(ticketedToggle.props.value).toBe(false);
     expect(screen.queryByLabelText('Ticket price')).toBeNull();
     expect(screen.queryByText('Require QR check-in')).toBeNull();
     expect(screen.queryByText(/IRLobby takes 10%/)).toBeNull();
@@ -72,12 +73,14 @@ describe('CreateActivityScreen ticketed toggle', () => {
     expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
   });
 
-  it('reveals ticket fields and the ticketed publish CTA when the toggle is on', () => {
+  it('reveals ticket fields and the ticketed publish CTA when the toggle is on', async () => {
     renderScreen();
 
-    fireEvent(screen.getByLabelText('Ticketed event'), 'valueChange', true);
+    fireEvent(await screen.findByLabelText('Ticketed event'), 'valueChange', true);
 
-    expect(screen.getByLabelText('Ticket price')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Ticket price')).toBeTruthy();
+    });
     expect(screen.getByLabelText('Capacity')).toBeTruthy();
     expect(screen.getByText('Require QR check-in')).toBeTruthy();
     expect(screen.getByText(/IRLobby takes 10%/)).toBeTruthy();

@@ -1,24 +1,15 @@
 import { Platform } from 'react-native';
 
-const mockConfig = {
-  googleExpoClientId: undefined as string | undefined,
-  googleIosClientId: 'ios-123.apps.googleusercontent.com',
-  googleAndroidClientId: 'android-123.apps.googleusercontent.com',
-  googleWebClientId: 'web-123.apps.googleusercontent.com',
-};
-
 jest.mock('@constants/config', () => ({
-  pickConfigString: (...values: unknown[]) => {
-    for (const value of values) {
-      if (typeof value === 'string' && value.trim()) {
-        return value.trim();
-      }
-    }
-    return undefined;
+  config: {
+    googleExpoClientId: undefined as string | undefined,
+    googleIosClientId: 'ios-123.apps.googleusercontent.com',
+    googleAndroidClientId: 'android-123.apps.googleusercontent.com',
+    googleWebClientId: 'web-123.apps.googleusercontent.com',
   },
-  config: mockConfig,
 }));
 
+import { config } from '@constants/config';
 import {
   completeGoogleAuthPrompt,
   describeMissingGoogleIdToken,
@@ -32,6 +23,13 @@ import {
   unwrapGoogleAuthPayload,
   wrapGoogleExchangeError,
 } from '../googleAuth';
+
+const mockConfig = config as {
+  googleExpoClientId?: string;
+  googleIosClientId?: string;
+  googleAndroidClientId?: string;
+  googleWebClientId?: string;
+};
 
 const makeJwt = (payload: Record<string, unknown>) => {
   const encode = (value: object) =>

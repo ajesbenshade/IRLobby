@@ -477,7 +477,7 @@ export async function loginWithGoogleIdToken(
       id_token: trimmedToken,
     });
     const payload = unwrapGoogleAuthPayload(response.data);
-    return persistAuthResponse(payload as AuthResponse);
+    return persistAuthResponse(payload as unknown as AuthResponse);
   } catch (error) {
     throw wrapGoogleExchangeError(error, trimmedToken);
   }

@@ -1,10 +1,13 @@
 import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
 
-import { config, pickConfigString } from '@constants/config';
+import { config } from '@constants/config';
 import { getErrorMessage } from '@utils/error';
 
-const trimId = (value?: string) => pickConfigString(value);
+const trimId = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
 
 export const reverseGoogleIosClientIdScheme = (clientId?: string) => {
   const trimmed = trimId(clientId);

@@ -28,6 +28,7 @@ jest.mock('@lib/googleAuth', () => {
   return {
     ...actual,
     getGoogleAuthRequestConfig: () => ({ iosClientId: 'test.apps.googleusercontent.com' }),
+    getGoogleNativeRedirectUriOptions: () => undefined,
     isGoogleAuthReadyForPlatform: () => true,
   };
 });
@@ -162,9 +163,14 @@ describe('LoginScreen dressed layout', () => {
 
     expect(await screen.findByText(authCopy.login.signInToastTitle)).toBeTruthy();
     expect(
-      screen.getByText('Google sign-in could not be verified.'),
+      screen.getAllByText('Google sign-in could not be verified.').length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText(authCopy.login.signInToastAction)).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        `${authCopy.login.signInToastTitle} Google sign-in could not be verified.`,
+      ),
     ).toBeTruthy();
-    expect(screen.getByLabelText(`${authCopy.login.signInToastTitle} Google sign-in could not be verified.`)).toBeTruthy();
     expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith('google-id-token');
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.twitterCta)).toBeTruthy();

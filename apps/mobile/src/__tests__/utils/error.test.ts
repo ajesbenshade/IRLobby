@@ -48,4 +48,11 @@ describe('getErrorMessage', () => {
     const error = makeAxiosError(503, { error: 'Google OAuth is not configured.' });
     expect(getErrorMessage(error)).toBe('Google OAuth is not configured.');
   });
+
+  it('surfaces JSON 400 Google exchange errors', () => {
+    const error = makeAxiosError(400, {
+      error: 'Google identity token is required.',
+    });
+    expect(getErrorMessage(error)).toBe('Google identity token is required.');
+  });
 });

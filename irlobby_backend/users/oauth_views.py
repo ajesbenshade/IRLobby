@@ -419,6 +419,11 @@ def google_mobile_login(request):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    if id_token_value.count(".") != 2:
+        return build_auth_error(
+            "Google identity token is malformed. Send an OpenID id_token JWT, not an access token or auth code."
+        )
+
     try:
         payload = verify_google_identity_token(id_token_value)
     except ValueError as error:

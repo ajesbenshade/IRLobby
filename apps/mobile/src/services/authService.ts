@@ -10,7 +10,9 @@ import {
   TWITTER_NO_CALLBACK_MESSAGE,
 } from '@lib/twitterAuth';
 import {
+  GOOGLE_INVALID_ID_TOKEN_MESSAGE,
   GOOGLE_MISSING_ID_TOKEN_MESSAGE,
+  isGoogleIdToken,
   unwrapGoogleAuthPayload,
   wrapGoogleExchangeError,
 } from '@lib/googleAuth';
@@ -470,6 +472,9 @@ export async function loginWithGoogleIdToken(
   const trimmedToken = typeof idToken === 'string' ? idToken.trim() : '';
   if (!trimmedToken) {
     throw new Error(GOOGLE_MISSING_ID_TOKEN_MESSAGE);
+  }
+  if (!isGoogleIdToken(trimmedToken)) {
+    throw new Error(GOOGLE_INVALID_ID_TOKEN_MESSAGE);
   }
 
   try {

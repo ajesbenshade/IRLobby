@@ -472,7 +472,9 @@ class SocialMobileLoginTests(APITestCase):
             "family_name": "User",
         }
 
-        response = self.client.post(self.google_url, {"id_token": "google-token"}, format="json")
+        response = self.client.post(
+            self.google_url, {"id_token": "aaa.bbb.ccc"}, format="json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["email"], user.email)
@@ -494,6 +496,25 @@ class SocialMobileLoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data["error"], "Google OAuth is not configured.")
+        mock_verify_google_identity_token.assert_not_called()
+
+    def test_google_mobile_login_rejects_missing_token(self):
+        response = self.client.post(self.google_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Google identity token is required.")
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["google-client-id"])
+    @patch("users.oauth_views.verify_google_identity_token")
+    def test_google_mobile_login_rejects_malformed_token(
+        self, mock_verify_google_identity_token
+    ):
+        response = self.client.post(
+            self.google_url, {"id_token": "ya29.access-token-not-a-jwt"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("malformed", response.data["error"])
         mock_verify_google_identity_token.assert_not_called()
 
     @override_settings(
@@ -560,7 +581,9 @@ class SocialMobileLoginTests(APITestCase):
             "email_verified": True,
         }
 
-        response = self.client.post(self.google_url, {"id_token": "google-token"}, format="json")
+        response = self.client.post(
+            self.google_url, {"id_token": "aaa.bbb.ccc"}, format="json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(

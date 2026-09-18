@@ -11,6 +11,20 @@ const mockRequest = {
   codeVerifier: 'pkce-verifier',
 };
 
+const googleIdToken = () => {
+  const encode = (value: object) =>
+    Buffer.from(JSON.stringify(value))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  return `${encode({ alg: 'none' })}.${encode({
+    iss: 'https://accounts.google.com',
+    aud: 'web.apps.googleusercontent.com',
+    sub: 'google-sub',
+  })}.sig`;
+};
+
 jest.mock('expo-auth-session', () => ({
   exchangeCodeAsync: (...args: unknown[]) => mockExchangeCodeAsync(...args),
 }));
@@ -79,9 +93,10 @@ describe('GoogleSignInButton', () => {
   });
 
   it('propagates AuthProvider/backend exchange errors to onError', async () => {
+    const idToken = googleIdToken();
     mockPromptAsync.mockResolvedValue({
       type: 'success',
-      params: { id_token: 'google-id-token' },
+      params: { id_token: idToken },
     });
     const onIdToken = jest.fn().mockRejectedValue(new Error('POST /api/auth/google/mobile/ failed'));
     const onError = jest.fn();
@@ -98,7 +113,7 @@ describe('GoogleSignInButton', () => {
     fireEvent.press(screen.getByLabelText('Continue with Google'));
 
     await waitFor(() => {
-      expect(onIdToken).toHaveBeenCalledWith('google-id-token');
+      expect(onIdToken).toHaveBeenCalledWith(idToken);
       expect(onError).toHaveBeenCalledWith(expect.objectContaining({
         message: 'POST /api/auth/google/mobile/ failed',
       }));
@@ -134,10 +149,11 @@ describe('GoogleSignInButton', () => {
   });
 
   it('exchanges authentication.idToken when params.id_token is missing', async () => {
+    const idToken = googleIdToken();
     mockPromptAsync.mockResolvedValue({
       type: 'success',
       params: {},
-      authentication: { idToken: 'from-authentication' },
+      authentication: { idToken },
     });
     const onIdToken = jest.fn().mockRejectedValue(new Error('token persist failed'));
     const onError = jest.fn();
@@ -154,19 +170,51 @@ describe('GoogleSignInButton', () => {
     fireEvent.press(screen.getByLabelText('Continue with Google'));
 
     await waitFor(() => {
-      expect(onIdToken).toHaveBeenCalledWith('from-authentication');
+      expect(onIdToken).toHaveBeenCalledWith(idToken);
       expect(onError).toHaveBeenCalledWith(expect.objectContaining({
         message: 'token persist failed',
       }));
     });
   });
 
+  it('ignores a garbage params.id_token and exchanges the authorization code instead', async () => {
+    const idToken = googleIdToken();
+    mockPromptAsync.mockResolvedValue({
+      type: 'success',
+      params: { id_token: 'ya29.access-token', code: 'auth-code' },
+    });
+    mockExchangeCodeAsync.mockResolvedValue({ idToken });
+    const onIdToken = jest.fn().mockResolvedValue(undefined);
+
+    render(
+      <GoogleSignInButton
+        label="Continue with Google"
+        notConfiguredHint="not configured"
+        onIdToken={onIdToken}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(mockExchangeCodeAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'auth-code',
+        }),
+        expect.objectContaining({ tokenEndpoint: 'https://oauth2.googleapis.com/token' }),
+      );
+      expect(onIdToken).toHaveBeenCalledWith(idToken);
+    });
+    expect(onIdToken).not.toHaveBeenCalledWith('ya29.access-token');
+  });
+
   it('exchanges the authorization code when Google returns success without id_token', async () => {
+    const idToken = googleIdToken();
     mockPromptAsync.mockResolvedValue({
       type: 'success',
       params: { code: 'auth-code' },
     });
-    mockExchangeCodeAsync.mockResolvedValue({ idToken: 'exchanged-id-token' });
+    mockExchangeCodeAsync.mockResolvedValue({ idToken });
     const onIdToken = jest.fn().mockResolvedValue(undefined);
 
     render(
@@ -188,7 +236,7 @@ describe('GoogleSignInButton', () => {
         }),
         expect.objectContaining({ tokenEndpoint: 'https://oauth2.googleapis.com/token' }),
       );
-      expect(onIdToken).toHaveBeenCalledWith('exchanged-id-token');
+      expect(onIdToken).toHaveBeenCalledWith(idToken);
     });
   });
 

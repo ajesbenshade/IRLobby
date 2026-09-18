@@ -16,8 +16,10 @@ import {
   getGoogleAuthRequestConfig,
   getGoogleIdTokenFromAuthResult,
   getGoogleNativeRedirectUriOptions,
+  GOOGLE_INVALID_ID_TOKEN_MESSAGE,
   GOOGLE_MISSING_ID_TOKEN_MESSAGE,
   isGoogleAuthReadyForPlatform,
+  isGoogleIdToken,
   peekGoogleTokenAudience,
   reverseGoogleIosClientIdScheme,
   unwrapGoogleAuthPayload,
@@ -40,6 +42,18 @@ const makeJwt = (payload: Record<string, unknown>) => {
       .replace(/=+$/, '');
   return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(payload)}.sig`;
 };
+
+const googleIdToken = (
+  overrides: Record<string, unknown> = {},
+) =>
+  makeJwt({
+    iss: 'https://accounts.google.com',
+    aud: 'web-123.apps.googleusercontent.com',
+    sub: 'google-sub',
+    email: 'aaron@example.com',
+    email_verified: true,
+    ...overrides,
+  });
 
 describe('getGoogleAuthRequestConfig', () => {
   it('includes webClientId, openid, and disables auto code exchange', () => {
@@ -86,32 +100,49 @@ describe('getGoogleNativeRedirectUriOptions', () => {
 });
 
 describe('getGoogleIdTokenFromAuthResult', () => {
-  it('reads id_token from params', () => {
+  it('reads a Google id_token JWT from params', () => {
+    const idToken = googleIdToken();
     expect(
       getGoogleIdTokenFromAuthResult({
         type: 'success',
-        params: { id_token: 'from-params' },
+        params: { id_token: idToken },
       }),
-    ).toBe('from-params');
+    ).toBe(idToken);
   });
 
   it('falls back to authentication.idToken when params are empty', () => {
+    const idToken = googleIdToken({ aud: 'ios-123.apps.googleusercontent.com' });
     expect(
       getGoogleIdTokenFromAuthResult({
         type: 'success',
         params: {},
-        authentication: { idToken: 'from-authentication' },
+        authentication: { idToken },
       }),
-    ).toBe('from-authentication');
+    ).toBe(idToken);
   });
 
   it('reads params.idToken camelCase', () => {
+    const idToken = googleIdToken();
     expect(
       getGoogleIdTokenFromAuthResult({
         type: 'success',
-        params: { idToken: 'camel-case-token' },
+        params: { idToken },
       }),
-    ).toBe('camel-case-token');
+    ).toBe(idToken);
+  });
+
+  it('ignores access tokens, auth codes, and non-Google JWTs', () => {
+    expect(
+      getGoogleIdTokenFromAuthResult({
+        type: 'success',
+        params: {
+          access_token: 'ya29.not-an-id-token',
+          code: '4/auth-code',
+          id_token: 'not-a-jwt',
+        },
+        authentication: { idToken: makeJwt({ iss: 'https://example.com', aud: 'x', sub: 'y' }) },
+      }),
+    ).toBeNull();
   });
 
   it('returns null when Google authorized without an identity token', () => {
@@ -122,6 +153,15 @@ describe('getGoogleIdTokenFromAuthResult', () => {
         authentication: { idToken: null },
       }),
     ).toBeNull();
+  });
+});
+
+describe('isGoogleIdToken', () => {
+  it('accepts Google OpenID JWTs and rejects garbage', () => {
+    expect(isGoogleIdToken(googleIdToken())).toBe(true);
+    expect(isGoogleIdToken('ya29.access-token')).toBe(false);
+    expect(isGoogleIdToken('4/auth-code')).toBe(false);
+    expect(isGoogleIdToken('aaa.bbb.ccc')).toBe(false);
   });
 });
 
@@ -167,7 +207,7 @@ describe('unwrapGoogleAuthPayload', () => {
 
 describe('wrapGoogleExchangeError', () => {
   it('appends the token audience when verification failed', () => {
-    const token = makeJwt({ aud: 'ios-123.apps.googleusercontent.com' });
+    const token = googleIdToken({ aud: 'ios-123.apps.googleusercontent.com' });
     const wrapped = wrapGoogleExchangeError(
       new Error('Google sign-in could not be verified.'),
       token,
@@ -175,6 +215,22 @@ describe('wrapGoogleExchangeError', () => {
     expect(wrapped.message).toContain('Google sign-in could not be verified.');
     expect(wrapped.message).toContain('ios-123.apps.googleusercontent.com');
     expect(wrapped.message).toContain('GOOGLE_OAUTH_CLIENT_IDS');
+  });
+
+  it('surfaces backend 400 error JSON as the message', () => {
+    const { AxiosError } = require('axios') as typeof import('axios');
+    const error = new AxiosError('Request failed');
+    error.response = {
+      status: 400,
+      data: { error: 'Google identity token is required.' },
+      statusText: 'Bad Request',
+      headers: {},
+      config: { headers: {} },
+    } as AxiosError['response'];
+
+    expect(wrapGoogleExchangeError(error, googleIdToken()).message).toBe(
+      'Google identity token is required.',
+    );
   });
 });
 
@@ -205,7 +261,8 @@ describe('completeGoogleAuthPrompt', () => {
 
   it('exchanges an authorization code when promptAsync has no id_token', async () => {
     const onIdToken = jest.fn();
-    const exchangeCode = jest.fn().mockResolvedValue('exchanged-id-token');
+    const exchanged = googleIdToken();
+    const exchangeCode = jest.fn().mockResolvedValue(exchanged);
 
     await expect(
       completeGoogleAuthPrompt(
@@ -231,7 +288,47 @@ describe('completeGoogleAuthPrompt', () => {
       }),
       'auth-code',
     );
-    expect(onIdToken).toHaveBeenCalledWith('exchanged-id-token');
+    expect(onIdToken).toHaveBeenCalledWith(exchanged);
+  });
+
+  it('does not treat a garbage params.id_token as an identity token', async () => {
+    const onIdToken = jest.fn();
+    const exchanged = googleIdToken();
+    const exchangeCode = jest.fn().mockResolvedValue(exchanged);
+
+    await completeGoogleAuthPrompt(
+      async () => ({
+        type: 'success',
+        params: { id_token: 'ya29.access-token', code: 'auth-code' },
+      }),
+      onIdToken,
+      {
+        request: {
+          clientId: 'ios-123.apps.googleusercontent.com',
+          redirectUri: 'com.googleusercontent.apps.ios-123:/oauthredirect',
+        },
+        exchangeCode,
+      },
+    );
+
+    expect(exchangeCode).toHaveBeenCalledWith(expect.any(Object), 'auth-code');
+    expect(onIdToken).toHaveBeenCalledWith(exchanged);
+  });
+
+  it('rejects an exchanged token that is not a Google ID JWT', async () => {
+    await expect(
+      completeGoogleAuthPrompt(
+        async () => ({
+          type: 'success',
+          params: { code: 'auth-code' },
+        }),
+        jest.fn(),
+        {
+          request: { clientId: 'ios', redirectUri: 'irlobby://' },
+          exchangeCode: async () => 'ya29.access-token',
+        },
+      ),
+    ).rejects.toThrow(GOOGLE_INVALID_ID_TOKEN_MESSAGE);
   });
 
   it('describes a failed code exchange without an identity token', () => {
@@ -245,18 +342,19 @@ describe('completeGoogleAuthPrompt', () => {
 
   it('exchanges the identity token and propagates onIdToken failures', async () => {
     const onIdToken = jest.fn().mockRejectedValue(new Error('backend exchange failed'));
+    const idToken = googleIdToken();
 
     await expect(
       completeGoogleAuthPrompt(
         async () => ({
           type: 'success',
-          params: { id_token: 'google-id-token' },
+          params: { id_token: idToken },
         }),
         onIdToken,
       ),
     ).rejects.toThrow('backend exchange failed');
 
-    expect(onIdToken).toHaveBeenCalledWith('google-id-token');
+    expect(onIdToken).toHaveBeenCalledWith(idToken);
   });
 
   it('surfaces browser-level Google errors', async () => {

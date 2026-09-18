@@ -5,8 +5,9 @@ appId: com.irlobby.app
 - extendedWaitUntil:
     visible: "Get out. Get together. For real."
     timeout: 20000
-- assertVisible: "Continue with X"
+- assertVisible: "Continue with Google"
 - assertVisible: "Continue with email"
+- assertNotVisible: "Continue with X"
 - assertVisible: "Terms"
 - assertVisible: "Privacy"
 - tapOn: "Forgot password?"

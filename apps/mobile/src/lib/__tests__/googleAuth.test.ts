@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { AxiosError } from 'axios';
 
 jest.mock('@constants/config', () => ({
   config: {
@@ -218,7 +219,6 @@ describe('wrapGoogleExchangeError', () => {
   });
 
   it('surfaces backend 400 error JSON as the message', () => {
-    const { AxiosError } = require('axios') as typeof import('axios');
     const error = new AxiosError('Request failed');
     error.response = {
       status: 400,

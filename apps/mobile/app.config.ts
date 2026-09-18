@@ -24,7 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   version: '1.0.0',
   description: 'IRLobby — Get out. Get together. Real plans nearby.',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: './assets/AppIcon-1024.png',
   scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',
   userInterfaceStyle: 'automatic',
   primaryColor: '#FF6B4A',
@@ -88,15 +88,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'VIBRATE',
     ],
     adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0A0814',
+      foregroundImage: './assets/AppIcon-1024.png',
+      backgroundColor: '#FF6B4A',
     },
   },
   plugins: [
     [
       'expo-notifications',
       {
-        icon: './assets/icon.png',
+        icon: './assets/AppIcon-1024.png',
         color: '#FF6B4A',
       },
     ],

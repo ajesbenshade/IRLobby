@@ -26,6 +26,21 @@ const SKIP_REFRESH_PATHS = [
   API_ROUTES.AUTH_RESET_PASSWORD,
 ];
 
+// Stale/invalid JWTs on AllowAny auth endpoints make simplejwt return 401
+// before the view runs. Never attach Authorization when signing in.
+const SKIP_AUTH_HEADER_PATHS = [
+  API_ROUTES.AUTH_TOKEN,
+  API_ROUTES.USER_LOGIN,
+  API_ROUTES.USER_REGISTER,
+  API_ROUTES.AUTH_GOOGLE_MOBILE,
+  API_ROUTES.AUTH_APPLE_MOBILE,
+  API_ROUTES.AUTH_TWITTER_URL,
+  API_ROUTES.AUTH_TWITTER_STATUS,
+  API_ROUTES.AUTH_TWITTER_CALLBACK,
+  API_ROUTES.AUTH_REQUEST_PASSWORD_RESET,
+  API_ROUTES.AUTH_RESET_PASSWORD,
+];
+
 let isRefreshing = false;
 let pendingRequests: Array<(token: string | null) => void> = [];
 let onSessionExpired: (() => void) | null = null;
@@ -74,8 +89,13 @@ const setAuthorizationHeader = (
   return nextHeaders;
 };
 
-const shouldSkipRefresh = (url?: string) =>
-  Boolean(url && SKIP_REFRESH_PATHS.some((route) => url.includes(route)));
+const urlMatchesPath = (url: string | undefined, paths: string[]) =>
+  Boolean(url && paths.some((route) => url.includes(route)));
+
+const shouldSkipRefresh = (url?: string) => urlMatchesPath(url, SKIP_REFRESH_PATHS);
+
+export const shouldAttachAccessToken = (url?: string) =>
+  !urlMatchesPath(url, SKIP_AUTH_HEADER_PATHS);
 
 const refreshAccessToken = async (): Promise<string | null> => {
   if (isRefreshing) {
@@ -149,6 +169,9 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   async (request) => {
+    if (!shouldAttachAccessToken(request.url)) {
+      return request;
+    }
     const token = await getAccessToken();
     if (token) {
       request.headers = setAuthorizationHeader(request.headers, token);

@@ -46,6 +46,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [socialError, setSocialError] = useState<unknown>(null);
 
   const passwordsMatch = password.length >= 8 && password === confirmPassword;
 
@@ -153,7 +154,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
   const isBusy =
     isPending || isTwitterPending || isGooglePending || isApplePending;
-  const authError = error ?? twitterError ?? googleError ?? appleError;
+  const authError = socialError ?? error ?? twitterError ?? googleError ?? appleError;
 
   const openLegalUrl = (url: string) => {
     if (!isAllowedIrlobbyUrl(url)) {
@@ -175,7 +176,12 @@ export const RegisterScreen = ({ navigation }: Props) => {
       return;
     }
 
-    await signInWithTwitterAsync();
+    setSocialError(null);
+    try {
+      await signInWithTwitterAsync();
+    } catch (twitterSignInError) {
+      setSocialError(twitterSignInError);
+    }
   }, [acceptedLegal, isBusy, signInWithTwitterAsync]);
 
   const handleAppleSignIn = useCallback(async () => {
@@ -304,7 +310,11 @@ export const RegisterScreen = ({ navigation }: Props) => {
             disabled={isBusy || !acceptedLegal}
             label={authCopy.register.googleCta}
             notConfiguredHint={authCopy.register.googleNotConfigured}
-            onIdToken={(idToken) => signInWithGoogleAsync(idToken)}
+            onIdToken={async (idToken) => {
+              setSocialError(null);
+              await signInWithGoogleAsync(idToken);
+            }}
+            onError={setSocialError}
           />
           {isAppleAvailable ? (
             <AppButton

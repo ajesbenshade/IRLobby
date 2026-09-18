@@ -1,9 +1,10 @@
 import * as Google from 'expo-auth-session/providers/google';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { SocialAuthButton } from '@components/SocialAuthButton';
 import {
+  completeGoogleAuthPrompt,
   getGoogleAuthRequestConfig,
   isGoogleAuthReadyForPlatform,
 } from '@lib/googleAuth';
@@ -14,17 +15,50 @@ type GoogleSignInButtonProps = {
   label: string;
   notConfiguredHint: string;
   onIdToken: (idToken: string) => Promise<unknown>;
+  onError?: (error: unknown) => void;
+  /** Increment to re-run the Google prompt (login toast “Try again”). */
+  retryNonce?: number;
 };
 
 const ConfiguredGoogleSignInButton = ({
   disabled = false,
   label,
   onIdToken,
+  onError,
+  retryNonce = 0,
 }: Omit<GoogleSignInButtonProps, 'notConfiguredHint'>) => {
   const [request, , promptAsync] = Google.useIdTokenAuthRequest(
     getGoogleAuthRequestConfig(),
   );
   const [isPrompting, setIsPrompting] = useState(false);
+  const inFlight = useRef(false);
+  const lastRetryNonce = useRef(0);
+
+  const startSignIn = useCallback(async () => {
+    if (disabled || !request || inFlight.current) {
+      return;
+    }
+
+    inFlight.current = true;
+    setIsPrompting(true);
+    try {
+      await completeGoogleAuthPrompt(promptAsync, onIdToken);
+    } catch (error) {
+      onError?.(error);
+      throw error;
+    } finally {
+      inFlight.current = false;
+      setIsPrompting(false);
+    }
+  }, [disabled, onError, onIdToken, promptAsync, request]);
+
+  useEffect(() => {
+    if (!retryNonce || retryNonce === lastRetryNonce.current) {
+      return;
+    }
+    lastRetryNonce.current = retryNonce;
+    void startSignIn().catch(() => undefined);
+  }, [retryNonce, startSignIn]);
 
   return (
     <SocialAuthButton
@@ -32,23 +66,8 @@ const ConfiguredGoogleSignInButton = ({
       label={label}
       disabled={disabled || !request || isPrompting}
       loading={isPrompting}
-      onPress={async () => {
-        setIsPrompting(true);
-        try {
-          const authResult = await promptAsync();
-          if (authResult.type !== 'success') {
-            return;
-          }
-          const idToken = authResult.params?.id_token;
-          if (typeof idToken !== 'string' || !idToken) {
-            throw new Error('Google sign-in did not return an identity token.');
-          }
-          await onIdToken(idToken);
-        } catch {
-          // Parent mutations record the failure for on-screen copy.
-        } finally {
-          setIsPrompting(false);
-        }
+      onPress={() => {
+        void startSignIn().catch(() => undefined);
       }}
     />
   );

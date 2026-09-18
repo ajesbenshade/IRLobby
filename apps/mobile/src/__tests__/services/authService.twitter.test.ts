@@ -40,7 +40,12 @@ jest.mock('@constants/config', () => ({
 }));
 
 import { loginWithTwitter } from '@services/authService';
-import { MOBILE_TWITTER_REDIRECT_URI } from '@lib/twitterAuth';
+import {
+  MOBILE_TWITTER_REDIRECT_URI,
+  TWITTER_CANCELLED_MESSAGE,
+  TWITTER_MISSING_ACCESS_MESSAGE,
+  TWITTER_NO_CALLBACK_MESSAGE,
+} from '@lib/twitterAuth';
 
 const user = { id: 42, email: 'host@irlobby.com' };
 
@@ -50,7 +55,8 @@ describe('loginWithTwitter', () => {
     mockOpenAuthSessionAsync.mockReset();
     mockDismissBrowser.mockReset();
     mockRemove.mockReset();
-    mockAddEventListener.mockClear();
+    mockAddEventListener.mockReset();
+    mockAddEventListener.mockImplementation(() => ({ remove: mockRemove }));
     mockSetTokens.mockClear();
   });
 
@@ -130,5 +136,49 @@ describe('loginWithTwitter', () => {
       'X/Twitter login is not configured on the backend yet.',
     );
     expect(mockOpenAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it('throws the callback error param so portal rejects are distinguishable', async () => {
+    mockGet.mockResolvedValueOnce({ data: { configured: true } }).mockResolvedValueOnce({
+      data: { auth_url: 'https://twitter.com/i/oauth2/authorize?client_id=abc' },
+    });
+    mockOpenAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'irlobby://auth/twitter?error=redirect_uri_mismatch&error_description=Callback%20URL%20mismatch',
+    });
+
+    await expect(loginWithTwitter()).rejects.toThrow(
+      /redirect_uri_mismatch: Callback URL mismatch/,
+    );
+  });
+
+  it('throws MISSING_ACCESS copy when the callback has no access token', async () => {
+    mockGet.mockResolvedValueOnce({ data: { configured: true } }).mockResolvedValueOnce({
+      data: { auth_url: 'https://twitter.com/i/oauth2/authorize?client_id=abc' },
+    });
+    mockOpenAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: `irlobby://auth/twitter?user=${encodeURIComponent(JSON.stringify(user))}`,
+    });
+
+    await expect(loginWithTwitter()).rejects.toThrow(TWITTER_MISSING_ACCESS_MESSAGE);
+  });
+
+  it('throws cancelled copy when the browser session is cancelled', async () => {
+    mockGet.mockResolvedValueOnce({ data: { configured: true } }).mockResolvedValueOnce({
+      data: { auth_url: 'https://twitter.com/i/oauth2/authorize?client_id=abc' },
+    });
+    mockOpenAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+
+    await expect(loginWithTwitter()).rejects.toThrow(TWITTER_CANCELLED_MESSAGE);
+  });
+
+  it('throws a no-callback message when the session dismisses without a deep link', async () => {
+    mockGet.mockResolvedValueOnce({ data: { configured: true } }).mockResolvedValueOnce({
+      data: { auth_url: 'https://twitter.com/i/oauth2/authorize?client_id=abc' },
+    });
+    mockOpenAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
+
+    await expect(loginWithTwitter()).rejects.toThrow(TWITTER_NO_CALLBACK_MESSAGE);
   });
 });

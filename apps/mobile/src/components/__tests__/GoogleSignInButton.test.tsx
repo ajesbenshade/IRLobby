@@ -2,9 +2,21 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 const mockPromptAsync = jest.fn();
+const mockExchangeCodeAsync = jest.fn();
+const mockUseIdTokenAuthRequest = jest.fn();
+
+const mockRequest = {
+  clientId: 'ios.apps.googleusercontent.com',
+  redirectUri: 'com.googleusercontent.apps.ios:/oauthredirect',
+  codeVerifier: 'pkce-verifier',
+};
+
+jest.mock('expo-auth-session', () => ({
+  exchangeCodeAsync: (...args: unknown[]) => mockExchangeCodeAsync(...args),
+}));
 
 jest.mock('expo-auth-session/providers/google', () => ({
-  useIdTokenAuthRequest: () => [{ ready: true }, null, mockPromptAsync],
+  useIdTokenAuthRequest: (...args: unknown[]) => mockUseIdTokenAuthRequest(...args),
 }));
 
 jest.mock('@lib/googleAuth', () => {
@@ -12,7 +24,15 @@ jest.mock('@lib/googleAuth', () => {
   return {
     ...actual,
     isGoogleAuthReadyForPlatform: () => true,
-    getGoogleAuthRequestConfig: () => ({ iosClientId: 'test.apps.googleusercontent.com' }),
+    getGoogleAuthRequestConfig: () => ({
+      iosClientId: 'ios.apps.googleusercontent.com',
+      webClientId: 'web.apps.googleusercontent.com',
+      shouldAutoExchangeCode: false,
+      scopes: ['openid', 'profile', 'email'],
+    }),
+    getGoogleNativeRedirectUriOptions: () => ({
+      native: 'com.googleusercontent.apps.ios:/oauthredirect',
+    }),
   };
 });
 
@@ -35,6 +55,27 @@ import { GoogleSignInButton } from '../GoogleSignInButton';
 describe('GoogleSignInButton', () => {
   beforeEach(() => {
     mockPromptAsync.mockReset();
+    mockExchangeCodeAsync.mockReset();
+    mockUseIdTokenAuthRequest.mockReset();
+    mockUseIdTokenAuthRequest.mockReturnValue([mockRequest, null, mockPromptAsync]);
+  });
+
+  it('loads useIdTokenAuthRequest with webClientId and no auto-exchange', () => {
+    render(
+      <GoogleSignInButton
+        label="Continue with Google"
+        notConfiguredHint="not configured"
+        onIdToken={jest.fn()}
+      />,
+    );
+
+    expect(mockUseIdTokenAuthRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webClientId: 'web.apps.googleusercontent.com',
+        shouldAutoExchangeCode: false,
+      }),
+      { native: 'com.googleusercontent.apps.ios:/oauthredirect' },
+    );
   });
 
   it('propagates AuthProvider/backend exchange errors to onError', async () => {
@@ -117,6 +158,37 @@ describe('GoogleSignInButton', () => {
       expect(onError).toHaveBeenCalledWith(expect.objectContaining({
         message: 'token persist failed',
       }));
+    });
+  });
+
+  it('exchanges the authorization code when Google returns success without id_token', async () => {
+    mockPromptAsync.mockResolvedValue({
+      type: 'success',
+      params: { code: 'auth-code' },
+    });
+    mockExchangeCodeAsync.mockResolvedValue({ idToken: 'exchanged-id-token' });
+    const onIdToken = jest.fn().mockResolvedValue(undefined);
+
+    render(
+      <GoogleSignInButton
+        label="Continue with Google"
+        notConfiguredHint="not configured"
+        onIdToken={onIdToken}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(mockExchangeCodeAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'ios.apps.googleusercontent.com',
+          code: 'auth-code',
+          redirectUri: 'com.googleusercontent.apps.ios:/oauthredirect',
+        }),
+        expect.objectContaining({ tokenEndpoint: 'https://oauth2.googleapis.com/token' }),
+      );
+      expect(onIdToken).toHaveBeenCalledWith('exchanged-id-token');
     });
   });
 

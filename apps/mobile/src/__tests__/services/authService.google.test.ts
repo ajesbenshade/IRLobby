@@ -96,4 +96,36 @@ describe('loginWithGoogleIdToken', () => {
     );
     expect(mockSetTokens).not.toHaveBeenCalled();
   });
+
+  it('unwraps nested data envelopes from the exchange', async () => {
+    mockPost.mockResolvedValue({
+      data: {
+        data: {
+          user,
+          tokens: { access: 'nested-access', refresh: 'nested-refresh' },
+        },
+      },
+    });
+
+    const result = await loginWithGoogleIdToken('google-id-token');
+    expect(result.tokens.accessToken).toBe('nested-access');
+    expect(mockSetTokens).toHaveBeenCalled();
+  });
+
+  it('adds the token audience when Google verification fails', async () => {
+    const encode = (value: object) =>
+      Buffer.from(JSON.stringify(value))
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    const idToken = `${encode({ alg: 'none' })}.${encode({
+      aud: 'ios.apps.googleusercontent.com',
+    })}.sig`;
+    mockPost.mockRejectedValue(new Error('Google sign-in could not be verified.'));
+
+    await expect(loginWithGoogleIdToken(idToken)).rejects.toThrow(
+      'Google sign-in could not be verified. Token audience ios.apps.googleusercontent.com must be listed in backend GOOGLE_OAUTH_CLIENT_IDS.',
+    );
+  });
 });

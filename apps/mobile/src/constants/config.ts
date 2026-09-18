@@ -1,10 +1,24 @@
 import Constants from 'expo-constants';
 
-const extra =
+const extra = (
   Constants.expoConfig?.extra ??
   // @ts-ignore Expo SDK < 49 compatibility
   Constants.manifest?.extra ??
-  {};
+  {}
+) as Record<string, unknown>;
+
+export const pickConfigString = (...values: Array<unknown>): string | undefined => {
+  for (const value of values) {
+    if (typeof value !== 'string') {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return undefined;
+};
 
 const removeTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
@@ -26,9 +40,17 @@ const deriveWebsocketUrl = (apiBaseUrl: string) => {
   return apiBaseUrl.replace(/^https?:\/\//, wsProtocol);
 };
 
-const apiBaseUrl = normalizeApiBaseUrl(extra.apiBaseUrl as string | undefined);
-const configuredWebsocketUrl = extra.websocketUrl as string | undefined;
-const configuredApiBaseUrl = (extra.apiBaseUrl as string | undefined)?.trim();
+const apiBaseUrl = normalizeApiBaseUrl(
+  pickConfigString(extra.apiBaseUrl, process.env.EXPO_PUBLIC_API_BASE_URL),
+);
+const configuredWebsocketUrl = pickConfigString(
+  extra.websocketUrl,
+  process.env.EXPO_PUBLIC_WEBSOCKET_URL,
+);
+const configuredApiBaseUrl = pickConfigString(
+  extra.apiBaseUrl,
+  process.env.EXPO_PUBLIC_API_BASE_URL,
+);
 const isUsingFallbackApiBaseUrl = !configuredApiBaseUrl;
 
 export const config = {
@@ -36,12 +58,37 @@ export const config = {
   websocketUrl: configuredWebsocketUrl ? removeTrailingSlash(configuredWebsocketUrl) : deriveWebsocketUrl(apiBaseUrl),
   isUsingFallbackApiBaseUrl,
   apiBaseUrlSource: isUsingFallbackApiBaseUrl ? (__DEV__ ? 'fallback-dev' : 'fallback-production') : 'configured',
-  twitterClientId: extra.twitterClientId as string | undefined,
-  twitterRedirectUri: extra.twitterRedirectUri as string | undefined,
-  googleExpoClientId: extra.googleExpoClientId as string | undefined,
-  googleIosClientId: extra.googleIosClientId as string | undefined,
-  googleAndroidClientId: extra.googleAndroidClientId as string | undefined,
-  googleWebClientId: extra.googleWebClientId as string | undefined,
-  mapboxPublicToken: extra.mapboxPublicToken as string | undefined,
-  sentryDsn: extra.sentryDsn as string | undefined,
+  twitterClientId: pickConfigString(
+    extra.twitterClientId,
+    process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
+  ),
+  twitterRedirectUri: pickConfigString(
+    extra.twitterRedirectUri,
+    process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
+  ),
+  googleExpoClientId: pickConfigString(
+    extra.googleExpoClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+  ),
+  googleIosClientId: pickConfigString(
+    extra.googleIosClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  ),
+  googleAndroidClientId: pickConfigString(
+    extra.googleAndroidClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  ),
+  googleWebClientId: pickConfigString(
+    extra.googleWebClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    extra.googleExpoClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+    extra.googleClientId,
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  ),
+  mapboxPublicToken: pickConfigString(
+    extra.mapboxPublicToken,
+    process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
+  ),
+  sentryDsn: pickConfigString(extra.sentryDsn, process.env.EXPO_PUBLIC_SENTRY_DSN),
 };

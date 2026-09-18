@@ -64,12 +64,17 @@ export const getErrorMessage = (
 ) => {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
+    const responseData = error.response?.data;
 
     if (status === 503) {
+      if (responseData && typeof responseData === 'object') {
+        const serverMessage = firstObjectMessage(responseData);
+        if (serverMessage) {
+          return sanitizeServerMessage(serverMessage, status, fallback);
+        }
+      }
       return UNREACHABLE_MESSAGE;
     }
-
-    const responseData = error.response?.data;
     if (typeof responseData === 'string') {
       return sanitizeServerMessage(responseData, status, fallback);
     }

@@ -9,7 +9,11 @@ import {
   TWITTER_CANCELLED_MESSAGE,
   TWITTER_NO_CALLBACK_MESSAGE,
 } from '@lib/twitterAuth';
-import { GOOGLE_MISSING_ID_TOKEN_MESSAGE } from '@lib/googleAuth';
+import {
+  GOOGLE_MISSING_ID_TOKEN_MESSAGE,
+  unwrapGoogleAuthPayload,
+  wrapGoogleExchangeError,
+} from '@lib/googleAuth';
 import { isAllowedTwitterOAuthUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
@@ -468,13 +472,15 @@ export async function loginWithGoogleIdToken(
     throw new Error(GOOGLE_MISSING_ID_TOKEN_MESSAGE);
   }
 
-  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
-    id_token: trimmedToken,
-  });
-  if (!response.data || typeof response.data !== 'object') {
-    throw new Error('Google sign-in did not return authentication data.');
+  try {
+    const response = await api.post<unknown>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
+      id_token: trimmedToken,
+    });
+    const payload = unwrapGoogleAuthPayload(response.data);
+    return persistAuthResponse(payload as AuthResponse);
+  } catch (error) {
+    throw wrapGoogleExchangeError(error, trimmedToken);
   }
-  return persistAuthResponse(response.data);
 }
 
 export async function loginWithAppleIdentityToken(payload: {

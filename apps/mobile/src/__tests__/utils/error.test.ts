@@ -43,4 +43,9 @@ describe('getErrorMessage', () => {
     const error = makeAxiosError(503, 'upstream');
     expect(getErrorMessage(error)).toBe('Unable to reach API right now. Please try again.');
   });
+
+  it('surfaces JSON 503 configuration errors', () => {
+    const error = makeAxiosError(503, { error: 'Google OAuth is not configured.' });
+    expect(getErrorMessage(error)).toBe('Google OAuth is not configured.');
+  });
 });

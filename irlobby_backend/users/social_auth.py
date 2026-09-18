@@ -38,7 +38,23 @@ def _clean_settings_list(name):
 
 
 def get_google_oauth_client_ids():
-    return _clean_settings_list("GOOGLE_OAUTH_CLIENT_IDS")
+    values = []
+    for name in (
+        "GOOGLE_OAUTH_CLIENT_IDS",
+        "GOOGLE_CLIENT_IDS",
+        "GOOGLE_IOS_CLIENT_ID",
+        "GOOGLE_ANDROID_CLIENT_ID",
+        "GOOGLE_WEB_CLIENT_ID",
+    ):
+        values.extend(_clean_settings_list(name))
+
+    seen = set()
+    unique = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            unique.append(value)
+    return unique
 
 
 def get_apple_oauth_audiences():
@@ -233,17 +249,56 @@ def resolve_or_create_social_user(
     return user, user_created
 
 
+def peek_google_token_audience(id_token_value):
+    try:
+        claims = jwt.decode(
+            id_token_value,
+            options={
+                "verify_signature": False,
+                "verify_aud": False,
+                "verify_exp": False,
+                "verify_iss": False,
+            },
+        )
+    except Exception:
+        return None
+
+    audience = claims.get("aud") if isinstance(claims, dict) else None
+    if isinstance(audience, str) and audience.strip():
+        return audience.strip()
+    if isinstance(audience, (list, tuple)):
+        for item in audience:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+    return None
+
+
 def verify_google_identity_token(id_token_value):
     audiences = get_google_oauth_client_ids()
     if not audiences:
         raise ValueError("Google OAuth is not configured")
 
+    token_audience = peek_google_token_audience(id_token_value)
+    if token_audience and token_audience not in audiences:
+        raise ValueError(
+            "Google token audience "
+            f"{token_audience} is not in GOOGLE_OAUTH_CLIENT_IDS. "
+            "Add this iOS/Android/Web client ID on the server."
+        )
+
     request_adapter = google_requests.Request()
     last_error = None
+    candidate_audiences = [token_audience] if token_audience else list(audiences)
+    if token_audience:
+        candidate_audiences.extend(
+            audience for audience in audiences if audience != token_audience
+        )
 
-    for audience in audiences:
+    for audience in candidate_audiences:
         try:
-            payload = google_id_token.verify_oauth2_token(id_token_value, request_adapter, audience)
+            payload = google_id_token.verify_oauth2_token(
+                id_token_value, request_adapter, audience
+            )
             issuer = payload.get("iss")
             if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
                 raise ValueError("Unexpected Google token issuer")

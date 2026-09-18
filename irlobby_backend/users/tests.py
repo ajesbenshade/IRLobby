@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlparse
 
+import jwt
 from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 from django.conf import settings
 from django.core import mail
@@ -27,7 +28,7 @@ from swipes.throttles import _swipe_daily_key
 from users.models import PushDeviceToken, SocialAuthIdentity, User
 from users.password_reset import hash_password_reset_token
 from users.push_notifications import send_push_to_user
-from users.social_auth import verify_apple_identity_token
+from users.social_auth import get_google_oauth_client_ids, verify_apple_identity_token
 from users.views import logout_view
 
 
@@ -494,6 +495,47 @@ class SocialMobileLoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data["error"], "Google OAuth is not configured.")
         mock_verify_google_identity_token.assert_not_called()
+
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_IDS=[],
+        GOOGLE_CLIENT_IDS=[],
+        GOOGLE_IOS_CLIENT_ID="ios.apps.googleusercontent.com",
+        GOOGLE_WEB_CLIENT_ID="web.apps.googleusercontent.com",
+        GOOGLE_ANDROID_CLIENT_ID="android.apps.googleusercontent.com",
+    )
+    def test_google_oauth_client_ids_include_platform_aliases(self):
+        self.assertEqual(
+            get_google_oauth_client_ids(),
+            [
+                "ios.apps.googleusercontent.com",
+                "android.apps.googleusercontent.com",
+                "web.apps.googleusercontent.com",
+            ],
+        )
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["allowed-client.apps.googleusercontent.com"])
+    def test_google_mobile_login_reports_audience_mismatch(self):
+        token = jwt.encode(
+            {
+                "aud": "ios-client.apps.googleusercontent.com",
+                "sub": "google-sub",
+                "iss": "https://accounts.google.com",
+                "email": "aaron@example.com",
+                "email_verified": True,
+                "exp": 4102444800,
+                "iat": 1700000000,
+            },
+            "secret",
+            algorithm="HS256",
+        )
+        if isinstance(token, bytes):
+            token = token.decode("utf-8")
+
+        response = self.client.post(self.google_url, {"id_token": token}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn("ios-client.apps.googleusercontent.com", response.data["error"])
+        self.assertIn("GOOGLE_OAUTH_CLIENT_IDS", response.data["error"])
 
     @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["google-client-id"])
     @patch("users.oauth_views.verify_google_identity_token")

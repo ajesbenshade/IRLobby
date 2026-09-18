@@ -421,6 +421,15 @@ def google_mobile_login(request):
 
     try:
         payload = verify_google_identity_token(id_token_value)
+    except ValueError as error:
+        logger.warning("Google mobile login failed: %s", error)
+        message = str(error).strip() or "Google sign-in could not be verified."
+        status_code = (
+            status.HTTP_401_UNAUTHORIZED
+            if "audience" in message.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        return build_auth_error(message, status_code=status_code)
     except Exception as error:
         logger.warning("Google mobile login failed: %s", error)
         return build_auth_error("Google sign-in could not be verified.")

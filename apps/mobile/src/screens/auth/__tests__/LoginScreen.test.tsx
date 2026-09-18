@@ -161,11 +161,10 @@ describe('LoginScreen dressed layout', () => {
     fireEvent.press(screen.getByLabelText(authCopy.login.googleCta));
 
     expect(await screen.findByText(authCopy.login.signInToastTitle)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.signInToastBody)).toBeTruthy();
-    expect(screen.getByLabelText(authCopy.login.signInToastAction)).toBeTruthy();
     expect(
-      await screen.findByText('Google sign-in could not be verified.'),
+      screen.getByText('Google sign-in could not be verified.'),
     ).toBeTruthy();
+    expect(screen.getByLabelText(`${authCopy.login.signInToastTitle} Google sign-in could not be verified.`)).toBeTruthy();
     expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith('google-id-token');
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.twitterCta)).toBeTruthy();

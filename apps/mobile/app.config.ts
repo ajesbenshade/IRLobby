@@ -1,15 +1,23 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() || '';
-const googleReversedClientIdScheme = googleIosClientId.endsWith('.apps.googleusercontent.com')
-  ? googleIosClientId.split('.').reverse().join('.')
-  : undefined;
+const readExpoPublic = (name: string) => process.env[name]?.trim() || undefined;
+
+export const reverseGoogleIosClientIdScheme = (iosClientId?: string) => {
+  const trimmed = iosClientId?.trim() || '';
+  return trimmed.endsWith('.apps.googleusercontent.com')
+    ? trimmed.split('.').reverse().join('.')
+    : undefined;
+};
 
 /** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
 export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
   'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const googleIosClientId = readExpoPublic('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID') || '';
+  const googleReversedClientIdScheme = reverseGoogleIosClientIdScheme(googleIosClientId);
+
+  return {
   ...config,
   name: 'IRLobby',
   slug: 'irlobby',
@@ -39,12 +47,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
     websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL,
-    twitterClientId: process.env.EXPO_PUBLIC_TWITTER_CLIENT_ID,
-    twitterRedirectUri: process.env.EXPO_PUBLIC_TWITTER_REDIRECT_URI,
-    googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
-    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    twitterClientId: readExpoPublic('EXPO_PUBLIC_TWITTER_CLIENT_ID'),
+    twitterRedirectUri: readExpoPublic('EXPO_PUBLIC_TWITTER_REDIRECT_URI'),
+    googleExpoClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID'),
+    googleClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_CLIENT_ID'),
+    googleIosClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID'),
+    googleAndroidClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID'),
+    googleWebClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'),
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
     eas: {
@@ -127,4 +136,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   ],
-});
+};
+};

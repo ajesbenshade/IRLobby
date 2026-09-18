@@ -5,6 +5,36 @@ export const PROTOTYPE_FOOTER_HOST = 'Stripe Connect Prototype — no charge';
 export const PROTOTYPE_FOOTER_BUYER =
   'Host payout via Stripe Connect · 10% IRLobby commission · Not an App Store IAP.';
 
+/** HTTPS bounce pages Stripe Account Links accept. Avoid sending bare irlobby://. */
+export const STRIPE_CONNECT_HTTPS_RETURN_URL = 'https://api.irlobby.com/stripe/connect/return';
+export const STRIPE_CONNECT_HTTPS_REFRESH_URL = 'https://api.irlobby.com/stripe/connect/refresh';
+
+export const GET_PAID_COPY = {
+  rowTitle: 'Get paid',
+  rowSubtitle: 'Connect Stripe to receive ticket payouts',
+  screenTitle: 'Get paid',
+  screenSubtitle: 'Connect a payout account to sell tickets.',
+  feeCopy: `IRLobby takes ${PLATFORM_FEE_PERCENT}% + Stripe fees.`,
+  continueCta: 'Continue to Stripe',
+  notNowCta: 'Not now',
+  doneCta: 'Done',
+  refreshCta: 'Refresh status',
+  footer: 'Stripe Connect · Express · Test mode — no live charges',
+  notConnectedTitle: 'Not connected',
+  notConnectedBody: "You're not connected to a payout account yet.\nConnect to start selling tickets.",
+  pendingTitle: 'Pending',
+  pendingBody: 'Stripe still needs a few details before you can receive ticket payouts.',
+  readyTitle: 'Connected',
+  readyBody: `Your payout account is connected. Ticketed events send ${100 - PLATFORM_FEE_PERCENT}% to you.`,
+  unavailableBody: 'Payouts aren’t live on this server yet. You can still host free plans.',
+} as const;
+
+export const STRIPE_CONNECT_CHIP = {
+  notConnected: 'Not connected',
+  pending: 'Pending',
+  ready: 'Ready',
+} as const;
+
 export function parseTicketPrice(value: string | number | null | undefined): number {
   const amount = typeof value === 'number' ? value : Number(String(value ?? '').replace(/[^0-9.]/g, ''));
   return Number.isFinite(amount) && amount > 0 ? amount : 0;

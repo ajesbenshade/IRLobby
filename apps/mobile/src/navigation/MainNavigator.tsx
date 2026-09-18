@@ -8,8 +8,9 @@ import { View } from '@components/RNCompat';
 import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
 
 import { ChatScreen } from '@screens/main/ChatScreen';
-import { CreateActivityScreen } from '@screens/main/CreateActivityScreen';
+import { CreateActivityScreen, EditActivityScreen } from '@screens/main/CreateActivityScreen';
 import { DiscoverScreen } from '@screens/main/DiscoverScreen';
+import { GetPaidScreen } from '@screens/main/GetPaidScreen';
 import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
@@ -214,6 +215,16 @@ export const MainNavigator = () => (
       name="DoorScan"
       component={DoorScanScreen}
       options={{ headerShown: false, title: 'Door scan' }}
+    />
+    <Stack.Screen
+      name="GetPaid"
+      component={GetPaidScreen}
+      options={{ headerShown: false, title: 'Get paid' }}
+    />
+    <Stack.Screen
+      name="EditActivity"
+      component={EditActivityScreen}
+      options={{ title: 'Edit event' }}
     />
   </Stack.Navigator>
 );

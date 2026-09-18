@@ -7,6 +7,18 @@ import {
   CREATE_EVENT_PUBLISH_LABEL,
   CREATE_EVENT_TICKETED_PUBLISH_LABEL,
 } from '../createActivityForm';
+import { EVENT_PHOTOS_HELPER } from '@constants/activity';
+
+const mockNavigate = jest.fn();
+
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: mockNavigate,
+    goBack: jest.fn(),
+    canGoBack: () => false,
+  }),
+  useRoute: () => ({ params: {} }),
+}));
 
 jest.mock('@hooks/useAuth', () => ({
   useAuth: () => ({
@@ -28,6 +40,8 @@ jest.mock('@services/paymentService', () => ({
 
 jest.mock('@services/activityService', () => ({
   createActivity: jest.fn(),
+  updateActivity: jest.fn(),
+  fetchActivity: jest.fn(),
 }));
 
 jest.mock('expo-image-picker', () => ({
@@ -86,5 +100,44 @@ describe('CreateActivityScreen ticketed toggle', () => {
     expect(screen.getByText(/IRLobby takes 10%/)).toBeTruthy();
     expect(screen.getByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_PUBLISH_LABEL)).toBeNull();
+  });
+});
+
+describe('CreateActivityScreen photos (Frame A2)', () => {
+  it('shows the photos section above the ticketed toggle with five empty slots', async () => {
+    renderScreen();
+
+    expect(await screen.findByText('Photos')).toBeTruthy();
+    expect(screen.getByText(EVENT_PHOTOS_HELPER)).toBeTruthy();
+    expect(screen.getAllByLabelText('Add photo')).toHaveLength(5);
+    expect(screen.queryByText('Pick up to 5 images')).toBeNull();
+  });
+
+  it('fills a slot from the system picker and can remove it', async () => {
+    const ImagePicker = jest.requireMock('expo-image-picker') as {
+      requestMediaLibraryPermissionsAsync: jest.Mock;
+      launchImageLibraryAsync: jest.Mock;
+    };
+    const { imageAssetToUploadDataUrl } = jest.requireMock('@utils/profileImages') as {
+      imageAssetToUploadDataUrl: jest.Mock;
+    };
+
+    ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true });
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://sunset.jpg', mimeType: 'image/jpeg', width: 200, height: 200 }],
+    });
+    imageAssetToUploadDataUrl.mockResolvedValue('data:image/jpeg;base64,abc');
+
+    renderScreen();
+    fireEvent.press((await screen.findAllByLabelText('Add photo'))[0]);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Remove photo 1')).toBeTruthy();
+    });
+    expect(screen.getAllByLabelText('Add photo')).toHaveLength(4);
+
+    fireEvent.press(screen.getByLabelText('Remove photo 1'));
+    expect(screen.getAllByLabelText('Add photo')).toHaveLength(5);
   });
 });

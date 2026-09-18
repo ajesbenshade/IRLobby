@@ -21,6 +21,7 @@ type AppButtonProps = PropsWithChildren<{
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
   textColor?: string;
+  accessibilityLabel?: string;
 }>;
 
 export const AppButton = ({
@@ -32,12 +33,14 @@ export const AppButton = ({
   compact = false,
   style,
   textColor,
+  accessibilityLabel,
 }: AppButtonProps) => {
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [

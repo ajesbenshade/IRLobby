@@ -24,6 +24,7 @@ const linking: LinkingOptions<RootStackParamList> = {
     'irlobby://',
     'https://irlobby.com',
     'https://www.irlobby.com',
+    'https://api.irlobby.com',
   ],
   config: {
     screens: {
@@ -47,6 +48,7 @@ const linking: LinkingOptions<RootStackParamList> = {
           BuyTicket: 'tickets/buy/:activityId',
           TicketWallet: 'tickets/success',
           DoorScan: 'tickets/scan',
+          GetPaid: 'stripe/connect/return',
         },
       },
     },

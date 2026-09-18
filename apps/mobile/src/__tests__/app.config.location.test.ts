@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 import type { ConfigContext } from 'expo/config';
 
 import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION } from '../../app.config';
@@ -67,5 +70,23 @@ describe('Google client IDs in extra', () => {
       'irlobby',
       'com.googleusercontent.apps.123-ios',
     ]);
+  });
+});
+
+describe('production app icon', () => {
+  it('points Expo, Android adaptive, and notification icons at the IR lettermark 1024', () => {
+    const config = appConfig({ config: {} } as ConfigContext);
+    const iconPath = './assets/AppIcon-1024.png';
+
+    expect(config.icon).toBe(iconPath);
+    expect(config.android?.adaptiveIcon?.foregroundImage).toBe(iconPath);
+
+    const notificationPlugin = (config.plugins ?? []).find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
+    ) as [string, { icon?: string }] | undefined;
+    expect(notificationPlugin?.[1]?.icon).toBe(iconPath);
+
+    const abs = path.resolve(__dirname, '../../assets/AppIcon-1024.png');
+    expect(fs.existsSync(abs)).toBe(true);
   });
 });

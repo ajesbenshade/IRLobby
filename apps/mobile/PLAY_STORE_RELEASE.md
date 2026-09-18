@@ -72,11 +72,11 @@ Reuse the text already drafted in `apps/mobile/store/metadata/`:
 
 Required graphics (Play-specific):
 
-- App icon: 512×512 PNG (derive from `assets/icon.png`)
+- App icon: 512×512 PNG (derive from `assets/AppIcon-1024.png`)
 - Feature graphic: 1024×500 PNG (must be created — not yet present)
 - Phone screenshots: at least 2, max 8, 16:9 or 9:16 between 320 and 3840 px
 - 7-inch tablet screenshots (optional but recommended)
-- Adaptive icon already configured at `assets/adaptive-icon.png`
+- Adaptive icon already configured at `assets/AppIcon-1024.png`
 
 ## 7) Data safety form
 

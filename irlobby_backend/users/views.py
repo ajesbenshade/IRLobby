@@ -468,9 +468,10 @@ def auth_status(request):
 @permission_classes([IsAuthenticated])
 def stripe_connect_status(request):
     """Return the host's Stripe Connect payout readiness."""
-    from .stripe_connect import StripeConnectError, sync_connect_account_status
+    from .stripe_connect import StripeConnectError, get_stripe_client, sync_connect_account_status
 
     try:
+        get_stripe_client()
         status_payload = sync_connect_account_status(request.user)
     except StripeConnectError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

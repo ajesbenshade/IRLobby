@@ -3,6 +3,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import connection
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -270,6 +271,7 @@ class ActivityLocationQueryTests(APITestCase):
         self.assertIn(self.far.id, ids)
 
 
+@override_settings(STRIPE_WEBHOOK_SECRET="whsec_test", STRIPE_API_KEY="sk_test_123")
 class TicketingTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
@@ -310,7 +312,7 @@ class TicketingTests(APITestCase):
             ]
         )
 
-    @patch("activities.views.stripe.checkout.Session.create")
+    @patch("users.stripe_connect.create_destination_checkout_session")
     def test_create_ticket_checkout_session(self, mock_session_create):
         mock_session_create.return_value = {
             "id": "cs_test_123",
@@ -319,7 +321,14 @@ class TicketingTests(APITestCase):
 
         self.client.force_authenticate(self.buyer)
         url = reverse("activity-ticket-buy", args=[self.activity.id])
-        response = self.client.post(url, {}, format="json")
+        response = self.client.post(
+            url,
+            {
+                "successUrl": "irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}",
+                "cancelUrl": "irlobby://tickets/cancel",
+            },
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["session_id"], "cs_test_123")
@@ -329,13 +338,25 @@ class TicketingTests(APITestCase):
         self.assertEqual(ticket.stripe_session_id, "cs_test_123")
 
         kwargs = mock_session_create.call_args.kwargs
-        self.assertNotIn("payment_method_types", kwargs)
+        self.assertEqual(kwargs["host"].stripe_connect_account_id, "acct_test_host")
+        self.assertEqual(kwargs["application_fee_amount"], 250)
         self.assertEqual(
-            kwargs["payment_intent_data"]["transfer_data"]["destination"],
-            "acct_test_host",
+            kwargs["success_url"],
+            "irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}",
         )
-        # $25 ticket * 10% = $2.50 = 250 cents
-        self.assertEqual(kwargs["payment_intent_data"]["application_fee_amount"], 250)
+
+    @override_settings(STRIPE_API_KEY="")
+    def test_cannot_buy_when_stripe_unconfigured(self):
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(reverse("activity-ticket-buy", args=[self.activity.id]))
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    @override_settings(STRIPE_API_KEY="sk_live_blocked", STRIPE_ALLOW_LIVE_MODE=False)
+    def test_cannot_buy_with_live_key(self):
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(reverse("activity-ticket-buy", args=[self.activity.id]))
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn("live", response.data.get("message", "").lower())
 
     def test_cannot_buy_when_host_not_connected(self):
         self.host.stripe_connect_payouts_enabled = False
@@ -379,7 +400,7 @@ class TicketingTests(APITestCase):
 
         mock_construct_event.return_value = {
             "type": "checkout.session.completed",
-            "data": {"object": {"id": "cs_test_123"}},
+            "data": {"object": {"id": "cs_test_123", "payment_status": "paid"}},
         }
 
         response = self.client.post(
@@ -408,6 +429,7 @@ class TicketingTests(APITestCase):
             "data": {
                 "object": {
                     "id": "missing_session",
+                    "payment_status": "paid",
                     "metadata": {"ticket_id": str(ticket.ticket_id)},
                     "payment_intent": "pi_test_456",
                 }
@@ -585,3 +607,50 @@ class TicketingTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_webhook_rejects_missing_signature(self):
+        response = self.client.post(reverse("stripe-webhook"), data={}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(STRIPE_WEBHOOK_SECRET="", STRIPE_CONNECT_WEBHOOK_SECRET="")
+    def test_webhook_rejects_when_signing_secret_missing(self):
+        response = self.client.post(
+            reverse("stripe-webhook"),
+            data={},
+            format="json",
+            HTTP_STRIPE_SIGNATURE="sig",
+        )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def test_webhook_rejects_invalid_signature(self):
+        response = self.client.post(
+            reverse("stripe-webhook"),
+            data={"id": "evt_test"},
+            format="json",
+            HTTP_STRIPE_SIGNATURE="t=1,v1=not-a-real-signature",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("activities.views.stripe.Webhook.construct_event")
+    def test_webhook_ignores_unpaid_checkout_session(self, mock_construct_event):
+        ticket = Ticket.objects.create(
+            buyer=self.buyer,
+            activity=self.activity,
+            status="pending",
+            stripe_session_id="cs_test_unpaid",
+        )
+        mock_construct_event.return_value = {
+            "type": "checkout.session.completed",
+            "data": {"object": {"id": "cs_test_unpaid", "payment_status": "unpaid"}},
+        }
+
+        response = self.client.post(
+            reverse("stripe-webhook"),
+            data={},
+            format="json",
+            HTTP_STRIPE_SIGNATURE="sig",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "pending")

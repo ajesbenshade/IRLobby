@@ -28,6 +28,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from irlobby_backend.legal_pages import privacy_policy, support_page
+from irlobby_backend.stripe_bounce import stripe_app_bounce
 from users.oauth_views import apple_mobile_login, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
@@ -173,6 +174,54 @@ urlpatterns = [
     path("privacy/", privacy_policy, name="privacy-policy-slash"),
     path("privacy-policy", privacy_policy, name="privacy-policy-alias"),
     path("privacy-policy/", privacy_policy, name="privacy-policy-alias-slash"),
+    path(
+        "stripe/connect/return/",
+        stripe_app_bounce,
+        {"target": "stripe/connect/return"},
+        name="stripe-connect-return",
+    ),
+    path(
+        "stripe/connect/return",
+        stripe_app_bounce,
+        {"target": "stripe/connect/return"},
+        name="stripe-connect-return-no-slash",
+    ),
+    path(
+        "stripe/connect/refresh/",
+        stripe_app_bounce,
+        {"target": "stripe/connect/refresh"},
+        name="stripe-connect-refresh",
+    ),
+    path(
+        "stripe/connect/refresh",
+        stripe_app_bounce,
+        {"target": "stripe/connect/refresh"},
+        name="stripe-connect-refresh-no-slash",
+    ),
+    path(
+        "tickets/success/",
+        stripe_app_bounce,
+        {"target": "tickets/success"},
+        name="stripe-ticket-success",
+    ),
+    path(
+        "tickets/success",
+        stripe_app_bounce,
+        {"target": "tickets/success"},
+        name="stripe-ticket-success-no-slash",
+    ),
+    path(
+        "tickets/cancel/",
+        stripe_app_bounce,
+        {"target": "tickets/cancel"},
+        name="stripe-ticket-cancel",
+    ),
+    path(
+        "tickets/cancel",
+        stripe_app_bounce,
+        {"target": "tickets/cancel"},
+        name="stripe-ticket-cancel-no-slash",
+    ),
     path("support", support_page, name="support"),
     path("support/", support_page, name="support-slash"),
     path(f"{admin_url_path}/", admin.site.urls),

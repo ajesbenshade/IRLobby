@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase, override_settings
+from django.http import Http404
+from django.test import RequestFactory, TestCase, override_settings
 
 from irlobby_backend.settings import validate_redis_url
 
@@ -159,9 +160,9 @@ class LegalPageTests(TestCase):
         self.assertIn("</dev/null", validate_line)
 
     def test_validate_nginx_does_not_steal_ssh_heredoc_stdin(self):
-        script = (
-            Path(settings.BASE_DIR) / "deploy" / "oracle" / "validate-nginx.sh"
-        ).read_text(encoding="utf-8")
+        script = (Path(settings.BASE_DIR) / "deploy" / "oracle" / "validate-nginx.sh").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("run --rm --no-deps -T", script)
         self.assertIn("</dev/null", script)
 
@@ -186,9 +187,9 @@ class LegalPageTests(TestCase):
 
     def test_enable_marketing_tls_workflow_uses_argv_ssh_and_host_webroot(self):
         repo_root = Path(__file__).resolve().parents[2]
-        workflow = (
-            repo_root / ".github" / "workflows" / "enable-marketing-tls.yml"
-        ).read_text(encoding="utf-8")
+        workflow = (repo_root / ".github" / "workflows" / "enable-marketing-tls.yml").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("workflow_dispatch", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertNotIn("\n  pull_request:", workflow)
@@ -214,3 +215,22 @@ class LegalPageTests(TestCase):
         self.assertNotIn("docker compose run", workflow)
         self.assertNotIn("bash -s", workflow)
         self.assertNotIn("-d api.irlobby.com", workflow)
+
+
+class StripeBouncePageTests(TestCase):
+    def test_connect_return_page_deep_links_to_app(self):
+        response = self.client.get("/stripe/connect/return/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"irlobby://stripe/connect/return", response.content)
+
+    def test_ticket_success_preserves_session_id(self):
+        response = self.client.get("/tickets/success/?session_id=cs_test_123")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"irlobby://tickets/success?session_id=cs_test_123", response.content)
+
+    def test_unknown_target_is_rejected(self):
+        from irlobby_backend.stripe_bounce import stripe_app_bounce
+
+        request = RequestFactory().get("/stripe/connect/evil/")
+        with self.assertRaises(Http404):
+            stripe_app_bounce(request, "stripe/connect/evil")

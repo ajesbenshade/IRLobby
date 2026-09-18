@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase, override_settings
 
-from utils.client_urls import is_allowed_client_return_url
+from utils.client_urls import is_allowed_client_return_url, to_stripe_https_return_url
 from utils.media import validate_image_reference, validate_image_reference_list
 
 
@@ -21,7 +21,12 @@ class ClientReturnUrlTests(SimpleTestCase):
 
     def test_allows_first_party_https(self):
         self.assertTrue(is_allowed_client_return_url("https://irlobby.com/app/tickets"))
-        self.assertTrue(is_allowed_client_return_url("https://www.irlobby.com/stripe/connect/return"))
+        self.assertTrue(
+            is_allowed_client_return_url("https://www.irlobby.com/stripe/connect/return")
+        )
+        self.assertTrue(
+            is_allowed_client_return_url("https://api.irlobby.com/stripe/connect/return")
+        )
 
     def test_rejects_credentials_in_url(self):
         self.assertFalse(is_allowed_client_return_url("https://user:pass@irlobby.com/app"))
@@ -63,3 +68,30 @@ class DebugReturnUrlTests(SimpleTestCase):
     def test_rejects_expo_and_localhost_outside_debug(self):
         self.assertFalse(is_allowed_client_return_url("exp://127.0.0.1:8081/--/tickets/success"))
         self.assertFalse(is_allowed_client_return_url("http://localhost:5173/tickets/cancel"))
+
+
+class StripeHttpsReturnUrlTests(SimpleTestCase):
+    @override_settings(STRIPE_REDIRECT_BASE_URL="https://api.irlobby.com")
+    def test_rewrites_app_scheme_to_api_bounce_page(self):
+        self.assertEqual(
+            to_stripe_https_return_url("irlobby://stripe/connect/return"),
+            "https://api.irlobby.com/stripe/connect/return",
+        )
+        self.assertEqual(
+            to_stripe_https_return_url(
+                "irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}"
+            ),
+            "https://api.irlobby.com/tickets/success?session_id={CHECKOUT_SESSION_ID}",
+        )
+
+    @override_settings(STRIPE_REDIRECT_BASE_URL="https://api.irlobby.com")
+    def test_leaves_https_urls_unchanged(self):
+        url = "https://www.irlobby.com/stripe/connect/return"
+        self.assertEqual(to_stripe_https_return_url(url), url)
+
+    @override_settings(DEBUG=True, STRIPE_REDIRECT_BASE_URL="https://api.irlobby.com")
+    def test_rewrites_expo_dev_urls_to_known_targets(self):
+        self.assertEqual(
+            to_stripe_https_return_url("exp://127.0.0.1:8081/--/tickets/cancel"),
+            "https://api.irlobby.com/tickets/cancel",
+        )

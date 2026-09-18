@@ -535,7 +535,11 @@ ACTIVITY_NEARBY_CACHE_TTL_SECONDS = config(
     "ACTIVITY_NEARBY_CACHE_TTL_SECONDS", default=60, cast=int
 )
 
-STRIPE_API_KEY = config("STRIPE_API_KEY", default="")
+# Prefer STRIPE_API_KEY. STRIPE_SECRET_KEY is accepted as an alias so a
+# Hetzner .env.production that used the more common Stripe name still works.
+STRIPE_API_KEY = (
+    config("STRIPE_API_KEY", default="") or config("STRIPE_SECRET_KEY", default="")
+).strip()
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
 STRIPE_CONNECT_WEBHOOK_SECRET = config("STRIPE_CONNECT_WEBHOOK_SECRET", default="")
 STRIPE_SUCCESS_URL = config(
@@ -550,4 +554,8 @@ STRIPE_CONNECT_REFRESH_URL = config(
 )
 STRIPE_PLATFORM_FEE_PERCENT = config("STRIPE_PLATFORM_FEE_PERCENT", default=10.0, cast=float)
 STRIPE_CONNECT_COUNTRY = config("STRIPE_CONNECT_COUNTRY", default="US")
+# Bounce origin for rewriting irlobby:// Stripe return URLs to https.
+STRIPE_REDIRECT_BASE_URL = config("STRIPE_REDIRECT_BASE_URL", default="https://api.irlobby.com")
+# Keep False until Aaron explicitly greenlights live charges.
+STRIPE_ALLOW_LIVE_MODE = config("STRIPE_ALLOW_LIVE_MODE", default=False, cast=bool)
 ENABLE_TICKETING = config("ENABLE_TICKETING", default=True, cast=bool)

@@ -30,6 +30,8 @@ import { appColors, appTypography, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
+import { createEventPrimaryCtaLabel, createEventTicketPayload } from './createActivityForm';
+
 type ActivityFormState = {
   title: string;
   description: string;
@@ -79,7 +81,7 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   ageRestriction: 'All Ages',
   equipmentRequired: '',
   weatherDependent: false,
-  isTicketed: true,
+  isTicketed: false,
   ticketPrice: '15',
   maxTickets: '40',
   requireQrCheckIn: true,
@@ -247,9 +249,7 @@ export const CreateActivityScreen = () => {
           .map((item) => item.trim())
           .filter(Boolean),
         images: imageUris,
-        is_ticketed: isTicketed,
-        ticket_price: isTicketed ? Number(ticketPrice) : undefined,
-        max_tickets: isTicketed ? Number(maxTickets) : undefined,
+        ...createEventTicketPayload(isTicketed, ticketPrice, maxTickets),
       },
     };
   };
@@ -413,49 +413,72 @@ export const CreateActivityScreen = () => {
           Use current location
         </AppButton>
 
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Field
-              accentLabel
-              label="Ticket price"
-              value={ticketPrice}
-              onChangeText={(value) => {
-                updateForm('isTicketed', true);
-                updateTextField('ticketPrice')(value);
-              }}
-              placeholder="$15"
-              keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={styles.half}>
-            <Field
-              accentLabel
-              label="Capacity"
-              value={maxTickets}
-              onChangeText={(value) => {
-                updateTextField('maxTickets')(value);
-                updateForm('capacity', value);
-              }}
-              placeholder="40"
-              keyboardType="number-pad"
-            />
-          </View>
-        </View>
-
-        <View style={styles.feePreview}>
-          <MaterialCommunityIcons name="information" size={18} color={appColors.primary} />
-          <Text style={styles.feePreviewText}>{feePreview}</Text>
-        </View>
-
         <View style={styles.checkInRow}>
-          <Text style={styles.checkInLabel}>Require QR check-in</Text>
+          <View style={styles.switchCopy}>
+            <Text style={styles.checkInLabel}>Ticketed event</Text>
+            <Text style={styles.switchSubtitle}>Guests buy a ticket before they can attend.</Text>
+          </View>
           <Switch
-            value={requireQrCheckIn}
-            onValueChange={updateToggleField('requireQrCheckIn')}
+            accessibilityLabel="Ticketed event"
+            value={isTicketed}
+            onValueChange={(value) => {
+              setForm((current) => ({
+                ...current,
+                isTicketed: value,
+                maxTickets:
+                  value && !current.maxTickets.trim() ? current.capacity || '40' : current.maxTickets,
+              }));
+            }}
             trackColor={{ false: appColors.line, true: appColors.primary }}
             thumbColor={appColors.white}
           />
         </View>
+
+        {isTicketed ? (
+          <>
+            <View style={styles.row}>
+              <View style={styles.half}>
+                <Field
+                  accentLabel
+                  label="Ticket price"
+                  value={ticketPrice}
+                  onChangeText={updateTextField('ticketPrice')}
+                  placeholder="$15"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.half}>
+                <Field
+                  accentLabel
+                  label="Capacity"
+                  value={maxTickets}
+                  onChangeText={(value) => {
+                    updateTextField('maxTickets')(value);
+                    updateForm('capacity', value);
+                  }}
+                  placeholder="40"
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
+
+            <View style={styles.feePreview}>
+              <MaterialCommunityIcons name="information" size={18} color={appColors.primary} />
+              <Text style={styles.feePreviewText}>{feePreview}</Text>
+            </View>
+
+            <View style={styles.checkInRow}>
+              <Text style={styles.checkInLabel}>Require QR check-in</Text>
+              <Switch
+                accessibilityLabel="Require QR check-in"
+                value={requireQrCheckIn}
+                onValueChange={updateToggleField('requireQrCheckIn')}
+                trackColor={{ false: appColors.line, true: appColors.primary }}
+                thumbColor={appColors.white}
+              />
+            </View>
+          </>
+        ) : null}
 
         {createMutation.error ? (
           <Text style={styles.errorText}>
@@ -472,22 +495,27 @@ export const CreateActivityScreen = () => {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={createEventPrimaryCtaLabel(isTicketed, createMutation.isPending)}
           disabled={!canSubmit || createMutation.isPending || isLocating}
           onPress={publishEvent}
           style={[styles.publishBtn, (!canSubmit || createMutation.isPending || isLocating) && styles.publishDisabled]}
         >
           <Text style={styles.publishLabel}>
-            {createMutation.isPending ? 'Publishing…' : 'Publish & enable tickets'}
+            {createEventPrimaryCtaLabel(isTicketed, createMutation.isPending)}
           </Text>
-          <MaterialCommunityIcons name="ticket-confirmation-outline" size={20} color={appColors.white} />
+          <MaterialCommunityIcons
+            name={isTicketed ? 'ticket-confirmation-outline' : 'check'}
+            size={20}
+            color={appColors.white}
+          />
         </Pressable>
 
-        {!canSellTickets && !stripeConnectUnavailable ? (
+        {isTicketed && !canSellTickets && !stripeConnectUnavailable ? (
           <AppButton variant="outline" onPress={() => onboardMutation.mutate()} loading={onboardMutation.isPending}>
             Set up payouts
           </AppButton>
         ) : null}
-        {stripeConnectUnavailable ? (
+        {isTicketed && stripeConnectUnavailable ? (
           <Text style={styles.hintText}>
             Ticket sales stay in prototype mode on this server — no live Stripe charge.
           </Text>
@@ -502,7 +530,7 @@ export const CreateActivityScreen = () => {
           <SectionIntro
             eyebrow="More details"
             title="What is this activity?"
-            subtitle="Keep the Frame A ticket fields above. These extras still publish with the event."
+            subtitle="These extras still publish with the event."
           />
           <Field
             label="Description"
@@ -583,22 +611,6 @@ export const CreateActivityScreen = () => {
                 <Text style={styles.switchSubtitle}>Signal that outdoor conditions can change the plan.</Text>
               </View>
               <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
-            </View>
-            <View style={styles.switchDivider} />
-            <View style={styles.switchRow}>
-              <View style={styles.switchCopy}>
-                <Text style={styles.switchTitle}>Ticketed event</Text>
-                <Text style={styles.switchSubtitle}>Guests buy a ticket before they can attend.</Text>
-              </View>
-              <Switch
-                value={isTicketed}
-                onValueChange={(value) => {
-                  updateForm('isTicketed', value);
-                  if (value && !maxTickets) {
-                    updateForm('maxTickets', capacity || '40');
-                  }
-                }}
-              />
             </View>
           </View>
           <AppButton variant="outline" onPress={handlePickImages} style={styles.inlineButton}>
@@ -736,6 +748,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 16,
     paddingVertical: 6,
   },
   checkInLabel: {

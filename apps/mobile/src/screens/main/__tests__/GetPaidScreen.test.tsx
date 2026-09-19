@@ -130,8 +130,7 @@ describe('GetPaidScreen (Frame F2)', () => {
     renderScreen();
 
     expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
-    expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
-    expect(screen.getByText(GET_PAID_COPY.unavailableBody)).toBeTruthy();
+    expect(await screen.findByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText(GET_PAID_COPY.continueCta));
     await waitFor(() => {

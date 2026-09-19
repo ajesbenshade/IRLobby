@@ -1,3 +1,5 @@
+import { AxiosError } from 'axios';
+
 import { API_ROUTES } from '@shared/schema';
 import {
   GET_PAID_COPY,
@@ -7,6 +9,7 @@ import {
 } from '@constants/tickets';
 import { api } from '@services/apiClient';
 import {
+  fetchStripeConnectStatus,
   startStripeConnectOnboarding,
   stripeConnectChipLabel,
 } from '@services/paymentService';
@@ -26,7 +29,19 @@ jest.mock('expo-web-browser', () => ({
   openBrowserAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }),
 }));
 
-const mockedApi = api as unknown as { post: jest.Mock };
+const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
+
+const makeAxiosError = (status: number, data: unknown = {}) => {
+  const error = new AxiosError('Request failed');
+  error.response = {
+    status,
+    data,
+    statusText: 'Error',
+    headers: {},
+    config: { headers: {} },
+  } as AxiosError['response'];
+  return error;
+};
 
 describe('stripeConnectChipLabel', () => {
   it('maps API flags onto Not connected, Pending, and Ready', () => {
@@ -54,6 +69,41 @@ describe('stripeConnectChipLabel', () => {
         status: 'Pending',
       }),
     ).toBe(STRIPE_CONNECT_CHIP.pending);
+  });
+});
+
+describe('fetchStripeConnectStatus', () => {
+  beforeEach(() => {
+    mockedApi.get.mockReset();
+  });
+
+  it('marks a successful status payload as available', async () => {
+    mockedApi.get.mockResolvedValue({
+      data: {
+        connected: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        onboardingComplete: false,
+      },
+    });
+
+    await expect(fetchStripeConnectStatus()).resolves.toEqual({
+      connected: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+      available: true,
+    });
+    expect(mockedApi.get).toHaveBeenCalledWith(API_ROUTES.USER_STRIPE_CONNECT_STATUS);
+  });
+
+  it('throws 401/404/501/503 instead of returning available:false', async () => {
+    for (const status of [401, 404, 501, 503]) {
+      mockedApi.get.mockRejectedValueOnce(makeAxiosError(status, { error: `http ${status}` }));
+      await expect(fetchStripeConnectStatus()).rejects.toMatchObject({
+        response: { status },
+      });
+    }
   });
 });
 

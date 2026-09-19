@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -33,12 +32,6 @@ export interface TicketPurchaseResponse {
   platformFeePercent?: number;
   platformFeeAmountCents?: number;
 }
-
-const isStripeConnectUnavailable = (error: unknown) =>
-  axios.isAxiosError(error) &&
-  (error.response?.status === 404 ||
-    error.response?.status === 501 ||
-    error.response?.status === 503);
 
 const CHIP_ALIASES: Record<string, StripeConnectChipLabel> = {
   'not connected': STRIPE_CONNECT_CHIP.notConnected,
@@ -78,23 +71,16 @@ export function stripeConnectStatusCopy(chip: StripeConnectChipLabel) {
 }
 
 export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
-  try {
-    const response = await api.get<StripeConnectStatus>(
-      API_ROUTES.USER_STRIPE_CONNECT_STATUS
-    );
-    return { ...response.data, available: true };
-  } catch (error) {
-    if (isStripeConnectUnavailable(error)) {
-      return {
-        connected: false,
-        payoutsEnabled: false,
-        detailsSubmitted: false,
-        onboardingComplete: false,
-        available: false,
-      };
-    }
-    throw error;
-  }
+  // Status errors must throw so Get paid can show HelperText and still keep
+  // Continue to Stripe. Do not treat 404/501/503 as a successful "unavailable"
+  // payload — the live Connect status endpoint uses 503 for StripeConnectError
+  // (e.g. missing key), and 401/502 already throw. Hiding the CTA on those
+  // codes was the TestFlight Get paid empty-button bug.
+  const response = await api.get<StripeConnectStatus>(API_ROUTES.USER_STRIPE_CONNECT_STATUS);
+  return {
+    ...response.data,
+    available: response.data?.available !== false,
+  };
 }
 
 export async function startStripeConnectOnboarding(): Promise<string> {

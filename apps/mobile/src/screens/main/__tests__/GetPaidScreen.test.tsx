@@ -75,7 +75,8 @@ describe('GetPaidScreen (Frame F2)', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.continueCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.footer)).toBeTruthy();
 
@@ -115,5 +116,39 @@ describe('GetPaidScreen (Frame F2)', () => {
     renderScreen();
     fireEvent.press(await screen.findByText(GET_PAID_COPY.notNowCta));
     expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  it('still renders Continue to Stripe when status is unavailable', async () => {
+    fetchStripeConnectStatus.mockResolvedValue({
+      available: false,
+      connected: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+    });
+
+    renderScreen();
+
+    expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.unavailableBody)).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(GET_PAID_COPY.continueCta));
+    await waitFor(() => {
+      expect(openStripeConnectOnboarding).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('keeps Continue to Stripe when status fetch errors (401 is not unavailable)', async () => {
+    const authError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: { status: 401, data: { detail: 'Authentication credentials were not provided.' } },
+    });
+    fetchStripeConnectStatus.mockRejectedValue(authError);
+
+    renderScreen();
+
+    expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(await screen.findByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
   });
 });

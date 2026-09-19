@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
-import { GET_PAID_COPY } from '@constants/tickets';
+import { GET_PAID_COPY, STRIPE_CONNECT_CHIP } from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
 import {
   fetchStripeConnectStatus,
@@ -30,8 +30,7 @@ export const GetPaidScreen = () => {
 
   const chip = stripeConnectChipLabel(statusQuery.data, Boolean(user?.canSellTickets));
   const copy = stripeConnectStatusCopy(chip);
-  const unavailable = statusQuery.data?.available === false;
-  const ready = chip === 'Ready';
+  const ready = chip === STRIPE_CONNECT_CHIP.ready;
 
   const onboardMutation = useMutation({
     mutationFn: openStripeConnectOnboarding,
@@ -59,9 +58,6 @@ export const GetPaidScreen = () => {
   const secondaryLabel = ready ? GET_PAID_COPY.doneCta : GET_PAID_COPY.notNowCta;
 
   const handlePrimary = () => {
-    if (unavailable) {
-      return;
-    }
     if (ready) {
       void statusQuery.refetch();
       void refreshProfile();
@@ -96,8 +92,8 @@ export const GetPaidScreen = () => {
               />
             </View>
             <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>{unavailable ? GET_PAID_COPY.notConnectedTitle : copy.title}</Text>
-              <Text style={styles.statusBody}>{unavailable ? GET_PAID_COPY.unavailableBody : copy.body}</Text>
+              <Text style={styles.statusTitle}>{copy.title}</Text>
+              <Text style={styles.statusBody}>{copy.body}</Text>
             </View>
           </View>
 
@@ -112,18 +108,17 @@ export const GetPaidScreen = () => {
             </HelperText>
           ) : null}
 
-          {unavailable ? null : (
-            <AppButton
-              onPress={handlePrimary}
-              loading={onboardMutation.isPending}
-              accessibilityLabel={primaryLabel}
-              style={styles.primary}
-            >
-              {primaryLabel}
-            </AppButton>
-          )}
+          <AppButton
+            onPress={handlePrimary}
+            loading={onboardMutation.isPending}
+            accessibilityLabel={primaryLabel}
+            style={styles.primary}
+          >
+            {primaryLabel}
+          </AppButton>
+          {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
 
-          <AppButton variant="outline" onPress={close} style={styles.secondary}>
+          <AppButton variant="ghost" onPress={close} style={styles.secondary}>
             {secondaryLabel}
           </AppButton>
 
@@ -221,6 +216,12 @@ const styles = StyleSheet.create({
   primary: {
     marginTop: 8,
     borderRadius: radii.pill,
+  },
+  leaveHelper: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   secondary: {
     borderRadius: radii.pill,

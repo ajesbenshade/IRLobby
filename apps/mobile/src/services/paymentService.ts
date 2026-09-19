@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -18,7 +17,6 @@ export interface StripeConnectStatus {
   detailsSubmitted: boolean;
   accountId?: string | null;
   onboardingComplete: boolean;
-  available?: boolean;
   status?: string | null;
 }
 
@@ -33,12 +31,6 @@ export interface TicketPurchaseResponse {
   platformFeePercent?: number;
   platformFeeAmountCents?: number;
 }
-
-const isStripeConnectUnavailable = (error: unknown) =>
-  axios.isAxiosError(error) &&
-  (error.response?.status === 404 ||
-    error.response?.status === 501 ||
-    error.response?.status === 503);
 
 const CHIP_ALIASES: Record<string, StripeConnectChipLabel> = {
   'not connected': STRIPE_CONNECT_CHIP.notConnected,
@@ -78,23 +70,11 @@ export function stripeConnectStatusCopy(chip: StripeConnectChipLabel) {
 }
 
 export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
-  try {
-    const response = await api.get<StripeConnectStatus>(
-      API_ROUTES.USER_STRIPE_CONNECT_STATUS
-    );
-    return { ...response.data, available: true };
-  } catch (error) {
-    if (isStripeConnectUnavailable(error)) {
-      return {
-        connected: false,
-        payoutsEnabled: false,
-        detailsSubmitted: false,
-        onboardingComplete: false,
-        available: false,
-      };
-    }
-    throw error;
-  }
+  // Backend has no `available` field. Return the payload as-is and let callers
+  // treat missing/absent status as not-connected. HTTP errors throw so Get paid
+  // can show HelperText and still keep Continue to Stripe.
+  const response = await api.get<StripeConnectStatus>(API_ROUTES.USER_STRIPE_CONNECT_STATUS);
+  return response.data;
 }
 
 export async function startStripeConnectOnboarding(): Promise<string> {

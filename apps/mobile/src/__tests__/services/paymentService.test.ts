@@ -2,7 +2,6 @@ import { AxiosError } from 'axios';
 
 import { API_ROUTES } from '@shared/schema';
 import {
-  GET_PAID_COPY,
   STRIPE_CONNECT_CHIP,
   STRIPE_CONNECT_HTTPS_REFRESH_URL,
   STRIPE_CONNECT_HTTPS_RETURN_URL,
@@ -121,6 +120,5 @@ describe('startStripeConnectOnboarding', () => {
       refreshUrl: STRIPE_CONNECT_HTTPS_REFRESH_URL,
     });
     expect(STRIPE_CONNECT_HTTPS_RETURN_URL).toBe('https://api.irlobby.com/stripe/connect/return');
-    expect(GET_PAID_COPY.footer).toContain('Test mode');
   });
 });

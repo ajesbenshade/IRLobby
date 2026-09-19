@@ -1,1 +1,1 @@
-Aaron pick restored — CoS concept C pixels, crop/upscale only. No redesign.
+Denser IR lettermark (Aaron washout). Deeper gradient + solid white mark.

@@ -80,13 +80,28 @@ describe('production app icon', () => {
 
     expect(config.icon).toBe(iconPath);
     expect(config.android?.adaptiveIcon?.foregroundImage).toBe(iconPath);
+    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#FF6B4A');
 
     const notificationPlugin = (config.plugins ?? []).find(
       (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
-    ) as [string, { icon?: string }] | undefined;
+    ) as [string, { icon?: string; color?: string }] | undefined;
     expect(notificationPlugin?.[1]?.icon).toBe(iconPath);
+    expect(notificationPlugin?.[1]?.color).toBe('#FF6B4A');
 
-    const abs = path.resolve(__dirname, '../../assets/AppIcon-1024.png');
-    expect(fs.existsSync(abs)).toBe(true);
+    const assetsDir = path.resolve(__dirname, '../../assets');
+    const master = path.join(assetsDir, 'AppIcon-1024.png');
+    const iconPng = path.join(assetsDir, 'icon.png');
+    const adaptivePng = path.join(assetsDir, 'adaptive-icon.png');
+    expect(fs.existsSync(master)).toBe(true);
+    expect(fs.readFileSync(iconPng).equals(fs.readFileSync(master))).toBe(true);
+    expect(fs.readFileSync(adaptivePng).equals(fs.readFileSync(master))).toBe(true);
+
+    const contents = JSON.parse(
+      fs.readFileSync(path.join(assetsDir, 'AppIcon.appiconset/Contents.json'), 'utf8'),
+    ) as { images: { filename?: string }[] };
+    for (const image of contents.images) {
+      if (!image.filename) continue;
+      expect(fs.existsSync(path.join(assetsDir, 'AppIcon.appiconset', image.filename))).toBe(true);
+    }
   });
 });

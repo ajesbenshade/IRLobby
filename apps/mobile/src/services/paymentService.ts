@@ -3,6 +3,12 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import { api } from './apiClient';
+import {
+  GET_PAID_COPY,
+  STRIPE_CONNECT_CHIP,
+  STRIPE_CONNECT_HTTPS_REFRESH_URL,
+  STRIPE_CONNECT_HTTPS_RETURN_URL,
+} from '@constants/tickets';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
 import { isAllowedStripeUrl } from '@utils/safeUrl';
 
@@ -13,7 +19,11 @@ export interface StripeConnectStatus {
   accountId?: string | null;
   onboardingComplete: boolean;
   available?: boolean;
+  status?: string | null;
 }
+
+export type StripeConnectChipLabel =
+  (typeof STRIPE_CONNECT_CHIP)[keyof typeof STRIPE_CONNECT_CHIP];
 
 export interface TicketPurchaseResponse {
   session_id: string;
@@ -29,6 +39,43 @@ const isStripeConnectUnavailable = (error: unknown) =>
   (error.response?.status === 404 ||
     error.response?.status === 501 ||
     error.response?.status === 503);
+
+const CHIP_ALIASES: Record<string, StripeConnectChipLabel> = {
+  'not connected': STRIPE_CONNECT_CHIP.notConnected,
+  not_connected: STRIPE_CONNECT_CHIP.notConnected,
+  pending: STRIPE_CONNECT_CHIP.pending,
+  ready: STRIPE_CONNECT_CHIP.ready,
+};
+
+export function stripeConnectChipLabel(
+  status?: StripeConnectStatus | null,
+  canSellTickets = false,
+): StripeConnectChipLabel {
+  const wording = status?.status?.trim().toLowerCase();
+  if (wording && CHIP_ALIASES[wording]) {
+    return CHIP_ALIASES[wording];
+  }
+
+  if (canSellTickets || status?.payoutsEnabled || status?.onboardingComplete) {
+    return STRIPE_CONNECT_CHIP.ready;
+  }
+
+  if (status?.connected || status?.detailsSubmitted) {
+    return STRIPE_CONNECT_CHIP.pending;
+  }
+
+  return STRIPE_CONNECT_CHIP.notConnected;
+}
+
+export function stripeConnectStatusCopy(chip: StripeConnectChipLabel) {
+  if (chip === STRIPE_CONNECT_CHIP.ready) {
+    return { title: GET_PAID_COPY.readyTitle, body: GET_PAID_COPY.readyBody };
+  }
+  if (chip === STRIPE_CONNECT_CHIP.pending) {
+    return { title: GET_PAID_COPY.pendingTitle, body: GET_PAID_COPY.pendingBody };
+  }
+  return { title: GET_PAID_COPY.notConnectedTitle, body: GET_PAID_COPY.notConnectedBody };
+}
 
 export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
   try {
@@ -51,13 +98,11 @@ export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
 }
 
 export async function startStripeConnectOnboarding(): Promise<string> {
-  const returnUrl = Linking.createURL('stripe/connect/return');
-  const refreshUrl = Linking.createURL('stripe/connect/refresh');
   const response = await api.post<{ url: string }>(
     API_ROUTES.USER_STRIPE_CONNECT_ONBOARD,
     {
-      returnUrl,
-      refreshUrl,
+      returnUrl: STRIPE_CONNECT_HTTPS_RETURN_URL,
+      refreshUrl: STRIPE_CONNECT_HTTPS_REFRESH_URL,
     }
   );
   const url = response.data?.url;

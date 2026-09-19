@@ -58,6 +58,7 @@ export interface CreateActivityPayload {
   weather_dependent?: boolean;
   tags?: string[];
   images?: string[];
+  imageUrls?: string[];
   is_ticketed?: boolean;
   isTicketed?: boolean;
   ticket_price?: number;
@@ -67,18 +68,47 @@ export interface CreateActivityPayload {
   platform_fee_percent?: number;
 }
 
+const activityImagePayload = (payload: CreateActivityPayload) => {
+  const images = payload.images ?? payload.imageUrls ?? [];
+  return { images, imageUrls: images };
+};
+
 export const createActivity = async (
   payload: CreateActivityPayload
 ): Promise<Activity> => {
   const response = await api.post<Activity>(API_ROUTES.ACTIVITIES, {
     ...payload,
     tags: payload.tags ?? [],
-    images: payload.images ?? [],
+    ...activityImagePayload(payload),
   });
   track("activity_create", {
     activity_id: String(response.data.id),
     category: payload.category ?? "",
   });
+  return response.data;
+};
+
+export const fetchActivity = async (
+  activityId: number | string
+): Promise<Activity> => {
+  const response = await api.get<Activity>(
+    API_ROUTE_BUILDERS.activityDetail(activityId)
+  );
+  return response.data;
+};
+
+export const updateActivity = async (
+  activityId: number | string,
+  payload: CreateActivityPayload
+): Promise<Activity> => {
+  const response = await api.patch<Activity>(
+    API_ROUTE_BUILDERS.activityDetail(activityId),
+    {
+      ...payload,
+      tags: payload.tags ?? [],
+      ...activityImagePayload(payload),
+    }
+  );
   return response.data;
 };
 

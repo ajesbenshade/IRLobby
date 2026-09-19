@@ -221,6 +221,17 @@ export const MyEventsScreen = () => {
                         compact
                         variant="outline"
                         onPress={() =>
+                          navigation.navigate('EditActivity', {
+                            activityId: activity.id,
+                          })
+                        }
+                      >
+                        Edit
+                      </AppButton>
+                      <AppButton
+                        compact
+                        variant="outline"
+                        onPress={() =>
                           navigation.navigate('DoorScan', {
                             activityId: activity.id,
                             title: activity.title,

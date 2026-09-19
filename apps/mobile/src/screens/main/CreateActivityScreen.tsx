@@ -1,17 +1,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AccentPill, EmptyStatePanel, PanelCard, SectionIntro } from '@components/AppChrome';
+import { AccentPill, PanelCard, SectionIntro } from '@components/AppChrome';
+import { EventPhotoSlots } from '@components/EventPhotoSlots';
 import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
-import { Image, ScrollView, View } from '@components/RNCompat';
+import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import { MAX_EVENT_PHOTOS } from '@constants/activity';
 import {
   formatEventDateLabel,
   formatEventTimeLabel,
@@ -20,17 +24,24 @@ import {
   PROTOTYPE_FOOTER_HOST,
 } from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
-import { createActivity } from '@services/activityService';
-import type { CreateActivityPayload } from '@services/activityService';
+import type { MainStackParamList } from '@navigation/types';
 import {
-  fetchStripeConnectStatus,
-  openStripeConnectOnboarding,
-} from '@services/paymentService';
+  createActivity,
+  fetchActivity,
+  updateActivity,
+} from '@services/activityService';
+import type { CreateActivityPayload } from '@services/activityService';
+import { fetchStripeConnectStatus } from '@services/paymentService';
 import { appColors, appTypography, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
-import { createEventPrimaryCtaLabel, createEventTicketPayload } from './createActivityForm';
+import {
+  createEventImagePayload,
+  createEventPrimaryCtaLabel,
+  createEventTicketPayload,
+  normalizeEventImages,
+} from './createActivityForm';
 
 type ActivityFormState = {
   title: string;
@@ -88,6 +99,20 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   imageUris: [],
 };
 
+const toFormDateTime = (value?: string | null): string => {
+  if (!value?.trim()) {
+    return '';
+  }
+
+  const parsed = new Date(value.includes(' ') ? value.replace(' ', 'T') : value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+};
+
 const VALID_VISIBILITY = ['everyone', 'friends', 'friendsOfFriends'] as const;
 
 const VISIBILITY_OPTIONS: Array<{ value: (typeof VALID_VISIBILITY)[number]; label: string }> = [
@@ -96,12 +121,19 @@ const VISIBILITY_OPTIONS: Array<{ value: (typeof VALID_VISIBILITY)[number]; labe
   { value: 'friendsOfFriends', label: 'Friends of friends' },
 ];
 
-export const CreateActivityScreen = () => {
+type CreateActivityScreenProps = {
+  activityId?: number | string;
+};
+
+export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps = {}) => {
   const queryClient = useQueryClient();
-  const { user, refreshProfile } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { user } = useAuth();
+  const isEditing = Boolean(activityId);
 
   const [form, setForm] = useState<ActivityFormState>(INITIAL_FORM_STATE);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
   const {
@@ -134,20 +166,18 @@ export const CreateActivityScreen = () => {
     staleTime: 30_000,
   });
 
+  const activityQuery = useQuery({
+    queryKey: ['mobile-activity', activityId],
+    queryFn: () => fetchActivity(activityId!),
+    enabled: Boolean(activityId),
+  });
+
   const stripeConnectUnavailable = connectStatusQuery.data?.available === false;
   const canSellTickets =
     !stripeConnectUnavailable &&
     (Boolean(user?.canSellTickets) ||
       Boolean(connectStatusQuery.data?.payoutsEnabled) ||
       Boolean(connectStatusQuery.data?.onboardingComplete));
-
-  const onboardMutation = useMutation({
-    mutationFn: openStripeConnectOnboarding,
-    onSuccess: async () => {
-      await connectStatusQuery.refetch();
-      await refreshProfile();
-    },
-  });
 
   const updateForm = <Key extends keyof ActivityFormState>(key: Key, value: ActivityFormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -161,14 +191,52 @@ export const CreateActivityScreen = () => {
     updateForm(key, value);
   };
 
-  const createMutation = useMutation({
-    mutationFn: createActivity,
+  useEffect(() => {
+    const activity = activityQuery.data;
+    if (!activityId || !activity) {
+      return;
+    }
+
+    const ticketed = Boolean(activity.isTicketed ?? activity.is_ticketed);
+    const ticketPriceValue = activity.ticketPrice ?? activity.ticket_price;
+    const maxTicketsValue = activity.maxTickets ?? activity.max_tickets ?? activity.capacity;
+
+    setForm({
+      ...INITIAL_FORM_STATE,
+      title: activity.title ?? '',
+      description: activity.description ?? '',
+      location: activity.location ?? '',
+      time: toFormDateTime(activity.time),
+      capacity: String(activity.capacity ?? 6),
+      latitude: String(activity.latitude ?? 0),
+      longitude: String(activity.longitude ?? 0),
+      tags: (activity.tags ?? []).join(', '),
+      category: activity.category ?? 'Social',
+      isTicketed: ticketed,
+      ticketPrice: ticketPriceValue != null ? String(ticketPriceValue) : '15',
+      maxTickets: maxTicketsValue != null ? String(maxTicketsValue) : '40',
+      imageUris: normalizeEventImages(activity.images),
+    });
+  }, [activityId, activityQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: CreateActivityPayload) =>
+      isEditing && activityId ? updateActivity(activityId, payload) : createActivity(payload),
     onSuccess: async () => {
-      setForm(INITIAL_FORM_STATE);
+      if (!isEditing) {
+        setForm(INITIAL_FORM_STATE);
+      }
       setTimeError(null);
+      setPhotoError(null);
 
       await queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
       await queryClient.invalidateQueries({ queryKey: ['mobile-hosted-activities'] });
+      if (activityId) {
+        await queryClient.invalidateQueries({ queryKey: ['mobile-activity', activityId] });
+      }
+      if (isEditing && navigation.canGoBack()) {
+        navigation.goBack();
+      }
     },
   });
 
@@ -248,15 +316,21 @@ export const CreateActivityScreen = () => {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        images: imageUris,
+        ...createEventImagePayload(imageUris),
         ...createEventTicketPayload(isTicketed, ticketPrice, maxTickets),
       },
     };
   };
 
   const handlePickImages = async () => {
+    const remaining = MAX_EVENT_PHOTOS - imageUris.length;
+    if (remaining <= 0) {
+      return;
+    }
+
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
+      setPhotoError('Photo library permission is required to add event photos.');
       return;
     }
 
@@ -264,7 +338,7 @@ export const CreateActivityScreen = () => {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.7,
-      selectionLimit: 5,
+      selectionLimit: remaining,
     });
 
     if (!result.canceled) {
@@ -272,9 +346,14 @@ export const CreateActivityScreen = () => {
         result.assets.map((asset) => imageAssetToUploadDataUrl(asset).catch(() => null)),
       );
       const selected = prepared.filter((item): item is string => Boolean(item));
+      if (selected.length === 0) {
+        setPhotoError('Use JPEG, PNG, or WebP photos.');
+        return;
+      }
+      setPhotoError(null);
       setForm((current) => ({
         ...current,
-        imageUris: [...current.imageUris, ...selected].slice(0, 5),
+        imageUris: [...current.imageUris, ...selected].slice(0, MAX_EVENT_PHOTOS),
       }));
     }
   };
@@ -344,7 +423,7 @@ export const CreateActivityScreen = () => {
     }
 
     setTimeError(null);
-    createMutation.mutate(payload!);
+    saveMutation.mutate(payload!);
   };
 
   return (
@@ -413,6 +492,20 @@ export const CreateActivityScreen = () => {
           Use current location
         </AppButton>
 
+        <EventPhotoSlots
+          images={imageUris}
+          onAdd={() => {
+            void handlePickImages();
+          }}
+          onRemove={(index) => {
+            setForm((current) => ({
+              ...current,
+              imageUris: current.imageUris.filter((_, currentIndex) => currentIndex !== index),
+            }));
+          }}
+        />
+        {photoError ? <Text style={styles.errorText}>{photoError}</Text> : null}
+
         <View style={styles.checkInRow}>
           <View style={styles.switchCopy}>
             <Text style={styles.checkInLabel}>Ticketed event</Text>
@@ -480,13 +573,13 @@ export const CreateActivityScreen = () => {
           </>
         ) : null}
 
-        {createMutation.error ? (
+        {saveMutation.error ? (
           <Text style={styles.errorText}>
-            {getErrorMessage(createMutation.error, 'Unable to create activity.')}
+            {getErrorMessage(saveMutation.error, isEditing ? 'Unable to save activity.' : 'Unable to create activity.')}
           </Text>
         ) : null}
 
-        {createMutation.isSuccess ? (
+        {saveMutation.isSuccess && !isEditing ? (
           <PanelCard tone="accent">
             <AccentPill tone="secondary">Saved</AccentPill>
             <Text style={styles.successText}>Activity created successfully.</Text>
@@ -495,13 +588,13 @@ export const CreateActivityScreen = () => {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={createEventPrimaryCtaLabel(isTicketed, createMutation.isPending)}
-          disabled={!canSubmit || createMutation.isPending || isLocating}
+          accessibilityLabel={createEventPrimaryCtaLabel(isTicketed, saveMutation.isPending, isEditing)}
+          disabled={!canSubmit || saveMutation.isPending || isLocating}
           onPress={publishEvent}
-          style={[styles.publishBtn, (!canSubmit || createMutation.isPending || isLocating) && styles.publishDisabled]}
+          style={[styles.publishBtn, (!canSubmit || saveMutation.isPending || isLocating) && styles.publishDisabled]}
         >
           <Text style={styles.publishLabel}>
-            {createEventPrimaryCtaLabel(isTicketed, createMutation.isPending)}
+            {createEventPrimaryCtaLabel(isTicketed, saveMutation.isPending, isEditing)}
           </Text>
           <MaterialCommunityIcons
             name={isTicketed ? 'ticket-confirmation-outline' : 'check'}
@@ -511,7 +604,7 @@ export const CreateActivityScreen = () => {
         </Pressable>
 
         {isTicketed && !canSellTickets && !stripeConnectUnavailable ? (
-          <AppButton variant="outline" onPress={() => onboardMutation.mutate()} loading={onboardMutation.isPending}>
+          <AppButton variant="outline" onPress={() => navigation.navigate('GetPaid')}>
             Set up payouts
           </AppButton>
         ) : null}
@@ -613,39 +706,15 @@ export const CreateActivityScreen = () => {
               <Switch value={weatherDependent} onValueChange={updateToggleField('weatherDependent')} />
             </View>
           </View>
-          <AppButton variant="outline" onPress={handlePickImages} style={styles.inlineButton}>
-            Pick up to 5 images
-          </AppButton>
-          {imageUris.length > 0 ? (
-            <View style={styles.mediaGrid}>
-              {imageUris.map((uri, index) => (
-                <View key={`${index}-${uri.slice(0, 16)}`} style={styles.mediaTile}>
-                  <Image source={{ uri }} style={styles.mediaImage} />
-                  <AppButton
-                    variant="ghost"
-                    compact
-                    onPress={() => {
-                      setForm((current) => ({
-                        ...current,
-                        imageUris: current.imageUris.filter((_, currentIndex) => currentIndex !== index),
-                      }));
-                    }}
-                  >
-                    Remove
-                  </AppButton>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <EmptyStatePanel
-              title="No media selected yet"
-              description="Add a few images so the card feels alive when it appears in discovery."
-            />
-          )}
         </PanelCard>
       </ScrollView>
     </View>
   );
+};
+
+export const EditActivityScreen = () => {
+  const route = useRoute<RouteProp<MainStackParamList, 'EditActivity'>>();
+  return <CreateActivityScreen activityId={route.params.activityId} />;
 };
 
 const styles = StyleSheet.create({
@@ -854,34 +923,8 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: appColors.line,
   },
-  mediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  mediaTile: {
-    width: '47%',
-    gap: 6,
-  },
-  mediaImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 18,
-    backgroundColor: appColors.cardStrong,
-  },
   successText: {
     color: appColors.ink,
     fontWeight: '700',
-  },
-  submitCard: {
-    gap: 10,
-  },
-  submitTitle: {
-    color: appColors.ink,
-    fontWeight: '800',
-  },
-  submitSubtitle: {
-    color: appColors.mutedInk,
-    lineHeight: 22,
   },
 });

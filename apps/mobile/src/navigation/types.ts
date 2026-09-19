@@ -69,4 +69,8 @@ export type MainStackParamList = {
     guestName?: string;
     quantity?: number;
   };
+  GetPaid: undefined;
+  EditActivity: {
+    activityId: number | string;
+  };
 };

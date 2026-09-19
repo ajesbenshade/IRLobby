@@ -61,6 +61,8 @@ export const API_ROUTE_BUILDERS = {
   moderationUnblockUser: (userId: number | string) =>
     `/api/moderation/unblock/${userId}/`,
   activitiesWithSearch: (query: string) => `${API_ROUTES.ACTIVITIES}?${query}`,
+  activityDetail: (activityId: number | string) =>
+    `${API_ROUTES.ACTIVITIES}${activityId}/`,
   ticketPurchase: (activityId: number | string) =>
     `${API_ROUTES.ACTIVITIES}${activityId}/buy-ticket/`,
   myTickets: () => API_ROUTES.TICKETS_MY,

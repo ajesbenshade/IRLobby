@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,6 +16,7 @@ import {
   PanelCard,
   SectionIntro,
 } from "@components/AppChrome";
+import { GetPaidRow, ProfileMenuRow } from "@components/GetPaidRow";
 import { Image, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
@@ -24,74 +25,12 @@ import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
 import { api } from "@services/apiClient";
 import { updateOnboarding } from "@services/authService";
-import {
-  fetchStripeConnectStatus,
-  openStripeConnectOnboarding,
-} from "@services/paymentService";
 import { appColors, appTypography, palette, radii } from "@theme/index";
 import { getErrorMessage } from "@utils/error";
 import { imageAssetToUploadDataUrl } from "@utils/profileImages";
 import { parseHttpsUrl } from "@utils/safeUrl";
 
 import type { MainStackParamList } from "@navigation/types";
-
-const PayoutSetupCard = () => {
-  const { user, refreshProfile } = useAuth();
-  const statusQuery = useQuery({
-    queryKey: ["stripe-connect-status"],
-    queryFn: fetchStripeConnectStatus,
-  });
-  const onboardMutation = useMutation({
-    mutationFn: openStripeConnectOnboarding,
-    onSuccess: async () => {
-      await statusQuery.refetch();
-      await refreshProfile();
-    },
-  });
-
-  const unavailable = statusQuery.data?.available === false;
-  const ready =
-    Boolean(user?.canSellTickets) ||
-    Boolean(statusQuery.data?.payoutsEnabled) ||
-    Boolean(statusQuery.data?.onboardingComplete);
-
-  return (
-    <View style={{ gap: 10 }}>
-      <Text style={{ color: appColors.mutedInk, lineHeight: 20 }}>
-        {unavailable
-          ? "Payouts aren’t live on this server yet. You can still host free plans."
-          : ready
-            ? "Your payout account is connected. Ticketed events will send 90% to you."
-            : "Connect a Stripe payout account to sell tickets for your events."}
-      </Text>
-      {!unavailable && statusQuery.error ? (
-        <HelperText type="error" visible>
-          {getErrorMessage(statusQuery.error, "Unable to load payout status.")}
-        </HelperText>
-      ) : null}
-      {onboardMutation.error ? (
-        <HelperText type="error" visible>
-          {getErrorMessage(onboardMutation.error, "Unable to open Stripe onboarding.")}
-        </HelperText>
-      ) : null}
-      {unavailable ? null : (
-        <AppButton
-          variant={ready ? "outline" : "contained"}
-          loading={onboardMutation.isPending || statusQuery.isFetching}
-          onPress={() => {
-            if (ready) {
-              void statusQuery.refetch();
-              return;
-            }
-            onboardMutation.mutate();
-          }}
-        >
-          {ready ? "Refresh payout status" : "Set up payouts with Stripe"}
-        </AppButton>
-      )}
-    </View>
-  );
-};
 
 export const ProfileScreen = () => {
   const MAX_INTERESTS = 20;
@@ -363,6 +302,51 @@ export const ProfileScreen = () => {
         </HelperText>
       ) : null}
 
+      <PanelCard style={styles.menuCard}>
+        <ProfileMenuRow
+          icon="cog-outline"
+          title="Settings"
+          onPress={() => navigation.navigate("Settings")}
+        />
+        <ProfileMenuRow
+          icon="bell-outline"
+          title="Notifications"
+          onPress={() => navigation.navigate("Notifications")}
+        />
+        <ProfileMenuRow
+          icon="lock-outline"
+          title="Privacy"
+          onPress={() => navigation.navigate("PrivacyPolicy")}
+        />
+        <GetPaidRow />
+        <ProfileMenuRow
+          icon="account-circle-outline"
+          title="Account"
+          onPress={() => navigation.navigate("Account")}
+        />
+        <ProfileMenuRow
+          icon="help-circle-outline"
+          title="Help"
+          onPress={() => navigation.navigate("HelpSupport")}
+        />
+        <ProfileMenuRow
+          icon="account-group-outline"
+          title="Connections"
+          onPress={() => navigation.navigate("Friends")}
+        />
+        <ProfileMenuRow
+          icon="star-outline"
+          title="Reviews"
+          onPress={() => navigation.navigate("Reviews")}
+        />
+        <ProfileMenuRow
+          icon="logout"
+          title="Log out"
+          danger
+          onPress={() => void signOut()}
+        />
+      </PanelCard>
+
       <PanelCard>
         <SectionIntro
           eyebrow="Intro"
@@ -506,67 +490,6 @@ export const ProfileScreen = () => {
             description="Add a couple from Profile when you’re ready — not required to start discovering."
           />
         )}
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Payouts"
-          title="Get paid for ticketed events"
-          subtitle="Connect Stripe once. IRLobby keeps 10% of each ticket; you receive the rest."
-        />
-        <PayoutSetupCard />
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Shortcuts"
-          title="Everything around your profile"
-          subtitle="Keep the side destinations grouped here instead of mixing them into the main edit flow."
-        />
-        <View style={styles.navWrap}>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("Settings")}
-          >
-            Settings
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("Friends")}
-          >
-            Connections
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("Reviews")}
-          >
-            Reviews
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("Notifications")}
-          >
-            Notifications
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("HelpSupport")}
-          >
-            Help & Support
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("PrivacyPolicy")}
-          >
-            Privacy
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate("TermsOfService")}
-          >
-            Terms
-          </Button>
-        </View>
       </PanelCard>
 
       {updateMutation.error ? (
@@ -818,5 +741,10 @@ const styles = StyleSheet.create({
   },
   signOut: {
     alignSelf: "flex-start",
+  },
+  menuCard: {
+    gap: 0,
+    paddingVertical: 6,
+    overflow: "hidden",
   },
 });

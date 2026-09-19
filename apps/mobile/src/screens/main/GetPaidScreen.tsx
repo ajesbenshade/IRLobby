@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { HelperText } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { View } from '@components/RNCompat';
+import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { GET_PAID_COPY, STRIPE_CONNECT_CHIP } from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
@@ -79,48 +79,63 @@ export const GetPaidScreen = () => {
             </Pressable>
           </View>
 
-          <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
-          <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
-          <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
+          {/* F2b lock: sheet sizes to title/status and shrinks if the phone is short.
+              Continue is sticky under the status card — not in the scroll, not at the
+              bottom of a flex:1 card (TF 81 off-screen). */}
+          <View style={styles.sheet} testID="get-paid-scroll">
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
+              <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
 
-          <View style={styles.statusCard}>
-            <View style={styles.statusIcon}>
-              <MaterialCommunityIcons
-                name={ready ? 'check-decagram' : 'link-variant'}
-                size={28}
-                color={appColors.primary}
-              />
-            </View>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>{copy.title}</Text>
-              <Text style={styles.statusBody}>{copy.body}</Text>
-            </View>
+              <View style={styles.statusCard}>
+                <View style={styles.statusIcon}>
+                  <MaterialCommunityIcons
+                    name={ready ? 'check-decagram' : 'link-variant'}
+                    size={28}
+                    color={appColors.primary}
+                  />
+                </View>
+                <View style={styles.statusCopy}>
+                  <Text style={styles.statusTitle}>{copy.title}</Text>
+                  <Text style={styles.statusBody}>{copy.body}</Text>
+                </View>
+              </View>
+
+              {statusQuery.error ? (
+                <HelperText type="error" visible>
+                  {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
+                </HelperText>
+              ) : null}
+              {onboardMutation.error ? (
+                <HelperText type="error" visible>
+                  {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
+                </HelperText>
+              ) : null}
+            </ScrollView>
           </View>
 
-          {statusQuery.error ? (
-            <HelperText type="error" visible>
-              {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
-            </HelperText>
-          ) : null}
-          {onboardMutation.error ? (
-            <HelperText type="error" visible>
-              {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
-            </HelperText>
-          ) : null}
-
-          <AppButton
-            onPress={handlePrimary}
-            loading={onboardMutation.isPending}
-            accessibilityLabel={primaryLabel}
-            style={styles.primary}
-          >
-            {primaryLabel}
-          </AppButton>
-          {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
-
-          <AppButton variant="ghost" onPress={close} style={styles.secondary}>
-            {secondaryLabel}
-          </AppButton>
+          <View style={styles.actions} testID="get-paid-actions">
+            <AppButton
+              onPress={handlePrimary}
+              loading={onboardMutation.isPending}
+              accessibilityLabel={primaryLabel}
+              style={styles.primary}
+            >
+              {primaryLabel}
+            </AppButton>
+            {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
+            <AppButton variant="ghost" onPress={close} style={styles.secondary}>
+              {secondaryLabel}
+            </AppButton>
+          </View>
 
           <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
         </View>
@@ -147,12 +162,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
+    overflow: 'hidden',
+  },
+  sheet: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  scrollContent: {
     gap: 12,
+    paddingBottom: spacing.sm,
+  },
+  divider: {
+    alignSelf: 'center',
+    width: 48,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: appColors.lineStrong,
+    marginVertical: 4,
+  },
+  actions: {
+    flexShrink: 0,
+    gap: 12,
+    paddingTop: spacing.md,
   },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexShrink: 0,
   },
   iconBtn: {
     width: 40,
@@ -179,7 +220,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 8,
   },
   statusCard: {
     flexDirection: 'row',
@@ -214,7 +254,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primary: {
-    marginTop: 8,
+    alignSelf: 'stretch',
+    width: '100%',
+    minHeight: 52,
     borderRadius: radii.pill,
   },
   leaveHelper: {
@@ -228,6 +270,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
+    flexShrink: 0,
+    paddingTop: spacing.md,
     color: appColors.softInk,
     fontSize: 12,
     fontWeight: '600',

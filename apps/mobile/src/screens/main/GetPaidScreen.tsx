@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { HelperText } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { View } from '@components/RNCompat';
+import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { GET_PAID_COPY, STRIPE_CONNECT_CHIP } from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
@@ -79,50 +79,62 @@ export const GetPaidScreen = () => {
             </Pressable>
           </View>
 
-          <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
-          <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
-          <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
-
-          <View style={styles.statusCard}>
-            <View style={styles.statusIcon}>
-              <MaterialCommunityIcons
-                name={ready ? 'check-decagram' : 'link-variant'}
-                size={28}
-                color={appColors.primary}
-              />
-            </View>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>{copy.title}</Text>
-              <Text style={styles.statusBody}>{copy.body}</Text>
-            </View>
-          </View>
-
-          {statusQuery.error ? (
-            <HelperText type="error" visible>
-              {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
-            </HelperText>
-          ) : null}
-          {onboardMutation.error ? (
-            <HelperText type="error" visible>
-              {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
-            </HelperText>
-          ) : null}
-
-          <AppButton
-            onPress={handlePrimary}
-            loading={onboardMutation.isPending}
-            accessibilityLabel={primaryLabel}
-            style={styles.primary}
+          {/* Title/status scroll; actions stay pinned. A flex:1 card + marginTop:'auto'
+              footer previously pushed Continue off-screen on real iPhone heights. */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            testID="get-paid-scroll"
           >
-            {primaryLabel}
-          </AppButton>
-          {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
+            <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
+            <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
+            <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
 
-          <AppButton variant="ghost" onPress={close} style={styles.secondary}>
-            {secondaryLabel}
-          </AppButton>
+            <View style={styles.statusCard}>
+              <View style={styles.statusIcon}>
+                <MaterialCommunityIcons
+                  name={ready ? 'check-decagram' : 'link-variant'}
+                  size={28}
+                  color={appColors.primary}
+                />
+              </View>
+              <View style={styles.statusCopy}>
+                <Text style={styles.statusTitle}>{copy.title}</Text>
+                <Text style={styles.statusBody}>{copy.body}</Text>
+              </View>
+            </View>
 
-          <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
+            {statusQuery.error ? (
+              <HelperText type="error" visible>
+                {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
+              </HelperText>
+            ) : null}
+            {onboardMutation.error ? (
+              <HelperText type="error" visible>
+                {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
+              </HelperText>
+            ) : null}
+          </ScrollView>
+
+          <View style={styles.actions} testID="get-paid-actions">
+            <AppButton
+              onPress={handlePrimary}
+              loading={onboardMutation.isPending}
+              accessibilityLabel={primaryLabel}
+              style={styles.primary}
+            >
+              {primaryLabel}
+            </AppButton>
+            {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
+
+            <AppButton variant="ghost" onPress={close} style={styles.secondary}>
+              {secondaryLabel}
+            </AppButton>
+
+            <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -147,12 +159,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
+    overflow: 'hidden',
+  },
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  scrollContent: {
     gap: 12,
+    paddingBottom: spacing.md,
+    flexGrow: 1,
+  },
+  actions: {
+    flexShrink: 0,
+    gap: 12,
+    paddingTop: spacing.sm,
   },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexShrink: 0,
   },
   iconBtn: {
     width: 40,
@@ -214,7 +241,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primary: {
-    marginTop: 8,
+    alignSelf: 'stretch',
+    width: '100%',
+    minHeight: 52,
     borderRadius: radii.pill,
   },
   leaveHelper: {
@@ -227,7 +256,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   footer: {
-    marginTop: 'auto',
     color: appColors.softInk,
     fontSize: 12,
     fontWeight: '600',

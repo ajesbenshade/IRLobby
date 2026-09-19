@@ -76,6 +76,11 @@ describe('GetPaidScreen (Frame F2b)', () => {
 
     expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    // Sticky action bar (not a flex:1 card + marginTop:'auto' footer) keeps
+    // Continue on-screen on short iPhones — TF 81 still hid it off-fold.
+    expect(screen.getByTestId('get-paid-actions')).toBeTruthy();
+    expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
+    expect(screen.getByLabelText(GET_PAID_COPY.continueCta)).toHaveStyle({ minHeight: 52 });
     expect(screen.getByText(GET_PAID_COPY.screenSubtitle)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.feeCopy)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
@@ -133,6 +138,26 @@ describe('GetPaidScreen (Frame F2b)', () => {
     await waitFor(() => {
       expect(openStripeConnectOnboarding).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('pins Continue in a sticky action bar for not-connected', async () => {
+    fetchStripeConnectStatus.mockResolvedValue({
+      connected: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+    });
+
+    renderScreen();
+
+    // accessibilityLabel stays Continue to Stripe (not Ready → Refresh).
+    expect(await screen.findByLabelText('Continue to Stripe')).toBeTruthy();
+    expect(screen.getByTestId('get-paid-actions')).toContainElement(
+      screen.getByLabelText(GET_PAID_COPY.continueCta),
+    );
+    expect(screen.getByTestId('get-paid-scroll')).toContainElement(
+      screen.getByText(GET_PAID_COPY.notConnectedTitle),
+    );
   });
 
   it('keeps Continue to Stripe when status fetch errors', async () => {

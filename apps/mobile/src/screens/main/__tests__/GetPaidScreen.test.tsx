@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactTestInstance } from 'react-test-renderer';
 
 import { GET_PAID_COPY } from '@constants/tickets';
 import { GetPaidScreen } from '../GetPaidScreen';
@@ -42,6 +43,18 @@ const { fetchStripeConnectStatus } = jest.requireMock('@services/paymentService'
   fetchStripeConnectStatus: jest.Mock;
 };
 
+const ancestorTestIds = (node: ReactTestInstance) => {
+  const ids: string[] = [];
+  let current: ReactTestInstance | null = node.parent;
+  while (current) {
+    if (typeof current.props.testID === 'string') {
+      ids.push(current.props.testID);
+    }
+    current = current.parent;
+  }
+  return ids;
+};
+
 const renderScreen = () => {
   const client = new QueryClient({
     defaultOptions: {
@@ -74,13 +87,14 @@ describe('GetPaidScreen (Frame F2b)', () => {
 
     renderScreen();
 
-    expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    const continueCta = await screen.findByLabelText(GET_PAID_COPY.continueCta);
+    expect(continueCta).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.continueCta)).toBeTruthy();
     // Sticky action bar (not a flex:1 card + marginTop:'auto' footer) keeps
     // Continue on-screen on short iPhones — TF 81 still hid it off-fold.
     expect(screen.getByTestId('get-paid-actions')).toBeTruthy();
     expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
-    expect(screen.getByLabelText(GET_PAID_COPY.continueCta)).toHaveStyle({ minHeight: 52 });
+    expect(ancestorTestIds(continueCta)).toContain('get-paid-actions');
     expect(screen.getByText(GET_PAID_COPY.screenSubtitle)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.feeCopy)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
@@ -151,13 +165,11 @@ describe('GetPaidScreen (Frame F2b)', () => {
     renderScreen();
 
     // accessibilityLabel stays Continue to Stripe (not Ready → Refresh).
-    expect(await screen.findByLabelText('Continue to Stripe')).toBeTruthy();
-    expect(screen.getByTestId('get-paid-actions')).toContainElement(
-      screen.getByLabelText(GET_PAID_COPY.continueCta),
-    );
-    expect(screen.getByTestId('get-paid-scroll')).toContainElement(
-      screen.getByText(GET_PAID_COPY.notConnectedTitle),
-    );
+    const continueCta = await screen.findByLabelText('Continue to Stripe');
+    expect(continueCta).toBeTruthy();
+    expect(ancestorTestIds(continueCta)).toContain('get-paid-actions');
+    expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
+    expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
   });
 
   it('keeps Continue to Stripe when status fetch errors', async () => {

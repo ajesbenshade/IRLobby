@@ -19,7 +19,6 @@ export const GET_PAID_COPY = {
   notNowCta: 'Not now',
   doneCta: 'Done',
   refreshCta: 'Refresh status',
-  footer: 'Stripe Connect · Express · Test mode — no live charges',
   notConnectedTitle: 'Not connected',
   notConnectedBody: 'Connect Stripe Express to continue.',
   pendingTitle: 'Pending',

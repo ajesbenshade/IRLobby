@@ -136,8 +136,6 @@ export const GetPaidScreen = () => {
               {secondaryLabel}
             </AppButton>
           </View>
-
-          <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
         </View>
       </SafeAreaView>
     </View>
@@ -267,14 +265,5 @@ const styles = StyleSheet.create({
   },
   secondary: {
     borderRadius: radii.pill,
-  },
-  footer: {
-    marginTop: 'auto',
-    flexShrink: 0,
-    paddingTop: spacing.md,
-    color: appColors.softInk,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 });

@@ -117,7 +117,8 @@ describe('GetPaidScreen (Frame F2b)', () => {
     expect(screen.getByText(GET_PAID_COPY.notConnectedBody)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
-    expect(screen.getByText(GET_PAID_COPY.footer)).toBeTruthy();
+    expect(screen.queryByText(/Test mode/i)).toBeNull();
+    expect(screen.queryByText(/no live charges/i)).toBeNull();
 
     const texts = collectText(view.root);
     const statusAt = texts.indexOf(GET_PAID_COPY.notConnectedTitle);
@@ -199,6 +200,24 @@ describe('GetPaidScreen (Frame F2b)', () => {
     expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
+  });
+
+  it('omits Test mode footer and keeps hosts-only plus leave-app helper', async () => {
+    fetchStripeConnectStatus.mockResolvedValue({
+      connected: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+    });
+
+    renderScreen();
+
+    expect(await screen.findByText(GET_PAID_COPY.screenSubtitle)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
+    expect(screen.getByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(screen.queryByText(/Test mode/i)).toBeNull();
+    expect(screen.queryByText(/no live charges/i)).toBeNull();
+    expect(screen.queryByText(/Stripe Connect · Express/i)).toBeNull();
   });
 
   it('keeps Continue to Stripe when status fetch errors', async () => {

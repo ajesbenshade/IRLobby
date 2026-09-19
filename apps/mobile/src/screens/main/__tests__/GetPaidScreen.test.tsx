@@ -121,7 +121,7 @@ describe('GetPaidScreen (Frame F2b)', () => {
   });
 
   it('treats missing status as not-connected and still shows Continue to Stripe', async () => {
-    fetchStripeConnectStatus.mockResolvedValue(undefined);
+    fetchStripeConnectStatus.mockResolvedValue(null);
 
     renderScreen();
 

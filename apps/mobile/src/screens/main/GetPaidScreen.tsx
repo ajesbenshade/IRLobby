@@ -79,44 +79,48 @@ export const GetPaidScreen = () => {
             </Pressable>
           </View>
 
-          {/* Title/status scroll; actions stay pinned. A flex:1 card + marginTop:'auto'
-              footer previously pushed Continue off-screen on real iPhone heights. */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            testID="get-paid-scroll"
-          >
-            <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
-            <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
-            <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
+          {/* F2b lock: sheet sizes to title/status and shrinks if the phone is short.
+              Continue is sticky under the status card — not in the scroll, not at the
+              bottom of a flex:1 card (TF 81 off-screen). */}
+          <View style={styles.sheet} testID="get-paid-scroll">
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <Text style={styles.title}>{GET_PAID_COPY.screenTitle}</Text>
+              <Text style={styles.subtitle}>{GET_PAID_COPY.screenSubtitle}</Text>
+              <View style={styles.divider} />
+              <Text style={styles.fee}>{GET_PAID_COPY.feeCopy}</Text>
 
-            <View style={styles.statusCard}>
-              <View style={styles.statusIcon}>
-                <MaterialCommunityIcons
-                  name={ready ? 'check-decagram' : 'link-variant'}
-                  size={28}
-                  color={appColors.primary}
-                />
+              <View style={styles.statusCard}>
+                <View style={styles.statusIcon}>
+                  <MaterialCommunityIcons
+                    name={ready ? 'check-decagram' : 'link-variant'}
+                    size={28}
+                    color={appColors.primary}
+                  />
+                </View>
+                <View style={styles.statusCopy}>
+                  <Text style={styles.statusTitle}>{copy.title}</Text>
+                  <Text style={styles.statusBody}>{copy.body}</Text>
+                </View>
               </View>
-              <View style={styles.statusCopy}>
-                <Text style={styles.statusTitle}>{copy.title}</Text>
-                <Text style={styles.statusBody}>{copy.body}</Text>
-              </View>
-            </View>
 
-            {statusQuery.error ? (
-              <HelperText type="error" visible>
-                {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
-              </HelperText>
-            ) : null}
-            {onboardMutation.error ? (
-              <HelperText type="error" visible>
-                {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
-              </HelperText>
-            ) : null}
-          </ScrollView>
+              {statusQuery.error ? (
+                <HelperText type="error" visible>
+                  {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
+                </HelperText>
+              ) : null}
+              {onboardMutation.error ? (
+                <HelperText type="error" visible>
+                  {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
+                </HelperText>
+              ) : null}
+            </ScrollView>
+          </View>
 
           <View style={styles.actions} testID="get-paid-actions">
             <AppButton
@@ -128,13 +132,12 @@ export const GetPaidScreen = () => {
               {primaryLabel}
             </AppButton>
             {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
-
             <AppButton variant="ghost" onPress={close} style={styles.secondary}>
               {secondaryLabel}
             </AppButton>
-
-            <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
           </View>
+
+          <Text style={styles.footer}>{GET_PAID_COPY.footer}</Text>
         </View>
       </SafeAreaView>
     </View>
@@ -161,19 +164,30 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     overflow: 'hidden',
   },
-  scroll: {
-    flex: 1,
+  sheet: {
+    flexGrow: 0,
+    flexShrink: 1,
     minHeight: 0,
+  },
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     gap: 12,
-    paddingBottom: spacing.md,
-    flexGrow: 1,
+    paddingBottom: spacing.sm,
+  },
+  divider: {
+    alignSelf: 'center',
+    width: 48,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: appColors.lineStrong,
+    marginVertical: 4,
   },
   actions: {
     flexShrink: 0,
     gap: 12,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
   },
   navRow: {
     flexDirection: 'row',
@@ -206,7 +220,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 8,
   },
   statusCard: {
     flexDirection: 'row',
@@ -256,6 +269,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   footer: {
+    marginTop: 'auto',
+    flexShrink: 0,
+    paddingTop: spacing.md,
     color: appColors.softInk,
     fontSize: 12,
     fontWeight: '600',

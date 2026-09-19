@@ -55,6 +55,23 @@ const ancestorTestIds = (node: ReactTestInstance) => {
   return ids;
 };
 
+const collectText = (node: ReactTestInstance) => {
+  const texts: string[] = [];
+  const walk = (current: ReactTestInstance) => {
+    const children = current.children;
+    if (typeof current.props.children === 'string') {
+      texts.push(current.props.children);
+    }
+    children.forEach((child) => {
+      if (typeof child !== 'string') {
+        walk(child);
+      }
+    });
+  };
+  walk(node);
+  return texts;
+};
+
 const renderScreen = () => {
   const client = new QueryClient({
     defaultOptions: {
@@ -85,16 +102,15 @@ describe('GetPaidScreen (Frame F2b)', () => {
       onboardingComplete: false,
     });
 
-    renderScreen();
-
+    const view = renderScreen();
     const continueCta = await screen.findByLabelText(GET_PAID_COPY.continueCta);
     expect(continueCta).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.continueCta)).toBeTruthy();
-    // Sticky action bar (not a flex:1 card + marginTop:'auto' footer) keeps
-    // Continue on-screen on short iPhones — TF 81 still hid it off-fold.
+    // F2b lock: sticky Continue under status, then helper, then Not now.
     expect(screen.getByTestId('get-paid-actions')).toBeTruthy();
     expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
     expect(ancestorTestIds(continueCta)).toContain('get-paid-actions');
+    expect(ancestorTestIds(continueCta)).not.toContain('get-paid-scroll');
     expect(screen.getByText(GET_PAID_COPY.screenSubtitle)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.feeCopy)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
@@ -102,6 +118,16 @@ describe('GetPaidScreen (Frame F2b)', () => {
     expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.footer)).toBeTruthy();
+
+    const texts = collectText(view.root);
+    const statusAt = texts.indexOf(GET_PAID_COPY.notConnectedTitle);
+    const continueAt = texts.indexOf(GET_PAID_COPY.continueCta);
+    const helperAt = texts.indexOf(GET_PAID_COPY.leaveAppHelper);
+    const notNowAt = texts.indexOf(GET_PAID_COPY.notNowCta);
+    expect(statusAt).toBeGreaterThan(-1);
+    expect(continueAt).toBeGreaterThan(statusAt);
+    expect(helperAt).toBeGreaterThan(continueAt);
+    expect(notNowAt).toBeGreaterThan(helperAt);
 
     fireEvent.press(await screen.findByLabelText(GET_PAID_COPY.continueCta));
     await waitFor(() => {
@@ -168,8 +194,11 @@ describe('GetPaidScreen (Frame F2b)', () => {
     const continueCta = await screen.findByLabelText('Continue to Stripe');
     expect(continueCta).toBeTruthy();
     expect(ancestorTestIds(continueCta)).toContain('get-paid-actions');
+    expect(ancestorTestIds(continueCta)).not.toContain('get-paid-scroll');
     expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
     expect(screen.getByTestId('get-paid-scroll')).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
   });
 
   it('keeps Continue to Stripe when status fetch errors', async () => {

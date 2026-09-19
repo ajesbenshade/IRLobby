@@ -45,6 +45,8 @@ const makeAxiosError = (status: number, data: unknown = {}) => {
 
 describe('stripeConnectChipLabel', () => {
   it('maps API flags onto Not connected, Pending, and Ready', () => {
+    expect(stripeConnectChipLabel()).toBe(STRIPE_CONNECT_CHIP.notConnected);
+    expect(stripeConnectChipLabel(undefined)).toBe(STRIPE_CONNECT_CHIP.notConnected);
     expect(stripeConnectChipLabel({ connected: false, payoutsEnabled: false, detailsSubmitted: false, onboardingComplete: false })).toBe(
       STRIPE_CONNECT_CHIP.notConnected,
     );
@@ -77,7 +79,7 @@ describe('fetchStripeConnectStatus', () => {
     mockedApi.get.mockReset();
   });
 
-  it('marks a successful status payload as available', async () => {
+  it('returns the status payload without inventing an available flag', async () => {
     mockedApi.get.mockResolvedValue({
       data: {
         connected: false,
@@ -92,12 +94,11 @@ describe('fetchStripeConnectStatus', () => {
       payoutsEnabled: false,
       detailsSubmitted: false,
       onboardingComplete: false,
-      available: true,
     });
     expect(mockedApi.get).toHaveBeenCalledWith(API_ROUTES.USER_STRIPE_CONNECT_STATUS);
   });
 
-  it('throws 401/404/501/503 instead of returning available:false', async () => {
+  it('throws 401/404/501/503 instead of a client-invented unavailable payload', async () => {
     for (const status of [401, 404, 501, 503]) {
       mockedApi.get.mockRejectedValueOnce(makeAxiosError(status, { error: `http ${status}` }));
       await expect(fetchStripeConnectStatus()).rejects.toMatchObject({

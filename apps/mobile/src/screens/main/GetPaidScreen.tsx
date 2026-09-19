@@ -30,7 +30,6 @@ export const GetPaidScreen = () => {
 
   const chip = stripeConnectChipLabel(statusQuery.data, Boolean(user?.canSellTickets));
   const copy = stripeConnectStatusCopy(chip);
-  const unavailable = statusQuery.data?.available === false;
   const ready = chip === STRIPE_CONNECT_CHIP.ready;
 
   const onboardMutation = useMutation({
@@ -103,11 +102,6 @@ export const GetPaidScreen = () => {
               {getErrorMessage(statusQuery.error, 'Unable to load payout status.')}
             </HelperText>
           ) : null}
-          {unavailable ? (
-            <HelperText type="info" visible>
-              {GET_PAID_COPY.unavailableBody}
-            </HelperText>
-          ) : null}
           {onboardMutation.error ? (
             <HelperText type="error" visible>
               {getErrorMessage(onboardMutation.error, 'Unable to open Stripe onboarding.')}
@@ -122,8 +116,9 @@ export const GetPaidScreen = () => {
           >
             {primaryLabel}
           </AppButton>
+          {!ready ? <Text style={styles.leaveHelper}>{GET_PAID_COPY.leaveAppHelper}</Text> : null}
 
-          <AppButton variant="outline" onPress={close} style={styles.secondary}>
+          <AppButton variant="ghost" onPress={close} style={styles.secondary}>
             {secondaryLabel}
           </AppButton>
 
@@ -221,6 +216,12 @@ const styles = StyleSheet.create({
   primary: {
     marginTop: 8,
     borderRadius: radii.pill,
+  },
+  leaveHelper: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   secondary: {
     borderRadius: radii.pill,

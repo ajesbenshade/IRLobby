@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { GET_PAID_COPY, STRIPE_CONNECT_CHIP } from '@constants/tickets';
+import { GET_PAID_COPY } from '@constants/tickets';
 import { GetPaidScreen } from '../GetPaidScreen';
 import { openStripeConnectOnboarding } from '@services/paymentService';
 
@@ -56,7 +56,7 @@ const renderScreen = () => {
   );
 };
 
-describe('GetPaidScreen (Frame F2)', () => {
+describe('GetPaidScreen (Frame F2b)', () => {
   beforeEach(() => {
     mockGoBack.mockReset();
     mockRefreshProfile.mockReset();
@@ -64,9 +64,8 @@ describe('GetPaidScreen (Frame F2)', () => {
     fetchStripeConnectStatus.mockReset();
   });
 
-  it('shows not-connected copy and continues to Stripe', async () => {
+  it('shows F2b not-connected copy and continues to Stripe', async () => {
     fetchStripeConnectStatus.mockResolvedValue({
-      available: true,
       connected: false,
       payoutsEnabled: false,
       detailsSubmitted: false,
@@ -77,6 +76,11 @@ describe('GetPaidScreen (Frame F2)', () => {
 
     expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.continueCta)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.screenSubtitle)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.feeCopy)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.notConnectedBody)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.notNowCta)).toBeTruthy();
     expect(screen.getByText(GET_PAID_COPY.footer)).toBeTruthy();
 
@@ -88,7 +92,6 @@ describe('GetPaidScreen (Frame F2)', () => {
 
   it('does not re-onboard when status is Ready', async () => {
     fetchStripeConnectStatus.mockResolvedValue({
-      available: true,
       connected: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
@@ -106,7 +109,6 @@ describe('GetPaidScreen (Frame F2)', () => {
 
   it('closes on Not now', async () => {
     fetchStripeConnectStatus.mockResolvedValue({
-      available: true,
       connected: false,
       payoutsEnabled: false,
       detailsSubmitted: false,
@@ -118,19 +120,14 @@ describe('GetPaidScreen (Frame F2)', () => {
     expect(mockGoBack).toHaveBeenCalled();
   });
 
-  it('still renders Continue to Stripe when status is unavailable', async () => {
-    fetchStripeConnectStatus.mockResolvedValue({
-      available: false,
-      connected: false,
-      payoutsEnabled: false,
-      detailsSubmitted: false,
-      onboardingComplete: false,
-    });
+  it('treats missing status as not-connected and still shows Continue to Stripe', async () => {
+    fetchStripeConnectStatus.mockResolvedValue(undefined);
 
     renderScreen();
 
     expect(await screen.findByLabelText(GET_PAID_COPY.continueCta)).toBeTruthy();
     expect(await screen.findByText(GET_PAID_COPY.notConnectedTitle)).toBeTruthy();
+    expect(screen.getByText(GET_PAID_COPY.leaveAppHelper)).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText(GET_PAID_COPY.continueCta));
     await waitFor(() => {
@@ -138,7 +135,7 @@ describe('GetPaidScreen (Frame F2)', () => {
     });
   });
 
-  it('keeps Continue to Stripe when status fetch errors (401 is not unavailable)', async () => {
+  it('keeps Continue to Stripe when status fetch errors', async () => {
     const authError = Object.assign(new Error('Request failed'), {
       isAxiosError: true,
       response: { status: 401, data: { detail: 'Authentication credentials were not provided.' } },

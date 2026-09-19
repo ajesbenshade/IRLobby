@@ -172,12 +172,10 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     enabled: Boolean(activityId),
   });
 
-  const stripeConnectUnavailable = connectStatusQuery.data?.available === false;
   const canSellTickets =
-    !stripeConnectUnavailable &&
-    (Boolean(user?.canSellTickets) ||
-      Boolean(connectStatusQuery.data?.payoutsEnabled) ||
-      Boolean(connectStatusQuery.data?.onboardingComplete));
+    Boolean(user?.canSellTickets) ||
+    Boolean(connectStatusQuery.data?.payoutsEnabled) ||
+    Boolean(connectStatusQuery.data?.onboardingComplete);
 
   const updateForm = <Key extends keyof ActivityFormState>(key: Key, value: ActivityFormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -603,15 +601,10 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           />
         </Pressable>
 
-        {isTicketed && !canSellTickets && !stripeConnectUnavailable ? (
+        {isTicketed && !canSellTickets ? (
           <AppButton variant="outline" onPress={() => navigation.navigate('GetPaid')}>
             Set up payouts
           </AppButton>
-        ) : null}
-        {isTicketed && stripeConnectUnavailable ? (
-          <Text style={styles.hintText}>
-            Ticket sales stay in prototype mode on this server — no live Stripe charge.
-          </Text>
         ) : null}
 
         <View style={styles.footerRow}>

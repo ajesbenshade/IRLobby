@@ -17,7 +17,6 @@ export interface StripeConnectStatus {
   detailsSubmitted: boolean;
   accountId?: string | null;
   onboardingComplete: boolean;
-  available?: boolean;
   status?: string | null;
 }
 
@@ -71,16 +70,11 @@ export function stripeConnectStatusCopy(chip: StripeConnectChipLabel) {
 }
 
 export async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
-  // Status errors must throw so Get paid can show HelperText and still keep
-  // Continue to Stripe. Do not treat 404/501/503 as a successful "unavailable"
-  // payload — the live Connect status endpoint uses 503 for StripeConnectError
-  // (e.g. missing key), and 401/502 already throw. Hiding the CTA on those
-  // codes was the TestFlight Get paid empty-button bug.
+  // Backend has no `available` field. Return the payload as-is and let callers
+  // treat missing/absent status as not-connected. HTTP errors throw so Get paid
+  // can show HelperText and still keep Continue to Stripe.
   const response = await api.get<StripeConnectStatus>(API_ROUTES.USER_STRIPE_CONNECT_STATUS);
-  return {
-    ...response.data,
-    available: response.data?.available !== false,
-  };
+  return response.data;
 }
 
 export async function startStripeConnectOnboarding(): Promise<string> {

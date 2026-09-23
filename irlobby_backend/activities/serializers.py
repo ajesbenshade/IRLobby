@@ -86,7 +86,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "created_at",
             "participant_count",
         )
-        read_only_fields = ("id", "is_approved", "created_at")
+        read_only_fields = ("id", "is_approved", "created_at", "tickets_sold")
 
     def to_internal_value(self, data):
         normalized_data = dict(data)

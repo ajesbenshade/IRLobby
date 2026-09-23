@@ -8,6 +8,7 @@ import {
   CREATE_EVENT_TICKETED_PUBLISH_LABEL,
 } from '../createActivityForm';
 import { EVENT_PHOTOS_HELPER } from '@constants/activity';
+import { PROTOTYPE_FOOTER_HOST } from '@constants/tickets';
 
 const mockNavigate = jest.fn();
 
@@ -63,6 +64,18 @@ jest.mock('@expo/vector-icons', () => ({
   MaterialCommunityIcons: 'MaterialCommunityIcons',
 }));
 
+jest.mock('@constants/config', () => {
+  const actual = jest.requireActual('@constants/config');
+  return { ...actual, config: { ...actual.config, ticketingEnabled: true } };
+});
+
+const mockConfig = (jest.requireMock('@constants/config') as { config: { ticketingEnabled: boolean } })
+  .config;
+
+beforeEach(() => {
+  mockConfig.ticketingEnabled = true;
+});
+
 const renderScreen = () => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0, enabled: false }, mutations: { retry: false } },
@@ -100,6 +113,19 @@ describe('CreateActivityScreen ticketed toggle', () => {
     expect(screen.getByText(/IRLobby takes 10%/)).toBeTruthy();
     expect(screen.getByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_PUBLISH_LABEL)).toBeNull();
+  });
+});
+
+describe('CreateActivityScreen with ticketing disabled', () => {
+  it('hides the ticketed toggle, payouts button, and prototype footer', async () => {
+    mockConfig.ticketingEnabled = false;
+    renderScreen();
+
+    expect(await screen.findByText('Photos')).toBeTruthy();
+    expect(screen.queryByLabelText('Ticketed event')).toBeNull();
+    expect(screen.queryByText('Set up payouts')).toBeNull();
+    expect(screen.queryByText(PROTOTYPE_FOOTER_HOST)).toBeNull();
+    expect(screen.getByText(CREATE_EVENT_PUBLISH_LABEL)).toBeTruthy();
   });
 });
 

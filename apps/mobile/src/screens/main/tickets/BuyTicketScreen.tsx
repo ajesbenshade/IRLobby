@@ -48,7 +48,7 @@ export const BuyTicketScreen = () => {
   const soldOut = Boolean(params.isSoldOut);
   const busy = checkoutMutation.isPending;
 
-  const goToWallet = (method: 'card' | 'apple') => {
+  const goToWallet = (method: 'card') => {
     navigation.replace('TicketWallet', {
       activityId: params.activityId,
       title: params.title,
@@ -61,7 +61,7 @@ export const BuyTicketScreen = () => {
     });
   };
 
-  const handlePay = async (method: 'card' | 'apple') => {
+  const handlePay = async (method: 'card') => {
     if (soldOut || busy) {
       return;
     }
@@ -172,18 +172,6 @@ export const BuyTicketScreen = () => {
         >
           <MaterialCommunityIcons name="credit-card-outline" size={20} color={appColors.white} />
           <Text style={styles.payCardLabel}>{soldOut ? 'Sold out' : 'Pay with card'}</Text>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={soldOut || busy}
-          onPress={() => void handlePay('apple')}
-          style={[styles.applePay, (soldOut || busy) && styles.disabled]}
-        >
-          <View style={styles.applePayInner}>
-            <MaterialCommunityIcons name="apple" size={22} color={appColors.black} />
-            <Text style={styles.applePayLabel}>Pay</Text>
-          </View>
         </Pressable>
 
         <Text style={styles.footer}>{PROTOTYPE_FOOTER_BUYER}</Text>
@@ -370,26 +358,6 @@ const styles = StyleSheet.create({
     fontFamily: appTypography.bodySemibold,
     fontSize: 17,
     fontWeight: '700',
-  },
-  applePay: {
-    minHeight: 54,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: appColors.black,
-    backgroundColor: appColors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applePayInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  applePayLabel: {
-    color: appColors.black,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
   footer: {
     textAlign: 'center',

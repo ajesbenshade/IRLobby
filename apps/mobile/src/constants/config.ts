@@ -91,4 +91,8 @@ export const config = {
     process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
   ),
   sentryDsn: pickConfigString(extra.sentryDsn, process.env.EXPO_PUBLIC_SENTRY_DSN),
+  // Ticket sales stay hidden until checkout is production-ready. Opt in per build.
+  ticketingEnabled:
+    pickConfigString(extra.ticketingEnabled, process.env.EXPO_PUBLIC_ENABLE_TICKETING)?.toLowerCase() ===
+    'true',
 };

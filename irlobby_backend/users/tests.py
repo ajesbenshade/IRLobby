@@ -1175,3 +1175,55 @@ class PushNotificationTests(APITestCase):
 
         token.refresh_from_db()
         self.assertTrue(token.is_active)
+
+
+class SeedReviewAccountTests(APITestCase):
+    def test_seeds_review_account_with_content_visible_from_any_location(self):
+        from django.core.management import call_command
+
+        from chat.models import Conversation
+
+        call_command("seed_review_account", password="Review-pass-123")
+        # Re-running must be idempotent and keep dates in the future.
+        call_command("seed_review_account", password="Review-pass-123")
+
+        reviewer = User.objects.get(email="app-review@irlobby.com")
+        self.assertTrue(reviewer.check_password("Review-pass-123"))
+        self.assertTrue(reviewer.preferences["onboarding_completed"])
+        self.assertEqual(Match.objects.filter(user_b=reviewer).count(), 1)
+        self.assertEqual(Conversation.objects.get(match__user_b=reviewer).messages.count(), 4)
+        self.assertTrue(
+            ActivityParticipant.objects.filter(user=reviewer, status="confirmed").exists()
+        )
+
+        # Real content elsewhere must not leak into the review feed.
+        other_host = User.objects.create_user(
+            username="london_host", email="london@example.com", password="x"
+        )
+        Activity.objects.create(
+            host=other_host,
+            is_approved=True,
+            title="London Walk",
+            description="Elsewhere",
+            location="London",
+            latitude=51.5,
+            longitude=-0.12,
+            time=timezone.now() + timedelta(days=1),
+            capacity=5,
+        )
+
+        self.client.force_authenticate(reviewer)
+        # Coordinates far from the seeded Cupertino content (London).
+        response = self.client.get(
+            reverse("activity-list"), {"latitude": 51.5, "longitude": -0.12}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"] if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 6)
+        self.assertNotIn("London Walk", [item["title"] for item in results])
+
+    def test_seed_review_account_requires_password(self):
+        from django.core.management import CommandError, call_command
+
+        with self.assertRaises(CommandError):
+            call_command("seed_review_account")

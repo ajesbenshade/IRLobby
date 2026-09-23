@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
+import { AppleSignInButton } from '@components/AppleSignInButton';
 import { GoogleSignInButton } from '@components/GoogleSignInButton';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
@@ -272,14 +273,13 @@ export const RegisterScreen = ({ navigation }: Props) => {
         <View style={styles.oauthSection}>
           <View style={styles.divider} />
           {isAppleAvailable ? (
-            <AppButton
-              variant="social"
+            <AppleSignInButton
+              mode="signUp"
+              height={48}
               onPress={handleAppleSignIn}
               disabled={isBusy || !acceptedLegal}
               loading={isApplePending}
-            >
-              {authCopy.register.appleCta}
-            </AppButton>
+            />
           ) : null}
           <GoogleSignInButton
             disabled={isBusy || !acceptedLegal}

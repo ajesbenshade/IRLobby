@@ -50,6 +50,7 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_CONNECT_WEBHOOK_SECRET: ${{ secrets.STRIPE_CONNECT_WEBHOOK_SECRET }}
           STRIPE_PLATFORM_FEE_PERCENT: ${{ vars.STRIPE_PLATFORM_FEE_PERCENT || '10' }}
+          REVIEW_ACCOUNT_PASSWORD: ${{ secrets.REVIEW_ACCOUNT_PASSWORD }}
         run: |
           set -euo pipefail
 
@@ -314,6 +315,18 @@ jobs:
           echo "=== web logs (tail) ==="
           docker logs --tail 40 irlobby_backend-web-1 2>&1 || true
           REMOTE
+
+          # Refresh the App Store / Play reviewer demo account (users/activities/chat).
+          # The password travels over stdin so it never appears in a remote command line.
+          if [ -z "${REVIEW_ACCOUNT_PASSWORD:-}" ]; then
+            echo "REVIEW_ACCOUNT_PASSWORD secret not set; skipping review account seed."
+          elif [ "${DEPLOY_MODE}" != "full" ]; then
+            echo "Hotpatch mode does not ship the seed command; skipping review account seed."
+          else
+            printf '%s\n' "${REVIEW_ACCOUNT_PASSWORD}" | ssh -o BatchMode=yes -o ConnectTimeout=20 \
+              -o StrictHostKeyChecking=accept-new "${EFFECTIVE_USER}@${SSH_HOST}" \
+              'IFS= read -r REVIEW_ACCOUNT_PASSWORD; export REVIEW_ACCOUNT_PASSWORD; docker exec -e REVIEW_ACCOUNT_PASSWORD irlobby_backend-web-1 python manage.py seed_review_account'
+          fi
 
       - name: Verify auth routes
         run: |

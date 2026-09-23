@@ -21,6 +21,7 @@ import { Image, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
+import { config } from "@constants/config";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
 import { api } from "@services/apiClient";
@@ -318,7 +319,7 @@ export const ProfileScreen = () => {
           title="Privacy"
           onPress={() => navigation.navigate("PrivacyPolicy")}
         />
-        <GetPaidRow />
+        {config.ticketingEnabled ? <GetPaidRow /> : null}
         <ProfileMenuRow
           icon="account-circle-outline"
           title="Account"

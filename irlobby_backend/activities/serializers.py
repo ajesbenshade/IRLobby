@@ -6,6 +6,7 @@ from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
 from .models import Activity, ActivityParticipant, Ticket
+from .ticketing import ticketing_enabled
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -124,6 +125,13 @@ class ActivitySerializer(serializers.ModelSerializer):
         # Platform fee is fixed by IRLobby policy (default 10%).
         attrs["platform_fee_percent"] = getattr(settings, "STRIPE_PLATFORM_FEE_PERCENT", 10)
 
+        newly_ticketed = is_ticketed and not getattr(self.instance, "is_ticketed", False)
+        request = self.context.get("request")
+        if newly_ticketed and request is not None and not ticketing_enabled(request):
+            raise serializers.ValidationError(
+                {"is_ticketed": "Ticketed events are not available yet."}
+            )
+
         if is_ticketed:
             if ticket_price <= 0:
                 raise serializers.ValidationError(
@@ -136,7 +144,6 @@ class ActivitySerializer(serializers.ModelSerializer):
                     {"max_tickets": "Ticketed activities require a positive ticket quantity."}
                 )
 
-            request = self.context.get("request")
             host = getattr(request, "user", None) if request else None
             if self.instance is not None:
                 host = self.instance.host

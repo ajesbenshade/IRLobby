@@ -12,7 +12,8 @@ import Svg, { Path } from 'react-native-svg';
 import { View } from '@components/RNCompat';
 import { appColors, appTypography, radii } from '@theme/index';
 
-export type SocialProvider = 'apple' | 'google' | 'x' | 'email';
+// Sign in with Apple must use AppleSignInButton (the native system button).
+export type SocialProvider = 'google' | 'x' | 'email';
 
 type SocialAuthButtonProps = {
   provider: SocialProvider;
@@ -96,9 +97,6 @@ export const SocialAuthButton = ({
       ]}
     >
       <View style={styles.row}>
-        {provider === 'apple' ? (
-          <MaterialCommunityIcons name="apple" size={20} color={iconColor} />
-        ) : null}
         {provider === 'google' ? <GoogleMark /> : null}
         {provider === 'x' ? <XMark color={iconColor} /> : null}
         {showLabel ? (

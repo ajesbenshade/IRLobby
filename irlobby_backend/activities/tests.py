@@ -654,3 +654,62 @@ class TicketingTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, "pending")
+
+
+@override_settings(ENABLE_TICKETING=False)
+class TicketingDisabledTests(APITestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(
+            username="off-host", email="off-host@example.com", password="password123"
+        )
+        self.viewer = User.objects.create_user(
+            username="off-viewer", email="off-viewer@example.com", password="password123"
+        )
+        common = dict(
+            host=self.host,
+            is_approved=True,
+            description="Event.",
+            location="Venue",
+            latitude=40.0,
+            longitude=-74.0,
+            time=timezone.now() + timedelta(days=3),
+            capacity=10,
+        )
+        Activity.objects.create(title="Free Event", **common)
+        Activity.objects.create(
+            title="Paid Event", is_ticketed=True, ticket_price=20, max_tickets=5, **common
+        )
+
+    def _titles(self, user):
+        self.client.force_authenticate(user)
+        response = self.client.get(reverse("activity-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data["results"] if isinstance(response.data, dict) else response.data
+        return {item["title"] for item in data}
+
+    def test_ticketed_events_hidden_from_other_users(self):
+        self.assertEqual(self._titles(self.viewer), {"Free Event"})
+
+    def test_host_still_sees_own_ticketed_event(self):
+        self.assertEqual(self._titles(self.host), {"Free Event", "Paid Event"})
+
+    def test_cannot_create_ticketed_event(self):
+        self.client.force_authenticate(self.host)
+        response = self.client.post(
+            reverse("activity-list"),
+            {
+                "title": "New Paid",
+                "description": "x",
+                "location": "Venue",
+                "latitude": 40.0,
+                "longitude": -74.0,
+                "time": (timezone.now() + timedelta(days=2)).isoformat(),
+                "capacity": 5,
+                "is_ticketed": True,
+                "ticket_price": "10.00",
+                "max_tickets": 5,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("is_ticketed", response.data)

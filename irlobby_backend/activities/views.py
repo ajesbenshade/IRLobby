@@ -19,7 +19,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
-from waffle import flag_is_active
 
 from matches.models import Match
 from moderation.models import BlockedUser
@@ -32,12 +31,9 @@ from .serializers import (
     TicketSerializer,
     TicketValidationSerializer,
 )
+from .ticketing import ticketing_enabled
 
 logger = logging.getLogger(__name__)
-
-
-def ticketing_enabled(request):
-    return flag_is_active(request, "ticketed_events_enabled") or settings.ENABLE_TICKETING
 
 
 class ActivityListCreateView(generics.ListCreateAPIView):
@@ -63,12 +59,27 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         if self.request.user.is_staff:
             queryset = Activity.objects.all()
 
+        if not ticketing_enabled(self.request):
+            queryset = queryset.filter(Q(is_ticketed=False) | Q(host=self.request.user))
+
         # Filter by location if provided
         latitude = self.request.query_params.get("latitude")
         longitude = self.request.query_params.get("longitude")
         radius = self.request.query_params.get("radius", 10)  # Default 10km radius
 
         ordered_by_distance = False
+
+        # App Review devices can be anywhere; anchor the review account to its seeded
+        # location so reviewers always see the demo content (see seed_review_account).
+        user = self.request.user
+        if (
+            latitude
+            and longitude
+            and (user.preferences or {}).get("app_review_account")
+            and user.latitude is not None
+            and user.longitude is not None
+        ):
+            latitude, longitude = str(user.latitude), str(user.longitude)
 
         if latitude and longitude:
             try:

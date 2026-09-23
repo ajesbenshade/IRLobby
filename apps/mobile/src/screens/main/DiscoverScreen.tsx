@@ -24,6 +24,7 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import {
@@ -170,6 +171,9 @@ export const DiscoverScreen = () => {
   } = useQuery({
     queryKey: ['mobile-discover-activities', discoverFilters],
     queryFn: () => fetchActivities(discoverFilters),
+    // Paid events can't be joined for free, so hide them while ticket sales are off.
+    select: (items) =>
+      config.ticketingEnabled ? items : items.filter((item) => !isActivityTicketed(item)),
   });
 
   const swipeMutation = useMutation({

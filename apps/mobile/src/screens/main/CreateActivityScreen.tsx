@@ -16,6 +16,7 @@ import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
 import { MAX_EVENT_PHOTOS } from '@constants/activity';
+import { config } from '@constants/config';
 import {
   formatEventDateLabel,
   formatEventTimeLabel,
@@ -164,6 +165,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     queryKey: ['stripe-connect-status'],
     queryFn: fetchStripeConnectStatus,
     staleTime: 30_000,
+    enabled: config.ticketingEnabled,
   });
 
   const activityQuery = useQuery({
@@ -504,70 +506,74 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
         />
         {photoError ? <Text style={styles.errorText}>{photoError}</Text> : null}
 
-        <View style={styles.checkInRow}>
-          <View style={styles.switchCopy}>
-            <Text style={styles.checkInLabel}>Ticketed event</Text>
-            <Text style={styles.switchSubtitle}>Guests buy a ticket before they can attend.</Text>
-          </View>
-          <Switch
-            accessibilityLabel="Ticketed event"
-            value={isTicketed}
-            onValueChange={(value) => {
-              setForm((current) => ({
-                ...current,
-                isTicketed: value,
-                maxTickets:
-                  value && !current.maxTickets.trim() ? current.capacity || '40' : current.maxTickets,
-              }));
-            }}
-            trackColor={{ false: appColors.line, true: appColors.primary }}
-            thumbColor={appColors.white}
-          />
-        </View>
-
-        {isTicketed ? (
+        {config.ticketingEnabled ? (
           <>
-            <View style={styles.row}>
-              <View style={styles.half}>
-                <Field
-                  accentLabel
-                  label="Ticket price"
-                  value={ticketPrice}
-                  onChangeText={updateTextField('ticketPrice')}
-                  placeholder="$15"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.half}>
-                <Field
-                  accentLabel
-                  label="Capacity"
-                  value={maxTickets}
-                  onChangeText={(value) => {
-                    updateTextField('maxTickets')(value);
-                    updateForm('capacity', value);
-                  }}
-                  placeholder="40"
-                  keyboardType="number-pad"
-                />
-              </View>
-            </View>
-
-            <View style={styles.feePreview}>
-              <MaterialCommunityIcons name="information" size={18} color={appColors.primary} />
-              <Text style={styles.feePreviewText}>{feePreview}</Text>
-            </View>
-
             <View style={styles.checkInRow}>
-              <Text style={styles.checkInLabel}>Require QR check-in</Text>
+              <View style={styles.switchCopy}>
+                <Text style={styles.checkInLabel}>Ticketed event</Text>
+                <Text style={styles.switchSubtitle}>Guests buy a ticket before they can attend.</Text>
+              </View>
               <Switch
-                accessibilityLabel="Require QR check-in"
-                value={requireQrCheckIn}
-                onValueChange={updateToggleField('requireQrCheckIn')}
+                accessibilityLabel="Ticketed event"
+                value={isTicketed}
+                onValueChange={(value) => {
+                  setForm((current) => ({
+                    ...current,
+                    isTicketed: value,
+                    maxTickets:
+                      value && !current.maxTickets.trim() ? current.capacity || '40' : current.maxTickets,
+                  }));
+                }}
                 trackColor={{ false: appColors.line, true: appColors.primary }}
                 thumbColor={appColors.white}
               />
             </View>
+
+            {isTicketed ? (
+              <>
+                <View style={styles.row}>
+                  <View style={styles.half}>
+                    <Field
+                      accentLabel
+                      label="Ticket price"
+                      value={ticketPrice}
+                      onChangeText={updateTextField('ticketPrice')}
+                      placeholder="$15"
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <View style={styles.half}>
+                    <Field
+                      accentLabel
+                      label="Capacity"
+                      value={maxTickets}
+                      onChangeText={(value) => {
+                        updateTextField('maxTickets')(value);
+                        updateForm('capacity', value);
+                      }}
+                      placeholder="40"
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.feePreview}>
+                  <MaterialCommunityIcons name="information" size={18} color={appColors.primary} />
+                  <Text style={styles.feePreviewText}>{feePreview}</Text>
+                </View>
+
+                <View style={styles.checkInRow}>
+                  <Text style={styles.checkInLabel}>Require QR check-in</Text>
+                  <Switch
+                    accessibilityLabel="Require QR check-in"
+                    value={requireQrCheckIn}
+                    onValueChange={updateToggleField('requireQrCheckIn')}
+                    trackColor={{ false: appColors.line, true: appColors.primary }}
+                    thumbColor={appColors.white}
+                  />
+                </View>
+              </>
+            ) : null}
           </>
         ) : null}
 
@@ -607,10 +613,12 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           </AppButton>
         ) : null}
 
-        <View style={styles.footerRow}>
-          <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primaryDeep} />
-          <Text style={styles.footerText}>{PROTOTYPE_FOOTER_HOST}</Text>
-        </View>
+        {config.ticketingEnabled ? (
+          <View style={styles.footerRow}>
+            <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primaryDeep} />
+            <Text style={styles.footerText}>{PROTOTYPE_FOOTER_HOST}</Text>
+          </View>
+        ) : null}
 
         <PanelCard>
           <SectionIntro

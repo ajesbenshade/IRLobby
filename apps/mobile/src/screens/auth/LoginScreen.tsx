@@ -19,6 +19,7 @@ import { GoogleSignInButton } from '@components/GoogleSignInButton';
 import { AuthSignInToast } from '@components/AuthSignInToast';
 import { IrlobbyLoginMark } from '@components/IrlobbyLoginMark';
 import { View } from '@components/RNCompat';
+import { AppleSignInButton } from '@components/AppleSignInButton';
 import { SocialAuthButton } from '@components/SocialAuthButton';
 import { Field } from '@components/ui/Field';
 import { config } from '@constants/config';
@@ -193,9 +194,8 @@ export const LoginScreen = ({ navigation }: Props) => {
             <View style={styles.stack}>
               <Text style={styles.heading}>{authCopy.login.title}</Text>
               {isAppleAvailable ? (
-                <SocialAuthButton
-                  provider="apple"
-                  label={authCopy.login.appleCta}
+                <AppleSignInButton
+                  mode="continue"
                   onPress={handleAppleSignIn}
                   disabled={isBusy}
                   loading={isApplePending}

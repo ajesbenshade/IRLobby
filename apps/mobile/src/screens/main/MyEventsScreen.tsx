@@ -7,6 +7,7 @@ import { Button, Text } from 'react-native-paper';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
+import { config } from '@constants/config';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchMatches } from '@services/matchService';
@@ -228,20 +229,22 @@ export const MyEventsScreen = () => {
                       >
                         Edit
                       </AppButton>
-                      <AppButton
-                        compact
-                        variant="outline"
-                        onPress={() =>
-                          navigation.navigate('DoorScan', {
-                            activityId: activity.id,
-                            title: activity.title,
-                            admitted: activity.participant_count ?? 0,
-                            capacity: activity.maxTickets ?? activity.max_tickets ?? activity.capacity ?? 40,
-                          })
-                        }
-                      >
-                        Door scan
-                      </AppButton>
+                      {config.ticketingEnabled ? (
+                        <AppButton
+                          compact
+                          variant="outline"
+                          onPress={() =>
+                            navigation.navigate('DoorScan', {
+                              activityId: activity.id,
+                              title: activity.title,
+                              admitted: activity.participant_count ?? 0,
+                              capacity: activity.maxTickets ?? activity.max_tickets ?? activity.capacity ?? 40,
+                            })
+                          }
+                        >
+                          Door scan
+                        </AppButton>
+                      ) : null}
                     </View>
                   </View>
                 ))}

@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import { ActivityIndicator } from 'react-native';
 
 import { View } from '@components/RNCompat';
+import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import { AccountDeletedScreen } from '@screens/auth/AccountDeletedScreen';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
@@ -45,10 +46,14 @@ const linking: LinkingOptions<RootStackParamList> = {
             },
           },
           Notifications: 'notifications',
-          BuyTicket: 'tickets/buy/:activityId',
-          TicketWallet: 'tickets/success',
-          DoorScan: 'tickets/scan',
-          GetPaid: 'stripe/connect/return',
+          ...(config.ticketingEnabled
+            ? {
+                BuyTicket: 'tickets/buy/:activityId',
+                TicketWallet: 'tickets/success',
+                DoorScan: 'tickets/scan',
+                GetPaid: 'stripe/connect/return',
+              }
+            : {}),
         },
       },
     },

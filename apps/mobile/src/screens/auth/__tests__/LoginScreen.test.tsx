@@ -54,6 +54,9 @@ jest.mock('expo-apple-authentication', () => ({
   isAvailableAsync: jest.fn(async () => true),
   signInAsync: jest.fn(),
   AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+  AppleAuthenticationButtonType: { SIGN_IN: 0, CONTINUE: 1, SIGN_UP: 2 },
+  AppleAuthenticationButtonStyle: { WHITE: 0, WHITE_OUTLINE: 1, BLACK: 2 },
+  AppleAuthenticationButton: 'AppleAuthenticationButton',
 }));
 
 jest.mock('@expo/vector-icons', () => ({
@@ -120,7 +123,7 @@ describe('LoginScreen dressed layout', () => {
 
     expect(screen.getByText(authCopy.login.subtitle)).toBeTruthy();
     expect(screen.getByText(authCopy.login.title)).toBeTruthy();
-    expect(await screen.findByLabelText(authCopy.login.appleCta)).toBeTruthy();
+    expect(await screen.findByTestId('apple-sign-in-button')).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
     expect(screen.queryByText(authCopy.login.twitterCta)).toBeNull();

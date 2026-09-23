@@ -56,6 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     googleWebClientId: readExpoPublic('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'),
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    ticketingEnabled: readExpoPublic('EXPO_PUBLIC_ENABLE_TICKETING'),
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
     },

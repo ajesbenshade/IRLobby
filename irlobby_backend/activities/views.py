@@ -372,7 +372,8 @@ def _fulfill_paid_checkout_session(session_data) -> None:
 
     with transaction.atomic():
         ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
-        if ticket.status == "paid":
+        # A retry must not reopen a redeemed ticket or count its sale twice.
+        if ticket.status in {"paid", "used"}:
             return
         ticket.status = "paid"
         ticket.purchased_at = timezone.now()
@@ -469,6 +470,7 @@ class ValidateTicketView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [TicketThrottle]
 
+    @transaction.atomic
     def post(self, request, ticket_id):
         if not ticketing_enabled(request):
             return Response(
@@ -491,7 +493,11 @@ class ValidateTicketView(APIView):
                 {"message": "Ticket identifier mismatch."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        ticket = get_object_or_404(Ticket, ticket_id=ticket_uuid, activity_id=activity_id)
+        # Serialize scans of this ticket, including its audit log. A competing
+        # scan must see the committed "used" status before deciding to admit.
+        ticket = get_object_or_404(
+            Ticket.objects.select_for_update(), ticket_id=ticket_uuid, activity_id=activity_id
+        )
 
         if ticket.activity.host_id != request.user.id:
             return Response(

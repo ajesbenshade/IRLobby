@@ -63,12 +63,21 @@ The backend uses Django 5.2, Django REST Framework, and Django Channels for real
    python manage.py migrate
    ```
 
-6. **Create a superuser:**
+6. **Seed swipeable demo activities (optional):**
+   ```bash
+   # Complete beta deck with photos, descriptions, and locations
+   python manage.py seed_beta_events --hub youngstown
+
+   # App Store / Play reviewer account (requires password)
+   REVIEW_ACCOUNT_PASSWORD='...' python manage.py seed_review_account
+   ```
+
+7. **Create a superuser:**
    ```bash
    python manage.py createsuperuser
    ```
 
-7. **Start the development server:**
+8. **Start the development server:**
    ```bash
    python manage.py runserver
    ```

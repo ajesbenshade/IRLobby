@@ -87,9 +87,20 @@ Profile: Name = "Reviewer"
 Vibe Quiz: Complete with realistic preferences
 ```
 
-### 2.2 Seed test activities (optional)
+### 2.2 Seed test activities
 
-Create 1–2 sample activities from another account. This lets the reviewer see matches and test chat.
+On production (also runs automatically on full backend deploy):
+
+```bash
+cd irlobby_backend
+# App Review demo account (requires REVIEW_ACCOUNT_PASSWORD)
+python manage.py seed_review_account
+
+# Beta tester swipe deck — photos, descriptions, locations (default hub: Youngstown)
+python manage.py seed_beta_events --hub youngstown
+```
+
+`seed_beta_events` creates approved activities with Unsplash photos so Discover has cards to swipe.
 
 ### 2.3 Save credentials in the repository
 

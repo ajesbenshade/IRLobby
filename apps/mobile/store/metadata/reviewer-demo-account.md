@@ -15,8 +15,9 @@ Used for both Apple App Review (App Store Connect → your version → App Revie
 
 1. Onboarding is marked complete, so they land directly on Home.
 2. Home shows 6 upcoming activities around Cupertino, CA, hosted by 4 other seeded users
-   (Maya, Jordan, Priya, Sam). The review account skips the nearby-radius filter, so this
-   content appears wherever the review device is located.
+   (Maya, Jordan, Priya, Sam). Each activity includes photos, a full description, location,
+   and tags. The review account skips the nearby-radius filter, so this content appears
+   wherever the review device is located.
 3. The reviewer can:
    - Browse and swipe activities, and join one (they are already confirmed for the hike)
    - Open the existing chat with Maya (a match with message history) and send messages

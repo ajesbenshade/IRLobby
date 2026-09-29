@@ -59,10 +59,11 @@ test('authenticated user can load discovery and swipe an activity', async ({ pag
 
   await page.goto('/app/discovery');
 
-  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Upcoming gatherings', exact: true })).toBeVisible();
+  await expect(page.getByText('From Franconia Mennonite Church')).toBeVisible();
   await expect(page.getByText(activity.title)).toBeVisible();
 
-  await page.getByLabel("I'm going to this activity").click();
+  await page.getByLabel(`I'm going to ${activity.title}`).click();
 
   await expect.poll(() => swipeRequestSeen).toBe(true);
   await expect(page.getByText('You cleared the deck')).toBeVisible();

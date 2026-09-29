@@ -42,6 +42,7 @@ interface User {
   householdChildCount?: number | null;
   dateOfBirth?: string | null;
   sex?: 'male' | 'female' | '';
+  church?: { id?: number; name: string } | null;
   swipesRemainingToday?: number | null;
 }
 
@@ -138,6 +139,16 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
       (typeof profile.date_of_birth === 'string' ? profile.date_of_birth : undefined) ??
       null,
     sex: profile.sex === 'male' || profile.sex === 'female' ? profile.sex : '',
+    church: (() => {
+      const church = asRecord(profile.church);
+      if (!church || typeof church.name !== 'string' || !church.name.trim()) {
+        return null;
+      }
+      return {
+        id: typeof church.id === 'number' ? church.id : undefined,
+        name: church.name.trim(),
+      };
+    })(),
   };
 };
 

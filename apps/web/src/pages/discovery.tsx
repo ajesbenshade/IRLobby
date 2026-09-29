@@ -15,7 +15,7 @@ import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff, Sparkles } from 'lucide-react';
+import { Filter, MapPin, Bell, RefreshCw, Map, WifiOff, Sparkles } from 'lucide-react';
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -37,7 +37,6 @@ export default function Discovery() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
-  const [tonightOnly, setTonightOnly] = useState(true);
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
@@ -69,22 +68,9 @@ export default function Discovery() {
     setFilters((prev) => ({ ...prev, tags: [...vibeDiscoverTags] }));
   }, [hasVibeProfile, vibeDiscoverTags, filters.tags]);
 
-  const tonightWindow = useMemo(() => {
-    const now = new Date();
-    const end = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    return { dateFrom: now, dateTo: end };
-    // Recompute when Tonight toggles so the 8h window stays fresh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tonightOnly intentionally refreshes the window
-  }, [tonightOnly]);
+  const churchLine = `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`;
 
-  const effectiveFilters = useMemo<Partial<ActivityFilters>>(
-    () => ({
-      ...filters,
-      dateFrom: tonightOnly ? tonightWindow.dateFrom : filters.dateFrom,
-      dateTo: tonightOnly ? tonightWindow.dateTo : filters.dateTo,
-    }),
-    [filters, tonightOnly, tonightWindow.dateFrom, tonightWindow.dateTo],
-  );
+  const effectiveFilters = filters;
 
   // Use the token in the API request
   const {
@@ -183,7 +169,6 @@ export default function Discovery() {
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
-    setTonightOnly(false);
     setCurrentActivityIndex(0);
   };
 
@@ -259,22 +244,10 @@ export default function Discovery() {
       <div className="min-h-screen bg-background">
         <header className="bg-card shadow-sm p-4 flex items-center justify-between">
           <div>
-            <h2 className="font-display text-[28px] font-bold text-foreground">Discover</h2>
-            <p className="text-sm text-muted-foreground">
-              {tonightOnly ? 'Gatherings in the next 8 hours' : 'Gatherings near you'}
-            </p>
+            <h2 className="font-display text-[28px] font-bold text-foreground">Upcoming gatherings</h2>
+            <p className="text-sm text-muted-foreground">{churchLine}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant={tonightOnly ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setTonightOnly((prev) => !prev);
-                setCurrentActivityIndex(0);
-              }}
-            >
-              Tonight
-            </Button>
             <Button variant="ghost" size="sm" className="w-10 h-10 p-0" onClick={() => setShowFilterModal(true)}>
               <Filter className="w-5 h-5" />
             </Button>
@@ -282,31 +255,16 @@ export default function Discovery() {
         </header>
         <PageState
           icon={MapPin}
-          title={
-            deckCleared
-              ? 'You cleared the deck'
-              : tonightOnly
-                ? 'Quiet night nearby'
-                : 'Nothing nearby yet'
-          }
+          title={deckCleared ? 'You cleared the deck' : 'Nothing coming up'}
           description={
             deckCleared
               ? 'You’ve seen this round. Refresh for anything new, or host a plan so others can find you.'
-              : tonightOnly
-                ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
-                : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
+              : 'No upcoming gatherings yet. Refresh, or host one for the church.'
           }
-          actionLabel={deckCleared ? 'Reload deck' : tonightOnly ? 'Show all times' : 'Refresh'}
+          actionLabel={deckCleared ? 'Reload deck' : 'Refresh'}
           onAction={() => {
             if (deckCleared) {
               setCurrentActivityIndex(0);
-              void handleRefresh();
-              return;
-            }
-            if (tonightOnly) {
-              setTonightOnly(false);
-              setCurrentActivityIndex(0);
-              return;
             }
             void handleRefresh();
           }}
@@ -367,22 +325,10 @@ export default function Discovery() {
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
-          <h2 className="font-display text-[28px] font-bold text-foreground">Discover</h2>
-          <p className="text-sm text-muted-foreground">
-            {tonightOnly ? 'Gatherings in the next 8 hours' : 'Gatherings near you'}
-          </p>
+          <h2 className="font-display text-[28px] font-bold text-foreground">Upcoming gatherings</h2>
+          <p className="text-sm text-muted-foreground">{churchLine}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={tonightOnly ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setTonightOnly((prev) => !prev);
-              setCurrentActivityIndex(0);
-            }}
-          >
-            Tonight
-          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -477,39 +423,6 @@ export default function Discovery() {
           />
         )}
 
-        {/* Action buttons - Fixed position to avoid cutoff */}
-        <div className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-offset)+0.75rem)] flex items-center justify-center gap-6 z-50 px-4">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleReject}
-            disabled={swipeMutation.isPending}
-            className="h-[54px] rounded-full border-2 border-border bg-white px-5 text-[#222222] shadow-lg"
-            aria-label="Pass on this activity"
-          >
-            Pass
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDetailsModal(true)}
-            className="h-12 w-12 rounded-full border-2 border-border text-muted-foreground hover:bg-muted shadow-lg bg-card"
-            aria-label="View activity details"
-          >
-            <Info className="h-4 w-4" />
-          </Button>
-
-          <Button
-            size="lg"
-            onClick={handleJoin}
-            disabled={swipeMutation.isPending}
-            className="h-[54px] rounded-full bg-primary px-5 text-white shadow-lg hover:bg-primary/90"
-            aria-label="I'm going to this activity"
-          >
-            I'm going
-          </Button>
-        </div>
       </div>
 
       {/* Modals */}

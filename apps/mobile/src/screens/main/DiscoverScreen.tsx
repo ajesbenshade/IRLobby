@@ -119,7 +119,8 @@ export const DiscoverScreen = () => {
   const [visibilityFilter, setVisibilityFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
-  const [tonightOnly, setTonightOnly] = useState(true);
+  const foyerMode = isFoyerMode();
+  const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
   const [giveTarget, setGiveTarget] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
@@ -162,10 +163,12 @@ export const DiscoverScreen = () => {
       skill_level: skillFilter.trim() || undefined,
       age_restriction: ageFilter.trim() || undefined,
       visibility: visibilityFilter.trim() || undefined,
-      date_from: tonightOnly
-        ? tonightWindow.date_from
-        : normalizeDateFilter(dateFromFilter, false),
-      date_to: tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
+      date_from:
+        !foyerMode && tonightOnly
+          ? tonightWindow.date_from
+          : normalizeDateFilter(dateFromFilter, false),
+      date_to:
+        !foyerMode && tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
     }),
     [
       ageFilter,
@@ -177,6 +180,7 @@ export const DiscoverScreen = () => {
       normalizeDateFilter,
       skillFilter,
       tagFilter,
+      foyerMode,
       tonightOnly,
       tonightWindow.date_from,
       tonightWindow.date_to,
@@ -407,7 +411,7 @@ export const DiscoverScreen = () => {
     setVisibilityFilter('');
     setDateFromFilter('');
     setDateToFilter('');
-    setTonightOnly(true);
+    setTonightOnly(!isFoyerMode());
     setCurrentIndex(0);
   }, []);
 
@@ -463,7 +467,6 @@ export const DiscoverScreen = () => {
   const showTickets = isTicketingUiEnabled(config.ticketingEnabled);
   const ticketed = showTickets && currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
-  const foyerMode = isFoyerMode();
   const coverImage = currentActivity ? coverPhotoUrl(currentActivity) ?? currentActivity.images?.[0] : undefined;
   const audienceLabel = currentActivity ? audienceChipLabel(currentActivity) : '';
   const goingLabel = currentActivity
@@ -481,8 +484,12 @@ export const DiscoverScreen = () => {
       <FoyerHeader />
       <PageHeader
         eyebrow="Discover"
-        title="Gatherings near you"
-        subtitle="Swipe to pass, or say you’re going."
+        title={foyerMode ? 'Upcoming gatherings' : 'Gatherings near you'}
+        subtitle={
+          foyerMode
+            ? `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`
+            : 'Swipe to pass, or say you’re going.'
+        }
         rightContent={
           <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
             Pings
@@ -520,14 +527,16 @@ export const DiscoverScreen = () => {
               selected={showMap}
               onPress={() => setShowMap((previous) => !previous)}
             />
-            <Chip
-              label="Tonight"
-              selected={tonightOnly}
-              onPress={() => {
-                setTonightOnly((previous) => !previous);
-                setCurrentIndex(0);
-              }}
-            />
+            {foyerMode ? null : (
+              <Chip
+                label="Tonight"
+                selected={tonightOnly}
+                onPress={() => {
+                  setTonightOnly((previous) => !previous);
+                  setCurrentIndex(0);
+                }}
+              />
+            )}
             <AccentPill tone="neutral">{activities.length} nearby</AccentPill>
           </View>
 
@@ -599,7 +608,7 @@ export const DiscoverScreen = () => {
                 onChangeText={setTagFilter}
                 placeholder="Low-key, rooftop, hike"
               />
-              {!tonightOnly ? (
+              {foyerMode || !tonightOnly ? (
                 <>
                   <Field
                     label="Starts after"
@@ -678,15 +687,17 @@ export const DiscoverScreen = () => {
 
           {!isLoading && !error && activities.length === 0 ? (
             <EmptyStatePanel
-              title={tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
+              title={foyerMode ? 'Nothing coming up' : tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
               description={
-                tonightOnly
-                  ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
-                  : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
+                foyerMode
+                  ? 'No upcoming gatherings yet. Refresh, or host one for the church.'
+                  : tonightOnly
+                    ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
+                    : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
               }
               action={
                 <View style={styles.emptyActions}>
-                  {tonightOnly ? (
+                  {!foyerMode && tonightOnly ? (
                     <AppButton
                       onPress={() => {
                         setTonightOnly(false);

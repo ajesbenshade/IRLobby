@@ -184,8 +184,9 @@ export const FoyerProfileCard = () => {
         <Text style={styles.householdLabel}>Household</Text>
         <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
       </Pressable>
-      <Pressable accessibilityRole="link" accessibilityLabel="Subscribe to church calendar" onPress={openChurchCalendarSubscription} style={styles.household}>
+      <Pressable accessibilityRole="link" accessibilityLabel="Subscribe to church calendar" onPress={openChurchCalendarSubscription} style={styles.subscribeCard}>
         <Text style={styles.householdLabel}>Subscribe to church calendar</Text>
+        <Text style={styles.helper}>The Foyer does not need access to your calendar.</Text>
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {saveMutation.isPending ? <AppButton loading>Save</AppButton> : null}
@@ -251,5 +252,6 @@ const styles = StyleSheet.create({
   },
   householdLabel: { fontFamily: appTypography.bodySemibold, color: appColors.ink },
   householdCount: { color: appColors.mutedInk },
+  subscribeCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 4 },
   error: { color: appColors.danger },
 });

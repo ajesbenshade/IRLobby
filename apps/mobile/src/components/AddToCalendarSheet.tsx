@@ -15,7 +15,7 @@ export const AddToCalendarSheet = ({ onGoogle, onOutlook, onApple, onDismiss }: 
   <View style={styles.sheet}>
     <View style={styles.handle} />
     <Text style={styles.title}>Add to calendar</Text>
-    <Text style={styles.helper}>Opens in Safari. The Foyer does not use your calendar.</Text>
+    <Text style={styles.helper}>The Foyer does not need access to your calendar.</Text>
     <Pressable accessibilityRole="link" accessibilityLabel="Google Calendar" onPress={onGoogle} style={styles.link}>
       <Text style={styles.linkText}>Google Calendar</Text>
     </Pressable>

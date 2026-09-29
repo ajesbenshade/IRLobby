@@ -30,6 +30,12 @@ interface ActivityHost {
 interface ActivityDetail {
   id: number | string;
   title?: string;
+  calendar_links?: {
+    ics_url?: string | null;
+    webcal_url?: string | null;
+    google_url?: string | null;
+    outlook_url?: string | null;
+  } | null;
   description?: string;
   location?: string;
   time?: string;
@@ -263,9 +269,9 @@ export default function ActivityDetailPage() {
       </div>
       {showCalendar && activityId ? (
         <AddToCalendarDialog
-          onGoogle={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).google)}
-          onOutlook={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).outlook)}
-          onApple={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).apple)}
+          onGoogle={() => openCalendarUrl(gatheringCalendarUrls(a).google)}
+          onOutlook={() => openCalendarUrl(gatheringCalendarUrls(a).outlook)}
+          onApple={() => openCalendarUrl(gatheringCalendarUrls(a).apple)}
           onDismiss={() => setShowCalendar(false)}
         />
       ) : null}

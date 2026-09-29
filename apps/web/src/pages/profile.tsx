@@ -89,10 +89,11 @@ export default function Profile() {
         </Link>
         <button
           type="button"
-          className="mt-3 flex w-full items-center rounded-2xl bg-white px-4 py-4 text-left font-semibold shadow-sm"
+          className="mt-3 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-sm"
           onClick={() => openCalendarUrl(churchSubscribeUrl())}
         >
-          Subscribe to church calendar
+          <span className="block font-semibold">Subscribe to church calendar</span>
+          <span className="mt-1 block text-sm font-normal text-[#6e6a68]">The Foyer does not need access to your calendar.</span>
         </button>
       </div>
 

@@ -39,10 +39,11 @@ export default function GatheringsPage() {
       <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
       <button
         type="button"
-        className="mt-3 font-semibold text-[#a2033f]"
+        className="mt-4 w-full rounded-2xl bg-white p-4 text-left shadow-sm"
         onClick={() => openCalendarUrl(churchSubscribeUrl())}
       >
-        Subscribe to church calendar
+        <span className="block font-semibold text-[#222222]">Subscribe to church calendar</span>
+        <span className="mt-1 block text-sm text-[#6e6a68]">The Foyer does not need access to your calendar.</span>
       </button>
       <div className="mt-4 flex rounded-xl bg-white p-1">
         {(['upcoming', 'past'] as const).map((value) => (

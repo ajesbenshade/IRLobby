@@ -155,7 +155,7 @@ export function AddToCalendarDialog({
     <div className="fixed inset-0 z-[90] flex items-end bg-black/40" role="dialog" aria-label="Add to calendar">
       <div className="w-full rounded-t-[22px] bg-white p-5">
         <h2 className="font-display text-[26px] text-[#222222]">Add to calendar</h2>
-        <p className="mb-4 text-sm text-[#6e6a68]">Opens in your browser. The Foyer does not use your calendar.</p>
+        <p className="mb-4 text-sm text-[#6e6a68]">The Foyer does not need access to your calendar.</p>
         <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onGoogle}>
           Google Calendar
         </button>

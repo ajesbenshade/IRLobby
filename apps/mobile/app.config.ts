@@ -31,11 +31,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#f6f1ee',
+    backgroundColor: '#a2033f',
     dark: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#f6f1ee',
+      backgroundColor: '#a2033f',
     },
   },
   updates: {
@@ -63,6 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   },
   ios: {
+    icon: './assets/AppIcon-1024.png',
     supportsTablet: false,
     bundleIdentifier: 'com.irlobby.app',
     usesAppleSignIn: true,
@@ -91,16 +92,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'VIBRATE',
     ],
     adaptiveIcon: {
-      foregroundImage: './assets/AppIcon-1024.png',
-      backgroundColor: '#FF6B4A',
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#a2033f',
     },
   },
   plugins: [
     [
       'expo-notifications',
       {
-        icon: './assets/AppIcon-1024.png',
-        color: '#FF6B4A',
+        icon: './assets/notification-icon.png',
+        color: '#a2033f',
       },
     ],
     [

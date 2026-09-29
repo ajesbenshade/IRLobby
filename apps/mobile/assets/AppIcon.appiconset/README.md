@@ -1,1 +1,1 @@
-Denser IR lettermark (Aaron washout). Deeper gradient + solid white mark.
+Cream Libre Baskerville F on burgundy (#a2033f). Opaque RGB, square corners.

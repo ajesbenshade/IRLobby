@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ZodError } from 'zod';
 
 const DEFAULT_FALLBACK = 'Something went wrong. Please try again.';
 const SESSION_EXPIRED_MESSAGE = 'Your session expired. Sign in again to continue.';
@@ -62,6 +63,10 @@ export const getErrorMessage = (
   error: unknown,
   fallback = DEFAULT_FALLBACK,
 ) => {
+  // Schema diagnostics are for developers, not user-facing error messages.
+  if (error instanceof ZodError) {
+    return fallback;
+  }
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const responseData = error.response?.data;

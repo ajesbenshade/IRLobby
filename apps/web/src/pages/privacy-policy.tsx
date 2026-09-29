@@ -65,15 +65,11 @@ export default function PrivacyPolicy() {
               <li>Block and report submissions used for moderation</li>
             </ul>
 
-            <h3 className="text-xl font-medium mb-2">2.4 Optional sign-in, payments, diagnostics</h3>
+            <h3 className="text-xl font-medium mb-2">2.4 Optional sign-in and diagnostics</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4">
               <li>
                 Apple, Google, or X (Twitter) identifiers and profile fields if you use that
                 sign-in
-              </li>
-              <li>
-                Stripe identifiers for paid activities only. We do not store full card numbers on
-                The Foyer servers.
               </li>
               <li>Crash and performance diagnostics via Sentry when configured</li>
               <li>Expo push tokens when you enable notifications</li>
@@ -90,7 +86,6 @@ export default function PrivacyPolicy() {
               <li>Prevent abuse and review reports</li>
               <li>Send transactional email such as password reset when SMTP is configured</li>
               <li>Debug crashes and improve reliability</li>
-              <li>Process paid-activity payments through Stripe when that feature is used</li>
             </ul>
             <p className="text-gray-700 leading-relaxed mt-4">
               We do not use your data to run third-party advertising networks, and we do not sell
@@ -103,7 +98,7 @@ export default function PrivacyPolicy() {
             <p className="text-gray-700 leading-relaxed mb-4">
               We share information only as needed to run the product: other users (profile and
               activity details required to match and chat), our hosting provider, Sentry, Mapbox,
-              Stripe for paid activities, Apple/Google/X if you use that sign-in, and the SMTP
+              Apple/Google/X if you use that sign-in, and the SMTP
               provider for transactional mail. We may also share information when required by law
               or to protect people from abuse.
             </p>

@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
 import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
 import { audienceChipLabel, type GatheringLike } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
@@ -162,6 +163,7 @@ export default function Discovery() {
 
   const calendarDialog = calendarActivity ? (
     <AddToCalendarDialog
+      summary={calendarEventSummary(calendarActivity.title, calendarActivity.time)}
       onGoogle={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).google)}
       onOutlook={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).outlook)}
       onApple={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).apple)}
@@ -455,7 +457,6 @@ export default function Discovery() {
             onSwipeLeft={handleReject}
             onSwipeRight={handleJoin}
             onShowDetails={() => setShowDetailsModal(true)}
-            onAddToCalendar={() => setCalendarActivity(currentActivity)}
             className="absolute inset-x-4 top-0 z-30"
             disabled={swipeMutation.isPending}
           />
@@ -484,7 +485,10 @@ export default function Discovery() {
             isOpen={showDetailsModal}
             onClose={() => setShowDetailsModal(false)}
             onJoin={handleJoin}
-            onAddToCalendar={() => setCalendarActivity(currentActivity)}
+            onAddToCalendar={() => {
+              setShowDetailsModal(false);
+              setCalendarActivity(currentActivity);
+            }}
           />
 
           <MatchSuccessModal

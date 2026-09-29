@@ -1,5 +1,6 @@
 import {
   CHURCH_CALENDAR_ICS_PATH,
+  calendarEventSummary,
   calendarLinksFromActivity,
   churchCalendarFeedUrl,
   churchCalendarSubscribeUrl,
@@ -27,6 +28,13 @@ describe('calendar links from the gathering', () => {
     );
     expect(calendarLinksFromActivity({}).google).toBeNull();
     expect(calendarLinksFromActivity({ calendar_links: { google_url: '  ' } }).google).toBeNull();
+  });
+
+  it('formats the sheet summary as title, weekday, and time', () => {
+    expect(calendarEventSummary("Women's Fall Brunch", '2026-10-17T13:30:00.000Z')).toBe(
+      "Women's Fall Brunch · Sat, Oct 17 · 9:30 AM",
+    );
+    expect(calendarEventSummary('Harvest Supper')).toBe('Harvest Supper');
   });
 
   it('builds the church subscribe and https copy links from one helper', () => {

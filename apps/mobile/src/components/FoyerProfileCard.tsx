@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -195,16 +196,26 @@ export const FoyerProfileCard = () => {
         <Text style={styles.householdLabel}>Household</Text>
         <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
       </Pressable>
+      <Text style={styles.calendarSection}>CALENDAR</Text>
       <View style={styles.calendarCard}>
-        <Text style={styles.calendarTitle}>Calendar</Text>
+        <View style={styles.calendarHeading}>
+          <View style={styles.calendarIcon}>
+            <MaterialCommunityIcons name="calendar-month-outline" size={22} color={appColors.primary} />
+          </View>
+          <Text style={styles.calendarTitle}>Church calendar</Text>
+        </View>
+        <Text style={styles.calendarBody}>
+          Subscribe to see every Franconia gathering in your own calendar. It updates automatically.
+        </Text>
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Subscribe to church calendar"
           onPress={openChurchCalendarSubscription}
-          style={styles.calendarRow}
+          style={styles.subscribeButton}
         >
-          <Text style={styles.calendarAction}>Subscribe to church calendar</Text>
+          <Text style={styles.subscribeText}>Subscribe to church calendar</Text>
         </Pressable>
+        <Text style={styles.calendarNote}>Opens in Apple Calendar, or copy the link for Google or Outlook.</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Copy link"
@@ -219,12 +230,13 @@ export const FoyerProfileCard = () => {
               })
               .catch(() => setLinkCopied(false));
           }}
-          style={styles.calendarRow}
+          style={styles.copyRow}
         >
-          <Text style={styles.calendarAction}>Copy link</Text>
+          <MaterialCommunityIcons name="content-copy" size={16} color={appColors.primary} />
+          <Text style={styles.copyText}>Copy link</Text>
         </Pressable>
         {linkCopied ? (
-          <Text accessibilityLiveRegion="polite" style={styles.helper}>
+          <Text accessibilityLiveRegion="polite" style={styles.copied}>
             Link copied
           </Text>
         ) : null}
@@ -293,9 +305,37 @@ const styles = StyleSheet.create({
   },
   householdLabel: { fontFamily: appTypography.bodySemibold, color: appColors.ink },
   householdCount: { color: appColors.mutedInk },
-  calendarCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 4 },
-  calendarTitle: { fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 16, marginBottom: 4 },
-  calendarRow: { minHeight: 44, justifyContent: 'center' },
-  calendarAction: { fontFamily: appTypography.bodySemibold, color: appColors.primary, fontSize: 16 },
+  calendarSection: {
+    marginTop: 16,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    color: appColors.mutedInk,
+  },
+  calendarCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 12 },
+  calendarHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  calendarIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTitle: { fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 17 },
+  calendarBody: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.mutedInk },
+  subscribeButton: {
+    minHeight: 54,
+    borderRadius: 999,
+    backgroundColor: appColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  subscribeText: { color: appColors.white, fontFamily: appTypography.bodySemibold, fontSize: 16 },
+  calendarNote: { fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18, color: appColors.mutedInk },
+  copyRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  copyText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
+  copied: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
   error: { color: appColors.danger },
 });

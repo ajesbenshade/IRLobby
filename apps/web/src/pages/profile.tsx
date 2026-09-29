@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
+import { Calendar, Copy } from 'lucide-react';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -116,18 +117,31 @@ export default function Profile() {
               : `${user.householdChildCount} children`}
           </span>
         </Link>
-        <div className="mt-3 rounded-2xl bg-white px-4 py-4 shadow-sm">
-          <p className="font-semibold text-[#222222]">Calendar</p>
+        <p className="mb-2 mt-4 text-[11.5px] font-bold tracking-wide text-[#6e6a68]">CALENDAR</p>
+        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f9e8ee] text-[#a2033f]">
+              <Calendar className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <p className="font-semibold text-[#222222]">Church calendar</p>
+          </div>
+          <p className="mt-3 text-[15px] leading-snug text-[#6e6a68]">
+            Subscribe to see every Franconia gathering in your own calendar. It updates
+            automatically.
+          </p>
           <button
             type="button"
-            className="mt-2 block min-h-11 text-left font-semibold text-[#a2033f]"
+            className="mt-4 h-[54px] w-full rounded-full bg-[#a2033f] font-semibold text-white"
             onClick={() => openCalendarUrl(churchSubscribeUrl())}
           >
             Subscribe to church calendar
           </button>
+          <p className="mt-3 text-sm leading-5 text-[#6e6a68]">
+            Opens in Apple Calendar, or copy the link for Google or Outlook.
+          </p>
           <button
             type="button"
-            className="block min-h-11 text-left font-semibold text-[#a2033f]"
+            className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 font-semibold text-[#a2033f]"
             onClick={() => {
               void copyChurchCalendarLink()
                 .then(() => {
@@ -137,9 +151,10 @@ export default function Profile() {
                 .catch(() => setLinkCopied(false));
             }}
           >
+            <Copy className="h-4 w-4" aria-hidden="true" />
             Copy link
           </button>
-          {linkCopied ? <p className="text-sm text-[#6e6a68]">Link copied</p> : null}
+          {linkCopied ? <p className="text-center text-sm text-[#6e6a68]">Link copied</p> : null}
         </div>
       </div>
 

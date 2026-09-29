@@ -13,6 +13,7 @@ import { AppButton } from '@components/ui/Button';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
 import { audienceChipLabel, coverPhotoUrl, goingCountLabel, hostDisplayName } from '@foyer/logic';
 import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
@@ -101,6 +102,7 @@ export const GatheringDetailScreen = () => {
         <Portal>
           <Modal visible onDismiss={() => setShowCalendar(false)} contentContainerStyle={styles.sheetModal}>
             <AddToCalendarSheet
+              summary={calendarEventSummary(activity.title, activity.time)}
               onGoogle={() => openCalendarUrl(gatheringCalendarUrls(activity).google)}
               onOutlook={() => openCalendarUrl(gatheringCalendarUrls(activity).outlook)}
               onApple={() => openCalendarUrl(gatheringCalendarUrls(activity).apple)}

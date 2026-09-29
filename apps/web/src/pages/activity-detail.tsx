@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
 import { compressImageFile } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
@@ -234,7 +235,9 @@ export default function ActivityDetailPage() {
 
       <label className="block rounded-2xl border border-dashed border-[#e1dbd7] bg-white p-4 text-sm">
         <span className="font-semibold text-[#a2033f]">Add a photo</span>
-        <span className="mt-1 block text-[#6e6a68]">Up to 8 photos. Hosts and people who are going can add them.</span>
+        <span className="mt-1 block text-[#6e6a68]">
+          Up to 8 photos. Hosts and people who are going can add them.
+        </span>
         <input
           aria-label="Add a gathering photo"
           type="file"
@@ -269,6 +272,7 @@ export default function ActivityDetailPage() {
       </div>
       {showCalendar && activityId ? (
         <AddToCalendarDialog
+          summary={calendarEventSummary(safeTitle, rawTime)}
           onGoogle={() => openCalendarUrl(gatheringCalendarUrls(a).google)}
           onOutlook={() => openCalendarUrl(gatheringCalendarUrls(a).outlook)}
           onApple={() => openCalendarUrl(gatheringCalendarUrls(a).apple)}

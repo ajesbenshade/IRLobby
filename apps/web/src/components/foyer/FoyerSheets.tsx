@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { Calendar, CalendarArrowDown, ChevronRight, Mail } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { WHOS_COMING_NOTE } from '@/lib/foyer';
@@ -174,56 +175,88 @@ export function YoureGoingDialog({
   );
 }
 
+function CalendarChoice({
+  icon,
+  label,
+  note,
+  onPress,
+}: {
+  icon: ReactNode;
+  label: string;
+  note?: string;
+  onPress: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="mb-2 flex min-h-16 w-full items-center gap-3 rounded-2xl border border-[#e1dbd7] bg-[#fbf7f5] px-3 py-2 text-left"
+      onClick={onPress}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f9e8ee] text-[#a2033f]">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-[#222222]">{label}</span>
+        {note ? <span className="block text-sm font-normal text-[#6e6a68]">{note}</span> : null}
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-[#a09b98]" aria-hidden="true" />
+    </button>
+  );
+}
+
 export function AddToCalendarDialog({
+  summary,
   onGoogle,
   onOutlook,
   onApple,
   onDismiss,
 }: {
+  summary: string;
   onGoogle: () => void;
   onOutlook: () => void;
   onApple: () => void;
   onDismiss: () => void;
 }) {
+  const choose = (open: () => void) => {
+    open();
+    onDismiss();
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-end bg-black/40"
+      className="fixed inset-0 z-[90] flex items-end bg-[rgba(20,14,16,0.42)]"
       role="dialog"
       aria-label="Add to calendar"
     >
-      <div className="w-full rounded-t-[22px] bg-white p-5">
+      <div className="w-full rounded-t-[22px] bg-white px-5 pb-6 pt-3">
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[#e1dbd7]" />
         <h2 className="font-display text-[26px] text-[#222222]">Add to calendar</h2>
-        <p className="mb-4 text-sm text-[#6e6a68]">
+        <p className="mb-3 text-[15px] text-[#6e6a68]">{summary}</p>
+        <CalendarChoice
+          icon={<Calendar className="h-5 w-5" aria-hidden="true" />}
+          label="Google Calendar"
+          onPress={() => choose(onGoogle)}
+        />
+        <CalendarChoice
+          icon={<Mail className="h-5 w-5" aria-hidden="true" />}
+          label="Outlook"
+          onPress={() => choose(onOutlook)}
+        />
+        <CalendarChoice
+          icon={<CalendarArrowDown className="h-5 w-5" aria-hidden="true" />}
+          label="Apple Calendar"
+          note="Downloads an .ics file"
+          onPress={() => choose(onApple)}
+        />
+        <p className="mb-3 mt-1 text-sm leading-5 text-[#6e6a68]">
           Opens in your calendar app. The Foyer doesn't need access to your calendar.
         </p>
         <button
           type="button"
-          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left font-semibold text-[#a2033f]"
-          onClick={onGoogle}
-        >
-          Google Calendar
-        </button>
-        <button
-          type="button"
-          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left font-semibold text-[#a2033f]"
-          onClick={onOutlook}
-        >
-          Outlook
-        </button>
-        <button
-          type="button"
-          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left"
-          onClick={onApple}
-        >
-          <span className="font-semibold text-[#a2033f]">Apple Calendar</span>
-          <span className="text-sm font-normal text-[#6e6a68]">Downloads an .ics file</span>
-        </button>
-        <button
-          type="button"
-          className="mt-1 w-full font-semibold text-[#a2033f]"
+          className="h-[54px] w-full rounded-full border border-[#e1dbd7] font-semibold text-[#222222]"
           onClick={onDismiss}
         >
-          Close
+          Cancel
         </button>
       </div>
     </div>

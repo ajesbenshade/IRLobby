@@ -1,3 +1,5 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
@@ -5,31 +7,59 @@ import { View } from '@components/RNCompat';
 import { appColors, appTypography, radii } from '@theme/index';
 
 type AddToCalendarSheetProps = {
+  summary: string;
   onGoogle: () => void;
   onOutlook: () => void;
   onApple: () => void;
   onDismiss: () => void;
 };
 
-export const AddToCalendarSheet = ({ onGoogle, onOutlook, onApple, onDismiss }: AddToCalendarSheetProps) => (
+const openAndClose = (open: () => void, close: () => void) => {
+  open();
+  close();
+};
+
+export const AddToCalendarSheet = ({ summary, onGoogle, onOutlook, onApple, onDismiss }: AddToCalendarSheetProps) => (
   <View style={styles.sheet}>
     <View style={styles.handle} />
     <Text style={styles.title}>Add to calendar</Text>
+    <Text style={styles.summary}>{summary}</Text>
+    <CalendarRow icon="calendar-month-outline" label="Google Calendar" onPress={() => openAndClose(onGoogle, onDismiss)} />
+    <CalendarRow icon="email-outline" label="Outlook" onPress={() => openAndClose(onOutlook, onDismiss)} />
+    <CalendarRow
+      icon="calendar-import-outline"
+      label="Apple Calendar"
+      note="Downloads an .ics file"
+      onPress={() => openAndClose(onApple, onDismiss)}
+    />
     <Text style={styles.helper}>Opens in your calendar app. The Foyer doesn't need access to your calendar.</Text>
-    <Pressable accessibilityRole="link" accessibilityLabel="Google Calendar" onPress={onGoogle} style={styles.link}>
-      <Text style={styles.linkText}>Google Calendar</Text>
-    </Pressable>
-    <Pressable accessibilityRole="link" accessibilityLabel="Outlook" onPress={onOutlook} style={styles.link}>
-      <Text style={styles.linkText}>Outlook</Text>
-    </Pressable>
-    <Pressable accessibilityRole="link" accessibilityLabel="Apple Calendar" onPress={onApple} style={styles.link}>
-      <Text style={styles.linkText}>Apple Calendar</Text>
-      <Text style={styles.rowNote}>Downloads an .ics file</Text>
-    </Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="Close calendar options" onPress={onDismiss} style={styles.done}>
-      <Text style={styles.doneText}>Close</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Cancel" onPress={onDismiss} style={styles.cancel}>
+      <Text style={styles.cancelText}>Cancel</Text>
     </Pressable>
   </View>
+);
+
+const CalendarRow = ({
+  icon,
+  label,
+  note,
+  onPress,
+}: {
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+  label: string;
+  note?: string;
+  onPress: () => void;
+}) => (
+  <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={styles.row}>
+    <View style={styles.iconTile}>
+      <MaterialCommunityIcons name={icon} size={22} color={appColors.primary} />
+    </View>
+    <View style={styles.rowCopy}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      {note ? <Text style={styles.rowNote}>{note}</Text> : null}
+    </View>
+    <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.softInk} />
+  </Pressable>
 );
 
 const styles = StyleSheet.create({
@@ -37,8 +67,10 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.white,
     borderTopLeftRadius: radii.card,
     borderTopRightRadius: radii.card,
-    padding: 20,
-    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+    gap: 10,
   },
   handle: {
     alignSelf: 'center',
@@ -46,48 +78,70 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 999,
     backgroundColor: appColors.line,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   title: {
     fontFamily: appTypography.heading,
     fontSize: 26,
     color: appColors.ink,
   },
-  helper: {
+  summary: {
     fontFamily: appTypography.bodyRegular,
-    fontSize: 14,
+    fontSize: 15,
     color: appColors.mutedInk,
-    lineHeight: 20,
     marginTop: -4,
+    marginBottom: 4,
   },
-  link: {
-    minHeight: 52,
+  row: {
+    minHeight: 64,
     borderRadius: radii.list,
-    backgroundColor: appColors.primaryWash,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: '#fbf7f5',
+    borderWidth: 1,
+    borderColor: appColors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 2,
+    gap: 12,
   },
-  linkText: {
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowCopy: { flex: 1, gap: 2 },
+  rowLabel: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 16,
-    color: appColors.primary,
+    color: appColors.ink,
   },
   rowNote: {
     fontFamily: appTypography.bodyRegular,
     fontSize: 13,
     color: appColors.mutedInk,
   },
-  done: {
-    minHeight: 44,
+  helper: {
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 14,
+    color: appColors.mutedInk,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  cancel: {
+    minHeight: 54,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: appColors.line,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
   },
-  doneText: {
+  cancelText: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 16,
-    color: appColors.primary,
+    color: appColors.ink,
   },
 });

@@ -29,6 +29,31 @@ export const calendarLinksFromActivity = (activity: CalendarLinkActivity) => {
   };
 };
 
+const summaryPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) =>
+  parts.find((part) => part.type === type)?.value ?? '';
+
+/** One line under the sheet title: "Women's Fall Brunch · Sat, Oct 17 · 9:30 AM". */
+export const calendarEventSummary = (title: string, startsAt?: string | null) => {
+  const name = title.trim() || 'Gathering';
+  if (!startsAt) {
+    return name;
+  }
+  const date = new Date(startsAt);
+  if (Number.isNaN(date.getTime())) {
+    return name;
+  }
+  const parts = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/New_York',
+  }).formatToParts(date);
+  const clock = `${summaryPart(parts, 'hour')}:${summaryPart(parts, 'minute')} ${summaryPart(parts, 'dayPeriod')}`;
+  return `${name} · ${summaryPart(parts, 'weekday')}, ${summaryPart(parts, 'month')} ${summaryPart(parts, 'day')} · ${clock}`;
+};
+
 const absoluteHttpBase = (apiBaseUrl: string, pageOrigin?: string) => {
   const trimmed = apiBaseUrl.trim().replace(/\/+$/, '');
   if (/^https?:\/\//i.test(trimmed)) {

@@ -40,6 +40,7 @@ import {
   type WhosComingResponse,
 } from '@foyer/logic';
 import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
@@ -737,6 +738,11 @@ export const DiscoverScreen = () => {
           {currentActivity ? (
             <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
               {foyerMode ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View details for ${currentActivity.title}`}
+                  onPress={() => setShowDetails(true)}
+                >
                 <View style={styles.foyerCard}>
                   <View style={styles.foyerPhotoWrap}>
                     {coverImage ? (
@@ -774,16 +780,9 @@ export const DiscoverScreen = () => {
                         <Text style={styles.hostedName}>{foyerHostName}</Text>
                       </View>
                     </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Add to calendar"
-                      onPress={() => setCalendarActivity(currentActivity)}
-                      style={styles.addCalendar}
-                    >
-                      <Text style={styles.addCalendarText}>Add to calendar</Text>
-                    </Pressable>
                   </View>
                 </View>
+                </Pressable>
               ) : (
               <View style={[styles.photoCard, ticketed ? styles.photoCardTicketed : null]}>
                 {coverImage ? (
@@ -894,7 +893,10 @@ export const DiscoverScreen = () => {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="Add to calendar"
-                      onPress={() => setCalendarActivity(currentActivity)}
+                      onPress={() => {
+                        setShowDetails(false);
+                        setCalendarActivity(currentActivity);
+                      }}
                       style={styles.addCalendar}
                     >
                       <Text style={styles.addCalendarText}>Add to calendar</Text>
@@ -922,7 +924,7 @@ export const DiscoverScreen = () => {
                     <AppButton variant="outline" onPress={() => setShowDetails(false)}>
                       Close
                     </AppButton>
-                    {ticketed ? (
+                    {foyerMode ? null : ticketed ? (
                       <AppButton
                         disabled={Boolean(currentActivity.isSoldOut)}
                         onPress={() => {
@@ -942,6 +944,8 @@ export const DiscoverScreen = () => {
                         {currentActivity.isSoldOut ? 'Sold out' : 'Buy ticket'}
                       </AppButton>
                     ) : null}
+                    {foyerMode ? null : (
+                    <>
                     <AppButton
                       variant="outline"
                       disabled={participationMutation.isPending}
@@ -982,6 +986,8 @@ export const DiscoverScreen = () => {
                     >
                       I'm going
                     </AppButton>
+                    </>
+                    )}
                   </View>
                 </ScrollView>
               ) : null}
@@ -1035,6 +1041,7 @@ export const DiscoverScreen = () => {
                 contentContainerStyle={styles.sheetModal}
               >
                 <AddToCalendarSheet
+                  summary={calendarEventSummary(calendarActivity.title, calendarActivity.time)}
                   onGoogle={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).google)}
                   onOutlook={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).outlook)}
                   onApple={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).apple)}

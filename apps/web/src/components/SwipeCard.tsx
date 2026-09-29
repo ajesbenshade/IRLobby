@@ -21,7 +21,6 @@ interface SwipeCardProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onShowDetails: () => void;
-  onAddToCalendar?: () => void;
   className?: string;
   disabled?: boolean;
 }
@@ -32,7 +31,6 @@ export default memo(function SwipeCard({
   onSwipeLeft,
   onSwipeRight,
   onShowDetails,
-  onAddToCalendar,
   className = '',
   disabled = false,
 }: SwipeCardProps) {
@@ -340,19 +338,6 @@ export default memo(function SwipeCard({
               </div>
             )}
           </div>
-
-          {foyerMode && onAddToCalendar ? (
-            <button
-              type="button"
-              className="mt-4 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAddToCalendar();
-              }}
-            >
-              Add to calendar
-            </button>
-          ) : null}
 
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4">
             <Button

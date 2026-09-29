@@ -243,6 +243,12 @@ urlpatterns = [
         "api/public/calendar.ics", foyer_views.public_calendar_ics_view, name="public-calendar-ics"
     ),
     path("api/public/calendar", foyer_views.public_calendar, name="public-calendar"),
+    path(
+        "api/public/events/<int:pk>.ics",
+        foyer_views.public_event_ics_view,
+        name="public-event-ics",
+    ),
+    path("api/public/event.ics", foyer_views.private_event_ics_view, name="private-event-ics"),
     path("api/activities/", include("activities.urls")),
     path("api/swipes/", include("swipes.urls")),
     path("api/matches/", include("matches.urls")),

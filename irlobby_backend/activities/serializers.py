@@ -8,6 +8,7 @@ from .access import is_church_admin
 from .eligibility import audience_label, confirmed_people_count, host_display_name
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
+from .public_calendar import build_calendar_links
 from .ticketing import ticketing_enabled
 
 
@@ -47,6 +48,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     going_count = serializers.SerializerMethodField()
     my_rsvp = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
+    calendar_links = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -112,6 +114,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "going_count",
             "my_rsvp",
             "photos",
+            "calendar_links",
         )
         read_only_fields = (
             "id",
@@ -307,6 +310,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             for photo in obj.photos.all()
             if photo.image
         ]
+
+    def get_calendar_links(self, obj):
+        return build_calendar_links(obj, self.context.get("request"))
 
     def validate_description(self, value):
         return strip_html(value)

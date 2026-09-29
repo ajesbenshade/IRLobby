@@ -21,7 +21,13 @@ from .eligibility import (
 from .household_rules import dependent_create_errors
 from .models import Activity, ActivityParticipant, Church, EventPhoto, HouseholdDependent
 from .photos import PhotoProcessingError, absolute_photo_url, compress_uploaded_image
-from .public_calendar import public_calendar_ics, public_calendar_queryset, public_event_payload
+from .public_calendar import (
+    activity_id_from_ics_token,
+    event_ics,
+    public_calendar_ics,
+    public_calendar_queryset,
+    public_event_payload,
+)
 from .serializers import ActivitySerializer
 
 MAX_EVENT_PHOTOS = 8
@@ -398,11 +404,43 @@ def public_calendar(request):
     return Response({"events": events})
 
 
+def _calendar_ics_response(body: str, filename: str, *, private: bool) -> HttpResponse:
+    response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
+    response["Cache-Control"] = "private, max-age=300" if private else "public, max-age=300"
+    return response
+
+
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def public_calendar_ics_view(request):
     body = public_calendar_ics(public_calendar_queryset())
-    response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
-    response["Content-Disposition"] = 'inline; filename="calendar.ics"'
-    return response
+    return _calendar_ics_response(body, "calendar.ics", private=False)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def public_event_ics_view(request, pk):
+    activity = (
+        Activity.objects.filter(pk=pk, list_on_church_calendar=True, calendar_approved=True)
+        .select_related("host", "host_church")
+        .first()
+    )
+    if activity is None:
+        return HttpResponse(status=404)
+    return _calendar_ics_response(event_ics(activity), "event.ics", private=False)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def private_event_ics_view(request):
+    activity_id = activity_id_from_ics_token(request.query_params.get("token") or "")
+    if activity_id is None:
+        return HttpResponse(status=404)
+    activity = Activity.objects.filter(pk=activity_id).select_related("host", "host_church").first()
+    if activity is None:
+        return HttpResponse(status=404)
+    return _calendar_ics_response(event_ics(activity), "event.ics", private=True)

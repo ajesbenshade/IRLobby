@@ -115,6 +115,7 @@ class Activity(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         indexes = [
@@ -140,6 +141,8 @@ class Activity(models.Model):
                 and "location_point" not in fields
             ):
                 fields.append("location_point")
+            if "updated_at" not in fields:
+                fields.append("updated_at")
             kwargs["update_fields"] = fields
         super().save(*args, **kwargs)
 

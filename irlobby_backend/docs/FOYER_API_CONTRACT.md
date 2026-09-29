@@ -111,7 +111,13 @@ Response adds:
   "going_count": 0,
   "my_rsvp": null,
   "photos": [],
-  "platform_fee_percent": "0.00"
+  "platform_fee_percent": "0.00",
+  "calendar_links": {
+    "ics_url": "https://<host>/api/public/event.ics?token=<signed>",
+    "webcal_url": "webcal://<host>/api/public/event.ics?token=<signed>",
+    "google_url": "https://calendar.google.com/calendar/render?action=TEMPLATE&...",
+    "outlook_url": "https://outlook.live.com/calendar/0/deeplink/compose?..."
+  }
 }
 ```
 
@@ -238,9 +244,57 @@ Only gatherings with `list_on_church_calendar: true` and `calendar_approved: tru
 
 Those eight keys are the only event fields. No birth dates, emails, children, chat, or RSVP lists.
 
-`GET /api/public/calendar.ics` → `text/calendar`. `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. Same events only.
+`GET /api/public/calendar.ics` → `text/calendar; charset=utf-8`. `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. Same events only. Subscribe in Apple Calendar by swapping the scheme: `webcal://<host>/api/public/calendar.ics` (same path, no Authorization header).
+
+Feed properties:
+
+| Property | Value |
+|---|---|
+| `X-WR-CALNAME` | `Franconia Mennonite Church – The Foyer` (en dash) |
+| `X-WR-TIMEZONE` | `America/New_York` |
+| `UID` | `foyer-activity-<id>@franconiamennonite.org` (stable) |
+| `DTSTAMP` | UTC time the file was generated |
+| `LAST-MODIFIED` | the gathering `updated_at`, UTC |
+| `SEQUENCE` | integer unix time of `updated_at` (bumps when the gathering is saved) |
+| `Cache-Control` | `public, max-age=300` |
+
+Timed instants are UTC (`...Z`), which match the `America/New_York` wall time stored on the gathering. Deleted gatherings and gatherings that are not both listed and approved are omitted from the next feed (there is no tombstone, so they are not sent as `CANCELLED`).
 
 CORS allows `https://franconiamennonite.org`.
+
+## Calendar links (no device calendar permission)
+
+List and detail responses (`GET /api/activities/`, `GET /api/activities/<id>/`, and the hosted and going lists) include `calendar_links` when the caller is authenticated. The phone opens these URLs; it does not request calendar permission.
+
+```json
+{
+  "ics_url": "https://<host>/api/public/events/12.ics",
+  "webcal_url": "webcal://<host>/api/public/events/12.ics",
+  "google_url": "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Harvest%20Supper&dates=20261006T180000Z/20261006T200000Z&details=Host%3A%20Sarah%20Host%0ABring%20a%20dish.&location=Franconia%20meetinghouse",
+  "outlook_url": "https://outlook.live.com/calendar/0/deeplink/compose?subject=Harvest%20Supper&body=Host%3A%20Sarah%20Host%0ABring%20a%20dish.&startdt=2026-10-06T18%3A00%3A00Z&enddt=2026-10-06T20%3A00%3A00Z&location=Franconia%20meetinghouse"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `ics_url` | `.ics` file. Safari and the Apple Calendar app open it with no `Authorization` header. |
+| `webcal_url` | the same URL with the `webcal://` scheme |
+| `google_url` | `https://calendar.google.com/calendar/render?action=TEMPLATE` with `text`, `dates` (`YYYYMMDDTHHMMSSZ/YYYYMMDDTHHMMSSZ`), `details`, and `location` |
+| `outlook_url` | `https://outlook.live.com/calendar/0/deeplink/compose` with `subject`, `body`, `startdt`, `enddt` (ISO UTC), and `location`. Work and school accounts can use the same query on `https://outlook.office.com/calendar/0/deeplink/compose`. |
+
+Approved church-calendar gatherings (`list_on_church_calendar` and `calendar_approved`) use a public file:
+
+`GET /api/public/events/<id>.ics`
+
+Any other gathering uses an unguessable token that is only returned inside the authenticated `calendar_links` object:
+
+`GET /api/public/event.ics?token=<signed>`
+
+The token is a stable Django signature of the gathering id (`salt` `foyer-event-ics`). It does not change between requests. A missing token, a bad signature, a forged id, or a deleted gathering is `404` with an empty body. `GET /api/public/events/<id>.ics` is also `404` unless that id is on the approved public calendar, so private ids cannot be walked.
+
+Both files are `text/calendar; charset=utf-8` and use `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. The per-gathering file contains only title (`SUMMARY`), start (`DTSTART`), end (`DTEND` when the end is after the start), location, description, and host name (the description begins with `Host: <name>`). It has no `ATTENDEE`, email, household, minor, or other contact data. `Cache-Control` is `public, max-age=300` for the public file and `private, max-age=300` for the token file.
+
+If `end_time` is null, or not after the start, the `.ics` omits `DTEND`. Google and Outlook links still send a positive range by using the start plus one hour. A start and end that fall on America/New_York midnights a whole number of days apart are still written as UTC instants, not a zero-length event.
 
 ## Stripe
 

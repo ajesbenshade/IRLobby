@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,7 +30,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
-const MAX_EVENT_CAPACITY = 10;
+const MAX_EVENT_CAPACITY = 500;
 const MAX_ACTIVITY_IMAGES = 5;
 
 const insertActivitySchema = z.object({
@@ -78,7 +79,7 @@ const categories = [
   'Gaming',
 ];
 
-const participantOptions = Array.from({ length: MAX_EVENT_CAPACITY }, (_, i) => i + 1);
+const participantOptions = [6, 10, 20, 40, 80, 150, 300, 500];
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -128,6 +129,7 @@ function getBrowserCoordinates(): Promise<{ latitude: number; longitude: number 
 }
 
 export default function CreateActivity() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -231,6 +233,14 @@ export default function CreateActivity() {
     }
   };
 
+  const [audienceGender, setAudienceGender] = useState<'everyone' | 'men' | 'women'>('everyone');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [listOnChurchCalendar, setListOnChurchCalendar] = useState(false);
+  const [donationEnabled, setDonationEnabled] = useState(false);
+  const [suggestedDonation, setSuggestedDonation] = useState('');
+  const [hostAsChurch, setHostAsChurch] = useState(false);
+
   const createActivityMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const visibility = data.visibility ?? [];
@@ -240,7 +250,16 @@ export default function CreateActivity() {
         visibility: normalizedVisibility,
         isPrivate: !normalizedVisibility.includes('everyone'),
         dateTime: new Date(data.dateTime).toISOString(),
-        images: imagePreviews,
+        images: imagePreviews.slice(0, 1),
+        audience_gender: audienceGender,
+        age_min: ageMin.trim() ? Number(ageMin) : null,
+        age_max: ageMax.trim() ? Number(ageMax) : null,
+        list_on_church_calendar: listOnChurchCalendar,
+        donation_enabled: donationEnabled,
+        suggested_donation: suggestedDonation.trim() || '0',
+        is_ticketed: false,
+        platform_fee_percent: 0,
+        host_kind: hostAsChurch ? 'church' : 'person',
       };
       const response = await apiRequest('POST', API_ROUTES.ACTIVITIES, activityData);
       if (!response.ok) {
@@ -451,6 +470,45 @@ export default function CreateActivity() {
                 </FormItem>
               )}
             />
+
+            <div className="space-y-3 rounded-xl border border-[#eadfd9] bg-[#f6f1ee] p-4">
+              <p className="font-display text-lg text-[#222222]">Who it&apos;s for</p>
+              <div className="flex gap-2">
+                {(['everyone', 'men', 'women'] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`rounded-full px-3 py-1 text-sm ${audienceGender === value ? 'bg-[#a2033f] text-white' : 'bg-white'}`}
+                    onClick={() => setAudienceGender(value)}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="Youngest age" value={ageMin} onChange={(event) => setAgeMin(event.target.value)} />
+                <Input placeholder="Oldest age" value={ageMax} onChange={(event) => setAgeMax(event.target.value)} />
+              </div>
+              <label className="flex items-start gap-2 text-sm text-[#222222]">
+                <input type="checkbox" checked={listOnChurchCalendar} onChange={(event) => setListOnChurchCalendar(event.target.checked)} />
+                <span>
+                  List on the church calendar. A public event&apos;s location is visible on the church website. Do not put a home address there unless you mean for the congregation to see it.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={donationEnabled} onChange={(event) => setDonationEnabled(event.target.checked)} />
+                Accept an optional gift. RSVP stays free. The Foyer does not take a cut.
+              </label>
+              {user?.isCongregationalAdmin ? (
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" checked={hostAsChurch} onChange={(event) => setHostAsChurch(event.target.checked)} />
+                  Host as Franconia Mennonite Church
+                </label>
+              ) : null}
+              {donationEnabled ? (
+                <Input placeholder="Suggested amount" value={suggestedDonation} onChange={(event) => setSuggestedDonation(event.target.value)} />
+              ) : null}
+            </div>
 
             {/* Max Participants */}
             <FormField

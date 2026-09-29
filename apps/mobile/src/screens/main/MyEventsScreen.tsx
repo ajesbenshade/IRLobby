@@ -9,7 +9,7 @@ import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { config } from '@constants/config';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
-import { fetchHostedActivities } from '@services/activityService';
+import { fetchGatherings, fetchHostedActivities } from '@services/activityService';
 import { fetchMatches } from '@services/matchService';
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -82,7 +82,14 @@ export const MyEventsScreen = () => {
     queryFn: fetchMatches,
   });
 
-  const isRefreshing = hostedRefetching || matchesRefetching;
+  const gatheringsQuery = useQuery({
+    queryKey: ['mobile-gatherings'],
+    queryFn: fetchGatherings,
+    enabled: config.foyerMode,
+  });
+  const gatherings = gatheringsQuery.data ?? [];
+
+  const isRefreshing = hostedRefetching || matchesRefetching || gatheringsQuery.isRefetching;
   const hostedCount = hosted.length;
   const matchedCount = matches.length;
 
@@ -109,6 +116,36 @@ export const MyEventsScreen = () => {
         }
         rightContent={<AccentPill tone="neutral">{hostedCount + matchedCount} total</AccentPill>}
       />
+
+      {config.foyerMode ? (
+        <PanelCard>
+          <SectionIntro
+            eyebrow="After the card"
+            title="Your gatherings"
+            subtitle="Come back to chat once you or a child in your household is going."
+          />
+          {gatherings.length === 0 ? (
+            <Text style={styles.loadingCopy}>No gatherings yet.</Text>
+          ) : (
+            gatherings.map((activity) => (
+              <View key={String(activity.id)} style={styles.eventRow}>
+                <View style={styles.eventPrimary}>
+                  <Text variant="titleMedium" style={styles.eventTitle}>
+                    {activity.title}
+                  </Text>
+                  <Text style={styles.eventMeta}>{activity.location || 'Location pending'}</Text>
+                </View>
+                <AppButton
+                  compact
+                  onPress={() => navigation.getParent()?.navigate('Chat')}
+                >
+                  Chat
+                </AppButton>
+              </View>
+            ))
+          )}
+        </PanelCard>
+      ) : null}
 
       <PanelCard style={styles.segmentShell} tone={activeSegment === 'events' ? 'accent' : 'default'}>
         <View style={styles.segmentShellHeader}>
@@ -229,7 +266,7 @@ export const MyEventsScreen = () => {
                       >
                         Edit
                       </AppButton>
-                      {config.ticketingEnabled ? (
+                      {config.ticketingEnabled && !config.foyerMode ? (
                         <AppButton
                           compact
                           variant="outline"

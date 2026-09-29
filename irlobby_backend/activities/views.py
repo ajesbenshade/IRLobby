@@ -23,7 +23,8 @@ from rest_framework.views import APIView
 from matches.models import Match
 from moderation.models import BlockedUser
 
-from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
+from .foyer import filter_eligible_activities, foyer_mode, going_headcount, user_can_access_activity_chat
+from .models import Activity, ActivityParticipant, Donation, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
 from .serializers import (
     ActivitySerializer,
@@ -204,12 +205,17 @@ class ActivityListCreateView(generics.ListCreateAPIView):
                 queryset = queryset.filter(tags__icontains=tag)
 
         if ordered_by_distance:
-            return queryset
-
-        return queryset.order_by("-created_at")
+            queryset = queryset
+        else:
+            queryset = queryset.order_by("-created_at")
+        return filter_eligible_activities(queryset, self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(host=self.request.user)
+        extra = {}
+        if foyer_mode():
+            extra["is_approved"] = True
+            extra["platform_fee_percent"] = 0
+        serializer.save(host=self.request.user, **extra)
 
 
 class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -235,6 +241,24 @@ class HostedActivitiesView(generics.ListAPIView):
         return Activity.objects.filter(host=self.request.user)
 
 
+class GatheringsView(generics.ListAPIView):
+    """Gatherings the account is hosting or already counted as going to."""
+
+    serializer_class = ActivitySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        going_ids = ActivityParticipant.objects.filter(user=user, status="confirmed").values_list(
+            "activity_id", flat=True
+        )
+        return (
+            Activity.objects.filter(Q(host=user) | Q(id__in=going_ids))
+            .distinct()
+            .order_by("time", "id")
+        )
+
+
 class TicketThrottle(UserRateThrottle):
     scope = "ticket_ops"
 
@@ -244,6 +268,11 @@ class ActivityTicketPurchaseView(APIView):
     throttle_classes = [TicketThrottle]
 
     def post(self, request, pk):
+        if foyer_mode():
+            return Response(
+                {"detail": "RSVP is free. Optional giving is separate from attendance."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if not ticketing_enabled(request):
             return Response(
                 {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -355,8 +384,33 @@ def _checkout_session_is_paid(session_data) -> bool:
     return payment_status in (None, "", "paid", "no_payment_required")
 
 
+def _fulfill_gift_checkout_session(session_data) -> None:
+    if not _checkout_session_is_paid(session_data):
+        return
+    metadata = session_data.get("metadata") or {}
+    if metadata.get("kind") != "foyer_gift":
+        return
+    donation = None
+    donation_id = metadata.get("donation_id")
+    if donation_id:
+        donation = Donation.objects.filter(pk=donation_id).first()
+    if donation is None:
+        stripe_session_id = session_data.get("id")
+        donation = Donation.objects.filter(stripe_session_id=stripe_session_id).first()
+    if donation is None or donation.status == "paid":
+        return
+    donation.status = "paid"
+    donation.stripe_payment_intent_id = _stripe_object_id(session_data.get("payment_intent")) or ""
+    donation.save(update_fields=["status", "stripe_payment_intent_id"])
+
+
 def _fulfill_paid_checkout_session(session_data) -> None:
     if not _checkout_session_is_paid(session_data):
+        return
+
+    metadata = session_data.get("metadata") or {}
+    if metadata.get("kind") == "foyer_gift":
+        _fulfill_gift_checkout_session(session_data)
         return
 
     stripe_session_id = session_data.get("id")
@@ -472,6 +526,11 @@ class ValidateTicketView(APIView):
 
     @transaction.atomic
     def post(self, request, ticket_id):
+        if foyer_mode():
+            return Response(
+                {"detail": "Door scanning is not used in The Foyer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if not ticketing_enabled(request):
             return Response(
                 {"detail": "Ticketing is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -569,10 +628,13 @@ def join_activity(request, pk):
             {"message": "Already requested to join"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    confirmed_count = ActivityParticipant.objects.filter(
-        activity=activity, status="confirmed"
-    ).count()
-    if confirmed_count >= activity.capacity:
+    if foyer_mode():
+        confirmed_count = going_headcount(activity)
+    else:
+        confirmed_count = ActivityParticipant.objects.filter(
+            activity=activity, status="confirmed"
+        ).count()
+    if activity.capacity is not None and confirmed_count >= activity.capacity:
         return Response({"message": "Activity is full"}, status=status.HTTP_400_BAD_REQUEST)
 
     ActivityParticipant.objects.create(activity=activity, user=user, status="pending")
@@ -630,8 +692,7 @@ def activity_chat(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
 
-    # Check if user is a participant
-    if not ActivityParticipant.objects.filter(activity=activity, user=user).exists():
+    if not user_can_access_activity_chat(user, activity):
         return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":

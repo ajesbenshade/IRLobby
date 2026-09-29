@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django.core import signing
@@ -21,13 +22,41 @@ class Activity(models.Model):
     location_point = models.PointField(geography=True, srid=4326, null=True, blank=True)
     time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
-    capacity = models.PositiveIntegerField(validators=[MaxValueValidator(10)])
+    # Null means no limit. The Foyer allows 1–500, not the old cap of 10.
+    capacity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(500)],
+    )
     visibility = models.JSONField(default=list)
     is_private = models.BooleanField(default=False)
     requires_approval = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     currency = models.CharField(max_length=8, default="USD")
     age_restriction = models.CharField(max_length=32, blank=True, default="")
+    audience_gender = models.CharField(
+        max_length=16,
+        choices=[("everyone", "Everyone"), ("men", "Men"), ("women", "Women")],
+        default="everyone",
+    )
+    age_min = models.PositiveIntegerField(null=True, blank=True)
+    age_max = models.PositiveIntegerField(null=True, blank=True)
+    list_on_church_calendar = models.BooleanField(default=False)
+    calendar_approved = models.BooleanField(default=False)
+    donation_enabled = models.BooleanField(default=False)
+    suggested_donation = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    host_kind = models.CharField(
+        max_length=16,
+        choices=[("person", "Person"), ("church", "Church")],
+        default="person",
+    )
+    church = models.ForeignKey(
+        "Church",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="hosted_activities",
+    )
     skill_level = models.CharField(max_length=32, blank=True, default="")
     equipment_provided = models.BooleanField(default=False)
     equipment_required = models.TextField(blank=True, default="")
@@ -48,8 +77,19 @@ class Activity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        if getattr(settings, "FOYER_MODE", False):
+            self.platform_fee_percent = 0
+            self.is_ticketed = False
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(
+                    set(update_fields) | {"platform_fee_percent", "is_ticketed"}
+                )
         if self.latitude is not None and self.longitude is not None:
             self.location_point = Point(self.longitude, self.latitude)
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None and "location_point" not in update_fields:
+                kwargs["update_fields"] = list(set(update_fields) | {"location_point"})
         super().save(*args, **kwargs)
 
     @property
@@ -77,6 +117,12 @@ class ActivityParticipant(models.Model):
         User, on_delete=models.CASCADE, related_name="participating_activities"
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    include_self = models.BooleanField(default=True)
+    dependents = models.ManyToManyField(
+        "HouseholdDependent",
+        blank=True,
+        related_name="rsvps",
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -158,3 +204,74 @@ class TicketRedemptionLog(models.Model):
 
     def __str__(self):
         return f"Redemption {self.ticket.ticket_id} by {self.host} at {self.scanned_at}"
+
+
+class Church(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    is_verified = models.BooleanField(default=False)
+    stripe_connect_account_id = models.CharField(max_length=255, blank=True, default="")
+    stripe_connect_payouts_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class HouseholdDependent(models.Model):
+    SEX_CHOICES = [("male", "Male"), ("female", "Female")]
+
+    guardian = models.ForeignKey(User, on_delete=models.CASCADE, related_name="dependents")
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150, blank=True, default="")
+    birth_date = models.DateField()
+    sex = models.CharField(max_length=16, choices=SEX_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["first_name", "last_name", "id"]
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+
+class EventPhoto(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="photos")
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="event_photos")
+    image = models.ImageField(upload_to="event_photos/%Y/%m/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def public_url(self, request=None):
+        if not self.image:
+            return ""
+        url = self.image.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
+
+class Donation(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("paid", "Paid"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    donor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="donations")
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="donations")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="pending")
+    stripe_session_id = models.CharField(max_length=255, blank=True, default="")
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Donation({self.amount}) for {self.activity_id}"

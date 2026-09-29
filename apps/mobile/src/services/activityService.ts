@@ -45,7 +45,7 @@ export interface CreateActivityPayload {
   longitude: number;
   time: string;
   end_time?: string;
-  capacity: number;
+  capacity: number | null;
   visibility?: string[];
   is_private?: boolean;
   requires_approval?: boolean;
@@ -66,6 +66,13 @@ export interface CreateActivityPayload {
   max_tickets?: number;
   maxTickets?: number;
   platform_fee_percent?: number;
+  audience_gender?: "everyone" | "men" | "women";
+  age_min?: number | null;
+  age_max?: number | null;
+  list_on_church_calendar?: boolean;
+  donation_enabled?: boolean;
+  suggested_donation?: string;
+  host_kind?: "person" | "church";
 }
 
 const activityImagePayload = (payload: CreateActivityPayload) => {
@@ -163,4 +170,40 @@ export const swipeActivity = async (
   }
 
   return response.data;
+};
+
+export interface HouseholdDependent {
+  id: number;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  sex: "male" | "female";
+}
+
+export const fetchDependents = async (): Promise<HouseholdDependent[]> => {
+  const response = await api.get<HouseholdDependent[]>("/api/household/dependents/");
+  return response.data;
+};
+
+export const rsvpActivity = async (
+  activityId: number | string,
+  payload: { include_self: boolean; dependent_ids: number[] }
+) => {
+  const response = await api.post(`/api/activities/${activityId}/rsvp/`, payload);
+  return response.data as {
+    headcount: number;
+    gift_notice: string;
+    donation_enabled: boolean;
+    suggested_donation: string;
+  };
+};
+
+export const giveToActivity = async (activityId: number | string, amount: string) => {
+  const response = await api.post(`/api/activities/${activityId}/give/`, { amount });
+  return response.data as { url?: string; gift_notice?: string; application_fee_amount: number };
+};
+
+export const fetchGatherings = async (): Promise<Activity[]> => {
+  const response = await api.get<Activity[]>("/api/activities/gatherings/");
+  return parseActivityListResponse(response.data) as Activity[];
 };

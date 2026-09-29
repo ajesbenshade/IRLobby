@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,6 +19,7 @@ import {
 import { GetPaidRow, ProfileMenuRow } from "@components/GetPaidRow";
 import { Image, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
+import { Chip } from "@components/ui/Chip";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { config } from "@constants/config";
@@ -51,6 +52,9 @@ export const ProfileScreen = () => {
   const [photoInput, setPhotoInput] = useState("");
   const [photoAlbum, setPhotoAlbum] = useState<string[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [birthDate, setBirthDate] = useState("");
+  const [sex, setSex] = useState<"" | "male" | "female">("");
+  const [churchName, setChurchName] = useState("");
 
   useEffect(() => {
     setFirstName(user?.firstName ?? "");
@@ -60,10 +64,24 @@ export const ProfileScreen = () => {
     setAvatarUrl(user?.avatarUrl ?? "");
     setInterests(user?.interests ?? []);
     setPhotoAlbum(user?.photoAlbum ?? []);
+    setBirthDate(user?.birthDate ?? "");
+    setSex(user?.sex ?? "");
+    setChurchName(user?.churchName ?? "");
     setInterestInput("");
     setPhotoInput("");
     setImageError(null);
   }, [user]);
+
+  const churchQuery = useQuery({
+    queryKey: ["churches", churchName],
+    queryFn: async () => {
+      const response = await api.get<Array<{ id: number; name: string }>>(
+        `/api/churches/?q=${encodeURIComponent(churchName.trim())}`
+      );
+      return response.data;
+    },
+    enabled: churchName.trim().length > 1,
+  });
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -73,6 +91,9 @@ export const ProfileScreen = () => {
         bio: bio.trim(),
         location: city.trim(),
         avatar_url: avatarUrl.trim(),
+        birth_date: birthDate.trim() || null,
+        sex,
+        church_name: churchName.trim(),
       });
 
       await updateOnboarding({
@@ -370,6 +391,29 @@ export const ProfileScreen = () => {
             />
           </View>
         </View>
+        <Field
+          label="Birth date"
+          value={birthDate}
+          onChangeText={setBirthDate}
+          placeholder="YYYY-MM-DD"
+          autoCapitalize="none"
+        />
+        <Text style={{ color: '#5c534f' }}>Sex is only used to match men or women gatherings.</Text>
+        <View style={styles.row}>
+          <Chip label="Male" selected={sex === "male"} onPress={() => setSex("male")} />
+          <Chip label="Female" selected={sex === "female"} onPress={() => setSex("female")} />
+        </View>
+        <Field
+          label="Are you a church member, and where?"
+          value={churchName}
+          onChangeText={setChurchName}
+          placeholder="Search or type a church"
+        />
+        {(churchQuery.data ?? []).slice(0, 6).map((church) => (
+          <Pressable key={church.id} onPress={() => setChurchName(church.name)}>
+            <Text>{church.name}</Text>
+          </Pressable>
+        ))}
         <Field
           label="City"
           value={city}

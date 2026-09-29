@@ -66,6 +66,13 @@ type ActivityFormState = {
   maxTickets: string;
   requireQrCheckIn: boolean;
   imageUris: string[];
+  audienceGender: 'everyone' | 'men' | 'women';
+  ageMin: string;
+  ageMax: string;
+  listOnChurchCalendar: boolean;
+  donationEnabled: boolean;
+  suggestedDonation: string;
+  hostAsChurch: boolean;
 };
 
 type StringFormField = {
@@ -98,6 +105,13 @@ const INITIAL_FORM_STATE: ActivityFormState = {
   maxTickets: '40',
   requireQrCheckIn: true,
   imageUris: [],
+  audienceGender: 'everyone',
+  ageMin: '',
+  ageMax: '',
+  listOnChurchCalendar: false,
+  donationEnabled: false,
+  suggestedDonation: '',
+  hostAsChurch: false,
 };
 
 const toFormDateTime = (value?: string | null): string => {
@@ -159,6 +173,13 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     title,
     visibility,
     weatherDependent,
+    audienceGender,
+    ageMin,
+    ageMax,
+    listOnChurchCalendar,
+    donationEnabled,
+    suggestedDonation,
+    hostAsChurch,
   } = form;
 
   const connectStatusQuery = useQuery({
@@ -250,8 +271,8 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     description.trim().length > 0 &&
     location.trim().length > 0 &&
     time.trim().length > 0 &&
-    Number(capacity) > 0 &&
-    (!isTicketed || (ticketAmount > 0 && Number(maxTickets) > 0));
+    (capacity.trim() === '' || (Number(capacity) >= 1 && Number(capacity) <= 500)) &&
+    (!isTicketed || config.foyerMode || (ticketAmount > 0 && Number(maxTickets) > 0));
 
   const clearTimeError = () => {
     if (timeError) {
@@ -299,7 +320,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
         location: location.trim(),
         time: normalizedStartTime,
         end_time: normalizedEndTime ?? undefined,
-        capacity: Math.min(10, Math.max(1, Number(capacity) || 1)),
+        capacity: capacity.trim() === '' ? null : Math.min(500, Math.max(1, Number(capacity) || 1)),
         latitude: parsedLatitude,
         longitude: parsedLongitude,
         visibility: [normalizedVisibility],
@@ -316,8 +337,19 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        ...createEventImagePayload(imageUris),
-        ...createEventTicketPayload(isTicketed, ticketPrice, maxTickets),
+        ...createEventImagePayload(config.foyerMode ? imageUris.slice(0, 1) : imageUris),
+        ...(config.foyerMode
+          ? {
+              is_ticketed: false,
+              audience_gender: audienceGender,
+              age_min: ageMin.trim() ? Number(ageMin) : null,
+              age_max: ageMax.trim() ? Number(ageMax) : null,
+              list_on_church_calendar: listOnChurchCalendar,
+              donation_enabled: donationEnabled,
+              suggested_donation: suggestedDonation.trim() || '0',
+              host_kind: hostAsChurch ? 'church' : 'person',
+            }
+          : createEventTicketPayload(isTicketed, ticketPrice, maxTickets)),
       },
     };
   };
@@ -492,7 +524,71 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           Use current location
         </AppButton>
 
+        {config.foyerMode ? (
+          <PanelCard>
+            <SectionIntro
+              eyebrow="Who it's for"
+              title="Audience"
+              subtitle="Everyone, men, or women, plus an optional age band. Age is checked on the event date."
+            />
+            <View style={styles.chipRow}>
+              {([
+                ['everyone', 'Everyone'],
+                ['men', 'Men'],
+                ['women', 'Women'],
+              ] as const).map(([value, label]) => (
+                <Chip
+                  key={value}
+                  label={label}
+                  selected={audienceGender === value}
+                  tone="primary"
+                  onPress={() => updateForm('audienceGender', value)}
+                />
+              ))}
+            </View>
+            <View style={styles.row}>
+              <View style={styles.half}>
+                <Field label="Youngest age" value={ageMin} onChangeText={updateTextField('ageMin')} keyboardType="number-pad" placeholder="Optional" />
+              </View>
+              <View style={styles.half}>
+                <Field label="Oldest age" value={ageMax} onChangeText={updateTextField('ageMax')} keyboardType="number-pad" placeholder="Optional" />
+              </View>
+            </View>
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchTitle}>List on the church calendar</Text>
+                <Text style={styles.switchSubtitle}>
+                  A public event's location is visible on the church website. Do not put a home address there unless you mean for the congregation to see it.
+                </Text>
+              </View>
+              <Switch accessibilityLabel="List on the church calendar" value={listOnChurchCalendar} onValueChange={updateToggleField('listOnChurchCalendar')} />
+            </View>
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchTitle}>Accept an optional gift</Text>
+                <Text style={styles.switchSubtitle}>
+                  RSVP stays free. The Foyer does not take a cut. Stripe's card fee still applies.
+                </Text>
+              </View>
+              <Switch accessibilityLabel="Accept an optional gift" value={donationEnabled} onValueChange={updateToggleField('donationEnabled')} />
+            </View>
+            {donationEnabled ? (
+              <Field label="Suggested amount" value={suggestedDonation} onChangeText={updateTextField('suggestedDonation')} keyboardType="decimal-pad" placeholder="15" />
+            ) : null}
+            {user?.isCongregationalAdmin ? (
+              <View style={styles.switchRow}>
+                <View style={styles.switchCopy}>
+                  <Text style={styles.switchTitle}>Host as Franconia Mennonite Church</Text>
+                  <Text style={styles.switchSubtitle}>Gifts go to the church Stripe account. The calendar can publish immediately.</Text>
+                </View>
+                <Switch accessibilityLabel="Host as Franconia Mennonite Church" value={hostAsChurch} onValueChange={updateToggleField('hostAsChurch')} />
+              </View>
+            ) : null}
+          </PanelCard>
+        ) : null}
+
         <EventPhotoSlots
+          max={config.foyerMode ? 1 : MAX_EVENT_PHOTOS}
           images={imageUris}
           onAdd={() => {
             void handlePickImages();
@@ -506,7 +602,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
         />
         {photoError ? <Text style={styles.errorText}>{photoError}</Text> : null}
 
-        {config.ticketingEnabled ? (
+        {config.ticketingEnabled && !config.foyerMode ? (
           <>
             <View style={styles.checkInRow}>
               <View style={styles.switchCopy}>
@@ -613,7 +709,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           </AppButton>
         ) : null}
 
-        {config.ticketingEnabled ? (
+        {config.ticketingEnabled && !config.foyerMode ? (
           <View style={styles.footerRow}>
             <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primaryDeep} />
             <Text style={styles.footerText}>{PROTOTYPE_FOOTER_HOST}</Text>

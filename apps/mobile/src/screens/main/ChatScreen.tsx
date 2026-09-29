@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
 import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
-import { FlatList, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
+import { FlatList, Image, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
@@ -327,6 +327,9 @@ export const ChatScreen = () => {
           <AppButton variant="ghost" compact onPress={() => setSelectedConversationId(null)}>
             Back
           </AppButton>
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
+          ) : null}
           <View style={styles.headerTextWrap}>
             <Text style={styles.headerTitle}>
               {selectedConversation?.match ?? 'Your spark'}
@@ -375,6 +378,12 @@ export const ChatScreen = () => {
             const isOwnMessage = user?.id != null && String(item.userId) === String(user.id);
             return (
               <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
+                {(item.user as { avatarUrl?: string } | undefined)?.avatarUrl ? (
+                  <Image
+                    source={{ uri: (item.user as { avatarUrl?: string }).avatarUrl as string }}
+                    style={styles.messageAvatar}
+                  />
+                ) : null}
                 <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
                   {!isOwnMessage ? (
                     <Text style={styles.messageAuthor}>
@@ -653,6 +662,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: appColors.surfaceMuted,
+  },
+  messageAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+    backgroundColor: appColors.surfaceMuted,
   },
   headerTitle: {
     textAlign: 'left',

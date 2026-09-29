@@ -17,7 +17,12 @@ function PublicWordmark() {
       <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(124,58,237,0.28)] ring-1 ring-white/12">
         <img src="/app-icon.png" alt="" className="h-full w-full object-cover" />
       </span>
-      <span className="leading-none">IRLobby</span>
+      <span className="leading-none">
+        <span className="block font-display">The Foyer</span>
+        <span className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-white/70">
+          Franconia Mennonite Church
+        </span>
+      </span>
     </span>
   );
 }

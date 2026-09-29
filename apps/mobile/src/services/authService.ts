@@ -160,6 +160,12 @@ const normalizeUser = (
     avatarUrl: (userRecord.avatarUrl ?? userRecord.avatar_url ?? null) as
       | string
       | null,
+    birthDate: (userRecord.birthDate ?? userRecord.birth_date ?? null) as string | null,
+    sex: (userRecord.sex ?? '') as '' | 'male' | 'female',
+    churchName: (userRecord.churchName ?? userRecord.church_name ?? null) as string | null,
+    isCongregationalAdmin: Boolean(
+      userRecord.isCongregationalAdmin ?? userRecord.is_congregational_admin
+    ),
     bio: (userRecord.bio ?? userRecord.about ?? null) as string | null,
     city: (userRecord.city ?? userRecord.location ?? null) as string | null,
     interests: interests.filter(
@@ -292,6 +298,8 @@ export async function register(
     password_confirm: payload.password,
     first_name: payload.firstName,
     last_name: payload.lastName,
+    birth_date: payload.birthDate,
+    sex: payload.sex,
   };
 
   const response = await api.post<AuthResponse>(

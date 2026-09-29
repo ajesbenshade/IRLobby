@@ -69,11 +69,13 @@ jest.mock('@constants/config', () => {
   return { ...actual, config: { ...actual.config, ticketingEnabled: true } };
 });
 
-const mockConfig = (jest.requireMock('@constants/config') as { config: { ticketingEnabled: boolean } })
-  .config;
+const mockConfig = (jest.requireMock('@constants/config') as {
+  config: { ticketingEnabled: boolean; foyerMode: boolean };
+}).config;
 
 beforeEach(() => {
   mockConfig.ticketingEnabled = true;
+  mockConfig.foyerMode = false;
 });
 
 const renderScreen = () => {

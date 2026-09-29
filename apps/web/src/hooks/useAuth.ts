@@ -39,6 +39,10 @@ interface User {
   eventsHosted?: number;
   eventsAttended?: number;
   swipesRemainingToday?: number | null;
+  birthDate?: string;
+  sex?: string;
+  churchName?: string;
+  isCongregationalAdmin?: boolean;
 }
 
 const toOptionalNumber = (value: unknown): number | null | undefined => {
@@ -127,6 +131,14 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
     swipesRemainingToday: toOptionalNumber(
       profile.swipesRemainingToday ?? profile.swipes_remaining_today,
     ),
+    birthDate:
+      (typeof profile.birthDate === 'string' ? profile.birthDate : undefined) ??
+      (typeof profile.birth_date === 'string' ? profile.birth_date : undefined),
+    sex: typeof profile.sex === 'string' ? profile.sex : undefined,
+    churchName:
+      (typeof profile.churchName === 'string' ? profile.churchName : undefined) ??
+      (typeof profile.church_name === 'string' ? profile.church_name : undefined),
+    isCongregationalAdmin: Boolean(profile.isCongregationalAdmin),
   };
 };
 

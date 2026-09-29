@@ -299,6 +299,9 @@ raw_cors_origins = config(
     default=DEV_WEB_ORIGINS if DEBUG else "",
 )
 CORS_ALLOWED_ORIGINS = parse_origin_list(raw_cors_origins)
+CHURCH_SITE_ORIGIN = "https://franconiamennonite.org"
+if CHURCH_SITE_ORIGIN not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [*CORS_ALLOWED_ORIGINS, CHURCH_SITE_ORIGIN]
 
 raw_csrf_origins = config(
     "CSRF_TRUSTED_ORIGINS",
@@ -436,6 +439,8 @@ CELERY_BEAT_SCHEDULE = {
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+MEDIA_URL = "media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -553,6 +558,8 @@ STRIPE_CONNECT_REFRESH_URL = config(
     "STRIPE_CONNECT_REFRESH_URL", default="irlobby://stripe/connect/refresh"
 )
 STRIPE_PLATFORM_FEE_PERCENT = config("STRIPE_PLATFORM_FEE_PERCENT", default=10.0, cast=float)
+# The Foyer never keeps a platform cut. Ticket sales stay off while this is true.
+FOYER_MODE = config("FOYER_MODE", default=True, cast=bool)
 STRIPE_CONNECT_COUNTRY = config("STRIPE_CONNECT_COUNTRY", default="US")
 # Bounce origin for rewriting irlobby:// Stripe return URLs to https.
 STRIPE_REDIRECT_BASE_URL = config("STRIPE_REDIRECT_BASE_URL", default="https://api.irlobby.com")

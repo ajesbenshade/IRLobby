@@ -255,13 +255,13 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def check_activity_access(self, user, activity_id):
+        from activities.foyer import user_can_access_activity_chat
+
         try:
             activity = Activity.objects.get(id=activity_id)
-            return ActivityParticipant.objects.filter(
-                activity=activity, user=user, status="confirmed"
-            ).exists()
         except Activity.DoesNotExist:
             return False
+        return user_can_access_activity_chat(user, activity)
 
     @database_sync_to_async
     def save_activity_message(self, user, activity_id, message_text):

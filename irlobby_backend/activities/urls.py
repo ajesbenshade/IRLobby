@@ -1,11 +1,20 @@
 from django.urls import path
 
-from . import views
+from . import foyer_views, views
 
 urlpatterns = [
     path("", views.ActivityListCreateView.as_view(), name="activity-list"),
     path("<int:pk>/", views.ActivityDetailView.as_view(), name="activity-detail"),
     path("hosted/", views.HostedActivitiesView.as_view(), name="hosted-activities"),
+    path("gatherings/", views.GatheringsView.as_view(), name="activity-gatherings"),
+    path("<int:pk>/rsvp/", foyer_views.rsvp_activity, name="activity-rsvp"),
+    path("<int:pk>/give/", foyer_views.ActivityGiftView.as_view(), name="activity-give"),
+    path("<int:pk>/photos/", foyer_views.upload_event_photo, name="activity-photos"),
+    path(
+        "<int:pk>/calendar/approve/",
+        foyer_views.approve_church_calendar,
+        name="activity-calendar-approve",
+    ),
     path("<int:pk>/join/", views.join_activity, name="join-activity"),
     path("<int:pk>/leave/", views.leave_activity, name="leave-activity"),
     path(

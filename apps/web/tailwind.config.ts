@@ -6,7 +6,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Georgia', 'Times New Roman', 'serif'],
       },
       borderRadius: {
         lg: "var(--radius)",

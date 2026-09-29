@@ -6,7 +6,7 @@ import type { ConfigContext } from 'expo/config';
 import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION } from '../../app.config';
 
 const REQUIRED_LOCATION_COPY =
-  'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';
+  'The Foyer uses your location to show church gatherings near you — for example, a fellowship meal at Franconia Mennonite Church.';
 
 describe('iOS location usage description', () => {
   it('sets every NSLocation* Info.plist string to the App Review copy', () => {
@@ -80,13 +80,13 @@ describe('production app icon', () => {
 
     expect(config.icon).toBe(iconPath);
     expect(config.android?.adaptiveIcon?.foregroundImage).toBe(iconPath);
-    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#FF6B4A');
+    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#a2033f');
 
     const notificationPlugin = (config.plugins ?? []).find(
       (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
     ) as [string, { icon?: string; color?: string }] | undefined;
     expect(notificationPlugin?.[1]?.icon).toBe(iconPath);
-    expect(notificationPlugin?.[1]?.color).toBe('#FF6B4A');
+    expect(notificationPlugin?.[1]?.color).toBe('#a2033f');
 
     const assetsDir = path.resolve(__dirname, '../../assets');
     const master = path.join(assetsDir, 'AppIcon-1024.png');

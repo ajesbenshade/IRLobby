@@ -16,6 +16,7 @@
       "@lib/*": ["./src/lib/*"],
       "@theme/*": ["./src/theme/*"],
       "@utils/*": ["./src/utils/*"],
+      "@foyer/*": ["./src/foyer/*"],
       "@shared/*": ["../../packages/shared/*"]
     }
   },

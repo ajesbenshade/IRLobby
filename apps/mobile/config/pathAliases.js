@@ -15,6 +15,7 @@ const projectAliases = {
   '@lib': './src/lib',
   '@theme': './src/theme',
   '@utils': './src/utils',
+  '@foyer': './src/foyer',
 };
 
 const moduleResolverAliases = {

@@ -73,4 +73,8 @@ export type MainStackParamList = {
   EditActivity: {
     activityId: number | string;
   };
+  Household: undefined;
+  GatheringDetail: {
+    activityId: number | string;
+  };
 };

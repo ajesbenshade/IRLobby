@@ -37,6 +37,20 @@ export interface Activity {
   ticketsAvailable?: number | null;
   isSoldOut?: boolean;
   platformFeePercent?: number | string | null;
+  audience?: string | null;
+  audience_gender?: 'everyone' | 'men' | 'women' | string | null;
+  age_min?: number | null;
+  age_max?: number | null;
+  cover_photo_url?: string | null;
+  going_count?: number | null;
+  host_name?: string | null;
+  host_kind?: 'person' | 'church' | string | null;
+  giving_available?: boolean | null;
+  gift_disclaimer?: string | null;
+  fee_note?: string | null;
+  suggested_donation?: string | number | null;
+  my_rsvp?: { status?: string; people_count?: number; include_self?: boolean; dependent_ids?: number[] } | null;
+  photos?: Array<{ id?: number; url?: string }>;
 }
 
 export interface Participant {

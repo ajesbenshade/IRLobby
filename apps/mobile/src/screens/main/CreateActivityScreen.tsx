@@ -16,7 +16,7 @@ import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
 import { MAX_EVENT_PHOTOS } from '@constants/activity';
-import { isTicketingUiEnabled } from '@constants/appMode';
+import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import {
   formatEventDateLabel,
@@ -37,6 +37,8 @@ import { fetchStripeConnectStatus } from '@services/paymentService';
 import { appColors, appTypography, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
+
+import { FoyerHostForm } from './FoyerHostForm';
 
 import {
   createEventImagePayload,
@@ -127,7 +129,14 @@ type CreateActivityScreenProps = {
   activityId?: number | string;
 };
 
-export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps = {}) => {
+export const CreateActivityScreen = (props: CreateActivityScreenProps = {}) => {
+  if (isFoyerMode()) {
+    return <FoyerHostForm activityId={props.activityId} />;
+  }
+  return <CreateActivityScreenLegacy {...props} />;
+};
+
+const CreateActivityScreenLegacy = ({ activityId }: CreateActivityScreenProps = {}) => {
   const queryClient = useQueryClient();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { user } = useAuth();

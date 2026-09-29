@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { audienceChipLabel, coverPhotoUrl, hostDisplayName, type GatheringLike } from '@/lib/foyer';
 import type { Activity } from '@/types/activity';
 import { format, isValid } from 'date-fns';
 import { MapPin, Clock, Users, Star, X, Heart, Info } from 'lucide-react';
@@ -164,8 +165,12 @@ export default memo(function SwipeCard({
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const hostName =
-    activity.host?.firstName && activity.host?.lastName
+  const foyer = activity as typeof activity & GatheringLike;
+  const foyerMode = Boolean(foyer.audience || foyer.host_name || foyer.cover_photo_url || foyer.going_count != null);
+  const foyerCover = coverPhotoUrl(foyer);
+  const hostName = foyerMode
+    ? hostDisplayName(foyer)
+    : activity.host?.firstName && activity.host?.lastName
       ? `${activity.host.firstName} ${activity.host.lastName}`
       : 'Anonymous Host';
 
@@ -243,8 +248,8 @@ export default memo(function SwipeCard({
 
         {/* Activity Image */}
         <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-primary-deep/20 dark:from-primary/30 dark:to-primary-deep/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
-          {activity.images && activity.images.length > 0 ? (
-            <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
+          {foyerCover || (activity.images && activity.images.length > 0) ? (
+            <img src={foyerCover || activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
           ) : (
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -263,11 +268,8 @@ export default memo(function SwipeCard({
             <h3 className="text-lg font-bold text-foreground truncate flex-1 mr-2">
               {safeTitle}
             </h3>
-            <Badge
-              variant="secondary"
-              className="flex-shrink-0"
-            >
-              {safeTags.length > 0 ? safeTags[0] : 'Activity'}
+            <Badge variant="secondary" className="flex-shrink-0 bg-[#f9e8ee] text-[#a2033f]">
+              {foyerMode ? audienceChipLabel(foyer) : safeTags.length > 0 ? safeTags[0] : 'Activity'}
             </Badge>
           </div>
 
@@ -295,7 +297,9 @@ export default memo(function SwipeCard({
             <div className="flex items-center">
               <Users className="w-4 h-4 mr-2 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {activity.participant_count || 0}/{activity.capacity} people
+                {foyerMode
+                  ? `${foyer.going_count ?? activity.participant_count ?? 0} going`
+                  : `${activity.participant_count || 0}/${activity.capacity} people`}
               </span>
             </div>
           </div>
@@ -307,14 +311,17 @@ export default memo(function SwipeCard({
               <AvatarFallback className="text-sm">{hostInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
+              <p className="text-xs text-muted-foreground">{foyerMode ? 'Hosted by' : 'Host'}</p>
               <p className="text-sm font-medium text-foreground">{hostName}</p>
-              <p className="text-xs text-muted-foreground">
-                Host{' '}
-                <span aria-hidden="true" className="mx-1">
-                  &bull;
-                </span>
-                {activity.host?.eventsHosted || 0} events
-              </p>
+              {foyerMode ? null : (
+                <p className="text-xs text-muted-foreground">
+                  Host{' '}
+                  <span aria-hidden="true" className="mx-1">
+                    &bull;
+                  </span>
+                  {activity.host?.eventsHosted || 0} events
+                </p>
+              )}
             </div>
             {activity.host?.rating && (
               <div className="flex items-center">

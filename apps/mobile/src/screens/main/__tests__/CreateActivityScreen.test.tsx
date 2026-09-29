@@ -87,6 +87,15 @@ const renderScreen = () => {
   );
 };
 
+jest.mock('@services/foyerService', () => ({
+  uploadGatheringPhoto: jest.fn(),
+}));
+
+jest.mock('expo-image-manipulator', () => ({
+  SaveFormat: { JPEG: 'jpeg' },
+  manipulateAsync: jest.fn(async (uri: string) => ({ uri })),
+}));
+
 describe('CreateActivityScreen in foyer mode', () => {
   beforeEach(() => {
     process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
@@ -95,14 +104,37 @@ describe('CreateActivityScreen in foyer mode', () => {
   it('hides the ticketed toggle, fee preview, and 10% copy even when ticketing is enabled', async () => {
     renderScreen();
 
-    expect(await screen.findByText('Photos')).toBeTruthy();
+    expect(await screen.findByText('Add a cover photo')).toBeTruthy();
     expect(screen.queryByLabelText('Ticketed event')).toBeNull();
     expect(screen.queryByLabelText('Ticket price')).toBeNull();
     expect(screen.queryByText('Require QR check-in')).toBeNull();
     expect(screen.queryByText(/takes 10%/)).toBeNull();
     expect(screen.queryByText('Set up payouts')).toBeNull();
-    expect(screen.getByText(CREATE_EVENT_PUBLISH_LABEL)).toBeTruthy();
+    expect(screen.getByText('Post gathering')).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
+    expect(screen.getByText(/Don't list a home address/)).toBeTruthy();
+  });
+
+  it('rejects a capacity outside 1–500 and accepts a blank unlimited capacity', async () => {
+    const { createActivity } = jest.requireMock('@services/activityService') as {
+      createActivity: jest.Mock;
+    };
+    createActivity.mockResolvedValue({ id: 9 });
+    renderScreen();
+
+    fireEvent.changeText(await screen.findByLabelText('Title'), 'Harvest Supper');
+    fireEvent.changeText(screen.getByLabelText('Place'), 'Fellowship Hall');
+    fireEvent.changeText(screen.getByLabelText('Date & time'), '2026-11-07T17:30:00');
+    fireEvent.changeText(screen.getByLabelText('Capacity'), '501');
+    fireEvent.press(screen.getByText('Post gathering'));
+    expect(await screen.findByText('Capacity must be a whole number from 1 to 500.')).toBeTruthy();
+    expect(createActivity).not.toHaveBeenCalled();
+
+    fireEvent.changeText(screen.getByLabelText('Capacity'), '');
+    fireEvent.press(screen.getByText('Post gathering'));
+    await waitFor(() => {
+      expect(createActivity).toHaveBeenCalledWith(expect.objectContaining({ capacity: null }));
+    });
   });
 });
 
@@ -145,6 +177,14 @@ describe('CreateActivityScreen ticketed toggle when app mode is irlobby', () => 
 });
 
 describe('CreateActivityScreen with ticketing disabled', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'irlobby';
+  });
+
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
+  });
+
   it('hides the ticketed toggle, payouts button, and prototype footer', async () => {
     mockConfig.ticketingEnabled = false;
     renderScreen();
@@ -158,6 +198,14 @@ describe('CreateActivityScreen with ticketing disabled', () => {
 });
 
 describe('CreateActivityScreen photos (Frame A2)', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'irlobby';
+  });
+
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
+  });
+
   it('shows the photos section above the ticketed toggle with five empty slots', async () => {
     renderScreen();
 

@@ -15,13 +15,13 @@ export default function BottomNavigation() {
     },
     {
       id: 'gatherings',
-      route: '/app/activities',
+      route: '/app/gatherings',
       label: 'Gatherings',
       icon: Calendar,
     },
     {
       id: 'create',
-      route: '/app/create',
+      route: '/app/host',
       label: 'Host',
       icon: Plus,
       isSpecial: true,
@@ -37,10 +37,10 @@ export default function BottomNavigation() {
   const getCurrentScreen = () => {
     const path = location.pathname;
 
-    if (path.startsWith('/app/matches') || path.startsWith('/app/activities')) {
+    if (path.startsWith('/app/matches') || path.startsWith('/app/activities') || path.startsWith('/app/gatherings')) {
       return 'gatherings';
     }
-    if (path.startsWith('/app/create')) {
+    if (path.startsWith('/app/create') || path.startsWith('/app/host')) {
       return 'create';
     }
     if (

@@ -131,6 +131,7 @@ const AuthForm = ({
     passwordConfirm: '',
     firstName: '',
     lastName: '',
+    dateOfBirth: '',
   });
 
   const googleClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim() ?? '';
@@ -465,6 +466,7 @@ const AuthForm = ({
         password_confirm: formData.passwordConfirm,
         first_name: formData.firstName,
         last_name: formData.lastName,
+        ...(formData.dateOfBirth ? { date_of_birth: formData.dateOfBirth } : {}),
       });
 
       const data = (await response.json()) as AuthResponsePayload;
@@ -608,6 +610,17 @@ const AuthForm = ({
                   autoComplete="given-name"
                   required
                   value={formData.firstName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Birth date</Label>
+                <Input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="text"
+                  placeholder="YYYY-MM-DD"
+                  value={formData.dateOfBirth}
                   onChange={handleChange}
                 />
               </div>

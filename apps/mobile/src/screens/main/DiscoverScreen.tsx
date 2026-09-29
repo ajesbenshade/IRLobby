@@ -15,6 +15,8 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { FoyerHeader } from '@components/FoyerHeader';
+import { GiveSheet } from '@components/GiveSheet';
+import { WhosComingSheet } from '@components/WhosComingSheet';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
@@ -24,7 +26,20 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
-import { isTicketingUiEnabled } from '@constants/appMode';
+import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
+import {
+  audienceChipLabel,
+  buildRsvpPayload,
+  coverPhotoUrl,
+  defaultRsvpSelection,
+  giftDisclaimer,
+  giftIntro,
+  goingCountLabel,
+  hostAvatarUrl,
+  hostDisplayName,
+  shouldSkipWhosComingSheet,
+  type WhosComingResponse,
+} from '@foyer/logic';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
@@ -35,8 +50,10 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
+import { fetchWhosComing, postGivingLink, postRsvp } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import type { Activity } from '../../types/activity';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -103,6 +120,10 @@ export const DiscoverScreen = () => {
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
   const [tonightOnly, setTonightOnly] = useState(true);
+  const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
+  const [giveTarget, setGiveTarget] = useState<Activity | null>(null);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [rsvpPending, setRsvpPending] = useState(false);
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -283,6 +304,56 @@ export const DiscoverScreen = () => {
     [animateSwipe, currentActivity, isBusy, swipeMutation],
   );
 
+  const advanceAfterRsvp = useCallback((activity: Activity) => {
+    setWhosComing(null);
+    setCurrentIndex((index) => index + 1);
+    if (activity.giving_available) {
+      setGiveTarget(activity);
+    }
+  }, []);
+
+  const confirmRsvp = useCallback(
+    async (activity: Activity, payload: { include_self: boolean; dependent_ids: number[] }) => {
+      setRsvpPending(true);
+      setRsvpError(null);
+      try {
+        await postRsvp(activity.id, payload);
+        advanceAfterRsvp(activity);
+      } catch (error) {
+        setRsvpError(getErrorMessage(error, 'Unable to save your RSVP.'));
+      } finally {
+        setRsvpPending(false);
+      }
+    },
+    [advanceAfterRsvp],
+  );
+
+  const startGoing = useCallback(async () => {
+    if (!currentActivity || isBusy || rsvpPending) {
+      return;
+    }
+    if (!isFoyerMode()) {
+      handleSwipe('right');
+      return;
+    }
+    setRsvpPending(true);
+    setRsvpError(null);
+    try {
+      const sheet = await fetchWhosComing(currentActivity.id);
+      if (shouldSkipWhosComingSheet(sheet)) {
+        const selection = defaultRsvpSelection(sheet);
+        await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
+        advanceAfterRsvp(currentActivity);
+        return;
+      }
+      setWhosComing(sheet);
+    } catch (error) {
+      setRsvpError(getErrorMessage(error, 'Unable to open the RSVP list.'));
+    } finally {
+      setRsvpPending(false);
+    }
+  }, [advanceAfterRsvp, currentActivity, handleSwipe, isBusy, rsvpPending]);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -293,6 +364,14 @@ export const DiscoverScreen = () => {
         },
         onPanResponderRelease: (_, gestureState) => {
           if (gestureState.dx > 80) {
+            if (isFoyerMode()) {
+              void startGoing();
+              Animated.spring(pan, {
+                toValue: { x: 0, y: 0 },
+                useNativeDriver: false,
+              }).start();
+              return;
+            }
             handleSwipe('right');
             return;
           }
@@ -308,7 +387,7 @@ export const DiscoverScreen = () => {
           }).start();
         },
       }),
-    [handleSwipe, isBusy, pan],
+    [handleSwipe, isBusy, pan, startGoing],
   );
 
   const resetDeck = useCallback(() => {
@@ -384,7 +463,14 @@ export const DiscoverScreen = () => {
   const showTickets = isTicketingUiEnabled(config.ticketingEnabled);
   const ticketed = showTickets && currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
-  const coverImage = currentActivity?.images?.[0];
+  const foyerMode = isFoyerMode();
+  const coverImage = currentActivity ? coverPhotoUrl(currentActivity) ?? currentActivity.images?.[0] : undefined;
+  const audienceLabel = currentActivity ? audienceChipLabel(currentActivity) : '';
+  const goingLabel = currentActivity
+    ? goingCountLabel(currentActivity.going_count ?? currentActivity.participant_count ?? 0)
+    : '';
+  const foyerHostName = currentActivity ? hostDisplayName(currentActivity) : '';
+  const foyerHostAvatar = currentActivity ? hostAvatarUrl(currentActivity) : null;
 
   return (
     <>
@@ -640,6 +726,47 @@ export const DiscoverScreen = () => {
 
           {currentActivity ? (
             <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
+              {foyerMode ? (
+                <View style={styles.foyerCard}>
+                  <View style={styles.foyerPhotoWrap}>
+                    {coverImage ? (
+                      <Image source={{ uri: coverImage }} style={styles.foyerPhoto} />
+                    ) : (
+                      <View style={styles.foyerPhoto} />
+                    )}
+                    <View style={styles.coverBadge}>
+                      <Text style={styles.coverBadgeText}>Cover photo</Text>
+                    </View>
+                  </View>
+                  <View style={styles.foyerBody}>
+                    <View style={styles.foyerChipRow}>
+                      <View style={styles.audienceChip}>
+                        <Text style={styles.audienceChipText}>{audienceLabel}</Text>
+                      </View>
+                      <Text style={styles.goingCount}>{goingLabel}</Text>
+                    </View>
+                    <Text style={styles.foyerTitle}>{currentActivity.title}</Text>
+                    <Text style={styles.foyerMeta}>{currentTimeLabel}</Text>
+                    <Text style={styles.foyerMeta}>{currentActivity.location || 'Location TBD'}</Text>
+                    {currentActivity.description ? (
+                      <Text style={styles.foyerDescription}>{currentActivity.description}</Text>
+                    ) : null}
+                    <View style={styles.hostedRow}>
+                      {foyerHostAvatar ? (
+                        <Image source={{ uri: foyerHostAvatar }} style={styles.hostAvatar} />
+                      ) : (
+                        <View style={styles.hostAvatar}>
+                          <Text style={styles.hostInitial}>{foyerHostName.charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <View>
+                        <Text style={styles.hostedLabel}>Hosted by</Text>
+                        <Text style={styles.hostedName}>{foyerHostName}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ) : (
               <View style={[styles.photoCard, ticketed ? styles.photoCardTicketed : null]}>
                 {coverImage ? (
                   <Image source={{ uri: coverImage }} style={styles.photo} />
@@ -680,13 +807,13 @@ export const DiscoverScreen = () => {
                     <View style={styles.metaItem}>
                       <MaterialCommunityIcons name="account-group-outline" size={16} color="rgba(255,255,255,0.86)" />
                       <Text style={styles.photoMetaText}>
-                        {currentActivity.participant_count ?? 0}
-                        {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}
+                        {`${currentActivity.participant_count ?? 0}${currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}`}
                       </Text>
                     </View>
                   </View>
                 </LinearGradient>
               </View>
+              )}
             </AnimatedView>
           ) : null}
 
@@ -695,14 +822,17 @@ export const DiscoverScreen = () => {
               <AppButton variant="outline" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
                 Pass
               </AppButton>
-              <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
-                Details
-              </AppButton>
-              <AppButton onPress={() => handleSwipe('right')} disabled={isBusy} style={styles.actionButton}>
+              {foyerMode ? null : (
+                <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
+                  Details
+                </AppButton>
+              )}
+              <AppButton onPress={() => void startGoing()} disabled={isBusy || rsvpPending} style={styles.actionButton}>
                 I'm going
               </AppButton>
             </View>
           ) : null}
+          {rsvpError ? <Text style={styles.metaText}>{rsvpError}</Text> : null}
 
           <Portal>
             <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
@@ -819,7 +949,7 @@ export const DiscoverScreen = () => {
                     <AppButton
                       onPress={() => {
                         setShowDetails(false);
-                        handleSwipe('right');
+                        void startGoing();
                       }}
                     >
                       I'm going
@@ -829,6 +959,43 @@ export const DiscoverScreen = () => {
               ) : null}
             </Modal>
           </Portal>
+          {foyerMode && whosComing && currentActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setWhosComing(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <WhosComingSheet
+                  response={whosComing}
+                  subtitle={`${currentActivity.title} · ${audienceLabel}`}
+                  pending={rsvpPending}
+                  onConfirm={(payload) => void confirmRsvp(currentActivity, payload)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && giveTarget ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setGiveTarget(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <GiveSheet
+                  intro={giftIntro(giveTarget)}
+                  disclaimer={giftDisclaimer(giveTarget)}
+                  feeNote={giveTarget.fee_note}
+                  suggested={giveTarget.suggested_donation}
+                  onGive={async (amount) => {
+                    const link = await postGivingLink(giveTarget.id, amount);
+                    return link.url;
+                  }}
+                  onDismiss={() => setGiveTarget(null)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
     </AppScrollView>
     <SafetyActionsModal
       visible={safetyUserId != null}
@@ -1022,6 +1189,114 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  foyerCard: {
+    backgroundColor: appColors.white,
+    borderRadius: radii.card,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+  },
+  foyerPhotoWrap: {
+    height: 210,
+    backgroundColor: '#c4b2a8',
+  },
+  foyerPhoto: {
+    width: '100%',
+    height: 210,
+    backgroundColor: '#c4b2a8',
+  },
+  coverBadge: {
+    position: 'absolute',
+    left: 14,
+    bottom: 14,
+    backgroundColor: 'rgba(20,14,16,0.45)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  coverBadgeText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontFamily: appTypography.bodyMedium,
+  },
+  foyerBody: {
+    padding: 16,
+    gap: 8,
+  },
+  foyerChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  audienceChip: {
+    backgroundColor: appColors.primarySoft,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  audienceChipText: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 13,
+  },
+  goingCount: {
+    color: appColors.mutedInk,
+    fontFamily: appTypography.bodyMedium,
+    fontSize: 14,
+  },
+  foyerTitle: {
+    fontFamily: appTypography.heading,
+    fontSize: 25,
+    color: appColors.ink,
+  },
+  foyerMeta: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 15,
+  },
+  foyerDescription: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  hostedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: appColors.line,
+  },
+  hostAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hostInitial: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+  },
+  hostedLabel: {
+    color: appColors.mutedInk,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 12,
+  },
+  hostedName: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 15,
+  },
+  sheetModal: {
+    backgroundColor: 'transparent',
+    marginHorizontal: 0,
+    marginBottom: 0,
+    justifyContent: 'flex-end',
   },
   detailsModal: {
     backgroundColor: appColors.card,

@@ -4,11 +4,13 @@ import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
+import { GiveDialog, WhosComingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
+import { audienceChipLabel, type GatheringLike } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
@@ -38,6 +40,9 @@ export default function Discovery() {
   const [tonightOnly, setTonightOnly] = useState(true);
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
+  const [giveActivity, setGiveActivity] = useState<(Activity & GatheringLike) | null>(null);
+  const [rsvpPending, setRsvpPending] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
@@ -137,7 +142,44 @@ export default function Discovery() {
   };
 
   const handleReject = () => handleSwipe('pass');
-  const handleJoin = () => handleSwipe('like');
+
+  const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
+    setWhosComing(null);
+    setCurrentActivityIndex((index) => index + 1);
+    if (activity.giving_available) {
+      setGiveActivity(activity);
+    }
+  };
+
+  const confirmRsvp = async (
+    activity: Activity & GatheringLike,
+    payload: { include_self: boolean; dependent_ids: number[] },
+  ) => {
+    setRsvpPending(true);
+    try {
+      await apiRequest('POST', `/api/activities/${activity.id}/rsvp/`, payload);
+      advanceAfterRsvp(activity);
+    } finally {
+      setRsvpPending(false);
+    }
+  };
+
+  const handleJoin = async () => {
+    const activity = activities[currentActivityIndex] as (Activity & GatheringLike) | undefined;
+    if (!activity) return;
+    try {
+      const response = await apiRequest('GET', `/api/activities/${activity.id}/whos-coming/`);
+      const sheet = (await response.json()) as WhosComingSheetData;
+      if (!sheet.dependents || sheet.dependents.length === 0) {
+        const dependentIds = (sheet.dependents ?? []).filter((child) => child.eligible).map((child) => child.id);
+        await confirmRsvp(activity, { include_self: sheet.me?.eligible !== false, dependent_ids: dependentIds });
+        return;
+      }
+      setWhosComing(sheet);
+    } catch {
+      handleSwipe('like');
+    }
+  };
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
@@ -282,6 +324,18 @@ export default function Discovery() {
           onApplyFilters={handleApplyFilters}
           currentFilters={filters}
         />
+        {giveActivity ? (
+          <GiveDialog
+            activity={giveActivity}
+            onDismiss={() => setGiveActivity(null)}
+            onGive={async (amount) => {
+              const response = await apiRequest('POST', `/api/activities/${giveActivity.id}/giving-link/`, { amount });
+              const link = (await response.json()) as { url?: string };
+              if (link.url) window.open(link.url, '_blank', 'noopener,noreferrer');
+              setGiveActivity(null);
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -459,6 +513,32 @@ export default function Discovery() {
       </div>
 
       {/* Modals */}
+      {currentActivity && whosComing ? (
+        <WhosComingDialog
+          activityTitle={currentActivity.title}
+          audience={audienceChipLabel(currentActivity as GatheringLike)}
+          data={whosComing}
+          pending={rsvpPending}
+          onClose={() => setWhosComing(null)}
+          onConfirm={(payload) => void confirmRsvp(currentActivity as Activity & GatheringLike, payload)}
+        />
+      ) : null}
+      {giveActivity ? (
+        <GiveDialog
+          activity={giveActivity}
+          onDismiss={() => setGiveActivity(null)}
+          onGive={async (amount) => {
+            const response = await apiRequest('POST', `/api/activities/${giveActivity.id}/giving-link/`, {
+              amount,
+            });
+            const link = (await response.json()) as { url?: string };
+            if (link.url) {
+              window.open(link.url, '_blank', 'noopener,noreferrer');
+            }
+            setGiveActivity(null);
+          }}
+        />
+      ) : null}
       {currentActivity && (
         <>
           <ActivityDetailsModal

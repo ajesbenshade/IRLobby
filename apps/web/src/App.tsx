@@ -18,6 +18,9 @@ const Home = lazy(() => import('@/pages/home'));
 const Discovery = lazy(() => import('@/pages/discovery'));
 const Matches = lazy(() => import('@/pages/matches'));
 const CreateActivity = lazy(() => import('@/pages/create-activity'));
+const FoyerHost = lazy(() => import('@/pages/foyer-host'));
+const Gatherings = lazy(() => import('@/pages/gatherings'));
+const Household = lazy(() => import('@/pages/household'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Chat = lazy(() => import('@/pages/chat'));
 const Reviews = lazy(() => import('@/pages/reviews'));
@@ -105,6 +108,9 @@ function AppRoutes() {
         <Route path="matches" element={<Matches />} />
         <Route path="matches/:matchId/chat" element={<Chat />} />
         <Route path="create" element={<CreateActivity />} />
+        <Route path="host" element={<FoyerHost />} />
+        <Route path="gatherings" element={<Gatherings />} />
+        <Route path="household" element={<Household />} />
         <Route path="activities" element={<Matches showUserActivities />} />
         <Route path="connections" element={<Connections />} />
         <Route path="notifications" element={<Notifications />} />

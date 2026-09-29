@@ -16,6 +16,7 @@ module.exports = {
     '^@theme/(.*)$': '<rootDir>/src/theme/$1',
     '^@providers/(.*)$': '<rootDir>/src/providers/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
+    '^@foyer/(.*)$': '<rootDir>/src/foyer/$1',
     '^@shared/(.*)$': '<rootDir>/../../packages/shared/$1',
   },
   setupFiles: ['<rootDir>/jest.setup.js'],

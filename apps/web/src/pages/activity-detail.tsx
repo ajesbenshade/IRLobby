@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { compressImageFile } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -213,6 +214,32 @@ export default function ActivityDetailPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <label className="block rounded-2xl border border-dashed border-[#e1dbd7] bg-white p-4 text-sm">
+        <span className="font-semibold text-[#a2033f]">Add a photo</span>
+        <span className="mt-1 block text-[#6e6a68]">Up to 8 photos. Hosts and people who are going can add them.</span>
+        <input
+          aria-label="Add a gathering photo"
+          type="file"
+          accept="image/*"
+          className="mt-2 block w-full text-sm"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file || !activityId) return;
+            void (async () => {
+              const blob = await compressImageFile(file);
+              const body = new FormData();
+              body.append('image', blob, 'photo.jpg');
+              await fetch(`/api/activities/${activityId}/photos/`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${localStorage.getItem('authToken') ?? ''}` },
+                body,
+              });
+              await qc.invalidateQueries({ queryKey: [route] });
+            })();
+          }}
+        />
+      </label>
 
       <div className="sticky bottom-0 -mx-4 border-t bg-background/95 p-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <Button

@@ -5,7 +5,13 @@ import { WHOS_COMING_NOTE } from '@/lib/foyer';
 
 export type WhosComingSheetData = {
   me: { name: string; eligible: boolean; reason?: string | null };
-  dependents: Array<{ id: number; name: string; age?: number | null; eligible: boolean; reason?: string | null }>;
+  dependents: Array<{
+    id: number;
+    name: string;
+    age?: number | null;
+    eligible: boolean;
+    reason?: string | null;
+  }>;
   note?: string | null;
 };
 
@@ -33,13 +39,21 @@ export function WhosComingDialog({
   const count = (includeSelf ? 1 : 0) + dependentIds.length;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end bg-black/40" role="dialog" aria-label="Who's coming?">
+    <div
+      className="fixed inset-0 z-[80] flex items-end bg-black/40"
+      role="dialog"
+      aria-label="Who's coming?"
+    >
       <div className="w-full rounded-t-[22px] bg-white p-5">
         <h2 className="font-display text-[26px] text-[#222222]">Who's coming?</h2>
         <p className="mb-3 text-sm text-[#6e6a68]">
           {activityTitle} · {audience}
         </p>
-        <label className={`mb-2 flex items-center gap-3 rounded-2xl p-3 ${includeSelf ? 'bg-[#f9e8ee]' : 'bg-[#f6f1ee]'} ${data.me.eligible ? '' : 'opacity-50'}`}>
+        <label
+          className={`mb-2 flex items-center gap-3 rounded-2xl p-3 ${
+            includeSelf ? 'bg-[#f9e8ee]' : 'bg-[#f6f1ee]'
+          } ${data.me.eligible ? '' : 'opacity-50'}`}
+        >
           <input
             type="checkbox"
             checked={includeSelf}
@@ -48,7 +62,9 @@ export function WhosComingDialog({
           />
           <span>
             <span className="block font-semibold">Me</span>
-            <span className="text-sm text-[#6e6a68]">{data.me.eligible ? 'Your RSVP' : data.me.reason}</span>
+            <span className="text-sm text-[#6e6a68]">
+              {data.me.eligible ? 'Your RSVP' : data.me.reason}
+            </span>
           </span>
         </label>
         {data.dependents.map((child) => {
@@ -56,7 +72,9 @@ export function WhosComingDialog({
           return (
             <label
               key={child.id}
-              className={`mb-2 flex items-center gap-3 rounded-2xl p-3 ${selected ? 'bg-[#f9e8ee]' : 'bg-[#f6f1ee]'} ${child.eligible ? '' : 'opacity-50'}`}
+              className={`mb-2 flex items-center gap-3 rounded-2xl p-3 ${
+                selected ? 'bg-[#f9e8ee]' : 'bg-[#f6f1ee]'
+              } ${child.eligible ? '' : 'opacity-50'}`}
             >
               <input
                 type="checkbox"
@@ -65,7 +83,9 @@ export function WhosComingDialog({
                 disabled={!child.eligible}
                 onChange={() =>
                   setDependentIds((current) =>
-                    current.includes(child.id) ? current.filter((id) => id !== child.id) : [...current, child.id],
+                    current.includes(child.id)
+                      ? current.filter((id) => id !== child.id)
+                      : [...current, child.id],
                   )
                 }
               />
@@ -75,14 +95,20 @@ export function WhosComingDialog({
                   {child.age != null ? ` (age ${child.age})` : ''}
                 </span>
                 <span className="text-sm text-[#6e6a68]">
-                  {child.eligible ? 'In your household' : child.reason || "Outside this event's age range"}
+                  {child.eligible
+                    ? 'In your household'
+                    : child.reason || "Outside this event's age range"}
                 </span>
               </span>
             </label>
           );
         })}
         <p className="my-3 text-sm text-[#6e6a68]">{data.note || WHOS_COMING_NOTE}</p>
-        <Button className="h-[54px] w-full rounded-full" disabled={pending || count < 1} onClick={() => onConfirm({ include_self: includeSelf, dependent_ids: dependentIds })}>
+        <Button
+          className="h-[54px] w-full rounded-full"
+          disabled={pending || count < 1}
+          onClick={() => onConfirm({ include_self: includeSelf, dependent_ids: dependentIds })}
+        >
           Confirm · {count} going
         </Button>
         <button type="button" className="mt-3 w-full text-[#a2033f]" onClick={onClose}>
@@ -107,7 +133,11 @@ export function YoureGoingDialog({
   onDismiss: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[80] flex items-end bg-black/40" role="dialog" aria-label="You're going">
+    <div
+      className="fixed inset-0 z-[80] flex items-end bg-black/40"
+      role="dialog"
+      aria-label="You're going"
+    >
       <div className="w-full rounded-t-[22px] bg-white p-5">
         <h2 className="font-display text-[26px] text-[#222222]">You're going</h2>
         <p className="mb-4 text-sm text-[#6e6a68]">{title}</p>
@@ -132,7 +162,11 @@ export function YoureGoingDialog({
         >
           Add to calendar
         </button>
-        <button type="button" className="mt-1 w-full font-semibold text-[#a2033f]" onClick={onDismiss}>
+        <button
+          type="button"
+          className="mt-1 w-full font-semibold text-[#a2033f]"
+          onClick={onDismiss}
+        >
           Done
         </button>
       </div>
@@ -152,20 +186,43 @@ export function AddToCalendarDialog({
   onDismiss: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[90] flex items-end bg-black/40" role="dialog" aria-label="Add to calendar">
+    <div
+      className="fixed inset-0 z-[90] flex items-end bg-black/40"
+      role="dialog"
+      aria-label="Add to calendar"
+    >
       <div className="w-full rounded-t-[22px] bg-white p-5">
         <h2 className="font-display text-[26px] text-[#222222]">Add to calendar</h2>
-        <p className="mb-4 text-sm text-[#6e6a68]">The Foyer does not need access to your calendar.</p>
-        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onGoogle}>
+        <p className="mb-4 text-sm text-[#6e6a68]">
+          Opens in your calendar app. The Foyer doesn't need access to your calendar.
+        </p>
+        <button
+          type="button"
+          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left font-semibold text-[#a2033f]"
+          onClick={onGoogle}
+        >
           Google Calendar
         </button>
-        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onOutlook}>
+        <button
+          type="button"
+          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left font-semibold text-[#a2033f]"
+          onClick={onOutlook}
+        >
           Outlook
         </button>
-        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onApple}>
-          Apple Calendar
+        <button
+          type="button"
+          className="mb-2 flex min-h-[52px] w-full flex-col items-start justify-center rounded-2xl bg-[#f9e8ee] px-4 py-2 text-left"
+          onClick={onApple}
+        >
+          <span className="font-semibold text-[#a2033f]">Apple Calendar</span>
+          <span className="text-sm font-normal text-[#6e6a68]">Downloads an .ics file</span>
         </button>
-        <button type="button" className="mt-1 w-full font-semibold text-[#a2033f]" onClick={onDismiss}>
+        <button
+          type="button"
+          className="mt-1 w-full font-semibold text-[#a2033f]"
+          onClick={onDismiss}
+        >
           Close
         </button>
       </div>

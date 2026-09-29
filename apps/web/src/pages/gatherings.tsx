@@ -2,9 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { churchSubscribeUrl, openCalendarUrl } from '@/lib/calendar';
 import { apiRequest } from '@/lib/queryClient';
-import { coverPhotoUrl, isUpcomingGathering, whosGoingSummary, type GatheringLike } from '@/lib/foyer';
+import {
+  coverPhotoUrl,
+  isUpcomingGathering,
+  whosGoingSummary,
+  type GatheringLike,
+} from '@/lib/foyer';
 
 type Row = GatheringLike & { id: number | string; title: string; time?: string };
 
@@ -29,36 +33,46 @@ async function loadList(path: string): Promise<Row[]> {
 
 export default function GatheringsPage() {
   const [segment, setSegment] = useState<'upcoming' | 'past'>('upcoming');
-  const hosted = useQuery({ queryKey: ['foyer-hosted'], queryFn: () => loadList('/api/activities/hosted/') });
-  const going = useQuery({ queryKey: ['foyer-going'], queryFn: () => loadList('/api/activities/going/') });
+  const hosted = useQuery({
+    queryKey: ['foyer-hosted'],
+    queryFn: () => loadList('/api/activities/hosted/'),
+  });
+  const going = useQuery({
+    queryKey: ['foyer-going'],
+    queryFn: () => loadList('/api/activities/going/'),
+  });
   const filter = (rows: Row[]) =>
-    rows.filter((row) => (segment === 'upcoming' ? isUpcomingGathering(row.time) : !isUpcomingGathering(row.time)));
+    rows.filter((row) =>
+      segment === 'upcoming' ? isUpcomingGathering(row.time) : !isUpcomingGathering(row.time),
+    );
 
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-28 pt-8">
       <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
-      <button
-        type="button"
-        className="mt-4 w-full rounded-2xl bg-white p-4 text-left shadow-sm"
-        onClick={() => openCalendarUrl(churchSubscribeUrl())}
-      >
-        <span className="block font-semibold text-[#222222]">Subscribe to church calendar</span>
-        <span className="mt-1 block text-sm text-[#6e6a68]">The Foyer does not need access to your calendar.</span>
-      </button>
       <div className="mt-4 flex rounded-xl bg-white p-1">
         {(['upcoming', 'past'] as const).map((value) => (
           <button
             key={value}
             type="button"
-            className={`h-10 flex-1 rounded-lg text-sm ${segment === value ? 'font-semibold text-[#a2033f]' : 'text-[#6e6a68]'}`}
+            className={`h-10 flex-1 rounded-lg text-sm ${
+              segment === value ? 'font-semibold text-[#a2033f]' : 'text-[#6e6a68]'
+            }`}
             onClick={() => setSegment(value)}
           >
             {value === 'upcoming' ? 'Upcoming' : 'Past'}
           </button>
         ))}
       </div>
-      <Section label="HOSTING" rows={filter(hosted.data ?? [])} summary={(row) => `${row.going_count ?? row.participant_count ?? 0} going`} />
-      <Section label="GOING" rows={filter(going.data ?? [])} summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)} />
+      <Section
+        label="HOSTING"
+        rows={filter(hosted.data ?? [])}
+        summary={(row) => `${row.going_count ?? row.participant_count ?? 0} going`}
+      />
+      <Section
+        label="GOING"
+        rows={filter(going.data ?? [])}
+        summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
+      />
     </div>
   );
 }
@@ -80,7 +94,10 @@ function Section({
         {rows.map((row) => {
           const photo = coverPhotoUrl(row);
           return (
-            <div key={String(row.id)} className="flex items-center gap-3 rounded-[16px] bg-white p-3">
+            <div
+              key={String(row.id)}
+              className="flex items-center gap-3 rounded-[16px] bg-white p-3"
+            >
               {photo ? (
                 <img src={photo} alt="" className="h-14 w-14 rounded-xl object-cover" />
               ) : (
@@ -91,7 +108,10 @@ function Section({
                 <p className="text-sm text-[#6e6a68]">{formatWhen(row.time)}</p>
                 <p className="text-sm text-[#6e6a68]">{summary(row)}</p>
               </div>
-              <Link to={`/app/activity/${row.id}`} className="rounded-full bg-[#f9e8ee] px-3 py-2 text-sm font-semibold text-[#a2033f]">
+              <Link
+                to={`/app/activity/${row.id}`}
+                className="rounded-full bg-[#f9e8ee] px-3 py-2 text-sm font-semibold text-[#a2033f]"
+              >
                 Chat
               </Link>
             </div>

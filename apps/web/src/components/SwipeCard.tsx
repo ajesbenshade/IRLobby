@@ -21,6 +21,7 @@ interface SwipeCardProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onShowDetails: () => void;
+  onAddToCalendar?: () => void;
   className?: string;
   disabled?: boolean;
 }
@@ -31,6 +32,7 @@ export default memo(function SwipeCard({
   onSwipeLeft,
   onSwipeRight,
   onShowDetails,
+  onAddToCalendar,
   className = '',
   disabled = false,
 }: SwipeCardProps) {
@@ -166,13 +168,15 @@ export default memo(function SwipeCard({
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const foyer = activity as typeof activity & GatheringLike;
-  const foyerMode = Boolean(foyer.audience || foyer.host_name || foyer.cover_photo_url || foyer.going_count != null);
+  const foyerMode = Boolean(
+    foyer.audience || foyer.host_name || foyer.cover_photo_url || foyer.going_count != null,
+  );
   const foyerCover = coverPhotoUrl(foyer);
   const hostName = foyerMode
     ? hostDisplayName(foyer)
     : activity.host?.firstName && activity.host?.lastName
-      ? `${activity.host.firstName} ${activity.host.lastName}`
-      : 'Anonymous Host';
+    ? `${activity.host.firstName} ${activity.host.lastName}`
+    : 'Anonymous Host';
 
   const hostInitials =
     activity.host?.firstName && activity.host?.lastName
@@ -249,7 +253,11 @@ export default memo(function SwipeCard({
         {/* Activity Image */}
         <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-primary/20 to-primary-deep/20 dark:from-primary/30 dark:to-primary-deep/30 rounded-t-2xl flex items-center justify-center overflow-hidden">
           {foyerCover || (activity.images && activity.images.length > 0) ? (
-            <img src={foyerCover || activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
+            <img
+              src={foyerCover || activity.images[0]}
+              alt={safeTitle}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -265,11 +273,13 @@ export default memo(function SwipeCard({
         <div className="p-4">
           {/* Title and Category */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-foreground truncate flex-1 mr-2">
-              {safeTitle}
-            </h3>
+            <h3 className="text-lg font-bold text-foreground truncate flex-1 mr-2">{safeTitle}</h3>
             <Badge variant="secondary" className="flex-shrink-0 bg-[#f9e8ee] text-[#a2033f]">
-              {foyerMode ? audienceChipLabel(foyer) : safeTags.length > 0 ? safeTags[0] : 'Activity'}
+              {foyerMode
+                ? audienceChipLabel(foyer)
+                : safeTags.length > 0
+                ? safeTags[0]
+                : 'Activity'}
             </Badge>
           </div>
 
@@ -287,9 +297,7 @@ export default memo(function SwipeCard({
 
           {/* Description */}
           {activity.description && (
-            <p className="text-foreground/80 text-sm mb-4 line-clamp-2">
-              {activity.description}
-            </p>
+            <p className="text-foreground/80 text-sm mb-4 line-clamp-2">{activity.description}</p>
           )}
 
           {/* Participants */}
@@ -332,6 +340,19 @@ export default memo(function SwipeCard({
               </div>
             )}
           </div>
+
+          {foyerMode && onAddToCalendar ? (
+            <button
+              type="button"
+              className="mt-4 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddToCalendar();
+              }}
+            >
+              Add to calendar
+            </button>
+          ) : null}
 
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4">
             <Button

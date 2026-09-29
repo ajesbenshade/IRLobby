@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Animated, Image, PanResponder, StyleSheet } from 'react-native';
+import { Animated, Image, PanResponder, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Snackbar, Text } from 'react-native-paper';
 
 import {
@@ -774,6 +774,14 @@ export const DiscoverScreen = () => {
                         <Text style={styles.hostedName}>{foyerHostName}</Text>
                       </View>
                     </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Add to calendar"
+                      onPress={() => setCalendarActivity(currentActivity)}
+                      style={styles.addCalendar}
+                    >
+                      <Text style={styles.addCalendarText}>Add to calendar</Text>
+                    </Pressable>
                   </View>
                 </View>
               ) : (
@@ -881,6 +889,16 @@ export const DiscoverScreen = () => {
                   ) : null}
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
+                  ) : null}
+                  {foyerMode ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Add to calendar"
+                      onPress={() => setCalendarActivity(currentActivity)}
+                      style={styles.addCalendar}
+                    >
+                      <Text style={styles.addCalendarText}>Add to calendar</Text>
+                    </Pressable>
                   ) : null}
                   {typeof currentActivity.host !== 'string' &&
                   currentActivity.host &&
@@ -1320,6 +1338,19 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontFamily: appTypography.bodySemibold,
     fontSize: 15,
+  },
+  addCalendar: {
+    minHeight: 52,
+    borderRadius: radii.list,
+    backgroundColor: appColors.primaryWash,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  addCalendarText: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 16,
   },
   sheetModal: {
     backgroundColor: 'transparent',

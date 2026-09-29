@@ -1,10 +1,23 @@
 import { config } from '@/lib/config';
-import { calendarLinksFromActivity, churchCalendarSubscribeUrl, type CalendarLinkActivity } from '@shared/calendarLinks';
+import {
+  calendarLinksFromActivity,
+  churchCalendarFeedUrl,
+  churchCalendarSubscribeUrl,
+  type CalendarLinkActivity,
+} from '@shared/calendarLinks';
 
-export const gatheringCalendarUrls = (activity: CalendarLinkActivity) => calendarLinksFromActivity(activity);
+export const gatheringCalendarUrls = (activity: CalendarLinkActivity) =>
+  calendarLinksFromActivity(activity);
 
-export const churchSubscribeUrl = () =>
-  churchCalendarSubscribeUrl(config.apiBaseUrl, typeof window === 'undefined' ? undefined : window.location.origin);
+const pageOrigin = () => (typeof window === 'undefined' ? undefined : window.location.origin);
+
+export const churchSubscribeUrl = () => churchCalendarSubscribeUrl(config.apiBaseUrl, pageOrigin());
+
+export const churchCalendarHttpsUrl = () => churchCalendarFeedUrl(config.apiBaseUrl, pageOrigin());
+
+export const copyChurchCalendarLink = async () => {
+  await navigator.clipboard.writeText(churchCalendarHttpsUrl());
+};
 
 export const openCalendarUrl = (url: string | null) => {
   if (!url) {

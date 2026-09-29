@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
@@ -10,7 +10,7 @@ import { API_ROUTES } from '@shared/schema';
 import { Image, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { householdCountLabel } from '@foyer/logic';
-import { openChurchCalendarSubscription } from '@foyer/openCalendar';
+import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
@@ -30,6 +30,17 @@ export const FoyerProfileCard = () => {
   const [churchName, setChurchName] = useState('');
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) {
+        clearTimeout(copiedTimer.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const full = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
@@ -184,10 +195,40 @@ export const FoyerProfileCard = () => {
         <Text style={styles.householdLabel}>Household</Text>
         <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
       </Pressable>
-      <Pressable accessibilityRole="link" accessibilityLabel="Subscribe to church calendar" onPress={openChurchCalendarSubscription} style={styles.subscribeCard}>
-        <Text style={styles.householdLabel}>Subscribe to church calendar</Text>
-        <Text style={styles.helper}>The Foyer does not need access to your calendar.</Text>
-      </Pressable>
+      <View style={styles.calendarCard}>
+        <Text style={styles.calendarTitle}>Calendar</Text>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Subscribe to church calendar"
+          onPress={openChurchCalendarSubscription}
+          style={styles.calendarRow}
+        >
+          <Text style={styles.calendarAction}>Subscribe to church calendar</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Copy link"
+          onPress={() => {
+            void copyChurchCalendarLink()
+              .then(() => {
+                setLinkCopied(true);
+                if (copiedTimer.current) {
+                  clearTimeout(copiedTimer.current);
+                }
+                copiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+              })
+              .catch(() => setLinkCopied(false));
+          }}
+          style={styles.calendarRow}
+        >
+          <Text style={styles.calendarAction}>Copy link</Text>
+        </Pressable>
+        {linkCopied ? (
+          <Text accessibilityLiveRegion="polite" style={styles.helper}>
+            Link copied
+          </Text>
+        ) : null}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {saveMutation.isPending ? <AppButton loading>Save</AppButton> : null}
     </View>
@@ -252,6 +293,9 @@ const styles = StyleSheet.create({
   },
   householdLabel: { fontFamily: appTypography.bodySemibold, color: appColors.ink },
   householdCount: { color: appColors.mutedInk },
-  subscribeCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 4 },
+  calendarCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 4 },
+  calendarTitle: { fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 16, marginBottom: 4 },
+  calendarRow: { minHeight: 44, justifyContent: 'center' },
+  calendarAction: { fontFamily: appTypography.bodySemibold, color: appColors.primary, fontSize: 16 },
   error: { color: appColors.danger },
 });

@@ -20,6 +20,7 @@ interface ActivityDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onJoin: () => void;
+  onAddToCalendar?: () => void;
 }
 
 export default function ActivityDetailsModal({
@@ -27,6 +28,7 @@ export default function ActivityDetailsModal({
   isOpen,
   onClose,
   onJoin,
+  onAddToCalendar,
 }: ActivityDetailsModalProps) {
   const safeTitle = activity.title || 'Untitled Activity';
   const rawTags = activity.tags as unknown;
@@ -168,6 +170,16 @@ export default function ActivityDetailsModal({
             )}
           </div>
         </div>
+
+        {onAddToCalendar ? (
+          <button
+            type="button"
+            className="mb-3 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+            onClick={onAddToCalendar}
+          >
+            Add to calendar
+          </button>
+        ) : null}
 
         {/* Action Buttons */}
         <div className="flex space-x-3">

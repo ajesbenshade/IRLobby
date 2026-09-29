@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { churchSubscribeUrl, openCalendarUrl } from '@/lib/calendar';
+import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -16,6 +16,7 @@ export default function Profile() {
   const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -60,41 +61,86 @@ export default function Profile() {
         </div>
         <label className="mb-3 block text-sm font-semibold">
           Name
-          <input className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal" defaultValue={[user.firstName, user.lastName].filter(Boolean).join(' ')} aria-label="Name" />
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            defaultValue={[user.firstName, user.lastName].filter(Boolean).join(' ')}
+            aria-label="Name"
+          />
         </label>
         <label className="mb-3 block text-sm font-semibold">
           Birth date
-          <input className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal" defaultValue={user.dateOfBirth ?? ''} placeholder="YYYY-MM-DD" aria-label="Birth date" />
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            defaultValue={user.dateOfBirth ?? ''}
+            placeholder="YYYY-MM-DD"
+            aria-label="Birth date"
+          />
         </label>
         <p className="mb-1 text-sm font-semibold">Sex</p>
         <div className="mb-1 flex gap-2">
-          <span className={`rounded-lg px-4 py-2 ${user.sex === 'male' ? 'bg-white font-semibold text-[#a2033f]' : 'text-[#6e6a68]'}`}>Male</span>
-          <span className={`rounded-lg bg-white px-4 py-2 ${user.sex === 'female' ? 'font-semibold text-[#a2033f]' : ''}`}>Female</span>
+          <span
+            className={`rounded-lg px-4 py-2 ${
+              user.sex === 'male' ? 'bg-white font-semibold text-[#a2033f]' : 'text-[#6e6a68]'
+            }`}
+          >
+            Male
+          </span>
+          <span
+            className={`rounded-lg bg-white px-4 py-2 ${
+              user.sex === 'female' ? 'font-semibold text-[#a2033f]' : ''
+            }`}
+          >
+            Female
+          </span>
         </div>
         <p className="mb-3 text-xs text-[#6e6a68]">Only used for men's or women's events</p>
         <label className="mb-3 block text-sm font-semibold">
           Are you a church member, and where?
-          <input className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal" placeholder="Search churches" aria-label="Search churches" />
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            placeholder="Search churches"
+            aria-label="Search churches"
+          />
         </label>
         <p className="mb-3 text-xs text-[#6e6a68]">Not a member anywhere? Leave this blank.</p>
-        <Link to="/app/household" className="flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm">
+        <Link
+          to="/app/household"
+          className="flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
+        >
           <span className="font-semibold">Household</span>
           <span className="text-sm text-[#6e6a68]">
             {user.householdChildCount == null
               ? 'Children'
               : user.householdChildCount === 1
-                ? '1 child'
-                : `${user.householdChildCount} children`}
+              ? '1 child'
+              : `${user.householdChildCount} children`}
           </span>
         </Link>
-        <button
-          type="button"
-          className="mt-3 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-sm"
-          onClick={() => openCalendarUrl(churchSubscribeUrl())}
-        >
-          <span className="block font-semibold">Subscribe to church calendar</span>
-          <span className="mt-1 block text-sm font-normal text-[#6e6a68]">The Foyer does not need access to your calendar.</span>
-        </button>
+        <div className="mt-3 rounded-2xl bg-white px-4 py-4 shadow-sm">
+          <p className="font-semibold text-[#222222]">Calendar</p>
+          <button
+            type="button"
+            className="mt-2 block min-h-11 text-left font-semibold text-[#a2033f]"
+            onClick={() => openCalendarUrl(churchSubscribeUrl())}
+          >
+            Subscribe to church calendar
+          </button>
+          <button
+            type="button"
+            className="block min-h-11 text-left font-semibold text-[#a2033f]"
+            onClick={() => {
+              void copyChurchCalendarLink()
+                .then(() => {
+                  setLinkCopied(true);
+                  window.setTimeout(() => setLinkCopied(false), 2000);
+                })
+                .catch(() => setLinkCopied(false));
+            }}
+          >
+            Copy link
+          </button>
+          {linkCopied ? <p className="text-sm text-[#6e6a68]">Link copied</p> : null}
+        </div>
       </div>
 
       <div className="p-4 space-y-6">

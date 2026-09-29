@@ -15,7 +15,7 @@ export const AddToCalendarSheet = ({ onGoogle, onOutlook, onApple, onDismiss }: 
   <View style={styles.sheet}>
     <View style={styles.handle} />
     <Text style={styles.title}>Add to calendar</Text>
-    <Text style={styles.helper}>The Foyer does not need access to your calendar.</Text>
+    <Text style={styles.helper}>Opens in your calendar app. The Foyer doesn't need access to your calendar.</Text>
     <Pressable accessibilityRole="link" accessibilityLabel="Google Calendar" onPress={onGoogle} style={styles.link}>
       <Text style={styles.linkText}>Google Calendar</Text>
     </Pressable>
@@ -24,6 +24,7 @@ export const AddToCalendarSheet = ({ onGoogle, onOutlook, onApple, onDismiss }: 
     </Pressable>
     <Pressable accessibilityRole="link" accessibilityLabel="Apple Calendar" onPress={onApple} style={styles.link}>
       <Text style={styles.linkText}>Apple Calendar</Text>
+      <Text style={styles.rowNote}>Downloads an .ics file</Text>
     </Pressable>
     <Pressable accessibilityRole="button" accessibilityLabel="Close calendar options" onPress={onDismiss} style={styles.done}>
       <Text style={styles.doneText}>Close</Text>
@@ -63,14 +64,21 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: radii.list,
     backgroundColor: appColors.primaryWash,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 2,
   },
   linkText: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 16,
     color: appColors.primary,
+  },
+  rowNote: {
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 13,
+    color: appColors.mutedInk,
   },
   done: {
     minHeight: 44,

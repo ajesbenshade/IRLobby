@@ -1,6 +1,7 @@
 import {
   CHURCH_CALENDAR_ICS_PATH,
   calendarLinksFromActivity,
+  churchCalendarFeedUrl,
   churchCalendarSubscribeUrl,
 } from '@shared/calendarLinks';
 
@@ -28,8 +29,11 @@ describe('calendar links from the gathering', () => {
     expect(calendarLinksFromActivity({ calendar_links: { google_url: '  ' } }).google).toBeNull();
   });
 
-  it('keeps the church subscribe URL in one stubbed helper', () => {
+  it('builds the church subscribe and https copy links from one helper', () => {
     expect(CHURCH_CALENDAR_ICS_PATH).toBe('/api/public/calendar.ics');
+    expect(churchCalendarFeedUrl('https://api.irlobby.com')).toBe(
+      'https://api.irlobby.com/api/public/calendar.ics',
+    );
     expect(churchCalendarSubscribeUrl('https://api.irlobby.com')).toBe(
       'webcal://api.irlobby.com/api/public/calendar.ics',
     );

@@ -4,7 +4,12 @@ import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
-import { AddToCalendarDialog, WhosComingDialog, YoureGoingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
+import {
+  AddToCalendarDialog,
+  WhosComingDialog,
+  YoureGoingDialog,
+  type WhosComingSheetData,
+} from '@/components/foyer/FoyerSheets';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -184,8 +189,13 @@ export default function Discovery() {
       const response = await apiRequest('GET', `/api/activities/${activity.id}/whos-coming/`);
       const sheet = (await response.json()) as WhosComingSheetData;
       if (!sheet.dependents || sheet.dependents.length === 0) {
-        const dependentIds = (sheet.dependents ?? []).filter((child) => child.eligible).map((child) => child.id);
-        await confirmRsvp(activity, { include_self: sheet.me?.eligible !== false, dependent_ids: dependentIds });
+        const dependentIds = (sheet.dependents ?? [])
+          .filter((child) => child.eligible)
+          .map((child) => child.id);
+        await confirmRsvp(activity, {
+          include_self: sheet.me?.eligible !== false,
+          dependent_ids: dependentIds,
+        });
         return;
       }
       setWhosComing(sheet);
@@ -271,11 +281,18 @@ export default function Discovery() {
       <div className="min-h-screen bg-background">
         <header className="bg-card shadow-sm p-4 flex items-center justify-between">
           <div>
-            <h2 className="font-display text-[28px] font-bold text-foreground">Upcoming gatherings</h2>
+            <h2 className="font-display text-[28px] font-bold text-foreground">
+              Upcoming gatherings
+            </h2>
             <p className="text-sm text-muted-foreground">{churchLine}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="w-10 h-10 p-0" onClick={() => setShowFilterModal(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-10 h-10 p-0"
+              onClick={() => setShowFilterModal(true)}
+            >
               <Filter className="w-5 h-5" />
             </Button>
           </div>
@@ -342,7 +359,9 @@ export default function Discovery() {
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
-          <h2 className="font-display text-[28px] font-bold text-foreground">Upcoming gatherings</h2>
+          <h2 className="font-display text-[28px] font-bold text-foreground">
+            Upcoming gatherings
+          </h2>
           <p className="text-sm text-muted-foreground">{churchLine}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -381,7 +400,9 @@ export default function Discovery() {
             disabled={isRefreshing}
             aria-label="Refresh activities"
           >
-            <RefreshCw className={`w-5 h-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-5 h-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+            />
           </Button>
         </div>
       </header>
@@ -391,11 +412,10 @@ export default function Discovery() {
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
             <div className="flex-1 space-y-2">
-              <p className="font-medium text-foreground">
-                Want a feed that actually fits?
-              </p>
+              <p className="font-medium text-foreground">Want a feed that actually fits?</p>
               <p className="text-sm text-muted-foreground">
-                Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your energy.
+                Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your
+                energy.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setVibeReminderDismissed(true)}>
@@ -435,11 +455,11 @@ export default function Discovery() {
             onSwipeLeft={handleReject}
             onSwipeRight={handleJoin}
             onShowDetails={() => setShowDetailsModal(true)}
+            onAddToCalendar={() => setCalendarActivity(currentActivity)}
             className="absolute inset-x-4 top-0 z-30"
             disabled={swipeMutation.isPending}
           />
         )}
-
       </div>
 
       {/* Modals */}
@@ -450,7 +470,9 @@ export default function Discovery() {
           data={whosComing}
           pending={rsvpPending}
           onClose={() => setWhosComing(null)}
-          onConfirm={(payload) => void confirmRsvp(currentActivity as Activity & GatheringLike, payload)}
+          onConfirm={(payload) =>
+            void confirmRsvp(currentActivity as Activity & GatheringLike, payload)
+          }
         />
       ) : null}
       {goingDialog}
@@ -462,6 +484,7 @@ export default function Discovery() {
             isOpen={showDetailsModal}
             onClose={() => setShowDetailsModal(false)}
             onJoin={handleJoin}
+            onAddToCalendar={() => setCalendarActivity(currentActivity)}
           />
 
           <MatchSuccessModal

@@ -10,8 +10,8 @@ export type CalendarLinkActivity = {
 };
 
 /**
- * Stub until FOYER_API_CONTRACT.md records the church feed.
- * Backend confirmed the subscribe link is the webcal:// form of this path.
+ * Public church feed. Subscribe uses the webcal form; Copy link uses the https form.
+ * Gathering rows still come from activity.calendar_links.
  */
 export const CHURCH_CALENDAR_ICS_PATH = '/api/public/calendar.ics';
 
@@ -41,7 +41,8 @@ const absoluteHttpBase = (apiBaseUrl: string, pageOrigin?: string) => {
   return `${origin}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
-export const churchCalendarSubscribeUrl = (apiBaseUrl: string, pageOrigin?: string): string => {
-  const https = absoluteHttpBase(apiBaseUrl, pageOrigin);
-  return `${https.replace(/^https?:\/\//i, 'webcal://')}${CHURCH_CALENDAR_ICS_PATH}`;
-};
+export const churchCalendarFeedUrl = (apiBaseUrl: string, pageOrigin?: string): string =>
+  `${absoluteHttpBase(apiBaseUrl, pageOrigin)}${CHURCH_CALENDAR_ICS_PATH}`;
+
+export const churchCalendarSubscribeUrl = (apiBaseUrl: string, pageOrigin?: string): string =>
+  churchCalendarFeedUrl(apiBaseUrl, pageOrigin).replace(/^https?:\/\//i, 'webcal://');

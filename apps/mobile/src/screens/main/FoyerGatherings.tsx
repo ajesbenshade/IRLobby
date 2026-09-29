@@ -17,7 +17,6 @@ import {
 } from '@foyer/logic';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
-import { openChurchCalendarSubscription } from '@foyer/openCalendar';
 import { fetchGoingActivities } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -83,10 +82,6 @@ export const FoyerGatherings = () => {
     >
       <FoyerHeader />
       <Text style={styles.title}>Your gatherings</Text>
-      <Pressable accessibilityRole="link" accessibilityLabel="Subscribe to church calendar" onPress={openChurchCalendarSubscription} style={styles.subscribeCard}>
-        <Text style={styles.subscribe}>Subscribe to church calendar</Text>
-        <Text style={styles.subscribeNote}>The Foyer does not need access to your calendar.</Text>
-      </Pressable>
       <View style={styles.segment}>
         {(['upcoming', 'past'] as const).map((value) => (
           <Pressable
@@ -168,9 +163,6 @@ const Section = ({
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 16, paddingBottom: 120 },
   title: { fontFamily: appTypography.heading, fontSize: 28, color: appColors.ink },
-  subscribeCard: { backgroundColor: appColors.white, borderRadius: radii.card, padding: 16, gap: 4 },
-  subscribe: { color: appColors.ink, fontFamily: appTypography.bodySemibold, fontSize: 16 },
-  subscribeNote: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18 },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 12, padding: 4 },
   segmentItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: appColors.white, borderWidth: 1, borderColor: appColors.line },

@@ -4,7 +4,7 @@ import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
-import { GiveDialog, WhosComingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
+import { WhosComingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,7 +40,6 @@ export default function Discovery() {
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
-  const [giveActivity, setGiveActivity] = useState<(Activity & GatheringLike) | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
@@ -129,12 +128,9 @@ export default function Discovery() {
 
   const handleReject = () => handleSwipe('pass');
 
-  const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
+  const advanceAfterRsvp = () => {
     setWhosComing(null);
     setCurrentActivityIndex((index) => index + 1);
-    if (activity.giving_available) {
-      setGiveActivity(activity);
-    }
   };
 
   const confirmRsvp = async (
@@ -144,7 +140,7 @@ export default function Discovery() {
     setRsvpPending(true);
     try {
       await apiRequest('POST', `/api/activities/${activity.id}/rsvp/`, payload);
-      advanceAfterRsvp(activity);
+      advanceAfterRsvp();
     } finally {
       setRsvpPending(false);
     }
@@ -282,18 +278,6 @@ export default function Discovery() {
           onApplyFilters={handleApplyFilters}
           currentFilters={filters}
         />
-        {giveActivity ? (
-          <GiveDialog
-            activity={giveActivity}
-            onDismiss={() => setGiveActivity(null)}
-            onGive={async (amount) => {
-              const response = await apiRequest('POST', `/api/activities/${giveActivity.id}/giving-link/`, { amount });
-              const link = (await response.json()) as { url?: string };
-              if (link.url) window.open(link.url, '_blank', 'noopener,noreferrer');
-              setGiveActivity(null);
-            }}
-          />
-        ) : null}
       </div>
     );
   }
@@ -434,22 +418,6 @@ export default function Discovery() {
           pending={rsvpPending}
           onClose={() => setWhosComing(null)}
           onConfirm={(payload) => void confirmRsvp(currentActivity as Activity & GatheringLike, payload)}
-        />
-      ) : null}
-      {giveActivity ? (
-        <GiveDialog
-          activity={giveActivity}
-          onDismiss={() => setGiveActivity(null)}
-          onGive={async (amount) => {
-            const response = await apiRequest('POST', `/api/activities/${giveActivity.id}/giving-link/`, {
-              amount,
-            });
-            const link = (await response.json()) as { url?: string };
-            if (link.url) {
-              window.open(link.url, '_blank', 'noopener,noreferrer');
-            }
-            setGiveActivity(null);
-          }}
         />
       ) : null}
       {currentActivity && (

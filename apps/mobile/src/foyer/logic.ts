@@ -6,11 +6,8 @@ export const UNDER_13_MESSAGE = 'Accounts are not available under age 13.';
 export const CAPACITY_ERROR = 'Capacity must be a whole number from 1 to 500.';
 export const CALENDAR_ADDRESS_WARNING =
   "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
-export const FEE_NOTE = "Stripe's card fee applies. The Foyer takes no cut.";
 export const WHOS_COMING_NOTE =
   'Only children in your household are listed. Teens with their own account RSVP for themselves.';
-
-export const GIFT_CHIP_AMOUNTS = [5, 10, 20] as const;
 
 export type GatheringLike = {
   audience?: string | null;
@@ -33,11 +30,6 @@ export type GatheringLike = {
       }
     | null;
   host_kind?: HostKind | string | null;
-  giving_available?: boolean | null;
-  donation_enabled?: boolean | null;
-  gift_disclaimer?: string | null;
-  fee_note?: string | null;
-  suggested_donation?: string | number | null;
   my_rsvp?: { status?: string; people_count?: number; include_self?: boolean } | null;
 };
 
@@ -145,64 +137,6 @@ export const parseCapacity = (raw: string): CapacityParse => {
     return { ok: false, message: CAPACITY_ERROR };
   }
   return { ok: true, capacity: value };
-};
-
-export const parseSuggestedDonation = (raw: string): string | null => {
-  const trimmed = raw.trim().replace(/^\$/, '');
-  if (!trimmed) {
-    return null;
-  }
-  const value = Number(trimmed);
-  if (!Number.isFinite(value) || value < 0) {
-    return null;
-  }
-  return value.toFixed(2);
-};
-
-const moneyNumber = (value: string | number | null | undefined): number | null => {
-  if (value == null || value === '') {
-    return null;
-  }
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
-
-export const preselectedGiftAmount = (suggested: string | number | null | undefined): number => {
-  const amount = moneyNumber(suggested);
-  if (amount == null) {
-    return 10;
-  }
-  return amount;
-};
-
-export const giftChipSelected = (amount: number): number | 'other' =>
-  (GIFT_CHIP_AMOUNTS as readonly number[]).includes(amount) ? amount : 'other';
-
-export const giftIntro = (activity: GatheringLike & { title?: string | null }) => {
-  const title = activity.title?.trim() || 'this gathering';
-  if (activity.host_kind === 'church') {
-    return `The church is covering the meal for ${title}. A gift is optional and does not change your RSVP.`;
-  }
-  return `${hostDisplayName(activity)} is covering food for ${title}. A gift is optional and does not change your RSVP.`;
-};
-
-export const giftDisclaimer = (activity: GatheringLike) => {
-  const provided = activity.gift_disclaimer?.trim();
-  if (provided) {
-    return provided;
-  }
-  if (activity.host_kind === 'church') {
-    return `Your gift goes to ${hostDisplayName(activity)}.`;
-  }
-  return `This gift goes to ${hostDisplayName(activity)} directly. It is not a tax-deductible gift to Franconia Mennonite Church.`;
-};
-
-export const giveInBrowserLabel = (amount: number | null) => {
-  if (amount == null || amount <= 0) {
-    return 'Give in browser';
-  }
-  const shown = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-  return `Give $${shown} in browser`;
 };
 
 export const isChatGateError = (status: number | undefined, message: string | undefined) =>

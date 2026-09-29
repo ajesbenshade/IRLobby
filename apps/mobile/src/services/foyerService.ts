@@ -6,7 +6,6 @@ export type ChurchRecord = {
   id: number;
   name: string;
   is_verified?: boolean;
-  can_receive_gifts?: boolean;
 };
 
 export type HouseholdChild = {
@@ -25,15 +24,6 @@ export type RsvpResult = {
   going_count?: number;
 };
 
-export type GivingLinkResult = {
-  url: string;
-  amount: string;
-  disclaimer?: string | null;
-  fee_note?: string | null;
-  host_kind?: string;
-  host_name?: string;
-};
-
 export const fetchWhosComing = async (activityId: number | string): Promise<WhosComingResponse> => {
   const response = await api.get<WhosComingResponse>(`/api/activities/${activityId}/whos-coming/`);
   return response.data;
@@ -44,16 +34,6 @@ export const postRsvp = async (
   payload: { include_self: boolean; dependent_ids: number[] },
 ): Promise<RsvpResult> => {
   const response = await api.post<RsvpResult>(`/api/activities/${activityId}/rsvp/`, payload);
-  return response.data;
-};
-
-export const postGivingLink = async (
-  activityId: number | string,
-  amount: string,
-): Promise<GivingLinkResult> => {
-  const response = await api.post<GivingLinkResult>(`/api/activities/${activityId}/giving-link/`, {
-    amount,
-  });
   return response.data;
 };
 

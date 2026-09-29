@@ -45,10 +45,6 @@ export interface Activity {
   going_count?: number | null;
   host_name?: string | null;
   host_kind?: 'person' | 'church' | string | null;
-  giving_available?: boolean | null;
-  gift_disclaimer?: string | null;
-  fee_note?: string | null;
-  suggested_donation?: string | number | null;
   my_rsvp?: { status?: string; people_count?: number; include_self?: boolean; dependent_ids?: number[] } | null;
   photos?: Array<{ id?: number; url?: string }>;
 }

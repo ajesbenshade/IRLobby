@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { CALENDAR_ADDRESS_WARNING, FEE_NOTE, compressImageFile, parseCapacity } from '@/lib/foyer';
+import { CALENDAR_ADDRESS_WARNING, compressImageFile, parseCapacity } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 
 export default function FoyerHostPage() {
@@ -20,8 +20,6 @@ export default function FoyerHostPage() {
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
   const [calendar, setCalendar] = useState(false);
-  const [gifts, setGifts] = useState(false);
-  const [suggested, setSuggested] = useState('10');
   const [hostAsChurch, setHostAsChurch] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +47,6 @@ export default function FoyerHostPage() {
         age_min: ageMin.trim() ? Number(ageMin) : null,
         age_max: ageMax.trim() ? Number(ageMax) : null,
         list_on_church_calendar: calendar,
-        donation_enabled: gifts,
-        suggested_donation: gifts ? Number(suggested).toFixed(2) : null,
         host_kind: hostAsChurch ? 'church' : 'person',
       });
       const saved = (await response.json()) as { id: number | string };
@@ -126,17 +122,6 @@ export default function FoyerHostPage() {
         Post to the church website calendar
       </label>
       <p className="mb-4 rounded-xl bg-[#fdf3e6] p-3 text-sm text-[#8a540a]">{CALENDAR_ADDRESS_WARNING}</p>
-      <label className="mb-2 flex items-center gap-2 font-semibold">
-        <input type="checkbox" checked={gifts} onChange={(event) => setGifts(event.target.checked)} />
-        Accept gifts
-      </label>
-      {gifts ? (
-        <>
-          <p className="mb-2 text-sm text-[#6e6a68]">After someone RSVPs, they can choose to chip in. Gifts open in Safari.</p>
-          <Field label="Suggested amount" value={suggested} onChange={setSuggested} />
-          <p className="mb-4 text-sm text-[#6e6a68]">{FEE_NOTE}</p>
-        </>
-      ) : null}
       {admin ? (
         <div className="mb-4 rounded-2xl border border-[#e1dbd7] bg-white p-4">
           <p className="text-xs font-bold text-[#6e6a68]">Admin only</p>
@@ -144,7 +129,7 @@ export default function FoyerHostPage() {
             Host as Franconia Mennonite Church
             <input type="checkbox" checked={hostAsChurch} onChange={(event) => setHostAsChurch(event.target.checked)} />
           </label>
-          <p className="mt-1 text-sm text-[#6e6a68]">The church is shown as host and gifts go to the church.</p>
+          <p className="mt-1 text-sm text-[#6e6a68]">The church is shown as host.</p>
         </div>
       ) : null}
       {error ? <p className="mb-3 text-sm text-red-700">{error}</p> : null}

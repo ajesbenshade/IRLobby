@@ -5,9 +5,7 @@ import {
   defaultRsvpSelection,
   parseCapacity,
   peopleCount,
-  preselectedGiftAmount,
   registrationFieldError,
-  giftIntro,
   isChatGateError,
   shouldSkipWhosComingSheet,
   whosGoingSummary,
@@ -64,10 +62,8 @@ describe('capacity validation', () => {
   });
 });
 
-describe('gift amount and going summary', () => {
-  it('preselects the host suggestion and summarizes who is going', () => {
-    expect(preselectedGiftAmount('10.00')).toBe(10);
-    expect(preselectedGiftAmount(null)).toBe(10);
+describe('going summary and registration', () => {
+  it('summarizes who is going', () => {
     expect(whosGoingSummary(1)).toBe('You');
     expect(whosGoingSummary(2)).toBe('You + 1 child');
   });
@@ -75,15 +71,6 @@ describe('gift amount and going summary', () => {
   it('surfaces the under-13 registration error from the API', () => {
     expect(registrationFieldError({ date_of_birth: ['Accounts are not available under age 13.'] })).toBe(
       'Accounts are not available under age 13.',
-    );
-  });
-
-  it('writes the personal and church gift intros', () => {
-    expect(giftIntro({ title: "Women's Fall Brunch", host_name: 'Sarah L.', host_kind: 'person' })).toBe(
-      "Sarah L. is covering food for Women's Fall Brunch. A gift is optional and does not change your RSVP.",
-    );
-    expect(giftIntro({ title: 'Harvest Supper', host_kind: 'church', host_name: 'Franconia Mennonite Church' })).toBe(
-      'The church is covering the meal for Harvest Supper. A gift is optional and does not change your RSVP.',
     );
   });
 

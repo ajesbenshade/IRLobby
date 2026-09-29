@@ -1,7 +1,6 @@
 export type AudienceGender = 'everyone' | 'men' | 'women';
 
 export const CHAT_GATE_MESSAGE = 'Chat opens for people who are going.';
-export const FEE_NOTE = "Stripe's card fee applies. The Foyer takes no cut.";
 export const CALENDAR_ADDRESS_WARNING =
   "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
 export const WHOS_COMING_NOTE =
@@ -19,10 +18,6 @@ export type GatheringLike = {
   images?: string[] | null;
   host_name?: string | null;
   host_kind?: string | null;
-  gift_disclaimer?: string | null;
-  fee_note?: string | null;
-  suggested_donation?: string | number | null;
-  giving_available?: boolean | null;
   my_rsvp?: { status?: string; people_count?: number; include_self?: boolean } | null;
   description?: string | null;
   location?: string | null;
@@ -46,21 +41,6 @@ export const hostDisplayName = (activity: GatheringLike) => activity.host_name?.
 
 export const coverPhotoUrl = (activity: GatheringLike) =>
   activity.cover_photo_url?.trim() || activity.images?.find((item) => item?.trim()) || null;
-
-export const giftIntro = (activity: GatheringLike) => {
-  const title = activity.title?.trim() || 'this gathering';
-  if (activity.host_kind === 'church') {
-    return `The church is covering the meal for ${title}. A gift is optional and does not change your RSVP.`;
-  }
-  return `${hostDisplayName(activity)} is covering food for ${title}. A gift is optional and does not change your RSVP.`;
-};
-
-export const giftDisclaimer = (activity: GatheringLike) => {
-  const provided = activity.gift_disclaimer?.trim();
-  if (provided) return provided;
-  if (activity.host_kind === 'church') return `Your gift goes to ${hostDisplayName(activity)}.`;
-  return `This gift goes to ${hostDisplayName(activity)} directly. It is not a tax-deductible gift to Franconia Mennonite Church.`;
-};
 
 export const parseCapacity = (raw: string): { ok: true; capacity: number | null } | { ok: false; message: string } => {
   const trimmed = raw.trim();

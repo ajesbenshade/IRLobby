@@ -11,9 +11,7 @@ import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import {
   CALENDAR_ADDRESS_WARNING,
-  FEE_NOTE,
   parseCapacity,
-  parseSuggestedDonation,
   type AudienceGender,
   type HostKind,
 } from '@foyer/logic';
@@ -43,8 +41,6 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
   const [listOnCalendar, setListOnCalendar] = useState(false);
-  const [acceptGifts, setAcceptGifts] = useState(false);
-  const [suggested, setSuggested] = useState('10');
   const [hostAsChurch, setHostAsChurch] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +64,6 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         age_min: ageMin.trim() ? Number(ageMin) : null,
         age_max: ageMax.trim() ? Number(ageMax) : null,
         list_on_church_calendar: listOnCalendar,
-        donation_enabled: acceptGifts,
-        suggested_donation: acceptGifts ? parseSuggestedDonation(suggested) : null,
         host_kind: (hostAsChurch ? 'church' : 'person') as HostKind,
       };
       const saved = isEditing && activityId
@@ -185,15 +179,6 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
           <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
         </View>
 
-        <CheckRow label="Accept gifts" value={acceptGifts} onChange={setAcceptGifts} />
-        <Text style={styles.helper}>After someone RSVPs, they can choose to chip in. Gifts open in Safari.</Text>
-        {acceptGifts ? (
-          <>
-            <Field label="Suggested amount" value={suggested} onChange={setSuggested} placeholder="$10" keyboardType="decimal-pad" />
-            <Text style={styles.helper}>{FEE_NOTE}</Text>
-          </>
-        ) : null}
-
         {user?.isChurchAdmin ? (
           <View style={styles.admin}>
             <Text style={styles.adminLabel}>Admin only</Text>
@@ -202,7 +187,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
               value={hostAsChurch}
               onChange={setHostAsChurch}
             />
-            <Text style={styles.helper}>The church is shown as host and gifts go to the church.</Text>
+            <Text style={styles.helper}>The church is shown as host.</Text>
           </View>
         ) : null}
 

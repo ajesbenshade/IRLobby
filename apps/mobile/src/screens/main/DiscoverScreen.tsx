@@ -15,7 +15,6 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { FoyerHeader } from '@components/FoyerHeader';
-import { GiveSheet } from '@components/GiveSheet';
 import { WhosComingSheet } from '@components/WhosComingSheet';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
@@ -32,8 +31,6 @@ import {
   buildRsvpPayload,
   coverPhotoUrl,
   defaultRsvpSelection,
-  giftDisclaimer,
-  giftIntro,
   goingCountLabel,
   hostAvatarUrl,
   hostDisplayName,
@@ -50,7 +47,7 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
-import { fetchWhosComing, postGivingLink, postRsvp } from '@services/foyerService';
+import { fetchWhosComing, postRsvp } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import type { Activity } from '../../types/activity';
@@ -122,7 +119,6 @@ export const DiscoverScreen = () => {
   const foyerMode = isFoyerMode();
   const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
-  const [giveTarget, setGiveTarget] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
 
@@ -308,12 +304,9 @@ export const DiscoverScreen = () => {
     [animateSwipe, currentActivity, isBusy, swipeMutation],
   );
 
-  const advanceAfterRsvp = useCallback((activity: Activity) => {
+  const advanceAfterRsvp = useCallback(() => {
     setWhosComing(null);
     setCurrentIndex((index) => index + 1);
-    if (activity.giving_available) {
-      setGiveTarget(activity);
-    }
   }, []);
 
   const confirmRsvp = useCallback(
@@ -322,7 +315,7 @@ export const DiscoverScreen = () => {
       setRsvpError(null);
       try {
         await postRsvp(activity.id, payload);
-        advanceAfterRsvp(activity);
+        advanceAfterRsvp();
       } catch (error) {
         setRsvpError(getErrorMessage(error, 'Unable to save your RSVP.'));
       } finally {
@@ -347,7 +340,7 @@ export const DiscoverScreen = () => {
       if (shouldSkipWhosComingSheet(sheet)) {
         const selection = defaultRsvpSelection(sheet);
         await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
-        advanceAfterRsvp(currentActivity);
+        advanceAfterRsvp();
         return;
       }
       setWhosComing(sheet);
@@ -982,27 +975,6 @@ export const DiscoverScreen = () => {
                   subtitle={`${currentActivity.title} · ${audienceLabel}`}
                   pending={rsvpPending}
                   onConfirm={(payload) => void confirmRsvp(currentActivity, payload)}
-                />
-              </Modal>
-            </Portal>
-          ) : null}
-          {foyerMode && giveTarget ? (
-            <Portal>
-              <Modal
-                visible
-                onDismiss={() => setGiveTarget(null)}
-                contentContainerStyle={styles.sheetModal}
-              >
-                <GiveSheet
-                  intro={giftIntro(giveTarget)}
-                  disclaimer={giftDisclaimer(giveTarget)}
-                  feeNote={giveTarget.fee_note}
-                  suggested={giveTarget.suggested_donation}
-                  onGive={async (amount) => {
-                    const link = await postGivingLink(giveTarget.id, amount);
-                    return link.url;
-                  }}
-                  onDismiss={() => setGiveTarget(null)}
                 />
               </Modal>
             </Portal>

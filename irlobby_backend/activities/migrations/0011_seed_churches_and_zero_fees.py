@@ -20,7 +20,7 @@ def seed_churches_and_zero_fees(apps, schema_editor):
     for name in SEEDED_CHURCHES:
         church = Church.objects.filter(name__iexact=name).first()
         if church is None:
-            Church.objects.create(name=name, is_verified=True, stripe_account_id="")
+            Church.objects.create(name=name, is_verified=True)
         elif not church.is_verified:
             church.is_verified = True
             church.save(update_fields=["is_verified"])

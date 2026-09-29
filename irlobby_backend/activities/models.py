@@ -25,7 +25,6 @@ SEEDED_CHURCH_NAMES = (
 class Church(models.Model):
     name = models.CharField(max_length=255)
     is_verified = models.BooleanField(default=False)
-    stripe_account_id = models.CharField(max_length=255, blank=True, default="")
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -77,8 +76,6 @@ class Activity(models.Model):
     age_max = models.PositiveIntegerField(null=True, blank=True)
     list_on_church_calendar = models.BooleanField(default=False)
     calendar_approved = models.BooleanField(default=False)
-    donation_enabled = models.BooleanField(default=False)
-    suggested_donation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     host_kind = models.CharField(
         max_length=16,
         choices=[
@@ -212,31 +209,6 @@ class EventPhoto(models.Model):
 
     def __str__(self):
         return f"Photo {self.pk} for {self.activity_id}"
-
-
-class Gift(models.Model):
-    """Optional gift checkout. Separate from RSVP and from legacy tickets."""
-
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("paid", "Paid"),
-        ("cancelled", "Cancelled"),
-    ]
-
-    giver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gifts")
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="gifts")
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=8, default="USD")
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
-    stripe_session_id = models.CharField(max_length=255, blank=True, default="")
-    stripe_account_id = models.CharField(max_length=255, blank=True, default="")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Gift {self.amount} for {self.activity_id}"
 
 
 class Ticket(models.Model):

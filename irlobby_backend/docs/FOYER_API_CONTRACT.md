@@ -4,6 +4,8 @@ Mobile client contract for gatherings. Existing auth (`POST /api/users/register/
 
 Dates are ISO-8601. Ages are computed in `America/New_York`. `capacity` is people, not accounts: `null` means unlimited, otherwise 1–500. `platform_fee_percent` is always `0`.
 
+Giving and donations are out of scope for this build. There is no gift amount, Checkout Session, or church Stripe account in the API. Those can return later. RSVP stays free.
+
 ## Profile and registration
 
 `POST /api/users/register/` (no auth)
@@ -36,7 +38,7 @@ Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aes
 `GET /api/churches/?q=` (auth) → JSON array, verified churches first, max 20.
 
 ```json
-{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true, "can_receive_gifts": false }
+{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true }
 ```
 
 Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Perkasie, Deep Run East, and Finland Mennonite Church.
@@ -47,7 +49,7 @@ Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Per
 { "name": "Typed Chapel" }
 ```
 
-201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The Stripe account id is never returned.
+201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The response is only `id`, `name`, and `is_verified`.
 
 ## Household
 
@@ -87,8 +89,6 @@ New request fields (snake_case; camelCase aliases accepted):
 | `age_min`, `age_max` | integers or `null`. Max must be ≥ min. |
 | `capacity` | `null` or 1–500 |
 | `list_on_church_calendar` | bool, default false |
-| `donation_enabled` | bool, default false |
-| `suggested_donation` | decimal string or `null` |
 | `host_kind` | `person` (default) or `church` |
 | `host_church_id` | optional; church events default to Franconia Mennonite Church |
 
@@ -104,8 +104,6 @@ Response adds:
   "audience": "Women · 18+",
   "list_on_church_calendar": false,
   "calendar_approved": false,
-  "donation_enabled": true,
-  "suggested_donation": "10.00",
   "host_kind": "person",
   "host_church_id": null,
   "host_name": "Sarah Host",
@@ -113,16 +111,13 @@ Response adds:
   "going_count": 0,
   "my_rsvp": null,
   "photos": [],
-  "giving_available": false,
-  "gift_disclaimer": "This gift goes to Sarah Host directly. It is not a tax-deductible gift to Franconia Mennonite Church.",
-  "fee_note": "Stripe's card fee applies. The Foyer takes no cut.",
   "platform_fee_percent": "0.00"
 }
 ```
 
 `audience` chip text: `Everyone`, `Women · 18+` (min ≥ 18 and no max), `Everyone · Ages 6+` (min under 18 and no max), `Everyone · Ages 6–17` (both bounds).
 
-`host_name` is the person's first and last name, or the church name when `host_kind` is `church`. `gift_disclaimer` and `fee_note` are `null` when `donation_enabled` is false. For a church host the disclaimer is `Your gift goes to <church name>.` and does not include the personal-host tax sentence.
+`host_name` is the person's first and last name, or the church name when `host_kind` is `church`. Clients that send `donation_enabled`, `suggested_donation`, or gift fields are ignored; those names are not accepted or returned.
 
 `my_rsvp` when present:
 
@@ -197,37 +192,7 @@ Age is the age on the gathering's start date in `America/New_York`. Birth dates 
 
 ## Giving
 
-RSVP does not charge anyone. Gifts are a separate Checkout Session opened in Safari.
-
-`POST /api/activities/<id>/giving-link/` (auth)
-
-Requires `donation_enabled`, a confirmed going RSVP (yourself or a household child), and a connected account: the host's Stripe account for `host_kind: person`, or `Church.stripe_account_id` for `host_kind: church`. The church Stripe id is set in Django admin, not by the mobile API.
-
-```json
-{ "amount": "10.00", "success_url": "https://api.irlobby.com/tickets/success", "cancel_url": "https://api.irlobby.com/tickets/cancel" }
-```
-
-`success_url` and `cancel_url` are optional and use the existing ticket bounce URLs. 201:
-
-```json
-{
-  "url": "https://checkout.stripe.com/c/pay/cs_...",
-  "session_id": "cs_...",
-  "amount": "10.00",
-  "currency": "usd",
-  "host_kind": "person",
-  "host_name": "Sarah Host",
-  "tax_deductible": false,
-  "disclaimer": "This gift goes to Sarah Host directly. It is not a tax-deductible gift to Franconia Mennonite Church.",
-  "fee_note": "Stripe's card fee applies. The Foyer takes no cut.",
-  "platform_fee_percent": 0,
-  "application_fee_amount": 0
-}
-```
-
-Open `url` in the system browser. For a church host, `tax_deductible` is `null` and `disclaimer` is `Your gift goes to <church name>.`
-
-The charge is a Stripe Connect **direct charge** on the recipient account (`Stripe-Account` header) with `application_fee_amount: 0`. `STRIPE_ALLOW_LIVE_MODE` still blocks live secret keys.
+Out of scope. There is no `giving-link` endpoint, no gift Checkout Session, and no church Stripe account field. RSVP does not charge anyone. Giving can be added later without changing the RSVP contract.
 
 ## Church calendar approval
 
@@ -277,8 +242,6 @@ Those eight keys are the only event fields. No birth dates, emails, children, ch
 
 CORS allows `https://franconiamennonite.org`.
 
-## Stripe Connect finding
+## Stripe
 
-Current onboarding (`users/stripe_connect.py`) creates an Accounts v2 **Express** account (`dashboard: "express"`), not a Standard account (`dashboard: "full"`). It was recipient-only (`configuration.recipient` with `stripe_transfers` and `payouts`; `fees_collector` and `losses_collector` are `application`).
-
-Direct charges need the **merchant** `card_payments` capability. Recipient-only Express accounts cannot take them, so hosts who already onboarded have to re-onboard. New onboarding requests merchant `card_payments` alongside recipient transfers, and opening the onboarding link again requests merchant configuration on an existing account. Responsibilities cannot be changed later, so the platform still collects Stripe fees and the application fee stays 0. Legacy ticket destination charges and QR codes are left in place and unused; their application fee is also forced to 0.
+The Foyer flow does not use Stripe. Connect onboarding, ticket checkout, and QR validation remain in the codebase from IRLobby and are unused by gatherings. `platform_fee_percent` on an activity is still forced to `0`. Giving can return later; this build does not request `card_payments` or create direct charges.

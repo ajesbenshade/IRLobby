@@ -1,10 +1,7 @@
-"""Gathering endpoints for The Foyer: RSVP, household, churches, photos, gifts, calendar."""
+"""Gathering endpoints for The Foyer: RSVP, household, churches, photos, calendar."""
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
-
-from django.conf import settings
 from django.db import transaction
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -13,21 +10,16 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from users.stripe_connect import StripeConnectError, create_direct_checkout_session
-from utils.client_urls import is_allowed_client_return_url
-
-from .access import is_activity_host, is_church_admin, user_has_going_rsvp
+from .access import is_activity_host, is_church_admin
 from .eligibility import (
     age_on,
     confirmed_people_count,
     eligibility_for_person,
     event_local_date,
-    host_display_name,
     ny_today,
 )
-from .giving import FEE_NOTE, gift_disclaimer, giving_recipient_account_id
 from .household_rules import dependent_create_errors
-from .models import Activity, ActivityParticipant, Church, EventPhoto, Gift, HouseholdDependent
+from .models import Activity, ActivityParticipant, Church, EventPhoto, HouseholdDependent
 from .photos import PhotoProcessingError, absolute_photo_url, compress_uploaded_image
 from .public_calendar import public_calendar_ics, public_calendar_queryset, public_event_payload
 from .serializers import ActivitySerializer
@@ -59,7 +51,6 @@ def church_payload(church) -> dict:
         "id": church.id,
         "name": church.name,
         "is_verified": church.is_verified,
-        "can_receive_gifts": bool((church.stripe_account_id or "").strip()),
     }
 
 
@@ -397,136 +388,6 @@ def event_photo_file(request, pk, photo_id):
     if not photo.image:
         return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
     return FileResponse(photo.image.open("rb"), content_type="image/jpeg")
-
-
-def _return_url(value, default):
-    candidate = (value or "").strip() or default
-    if candidate and not is_allowed_client_return_url(candidate):
-        return None
-    return candidate
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def giving_link(request, pk):
-    activity = get_object_or_404(
-        Activity.objects.select_related("host", "host_church"),
-        pk=pk,
-    )
-    if not activity.donation_enabled:
-        return Response(
-            {"detail": "This gathering is not accepting gifts."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if not user_has_going_rsvp(request.user, activity):
-        return Response(
-            {"detail": "RSVP before giving. A gift does not change your RSVP."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    try:
-        amount = Decimal(str(request.data.get("amount"))).quantize(Decimal("0.01"))
-    except (InvalidOperation, TypeError):
-        return Response({"amount": "Enter a gift amount."}, status=status.HTTP_400_BAD_REQUEST)
-    if amount < Decimal("1.00") or amount > Decimal("10000.00"):
-        return Response(
-            {"amount": "Enter an amount between 1.00 and 10000.00."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    account_id = giving_recipient_account_id(activity)
-    if not account_id:
-        return Response(
-            {"detail": "Gifts are not available until the recipient finishes payout setup."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    success_url = _return_url(
-        request.data.get("success_url") or request.data.get("successUrl"),
-        settings.STRIPE_SUCCESS_URL,
-    )
-    cancel_url = _return_url(
-        request.data.get("cancel_url") or request.data.get("cancelUrl"),
-        settings.STRIPE_CANCEL_URL,
-    )
-    if not success_url or not cancel_url:
-        return Response(
-            {"detail": "Invalid success or cancel URL."}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    gift = Gift.objects.create(
-        giver=request.user,
-        activity=activity,
-        amount=amount,
-        currency=activity.currency or "USD",
-        status="pending",
-        stripe_account_id=account_id,
-    )
-    metadata = {
-        "kind": "gift",
-        "gift_id": str(gift.id),
-        "activity_id": str(activity.id),
-        "giver_id": str(request.user.id),
-        "platform_fee_percent": "0",
-    }
-    try:
-        session = create_direct_checkout_session(
-            connected_account_id=account_id,
-            unit_amount=int((amount * Decimal("100")).quantize(Decimal("1"))),
-            currency=(activity.currency or "usd").lower(),
-            product_name=f"Gift for {activity.title}",
-            description=activity.description or "",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata=metadata,
-        )
-    except StripeConnectError as exc:
-        gift.status = "cancelled"
-        gift.save(update_fields=["status"])
-        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-    except Exception as exc:
-        gift.status = "cancelled"
-        gift.save(update_fields=["status"])
-        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-
-    session_id = session["id"] if isinstance(session, dict) else session.id
-    session_url = session.get("url") if isinstance(session, dict) else getattr(session, "url", None)
-    gift.stripe_session_id = session_id or ""
-    gift.save(update_fields=["stripe_session_id"])
-    disclaimer = gift_disclaimer(activity)
-    return Response(
-        {
-            "url": session_url,
-            "session_id": session_id,
-            "amount": f"{amount:.2f}",
-            "currency": (activity.currency or "USD").lower(),
-            "host_kind": activity.host_kind,
-            "host_name": host_display_name(activity),
-            "tax_deductible": False if activity.host_kind != "church" else None,
-            "disclaimer": disclaimer,
-            "fee_note": FEE_NOTE,
-            "platform_fee_percent": 0,
-            "application_fee_amount": 0,
-        },
-        status=status.HTTP_201_CREATED,
-    )
-
-
-def mark_gift_paid(session_data) -> bool:
-    metadata = session_data.get("metadata", {}) or {}
-    if not isinstance(metadata, dict):
-        metadata = dict(metadata)
-    session_id = session_data.get("id")
-    gift = None
-    if session_id:
-        gift = Gift.objects.filter(stripe_session_id=session_id).first()
-    if gift is None and metadata.get("gift_id"):
-        gift = Gift.objects.filter(pk=metadata.get("gift_id")).first()
-    if gift is None:
-        return False
-    if gift.status != "paid":
-        gift.status = "paid"
-        gift.save(update_fields=["status"])
-    return True
 
 
 @api_view(["GET"])

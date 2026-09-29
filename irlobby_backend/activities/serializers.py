@@ -6,7 +6,6 @@ from utils.sanitize import strip_html
 
 from .access import is_church_admin
 from .eligibility import audience_label, confirmed_people_count, host_display_name
-from .giving import FEE_NOTE, gift_disclaimer, giving_recipient_account_id
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
 from .ticketing import ticketing_enabled
@@ -48,9 +47,6 @@ class ActivitySerializer(serializers.ModelSerializer):
     going_count = serializers.SerializerMethodField()
     my_rsvp = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
-    giving_available = serializers.SerializerMethodField()
-    gift_disclaimer = serializers.SerializerMethodField()
-    fee_note = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -109,8 +105,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             "audience",
             "list_on_church_calendar",
             "calendar_approved",
-            "donation_enabled",
-            "suggested_donation",
             "host_kind",
             "host_church_id",
             "host_name",
@@ -118,9 +112,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             "going_count",
             "my_rsvp",
             "photos",
-            "giving_available",
-            "gift_disclaimer",
-            "fee_note",
         )
         read_only_fields = (
             "id",
@@ -152,8 +143,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             "ageMin": "age_min",
             "ageMax": "age_max",
             "listOnChurchCalendar": "list_on_church_calendar",
-            "donationEnabled": "donation_enabled",
-            "suggestedDonation": "suggested_donation",
             "hostKind": "host_kind",
             "hostChurchId": "host_church_id",
         }
@@ -193,14 +182,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"age_min": "Enter an age of 120 or less."})
         if age_max is not None and age_max > 120:
             raise serializers.ValidationError({"age_max": "Enter an age of 120 or less."})
-
-        suggested = attrs.get(
-            "suggested_donation", getattr(self.instance, "suggested_donation", None)
-        )
-        if suggested is not None and suggested < 0:
-            raise serializers.ValidationError(
-                {"suggested_donation": "Suggested amount cannot be negative."}
-            )
 
         newly_ticketed = is_ticketed and not getattr(self.instance, "is_ticketed", False)
         request = self.context.get("request")
@@ -326,19 +307,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             for photo in obj.photos.all()
             if photo.image
         ]
-
-    def get_giving_available(self, obj):
-        return bool(giving_recipient_account_id(obj))
-
-    def get_gift_disclaimer(self, obj):
-        if not obj.donation_enabled:
-            return None
-        return gift_disclaimer(obj)
-
-    def get_fee_note(self, obj):
-        if not obj.donation_enabled:
-            return None
-        return FEE_NOTE
 
     def validate_description(self, value):
         return strip_html(value)

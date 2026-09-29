@@ -26,7 +26,6 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255)),
                 ("is_verified", models.BooleanField(default=False)),
-                ("stripe_account_id", models.CharField(blank=True, default="", max_length=255)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
@@ -47,37 +46,6 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["id"],
-            },
-        ),
-        migrations.CreateModel(
-            name="Gift",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("amount", models.DecimalField(decimal_places=2, max_digits=10)),
-                ("currency", models.CharField(default="USD", max_length=8)),
-                (
-                    "status",
-                    models.CharField(
-                        choices=[
-                            ("pending", "Pending"),
-                            ("paid", "Paid"),
-                            ("cancelled", "Cancelled"),
-                        ],
-                        default="pending",
-                        max_length=10,
-                    ),
-                ),
-                ("stripe_session_id", models.CharField(blank=True, default="", max_length=255)),
-                ("stripe_account_id", models.CharField(blank=True, default="", max_length=255)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-            ],
-            options={
-                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
@@ -124,11 +92,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="activity",
-            name="donation_enabled",
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name="activity",
             name="host_kind",
             field=models.CharField(
                 choices=[("person", "Person"), ("church", "Church")],
@@ -140,11 +103,6 @@ class Migration(migrations.Migration):
             model_name="activity",
             name="list_on_church_calendar",
             field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name="activity",
-            name="suggested_donation",
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
         ),
         migrations.AddField(
             model_name="activityparticipant",
@@ -190,24 +148,6 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="household_dependents",
-                to=settings.AUTH_USER_MODEL,
-            ),
-        ),
-        migrations.AddField(
-            model_name="gift",
-            name="activity",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="gifts",
-                to="activities.activity",
-            ),
-        ),
-        migrations.AddField(
-            model_name="gift",
-            name="giver",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="gifts",
                 to=settings.AUTH_USER_MODEL,
             ),
         ),

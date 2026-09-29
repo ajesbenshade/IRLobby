@@ -429,14 +429,7 @@ class StripeWebhookView(APIView):
 
         event_type = event["type"]
         if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
-            session_object = event["data"]["object"]
-            metadata = session_object.get("metadata", {}) or {}
-            if metadata.get("kind") == "gift" or metadata.get("gift_id"):
-                from .foyer_views import mark_gift_paid
-
-                mark_gift_paid(session_object)
-            else:
-                _fulfill_paid_checkout_session(session_object)
+            _fulfill_paid_checkout_session(event["data"]["object"])
 
         elif event_type in {
             "account.updated",

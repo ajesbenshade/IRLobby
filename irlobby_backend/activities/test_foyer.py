@@ -4,13 +4,13 @@ from datetime import date, datetime, timedelta
 from datetime import timezone as datetime_timezone
 from decimal import Decimal
 from io import BytesIO
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
@@ -29,7 +29,6 @@ from activities.models import (
 from activities.public_calendar import ICS_PRODID, PUBLIC_EVENT_FIELDS
 from irlobby_backend.asgi import application
 from users.models import User
-from users.stripe_connect import create_direct_checkout_session
 
 NY = ZoneInfo("America/New_York")
 
@@ -265,25 +264,15 @@ class FoyerAccountAndRsvpTests(APITestCase):
         self.assertIn("18", response.data["parent"])
 
 
-@override_settings(STRIPE_PLATFORM_FEE_PERCENT=15, STRIPE_API_KEY="sk_test_123")
-class FoyerGivingTests(APITestCase):
+@override_settings(STRIPE_PLATFORM_FEE_PERCENT=15)
+class FoyerFeeTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
-            username="giver-host",
-            email="giver-host@example.com",
+            username="fee-host",
+            email="fee-host@example.com",
             password="password123",
             first_name="Sarah",
             date_of_birth=_safe_birthdate(40),
-            sex="female",
-            stripe_connect_account_id="acct_host",
-            stripe_connect_payouts_enabled=True,
-            stripe_connect_details_submitted=True,
-        )
-        self.guest = User.objects.create_user(
-            username="guest",
-            email="guest@example.com",
-            password="password123",
-            date_of_birth=_safe_birthdate(30),
             sex="female",
         )
 
@@ -310,6 +299,14 @@ class FoyerGivingTests(APITestCase):
         self.assertEqual(activity.platform_fee_percent, Decimal("0"))
         self.assertEqual(response.data["platform_fee_percent"], "0.00")
         self.assertEqual(activity.capacity, 500)
+        for hidden in (
+            "donation_enabled",
+            "suggested_donation",
+            "giving_available",
+            "gift_disclaimer",
+            "fee_note",
+        ):
+            self.assertNotIn(hidden, response.data)
 
         unlimited = self.client.post(
             reverse("activity-list"),
@@ -326,106 +323,6 @@ class FoyerGivingTests(APITestCase):
         )
         self.assertEqual(unlimited.status_code, status.HTTP_201_CREATED)
         self.assertIsNone(Activity.objects.get(id=unlimited.data["id"]).capacity)
-
-    @patch("activities.foyer_views.create_direct_checkout_session")
-    def test_personal_gift_link_discloses_it_is_not_a_church_gift(self, mock_session):
-        mock_session.return_value = {
-            "id": "cs_gift",
-            "url": "https://checkout.stripe.com/c/pay/cs_gift",
-        }
-        activity = _activity(self.host, donation_enabled=True, suggested_donation=Decimal("10.00"))
-        ActivityParticipant.objects.create(
-            activity=activity, user=self.guest, status="confirmed", include_self=True
-        )
-        self.client.force_authenticate(self.guest)
-        response = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "10.00"},
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["url"], "https://checkout.stripe.com/c/pay/cs_gift")
-        self.assertEqual(response.data["platform_fee_percent"], 0)
-        self.assertEqual(response.data["application_fee_amount"], 0)
-        self.assertFalse(response.data["tax_deductible"])
-        self.assertIn("not a tax-deductible gift", response.data["disclaimer"])
-        self.assertIn("Sarah", response.data["disclaimer"])
-        self.assertEqual(mock_session.call_args.kwargs["connected_account_id"], "acct_host")
-        self.assertEqual(mock_session.call_args.kwargs["unit_amount"], 1000)
-
-    def test_church_gift_uses_the_church_account(self):
-        church = Church.objects.create(
-            name="Test Church", is_verified=True, stripe_account_id="acct_church"
-        )
-        activity = _activity(
-            self.host,
-            host_kind="church",
-            host_church=church,
-            donation_enabled=True,
-            calendar_approved=True,
-        )
-        ActivityParticipant.objects.create(
-            activity=activity, user=self.guest, status="confirmed", include_self=True
-        )
-        self.client.force_authenticate(self.guest)
-        with patch("activities.foyer_views.create_direct_checkout_session") as mock_session:
-            mock_session.return_value = {
-                "id": "cs_church",
-                "url": "https://checkout.stripe.com/c/pay/cs_church",
-            }
-            response = self.client.post(
-                reverse("activity-giving-link", args=[activity.id]),
-                {"amount": "20.00"},
-                format="json",
-            )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIsNone(response.data["tax_deductible"])
-        self.assertNotIn("not a tax-deductible", response.data["disclaimer"])
-        self.assertIn("Test Church", response.data["disclaimer"])
-        self.assertEqual(mock_session.call_args.kwargs["connected_account_id"], "acct_church")
-
-    @override_settings(STRIPE_API_KEY="sk_live_blocked", STRIPE_ALLOW_LIVE_MODE=False)
-    def test_giving_keeps_the_live_mode_guard(self):
-        activity = _activity(self.host, donation_enabled=True)
-        ActivityParticipant.objects.create(
-            activity=activity, user=self.guest, status="confirmed", include_self=True
-        )
-        self.client.force_authenticate(self.guest)
-        response = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "5.00"},
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertIn("Live Stripe keys", response.data["detail"])
-
-
-class DirectChargeSessionTests(TestCase):
-    @override_settings(STRIPE_API_KEY="sk_test_123")
-    @patch("users.stripe_connect.get_stripe_client")
-    def test_checkout_is_a_direct_charge_with_zero_application_fee(self, mock_get_client):
-        mock_client = Mock()
-        mock_client.v1.checkout.sessions.create.return_value = {
-            "id": "cs_direct",
-            "url": "https://checkout.stripe.com/c/pay/cs_direct",
-        }
-        mock_get_client.return_value = mock_client
-
-        create_direct_checkout_session(
-            connected_account_id="acct_recipient",
-            unit_amount=500,
-            currency="usd",
-            product_name="Gift",
-            description="Meal",
-            success_url="https://api.irlobby.com/tickets/success",
-            cancel_url="https://api.irlobby.com/tickets/cancel",
-            metadata={"kind": "gift", "gift_id": "1"},
-        )
-
-        params, options = mock_client.v1.checkout.sessions.create.call_args.args
-        self.assertEqual(options, {"stripe_account": "acct_recipient"})
-        self.assertEqual(params["payment_intent_data"]["application_fee_amount"], 0)
-        self.assertNotIn("transfer_data", params["payment_intent_data"])
 
 
 class FoyerChatAccessTests(APITestCase):
@@ -608,7 +505,7 @@ class FoyerChurchAndPhotoTests(APITestCase):
         found = self.client.get(reverse("church-list"), {"q": "blooming"})
         self.assertEqual(found.status_code, status.HTTP_200_OK)
         self.assertEqual(found.data[0]["name"], "Blooming Glen Mennonite Church")
-        self.assertNotIn("stripe_account_id", found.data[0])
+        self.assertEqual(set(found.data[0]), {"id", "name", "is_verified"})
 
         created = self.client.post(reverse("church-list"), {"name": "Typed Chapel"}, format="json")
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
@@ -670,7 +567,6 @@ class FoyerChurchAndPhotoTests(APITestCase):
                 "time": (timezone.now() + timedelta(days=5)).isoformat(),
                 "host_kind": "church",
                 "list_on_church_calendar": True,
-                "donation_enabled": True,
             },
             format="json",
         )

@@ -1,13 +1,11 @@
 """Edge paths for Foyer gatherings so error handling stays covered."""
 
 from datetime import date, datetime, timedelta
-from decimal import Decimal
 from io import BytesIO
 from types import SimpleNamespace
-from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
@@ -24,7 +22,6 @@ from activities.eligibility import (
     host_display_name,
     ny_today,
 )
-from activities.giving import giving_recipient_account_id
 from activities.household_rules import (
     account_age_error,
     dependent_blocks_minor_account,
@@ -37,7 +34,6 @@ from activities.models import (
     ActivityParticipant,
     Church,
     EventPhoto,
-    Gift,
     HouseholdDependent,
 )
 from activities.photos import (
@@ -49,7 +45,6 @@ from activities.photos import (
 from activities.public_calendar import _fold, _ics_escape, _ics_stamp, public_calendar_ics
 from chat.consumers import _query_activity_id
 from users.models import User
-from users.stripe_connect import StripeConnectError
 
 from .test_foyer import _activity, _jpeg_upload, _safe_birthdate
 
@@ -216,23 +211,8 @@ class FoyerRuleUnitTests(TestCase):
         self.assertIn("\r\n ", folded)
         self.assertIn("\\;", _ics_escape("a;b,c\\d\n"))
 
-    def test_giving_recipient_and_access_helpers(self):
-        host = SimpleNamespace(
-            stripe_connect_account_id="acct_host",
-            stripe_connect_payouts_enabled=False,
-            stripe_connect_details_submitted=False,
-            is_authenticated=True,
-        )
-        personal = SimpleNamespace(
-            donation_enabled=True, host_kind="person", host=host, host_church=None
-        )
-        self.assertEqual(giving_recipient_account_id(personal), "")
-        personal.donation_enabled = False
-        self.assertEqual(giving_recipient_account_id(personal), "")
-        church_event = SimpleNamespace(
-            donation_enabled=True, host_kind="church", host=host, host_church=None
-        )
-        self.assertEqual(giving_recipient_account_id(church_event), "")
+    def test_access_helpers_reject_anonymous_users(self):
+        personal = SimpleNamespace(host_kind="person", host_id=1)
         self.assertFalse(is_church_admin(None))
         self.assertFalse(is_activity_host(SimpleNamespace(is_authenticated=False), personal))
         self.assertIsNone(_query_activity_id({"query_string": "activityId="}))
@@ -521,20 +501,6 @@ class FoyerEndpointEdgeTests(APITestCase):
             format="json",
         )
         self.assertEqual(too_old_max.status_code, status.HTTP_400_BAD_REQUEST)
-        negative = self.client.post(
-            reverse("activity-list"),
-            {
-                "title": "Negative gift",
-                "description": "Nope.",
-                "location": "Hall",
-                "latitude": 40.3,
-                "longitude": -75.3,
-                "time": (timezone.now() + timedelta(days=3)).isoformat(),
-                "suggested_donation": "-1.00",
-            },
-            format="json",
-        )
-        self.assertEqual(negative.status_code, status.HTTP_400_BAD_REQUEST)
 
         created = self.client.post(
             reverse("activity-list"),
@@ -656,179 +622,6 @@ class FoyerEndpointEdgeTests(APITestCase):
         activity.save(update_fields=["images"])
         stored = Activity.objects.get(pk=activity.pk)
         self.assertEqual(stored.platform_fee_percent, 0)
-
-    def test_giving_link_errors_and_paid_webhook(self):
-        activity = _activity(
-            self.host,
-            donation_enabled=False,
-            host_kind="person",
-        )
-        self.client.force_authenticate(self.parent)
-        closed = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "10.00"},
-            format="json",
-        )
-        self.assertEqual(closed.status_code, status.HTTP_400_BAD_REQUEST)
-
-        activity.donation_enabled = True
-        activity.save(update_fields=["donation_enabled"])
-        no_rsvp = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "10.00"},
-            format="json",
-        )
-        self.assertEqual(no_rsvp.status_code, status.HTTP_400_BAD_REQUEST)
-        ActivityParticipant.objects.create(
-            activity=activity, user=self.parent, status="confirmed", include_self=True
-        )
-        bad_amount = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "lots"},
-            format="json",
-        )
-        self.assertEqual(bad_amount.status_code, status.HTTP_400_BAD_REQUEST)
-        small = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "0.50"},
-            format="json",
-        )
-        self.assertEqual(small.status_code, status.HTTP_400_BAD_REQUEST)
-        huge = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "10000.01"},
-            format="json",
-        )
-        self.assertEqual(huge.status_code, status.HTTP_400_BAD_REQUEST)
-        no_account = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "12.00"},
-            format="json",
-        )
-        self.assertEqual(no_account.status_code, status.HTTP_400_BAD_REQUEST)
-
-        self.host.stripe_connect_account_id = "acct_host"
-        self.host.stripe_connect_payouts_enabled = True
-        self.host.stripe_connect_details_submitted = True
-        self.host.save()
-        bad_url = self.client.post(
-            reverse("activity-giving-link", args=[activity.id]),
-            {"amount": "12.00", "success_url": "https://evil.example/pay"},
-            format="json",
-        )
-        self.assertEqual(bad_url.status_code, status.HTTP_400_BAD_REQUEST)
-
-        with patch(
-            "activities.foyer_views.create_direct_checkout_session",
-            side_effect=StripeConnectError("live blocked"),
-        ):
-            blocked = self.client.post(
-                reverse("activity-giving-link", args=[activity.id]),
-                {"amount": "12.00"},
-                format="json",
-            )
-        self.assertEqual(blocked.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(Gift.objects.get(giver=self.parent).status, "cancelled")
-
-        with patch(
-            "activities.foyer_views.create_direct_checkout_session",
-            side_effect=RuntimeError("stripe down"),
-        ):
-            down = self.client.post(
-                reverse("activity-giving-link", args=[activity.id]),
-                {"amount": "12.00"},
-                format="json",
-            )
-        self.assertEqual(down.status_code, status.HTTP_502_BAD_GATEWAY)
-
-        session = SimpleNamespace(id="cs_obj", url="https://checkout.stripe.com/c/pay/cs_obj")
-        with patch("activities.foyer_views.create_direct_checkout_session", return_value=session):
-            opened = self.client.post(
-                reverse("activity-giving-link", args=[activity.id]),
-                {"amount": "12.50", "successUrl": None, "cancelUrl": None},
-                format="json",
-            )
-        self.assertEqual(opened.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(opened.data["session_id"], "cs_obj")
-        self.assertEqual(opened.data["platform_fee_percent"], 0)
-        self.assertIn("not a tax-deductible", opened.data["disclaimer"])
-
-        church = Church.objects.get(name=FRANCONIA_CHURCH_NAME)
-        church_event = _activity(
-            self.host,
-            host_kind="church",
-            host_church=church,
-            donation_enabled=True,
-            calendar_approved=True,
-            list_on_church_calendar=True,
-        )
-        ActivityParticipant.objects.create(
-            activity=church_event,
-            user=self.parent,
-            status="confirmed",
-            include_self=False,
-        )
-        child = HouseholdDependent.objects.create(
-            parent=self.parent, name="Sam", date_of_birth=_safe_birthdate(6), sex="male"
-        )
-        participant = ActivityParticipant.objects.get(activity=church_event, user=self.parent)
-        participant.dependents.add(child)
-        self.assertTrue(user_has_going_rsvp(self.parent, church_event))
-        no_church_account = self.client.post(
-            reverse("activity-giving-link", args=[church_event.id]),
-            {"amount": "5.00"},
-            format="json",
-        )
-        self.assertEqual(no_church_account.status_code, status.HTTP_400_BAD_REQUEST)
-
-        gift = Gift.objects.create(
-            giver=self.parent,
-            activity=activity,
-            amount=Decimal("12.50"),
-            stripe_session_id="cs_obj",
-        )
-        from activities.foyer_views import mark_gift_paid
-
-        self.assertTrue(mark_gift_paid({"id": "cs_obj", "metadata": {}}))
-        gift.refresh_from_db()
-        self.assertEqual(gift.status, "paid")
-        self.assertTrue(mark_gift_paid({"id": "cs_obj", "metadata": {"kind": "gift"}}))
-        other = Gift.objects.create(
-            giver=self.parent, activity=activity, amount=Decimal("3.00"), stripe_session_id=""
-        )
-        self.assertTrue(mark_gift_paid({"id": "missing", "metadata": [("gift_id", str(other.id))]}))
-        other.refresh_from_db()
-        self.assertEqual(other.status, "paid")
-        self.assertFalse(mark_gift_paid({"id": "none", "metadata": {}}))
-
-    @override_settings(STRIPE_WEBHOOK_SECRET="whsec_test", STRIPE_API_KEY="sk_test_123")
-    @patch("activities.views.stripe.Webhook.construct_event")
-    def test_webhook_marks_a_gift_paid(self, mock_construct_event):
-        activity = _activity(self.host, donation_enabled=True)
-        gift = Gift.objects.create(
-            giver=self.parent,
-            activity=activity,
-            amount=Decimal("8.00"),
-            stripe_session_id="cs_gift",
-        )
-        mock_construct_event.return_value = {
-            "type": "checkout.session.async_payment_succeeded",
-            "data": {
-                "object": {
-                    "id": "cs_gift",
-                    "metadata": {"kind": "gift", "gift_id": str(gift.id)},
-                }
-            },
-        }
-        response = self.client.post(
-            reverse("stripe-webhook"),
-            data={},
-            format="json",
-            HTTP_STRIPE_SIGNATURE="sig",
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        gift.refresh_from_db()
-        self.assertEqual(gift.status, "paid")
 
     def test_public_ics_includes_end_photo_and_escaped_text(self):
         activity = _activity(

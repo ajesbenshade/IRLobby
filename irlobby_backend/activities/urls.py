@@ -27,7 +27,6 @@ urlpatterns = [
         foyer_views.delete_event_photo,
         name="activity-photo-delete",
     ),
-    path("<int:pk>/giving-link/", foyer_views.giving_link, name="activity-giving-link"),
     path("<int:pk>/leave/", views.leave_activity, name="leave-activity"),
     path(
         "<int:pk>/participants/<int:user_id>/",

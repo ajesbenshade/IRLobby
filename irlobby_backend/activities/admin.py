@@ -5,7 +5,6 @@ from .models import (
     ActivityParticipant,
     Church,
     EventPhoto,
-    Gift,
     HouseholdDependent,
     Ticket,
     TicketRedemptionLog,
@@ -40,8 +39,8 @@ class ActivityAdmin(admin.ModelAdmin):
 
 @admin.register(Church)
 class ChurchAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_verified", "stripe_account_id", "created_at")
-    search_fields = ("name", "stripe_account_id")
+    list_display = ("name", "is_verified", "created_at")
+    search_fields = ("name",)
     list_filter = ("is_verified",)
     raw_id_fields = ("created_by",)
 
@@ -57,13 +56,6 @@ class HouseholdDependentAdmin(admin.ModelAdmin):
 class EventPhotoAdmin(admin.ModelAdmin):
     list_display = ("id", "activity", "created_at")
     raw_id_fields = ("activity",)
-
-
-@admin.register(Gift)
-class GiftAdmin(admin.ModelAdmin):
-    list_display = ("id", "giver", "activity", "amount", "status", "created_at")
-    list_filter = ("status",)
-    raw_id_fields = ("giver", "activity")
 
 
 @admin.register(ActivityParticipant)

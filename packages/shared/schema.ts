@@ -92,8 +92,9 @@ export const ActivitySchema = z
     dateTime: z.string().optional(),
     end_time: nullableString.optional(),
     endDateTime: nullableString.optional(),
-    capacity: z.number().optional(),
-    maxParticipants: z.number().optional(),
+    // The API represents unlimited gathering capacity as null.
+    capacity: optionalNumber,
+    maxParticipants: optionalNumber,
     visibility: z.array(z.string()).optional(),
     is_private: z.boolean().optional(),
     isPrivate: z.boolean().optional(),
@@ -127,7 +128,7 @@ export const ActivitySchema = z
     images: z.array(z.string()).optional(),
     created_at: z.string().optional(),
     participant_count: z.number().optional(),
-    max_participants: z.number().optional(),
+    max_participants: optionalNumber,
   })
   .passthrough();
 

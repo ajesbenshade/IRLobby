@@ -11,7 +11,7 @@ const shouldLogConfig =
   (import.meta.env.PROD && resolvedConfig.diagnostics.usingRelativeApiBaseUrl);
 
 if (shouldLogConfig) {
-  console.info('IRLobby web config', resolvedConfig.diagnostics);
+  console.info('The Foyer web config', resolvedConfig.diagnostics);
 }
 
 export const config = {

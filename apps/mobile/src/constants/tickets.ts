@@ -3,7 +3,7 @@ export const PLATFORM_FEE_PERCENT = 10;
 export const PROTOTYPE_FOOTER_HOST = 'Stripe Connect Prototype — no charge';
 
 export const PROTOTYPE_FOOTER_BUYER =
-  'Host payout via Stripe Connect · 10% IRLobby commission · Not an App Store IAP.';
+  'Host payout via Stripe Connect · 10% The Foyer commission · Not an App Store IAP.';
 
 /** HTTPS bounce pages Stripe Account Links accept. Avoid sending bare irlobby://. */
 export const STRIPE_CONNECT_HTTPS_RETURN_URL = 'https://api.irlobby.com/stripe/connect/return';
@@ -14,7 +14,7 @@ export const GET_PAID_COPY = {
   rowSubtitle: 'Connect Stripe to receive ticket payouts',
   screenTitle: 'Get paid',
   screenSubtitle: 'For event hosts only — ticket buyers never connect Stripe.',
-  feeCopy: `Connect Stripe Express to receive ticket payouts. IRLobby takes ${PLATFORM_FEE_PERCENT}% + Stripe fees.`,
+  feeCopy: `Connect Stripe Express to receive ticket payouts. The Foyer takes ${PLATFORM_FEE_PERCENT}% + Stripe fees.`,
   continueCta: 'Continue to Stripe',
   notNowCta: 'Not now',
   doneCta: 'Done',
@@ -25,7 +25,7 @@ export const GET_PAID_COPY = {
   pendingBody: 'Stripe still needs a few details before you can receive ticket payouts.',
   readyTitle: 'Connected',
   readyBody: `Your payout account is connected. Ticketed events send ${100 - PLATFORM_FEE_PERCENT}% to you.`,
-  leaveAppHelper: 'Opens Stripe in your browser — you’ll leave IRLobby briefly, then return here.',
+  leaveAppHelper: 'Opens Stripe in your browser — you’ll leave The Foyer briefly, then return here.',
 } as const;
 
 export const STRIPE_CONNECT_CHIP = {
@@ -60,7 +60,7 @@ export function formatUsd(amount: number): string {
 }
 
 export function hostFeePreviewCopy(price: number): string {
-  return `IRLobby takes ${PLATFORM_FEE_PERCENT}% + Stripe fees — you get ~${formatUsd(hostPayoutPerTicket(price))}/ticket`;
+  return `The Foyer takes ${PLATFORM_FEE_PERCENT}% + Stripe fees — you get ~${formatUsd(hostPayoutPerTicket(price))}/ticket`;
 }
 
 export function makeTicketId(seed?: string): string {

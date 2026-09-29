@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
-import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
+import { FoyerHeader } from '@components/FoyerHeader';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { FlatList, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
@@ -454,11 +454,11 @@ export const ChatScreen = () => {
         <RefreshControl refreshing={conversationsRefetching} onRefresh={() => void refetchConversations()} />
       }
     >
+      <FoyerHeader />
       <PageHeader
-        eyebrow="Chat"
+        eyebrow="Gatherings"
         title="Your conversations"
         subtitle="New matches and active chats live here."
-        rightContent={<IrlobbyWordmark size="sm" />}
       />
 
       <PanelCard style={styles.summaryCard} tone="warm">

@@ -1,87 +1,90 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Soft light theme — Electric Midnight hierarchy */
-  --background: 250 33% 97%; /* #F7F6FB */
-  --foreground: 248 30% 14%; /* #1A1730 */
-  --muted: 250 30% 95%; /* #F0EEF7 */
-  --muted-foreground: 248 14% 41%; /* #5C5878 */
+  /* The Foyer — burgundy on cream */
+  --background: 23 31% 95%; /* #f6f1ee cream */
+  --foreground: 0 0% 13%; /* #222222 ink */
+  --muted: 339 58% 94%; /* #f9e8ee burgundy tint */
+  --muted-foreground: 20 4% 42%; /* #6e6a68 */
   --popover: 0 0% 100%;
-  --popover-foreground: 248 30% 14%;
-  --card: 0 0% 100%;
-  --card-foreground: 248 30% 14%;
-  --border: 250 28% 91%; /* #E4E0F0 */
-  --input: 250 28% 91%;
-  --primary: 248 100% 65%; /* #5B4BFF */
+  --popover-foreground: 0 0% 13%;
+  --card: 0 0% 100%; /* paper */
+  --card-foreground: 0 0% 13%;
+  --border: 24 18% 86%; /* #e1dbd7 */
+  --input: 24 18% 86%;
+  --primary: 337 96% 32%; /* #a2033f burgundy */
   --primary-foreground: 0 0% 100%;
-  --primary-deep: 295 81% 47%; /* #C026D3 fuchsia */
+  --primary-deep: 337 97% 25%; /* #7c0230 */
   --primary-deep-foreground: 0 0% 100%;
-  --secondary: 188 100% 56%; /* #1EE8FF cyan — matches shared secondary */
-  --secondary-foreground: 248 30% 14%;
-  --accent: 45 75% 68%; /* #E8C872 gold — matches shared accent */
-  --accent-foreground: 248 30% 14%;
+  --secondary: 339 58% 94%;
+  --secondary-foreground: 337 96% 32%;
+  --accent: 339 58% 94%;
+  --accent-foreground: 337 96% 32%;
   --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 100%;
-  --ring: 248 100% 65%;
-  --chart-1: 248 100% 65%;
-  --chart-2: 295 81% 47%;
-  --chart-3: 188 100% 56%;
-  --chart-4: 45 75% 68%;
-  --chart-5: 38 92% 50%;
+  --ring: 337 96% 32%;
+  --warn-bg: 36 90% 95%; /* #fdf3e6 */
+  --warn-text: 35 87% 29%; /* #8a540a */
+  --chart-1: 337 96% 32%;
+  --chart-2: 337 97% 25%;
+  --chart-3: 339 40% 70%;
+  --chart-4: 35 87% 29%;
+  --chart-5: 20 4% 42%;
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 248 30% 14%;
-  --sidebar-primary: 248 100% 65%;
+  --sidebar-foreground: 0 0% 13%;
+  --sidebar-primary: 337 96% 32%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 248 40% 96%;
-  --sidebar-accent-foreground: 248 100% 40%;
-  --sidebar-border: 250 28% 91%;
-  --sidebar-ring: 248 100% 65%;
-  --radius: 1rem; /* 16px — calmer, more modern cards */
+  --sidebar-accent: 339 58% 94%;
+  --sidebar-accent-foreground: 337 96% 32%;
+  --sidebar-border: 24 18% 86%;
+  --sidebar-ring: 337 96% 32%;
+  --radius: 1.375rem; /* 22px cards */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
 
 .dark {
-  /* Electric Midnight — flagship dark canvas */
-  --background: 245 25% 6%; /* #0A0814 */
-  --foreground: 245 25% 97%; /* #F4F3FA */
-  --muted: 245 20% 12%;
-  --muted-foreground: 245 15% 68%; /* #A5A1C2 */
-  --popover: 245 22% 9%;
-  --popover-foreground: 245 25% 97%;
-  --card: 245 22% 9%; /* #110D24 */
-  --card-foreground: 245 25% 97%;
-  --border: 245 18% 18%; /* #2A2548 */
-  --input: 245 18% 18%;
-  --primary: 248 100% 65%; /* #5B4BFF */
+  --background: 340 20% 8%;
+  --foreground: 23 31% 95%;
+  --muted: 340 16% 14%;
+  --muted-foreground: 20 6% 70%;
+  --popover: 340 18% 10%;
+  --popover-foreground: 23 31% 95%;
+  --card: 340 18% 10%;
+  --card-foreground: 23 31% 95%;
+  --border: 340 12% 22%;
+  --input: 340 12% 22%;
+  --primary: 337 96% 42%;
   --primary-foreground: 0 0% 100%;
-  --primary-deep: 295 81% 47%; /* #C026D3 */
-  --primary-deep-foreground: 0 0% 100%;
-  --secondary: 188 100% 56%; /* #1EE8FF */
-  --secondary-foreground: 245 25% 6%;
-  --accent: 45 75% 68%; /* #E8C872 */
-  --accent-foreground: 245 25% 6%;
+  --primary-deep: 337 70% 72%;
+  --primary-deep-foreground: 340 20% 8%;
+  --secondary: 339 30% 18%;
+  --secondary-foreground: 23 31% 95%;
+  --accent: 339 30% 18%;
+  --accent-foreground: 23 31% 95%;
   --destructive: 350 89% 60%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 248 100% 65%;
-  --chart-1: 248 100% 65%;
-  --chart-2: 295 81% 47%;
-  --chart-3: 188 100% 56%;
-  --chart-4: 45 75% 68%;
-  --chart-5: 38 92% 50%;
-  --sidebar-background: 245 22% 7%;
-  --sidebar-foreground: 245 25% 97%;
-  --sidebar-primary: 248 100% 65%;
+  --ring: 337 96% 42%;
+  --warn-bg: 36 40% 16%;
+  --warn-text: 36 80% 70%;
+  --chart-1: 337 96% 42%;
+  --chart-2: 337 70% 72%;
+  --chart-3: 339 40% 60%;
+  --chart-4: 35 70% 60%;
+  --chart-5: 20 6% 70%;
+  --sidebar-background: 340 18% 8%;
+  --sidebar-foreground: 23 31% 95%;
+  --sidebar-primary: 337 96% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 245 18% 12%;
-  --sidebar-accent-foreground: 245 25% 97%;
-  --sidebar-border: 245 18% 14%;
-  --sidebar-ring: 248 100% 65%;
-  --radius: 1rem;
+  --sidebar-accent: 340 16% 14%;
+  --sidebar-accent-foreground: 23 31% 95%;
+  --sidebar-border: 340 12% 18%;
+  --sidebar-ring: 337 96% 42%;
+  --radius: 1.375rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
 }
@@ -92,7 +95,7 @@
   }
 
   body {
-    font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
       Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
       'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     -webkit-font-smoothing: antialiased;
@@ -192,28 +195,25 @@ html {
 }
 
 .public-site-bg {
-  /* Electric Midnight dark premium */
-  background: radial-gradient(circle at 12% 18%, rgba(91, 75, 255, 0.22), transparent 32%),
-    radial-gradient(circle at 78% 12%, rgba(192, 38, 211, 0.18), transparent 26%),
-    radial-gradient(circle at 78% 86%, rgba(30, 232, 255, 0.12), transparent 30%),
-    linear-gradient(180deg, #0a0814 0%, #110d24 55%, #0a0814 100%);
+  background: radial-gradient(circle at 12% 18%, rgba(162, 3, 63, 0.16), transparent 32%),
+    radial-gradient(circle at 78% 12%, rgba(249, 232, 238, 0.9), transparent 28%),
+    linear-gradient(180deg, #f6f1ee 0%, #fff 55%, #f6f1ee 100%);
+  color: #222222;
 }
 
 .public-page-bg {
-  background: radial-gradient(circle at 50% 0%, rgba(91, 75, 255, 0.18), transparent 32%),
-    radial-gradient(circle at 95% 20%, rgba(192, 38, 211, 0.12), transparent 24%), #0a0814;
+  background: radial-gradient(circle at 50% 0%, rgba(162, 3, 63, 0.12), transparent 32%), #f6f1ee;
+  color: #222222;
 }
 
 .public-glass {
-  background: rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(22px);
-  backdrop-filter: blur(22px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e1dbd7;
+  border-radius: 22px;
 }
 
 .public-text-gradient {
-  background: linear-gradient(135deg, #5b4bff 0%, #c026d3 52%, #1ee8ff 100%);
+  background: linear-gradient(135deg, #a2033f 0%, #7c0230 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -228,12 +228,11 @@ html {
   transform: translateY(-4px);
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 18px 50px rgba(91, 75, 255, 0.16);
+  box-shadow: 0 18px 50px rgba(162, 3, 63, 0.12);
 }
 
 .public-phone-shadow {
-  box-shadow: 0 38px 120px rgba(91, 75, 255, 0.2), 0 20px 70px rgba(192, 38, 211, 0.14),
-    0 16px 60px rgba(30, 232, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 38px 120px rgba(162, 3, 63, 0.16), inset 0 0 0 1px rgba(225, 219, 215, 0.8);
 }
 
 @media (prefers-reduced-motion: reduce) {

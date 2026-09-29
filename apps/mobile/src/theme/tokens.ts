@@ -6,84 +6,92 @@ import {
   brandLineHeight,
   brandMotion,
   brandPalette,
-  brandRadii,
   brandSpacing,
-  brandTypography,
 } from '@shared/design-tokens';
 
 /**
- * IRLobby mobile design tokens.
- * Tagline: "Get out. Get together."
- *
- * Coral + white sheets — locked to Design frames A–D.
- * Shared Electric Midnight tokens stay the web source of truth.
+ * The Foyer mobile design tokens.
+ * Franconia Mennonite Church — burgundy on cream.
  */
 
-const coral = {
-  primary: '#FF6B4A',
-  primaryDeep: '#E25438',
-  primarySoft: '#FFE3DA',
-  primaryGlow: '#FF8B70',
+const foyer = {
+  burgundy: '#a2033f',
+  burgundyDeep: '#7c0230',
+  burgundyGlow: '#c43a66',
+  burgundyTint: '#f9e8ee',
+  ink: '#222222',
+  paper: '#ffffff',
+  cream: '#f6f1ee',
+  textSecondary: '#6e6a68',
+  textMuted: '#a09b98',
+  border: '#e1dbd7',
+  warnBg: '#fdf3e6',
+  warnText: '#8a540a',
 } as const;
 
 export const palette = {
-  primary: coral.primary,
-  primaryDeep: coral.primaryDeep,
-  primarySoft: coral.primarySoft,
-  primaryGlow: coral.primaryGlow,
+  primary: foyer.burgundy,
+  primaryDeep: foyer.burgundyDeep,
+  primarySoft: foyer.burgundyTint,
+  primaryGlow: foyer.burgundyGlow,
 
-  secondary: coral.primaryDeep,
-  secondaryDeep: '#C6452C',
-  secondarySoft: '#FFD2C6',
+  secondary: foyer.burgundyDeep,
+  secondaryDeep: '#5c0124',
+  secondarySoft: foyer.burgundyTint,
 
-  accent: coral.primary,
-  accentDeep: coral.primaryDeep,
-  accentSoft: coral.primarySoft,
+  accent: foyer.burgundy,
+  accentDeep: foyer.burgundyDeep,
+  accentSoft: foyer.burgundyTint,
 
   success: brandPalette.success,
-  warning: brandPalette.warning,
+  warning: foyer.warnText,
+  warnBg: foyer.warnBg,
+  warnText: foyer.warnText,
   danger: brandPalette.danger,
 
-  ink: brandPalette.lightInk,
-  mutedInk: brandPalette.lightMutedInk,
-  softInk: brandPalette.lightSoftInk,
-  line: '#EDE4E0',
-  lineStrong: '#D9CDC7',
-  surface: brandPalette.white,
-  surfaceMuted: '#FFF0EA',
-  background: '#FFF6F2',
-  overlay: 'rgba(28, 21, 32, 0.48)',
+  ink: foyer.ink,
+  mutedInk: foyer.textSecondary,
+  softInk: foyer.textMuted,
+  line: foyer.border,
+  lineStrong: '#d3ccc7',
+  surface: foyer.paper,
+  surfaceMuted: foyer.burgundyTint,
+  background: foyer.cream,
+  overlay: 'rgba(34, 34, 34, 0.48)',
   glass: 'rgba(255, 255, 255, 0.72)',
-  glassBorder: 'rgba(255, 107, 74, 0.16)',
-  white: brandPalette.white,
+  glassBorder: 'rgba(162, 3, 63, 0.16)',
+  white: foyer.paper,
   black: brandPalette.black,
 
-  darkBackground: '#1A1412',
-  darkSurface: '#2A2320',
-  darkSurfaceMuted: '#3A312D',
-  darkLine: '#4A403B',
-  darkInk: '#FFF6F2',
-  darkMutedInk: '#C4B6B0',
-  darkSoftInk: '#8E827C',
+  darkBackground: '#1a1214',
+  darkSurface: '#2a1c20',
+  darkSurfaceMuted: '#3a282c',
+  darkLine: '#4a383c',
+  darkInk: foyer.cream,
+  darkMutedInk: '#c4b6b0',
+  darkSoftInk: '#8e827c',
 
-  lightBackground: '#FFF6F2',
-  lightSurface: brandPalette.white,
-  lightSurfaceMuted: '#FFF0EA',
-  lightInk: brandPalette.lightInk,
-  lightMutedInk: brandPalette.lightMutedInk,
-  lightSoftInk: brandPalette.lightSoftInk,
-  lightLine: '#EDE4E0',
-  lightLineStrong: '#D9CDC7',
-  lightOverlay: 'rgba(28, 21, 32, 0.48)',
+  lightBackground: foyer.cream,
+  lightSurface: foyer.paper,
+  lightSurfaceMuted: foyer.burgundyTint,
+  lightInk: foyer.ink,
+  lightMutedInk: foyer.textSecondary,
+  lightSoftInk: foyer.textMuted,
+  lightLine: foyer.border,
+  lightLineStrong: '#d3ccc7',
+  lightOverlay: 'rgba(34, 34, 34, 0.48)',
 } as const;
 
 export const radii = {
-  xs: brandRadii.xs,
-  sm: brandRadii.sm,
-  md: brandRadii.md,
-  lg: brandRadii.lg,
-  xl: brandRadii.xl,
-  pill: brandRadii.pill,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 22,
+  xl: 22,
+  card: 22,
+  list: 16,
+  input: 12,
+  pill: 999,
 } as const;
 
 export const spacing = {
@@ -98,12 +106,13 @@ export const spacing = {
 } as const;
 
 export const typography = {
-  bodyRegular: brandTypography.bodyRegular,
-  bodyMedium: brandTypography.bodyMedium,
-  bodySemibold: brandTypography.bodySemibold,
-  heading: brandTypography.heading,
-  headingDisplay: brandTypography.headingDisplay,
-  display: brandTypography.display,
+  bodyRegular: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemibold: 'Inter_600SemiBold',
+  bodyBold: 'Inter_700Bold',
+  heading: 'LibreBaskerville_700Bold',
+  headingDisplay: 'LibreBaskerville_700Bold',
+  display: 'LibreBaskerville_700Bold',
 } as const;
 
 export const fontSize = {
@@ -114,6 +123,9 @@ export const fontSize = {
   xl: brandFontSize.xl,
   xxl: brandFontSize.xxl,
   display: brandFontSize.display,
+  wordmark: 26,
+  screenTitle: 28,
+  cardTitle: 25,
 } as const;
 
 export const lineHeight = {
@@ -131,14 +143,14 @@ export const shadows = {
     elevation: brandElevation.card.elevation,
   },
   float: {
-    shadowColor: coral.primary,
+    shadowColor: foyer.burgundy,
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: brandElevation.float.shadowOffset,
     elevation: brandElevation.float.elevation,
   },
   pop: {
-    shadowColor: coral.primaryDeep,
+    shadowColor: foyer.burgundyDeep,
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: brandElevation.pop.shadowOffset,
@@ -167,12 +179,13 @@ export const motion = {
 } as const;
 
 export const brand = {
-  name: sharedBrand.name,
+  name: 'The Foyer',
+  church: 'Franconia Mennonite Church',
   tagline: sharedBrand.tagline,
 } as const;
 
-/** Login canvas — matches Design dressed frame (Apple + Google + email). */
+/** Login canvas — cream paper with a burgundy wash. */
 export const loginGradients = {
-  dressed: ['#FFF8F4', '#FFE4DA', '#FFD4C6'] as const,
-  twitterProgress: ['#FF8B70', '#FF6B4A', '#E25438'] as const,
+  dressed: ['#ffffff', '#f6f1ee', '#f9e8ee'] as const,
+  twitterProgress: ['#c43a66', '#a2033f', '#7c0230'] as const,
 } as const;

@@ -53,7 +53,7 @@ export default function HelpSupport() {
         </Button>
         <div>
           <h1 className="text-xl font-bold text-gray-800">Help & Support</h1>
-          <p className="text-sm text-gray-500">Get assistance with your IRlobby experience</p>
+          <p className="text-sm text-gray-500">Get assistance with The Foyer</p>
         </div>
       </header>
 
@@ -105,9 +105,9 @@ export default function HelpSupport() {
                 How do I create an activity?
               </h3>
               <p className="text-sm text-gray-600">
-                To create an activity, go to the &ldquo;Create&rdquo; tab in the bottom navigation.
-                Fill out the activity details including title, description, date, time, location,
-                and capacity. Once complete, click &ldquo;Create Activity&rdquo; to publish it.
+                To host a gathering, go to the Host tab in the bottom navigation.
+                Fill out the details including title, description, date, time, location,
+                and capacity. Once complete, tap Publish.
               </p>
             </div>
 
@@ -117,9 +117,9 @@ export default function HelpSupport() {
                 How do I join an activity?
               </h3>
               <p className="text-sm text-gray-600">
-                Browse activities in the &ldquo;Discover&rdquo; tab. When you find an activity
-                you&apos;d like to join, swipe right or tap the green heart button. If it&apos;s an
-                open activity, you&apos;ll be joined immediately. For private activities, the host
+                Browse gatherings in the Discover tab. When you find one
+                you&apos;d like to join, swipe right or tap I&apos;m going. If it&apos;s an
+                open gathering, you&apos;ll be joined immediately. For private gatherings, the host
                 will need to approve your request.
               </p>
             </div>
@@ -130,9 +130,8 @@ export default function HelpSupport() {
                 How do I message other participants?
               </h3>
               <p className="text-sm text-gray-600">
-                Once you&apos;ve joined an activity, you can access the group chat from the
-                &ldquo;Matches&rdquo; tab. Select the activity and tap on the chat icon to open the
-                conversation with all participants.
+                Once you&apos;ve joined a gathering, open Gatherings and choose Chats.
+                Select the gathering to talk with everyone who is coming.
               </p>
             </div>
           </CardContent>
@@ -200,7 +199,7 @@ export default function HelpSupport() {
         <Card>
           <CardHeader>
             <CardTitle>Additional Resources</CardTitle>
-            <CardDescription>Helpful information about using IRlobby</CardDescription>
+            <CardDescription>Helpful information about using The Foyer</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button variant="outline" className="w-full justify-start gap-2">

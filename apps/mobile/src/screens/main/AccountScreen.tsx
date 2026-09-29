@@ -55,7 +55,7 @@ export const AccountScreen = () => {
       <PanelCard tone="dark" style={styles.dangerCard}>
         <SectionIntro
           eyebrow="Permanent deletion"
-          title="Delete your IRLobby account"
+          title="Delete your account on The Foyer"
           subtitle="This permanently deletes your profile, matches, and chat. It is not a deactivate."
         />
         <View style={styles.dangerBox}>

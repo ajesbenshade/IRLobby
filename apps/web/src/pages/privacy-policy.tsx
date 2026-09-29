@@ -5,8 +5,8 @@ export default function PrivacyPolicy() {
   return (
     <PublicSiteLayout activePath="/privacy">
       <PublicMetadata
-        title="IRLobby Privacy Policy"
-        description="How IRLobby collects and uses account, location, chat, and diagnostic data, and how to export or delete your account."
+        title="The Foyer Privacy Policy"
+        description="How The Foyer collects and uses account, location, chat, and diagnostic data, and how to export or delete your account."
         canonicalPath="/privacy"
       />
       <PublicHeroHeader
@@ -16,11 +16,11 @@ export default function PrivacyPolicy() {
       />
 
       <section className="px-6 pb-24">
-        <div className="prose prose-invert prose-headings:font-display prose-headings:text-white prose-p:text-white/75 prose-li:text-white/75 mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-white/95 p-8 text-slate-900 shadow-[0_25px_100px_rgba(0,0,0,0.22)] sm:p-10 prose-h2:text-slate-900 prose-h3:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900">
+        <div className="prose prose-invert prose-headings:font-display prose-headings:text-[#222222] prose-p:text-[#6e6a68] prose-li:text-[#6e6a68] mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-white/95 p-8 text-slate-900 shadow-[0_25px_100px_rgba(0,0,0,0.22)] sm:p-10 prose-h2:text-slate-900 prose-h3:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900">
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">1. Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
-              IRLobby (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) is an activity-first
+              The Foyer (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) is an activity-first
               social matching product. Users create accounts, discover nearby activities, match
               with people who want the same plan, and chat to coordinate. This policy describes how
               we handle information in the iOS app (bundle com.irlobby.app), the website, and the
@@ -59,7 +59,7 @@ export default function PrivacyPolicy() {
               </li>
               <li>Swipes, matches, and reviews (ratings and comments)</li>
               <li>
-                Chat messages between matched users, stored on the IRLobby backend so history works
+                Chat messages between matched users, stored on the The Foyer backend so history works
                 across devices. We do not send message bodies to a third-party chat vendor.
               </li>
               <li>Block and report submissions used for moderation</li>
@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
               </li>
               <li>
                 Stripe identifiers for paid activities only. We do not store full card numbers on
-                IRLobby servers.
+                The Foyer servers.
               </li>
               <li>Crash and performance diagnostics via Sentry when configured</li>
               <li>Expo push tokens when you enable notifications</li>
@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
                 Delete account: Settings → Delete account permanently removes the user record and
                 associated data. This cannot be undone.
               </li>
-              <li>Location: iOS Settings → Privacy → Location Services → IRLobby</li>
+              <li>Location: iOS Settings → Privacy → Location Services → The Foyer</li>
               <li>Notifications: disable in the app settings and/or iOS notification settings</li>
             </ul>
           </section>
@@ -128,7 +128,7 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">6. Children</h2>
             <p className="text-gray-700 leading-relaxed">
-              IRLobby is a social networking product rated 17+ on the App Store. It is not directed
+              The Foyer is a social networking product rated 17+ on the App Store. It is not directed
               at children under 17, and we do not knowingly collect personal information from them.
               If you believe a person under 17 has an account, email us and we will delete it.
             </p>

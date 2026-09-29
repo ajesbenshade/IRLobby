@@ -66,7 +66,7 @@ export default function RightRail() {
       </Card>
 
       <p className="px-1 text-[11px] text-muted-foreground">
-        © {new Date().getFullYear()} IRLobby ·{' '}
+        © {new Date().getFullYear()} The Foyer ·{' '}
         <Link to="/privacy" className="hover:underline">
           Privacy
         </Link>{' '}

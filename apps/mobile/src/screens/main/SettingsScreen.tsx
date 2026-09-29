@@ -213,7 +213,7 @@ export const SettingsScreen = () => {
       const payload = await exportDataMutation.mutateAsync();
       const exportDate = new Date().toISOString().split('T')[0];
       await Share.share({
-        title: 'IRLobby Data Export',
+        title: 'The Foyer Data Export',
         message: JSON.stringify(
           {
             exportDate,
@@ -258,7 +258,7 @@ export const SettingsScreen = () => {
       <PanelCard>
         <SectionIntro
           eyebrow="Account"
-          title="Your IRLobby account"
+          title="Your account on The Foyer"
           subtitle="Open Account to permanently delete your profile. Sign out stays here."
         />
         <DetailRow

@@ -238,7 +238,7 @@ export default memo(function SwipeCard({
             dragOffset.x > 32 ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          Join
+          I'm going
         </div>
 
         {/* Activity Image */}
@@ -250,7 +250,7 @@ export default memo(function SwipeCard({
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
                 <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
               </div>
-              <p className="text-white/80 font-medium">
+              <p className="text-[#6e6a68] font-medium">
                 {safeTags.length > 0 ? safeTags[0] : 'Activity'}
               </p>
             </div>
@@ -366,10 +366,10 @@ export default memo(function SwipeCard({
               }}
               disabled={disabled}
               className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/70 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
-              aria-label={`Join ${safeTitle}`}
+              aria-label={`I'm going to ${safeTitle}`}
             >
               <Heart className="mr-1 h-4 w-4" aria-hidden="true" />
-              Join
+              I'm going
             </Button>
           </div>
         </div>

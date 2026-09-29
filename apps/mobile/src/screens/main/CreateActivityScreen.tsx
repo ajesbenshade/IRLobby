@@ -10,12 +10,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccentPill, PanelCard, SectionIntro } from '@components/AppChrome';
 import { EventPhotoSlots } from '@components/EventPhotoSlots';
-import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
+import { FoyerHeader } from '@components/FoyerHeader';
 import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
 import { MAX_EVENT_PHOTOS } from '@constants/activity';
+import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import {
   formatEventDateLabel,
@@ -160,12 +161,14 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     visibility,
     weatherDependent,
   } = form;
+  const showTickets = isTicketingUiEnabled(config.ticketingEnabled);
+  const ticketedUi = showTickets && isTicketed;
 
   const connectStatusQuery = useQuery({
     queryKey: ['stripe-connect-status'],
     queryFn: fetchStripeConnectStatus,
     staleTime: 30_000,
-    enabled: config.ticketingEnabled,
+    enabled: showTickets,
   });
 
   const activityQuery = useQuery({
@@ -251,7 +254,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
     location.trim().length > 0 &&
     time.trim().length > 0 &&
     Number(capacity) > 0 &&
-    (!isTicketed || (ticketAmount > 0 && Number(maxTickets) > 0));
+    (!ticketedUi || (ticketAmount > 0 && Number(maxTickets) > 0));
 
   const clearTimeError = () => {
     if (timeError) {
@@ -317,7 +320,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
           .map((item) => item.trim())
           .filter(Boolean),
         ...createEventImagePayload(imageUris),
-        ...createEventTicketPayload(isTicketed, ticketPrice, maxTickets),
+        ...createEventTicketPayload(ticketedUi, ticketPrice, maxTickets),
       },
     };
   };
@@ -429,15 +432,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
   return (
     <View style={styles.frameRoot}>
       <SafeAreaView edges={['top']} style={styles.coralHeader}>
-        <View style={styles.headerIcons}>
-          <MaterialCommunityIcons name="white-balance-sunny" size={22} color={appColors.white} />
-          <IrlobbyWordmark color={appColors.white} size="sm" />
-          <View style={styles.sparkRow}>
-            <MaterialCommunityIcons name="star-four-points" size={12} color={appColors.white} />
-            <MaterialCommunityIcons name="star-four-points" size={10} color={appColors.white} />
-            <MaterialCommunityIcons name="star-four-points" size={12} color={appColors.white} />
-          </View>
-        </View>
+        <FoyerHeader tone="onPrimary" />
       </SafeAreaView>
 
       <ScrollView
@@ -506,7 +501,7 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
         />
         {photoError ? <Text style={styles.errorText}>{photoError}</Text> : null}
 
-        {config.ticketingEnabled ? (
+        {showTickets ? (
           <>
             <View style={styles.checkInRow}>
               <View style={styles.switchCopy}>
@@ -592,28 +587,28 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={createEventPrimaryCtaLabel(isTicketed, saveMutation.isPending, isEditing)}
+          accessibilityLabel={createEventPrimaryCtaLabel(ticketedUi, saveMutation.isPending, isEditing)}
           disabled={!canSubmit || saveMutation.isPending || isLocating}
           onPress={publishEvent}
           style={[styles.publishBtn, (!canSubmit || saveMutation.isPending || isLocating) && styles.publishDisabled]}
         >
           <Text style={styles.publishLabel}>
-            {createEventPrimaryCtaLabel(isTicketed, saveMutation.isPending, isEditing)}
+            {createEventPrimaryCtaLabel(ticketedUi, saveMutation.isPending, isEditing)}
           </Text>
           <MaterialCommunityIcons
-            name={isTicketed ? 'ticket-confirmation-outline' : 'check'}
+            name={ticketedUi ? 'ticket-confirmation-outline' : 'check'}
             size={20}
             color={appColors.white}
           />
         </Pressable>
 
-        {isTicketed && !canSellTickets ? (
+        {ticketedUi && !canSellTickets ? (
           <AppButton variant="outline" onPress={() => navigation.navigate('GetPaid')}>
             Set up payouts
           </AppButton>
         ) : null}
 
-        {config.ticketingEnabled ? (
+        {showTickets ? (
           <View style={styles.footerRow}>
             <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primaryDeep} />
             <Text style={styles.footerText}>{PROTOTYPE_FOOTER_HOST}</Text>
@@ -739,8 +734,8 @@ const styles = StyleSheet.create({
   sheet: {
     flex: 1,
     backgroundColor: appColors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: radii.card,
+    borderTopRightRadius: radii.card,
   },
   sheetContent: {
     paddingHorizontal: spacing.lg,
@@ -757,7 +752,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.input,
     borderWidth: 1,
     borderColor: appColors.line,
     backgroundColor: appColors.white,
@@ -785,7 +780,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.input,
     borderWidth: 1,
     borderColor: appColors.line,
     backgroundColor: appColors.white,
@@ -829,7 +824,8 @@ const styles = StyleSheet.create({
   },
   publishBtn: {
     minHeight: 54,
-    borderRadius: 18,
+    borderRadius: radii.pill,
+    paddingHorizontal: 20,
     backgroundColor: appColors.primary,
     flexDirection: 'row',
     alignItems: 'center',

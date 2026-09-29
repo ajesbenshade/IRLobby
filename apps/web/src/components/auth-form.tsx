@@ -518,9 +518,9 @@ const AuthForm = ({
   return (
     <Card className="w-full max-w-md mx-auto border-border/70 bg-card/80 backdrop-blur-xl shadow-float">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Welcome to IRLobby</CardTitle>
+        <CardTitle className="text-2xl text-center">Welcome to The Foyer</CardTitle>
         <CardDescription className="text-center">
-          Your Lobby for IRL Meetups - Connect, Discover, Experience
+          Franconia Mennonite Church
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -732,7 +732,7 @@ const AuthForm = ({
         </div>
       </CardContent>
       <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">
-        <p>IRLobby - Where activities meet people</p>
+        <p>The Foyer — Franconia Mennonite Church</p>
         <div className="flex space-x-4">
           <a href="/privacy" className="hover:underline">
             Privacy Policy

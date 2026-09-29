@@ -289,11 +289,11 @@ export default function CreateActivity() {
 
   return (
     <div
-      className="bg-gray-50 min-h-screen"
+      className="bg-background min-h-screen"
       style={{ paddingBottom: 'calc(var(--bottom-nav-offset) + 2rem)' }}
     >
       <header className="bg-white shadow-sm p-4">
-        <h2 className="text-xl font-bold text-gray-800">Create Activity</h2>
+        <h2 className="font-display text-[28px] font-bold text-[#222222]">Host a gathering</h2>
         <p className="text-sm text-gray-500">Share your passion with others</p>
       </header>
 
@@ -592,7 +592,7 @@ export default function CreateActivity() {
               className="w-full bg-primary text-white py-4 text-lg"
               disabled={createActivityMutation.isPending}
             >
-              {createActivityMutation.isPending ? 'Creating...' : 'Create Activity'}
+              {createActivityMutation.isPending ? 'Publishing...' : 'Publish'}
             </Button>
           </form>
         </Form>

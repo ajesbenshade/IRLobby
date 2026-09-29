@@ -24,6 +24,8 @@ import { SettingsScreen } from '@screens/main/SettingsScreen';
 import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
 import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
 import { WebContentScreen } from '@screens/main/WebContentScreen';
+import { isTicketingUiEnabled } from '@constants/appMode';
+import { config } from '@constants/config';
 import { appColors } from '@theme/index';
 
 import type { MainStackParamList, MainTabParamList } from './types';
@@ -141,9 +143,17 @@ const MainTabs = () => (
     })}
   >
     <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
-    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Events' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} listeners={{ tabPress: () => { void safeImpactHaptic('medium'); } }} />
-    <Tab.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen
+      name="Chat"
+      component={ChatScreen}
+      options={{
+        title: 'Chat',
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none', width: 0, height: 0, maxWidth: 0 },
+      }}
+    />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
 );
@@ -201,26 +211,30 @@ export const MainNavigator = () => (
       component={VibeQuizResultsScreen}
       options={{ title: 'Your Vibe' }}
     />
-    <Stack.Screen
-      name="BuyTicket"
-      component={BuyTicketScreen}
-      options={{ headerShown: false, title: 'Buy ticket' }}
-    />
-    <Stack.Screen
-      name="TicketWallet"
-      component={TicketWalletScreen}
-      options={{ headerShown: false, title: 'Your ticket' }}
-    />
-    <Stack.Screen
-      name="DoorScan"
-      component={DoorScanScreen}
-      options={{ headerShown: false, title: 'Door scan' }}
-    />
-    <Stack.Screen
-      name="GetPaid"
-      component={GetPaidScreen}
-      options={{ headerShown: false, title: 'Get paid' }}
-    />
+    {isTicketingUiEnabled(config.ticketingEnabled) ? (
+      <>
+        <Stack.Screen
+          name="BuyTicket"
+          component={BuyTicketScreen}
+          options={{ headerShown: false, title: 'Buy ticket' }}
+        />
+        <Stack.Screen
+          name="TicketWallet"
+          component={TicketWalletScreen}
+          options={{ headerShown: false, title: 'Your ticket' }}
+        />
+        <Stack.Screen
+          name="DoorScan"
+          component={DoorScanScreen}
+          options={{ headerShown: false, title: 'Door scan' }}
+        />
+        <Stack.Screen
+          name="GetPaid"
+          component={GetPaidScreen}
+          options={{ headerShown: false, title: 'Get paid' }}
+        />
+      </>
+    ) : null}
     <Stack.Screen
       name="EditActivity"
       component={EditActivityScreen}

@@ -21,7 +21,8 @@
     "e2e:maestro": "maestro test e2e"
   },
   "dependencies": {
-    "@expo-google-fonts/outfit": "^0.4.3",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/libre-baskerville": "^0.4.3",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",

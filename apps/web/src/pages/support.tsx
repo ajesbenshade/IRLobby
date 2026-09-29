@@ -7,8 +7,8 @@ export default function SupportPage() {
   return (
     <PublicSiteLayout activePath="/support">
       <PublicMetadata
-        title="IRLobby Support - Help, FAQ, and Contact"
-        description="Get answers for common IRLobby questions, account troubleshooting, and support contact details."
+        title="The Foyer Support - Help, FAQ, and Contact"
+        description="Get answers for common The Foyer questions, account troubleshooting, and support contact details."
         canonicalPath="/support"
       />
       <PublicHeroHeader
@@ -26,42 +26,42 @@ export default function SupportPage() {
           {supportFaqs.map((faq) => (
             <details
               key={faq.question}
-              className="public-glass rounded-[24px] p-6 text-white group"
+              className="public-glass rounded-[24px] p-6 text-[#222222] group"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
                 {faq.question}
-                <Plus className="h-5 w-5 text-[#ec4899] transition group-open:rotate-45" />
+                <Plus className="h-5 w-5 text-[#a2033f] transition group-open:rotate-45" />
               </summary>
-              <p className="mt-4 leading-relaxed text-white/70">{faq.answer}</p>
+              <p className="mt-4 leading-relaxed text-[#6e6a68]">{faq.answer}</p>
             </details>
           ))}
         </div>
       </section>
 
       <section className="px-6 pb-24">
-        <div className="mx-auto max-w-2xl rounded-[32px] border border-white/8 bg-white/4 p-10 text-center text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+        <div className="mx-auto max-w-2xl rounded-[32px] border border-white/8 bg-white/4 p-10 text-center text-[#222222] shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
           <h2 className="font-display text-3xl font-bold">Still stuck?</h2>
-          <p className="mt-3 text-white/70">
+          <p className="mt-3 text-[#6e6a68]">
             Email the team and expect a response inside two business days.
           </p>
           <a
             href="mailto:support@irlobby.com"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-7 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#6d28d9]"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#a2033f] px-7 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[#7c0230]"
           >
             support@irlobby.com
           </a>
-          <p className="mt-6 text-sm text-white/50">
+          <p className="mt-6 text-sm text-[#6e6a68]">
             For privacy questions, start with the{' '}
-            <a href="/privacy" className="text-[#ec4899] hover:underline">
+            <a href="/privacy" className="text-[#a2033f] hover:underline">
               Privacy Policy
             </a>
             . Operator contact:{' '}
-            <a href="mailto:ajesbenshade@gmail.com" className="text-[#ec4899] hover:underline">
+            <a href="mailto:ajesbenshade@gmail.com" className="text-[#a2033f] hover:underline">
               ajesbenshade@gmail.com
             </a>
             .
           </p>
-          <p className="mt-2 text-xs text-white/45">
+          <p className="mt-2 text-xs text-[#6e6a68]">
             Typical response window: within two business days.
           </p>
         </div>

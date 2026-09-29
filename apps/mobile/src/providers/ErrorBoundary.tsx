@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: appColors.softInk,
     textAlign: 'center',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Inter_400Regular',
   },
   button: {
     marginTop: spacing.sm,

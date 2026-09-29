@@ -11,7 +11,7 @@ export const reverseGoogleIosClientIdScheme = (iosClientId?: string) => {
 
 /** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
 export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
-  'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';
+  'The Foyer uses your location to show gatherings near you on Discover — for example, a church event a few miles away tonight.';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const googleIosClientId = readExpoPublic('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID') || '';
@@ -19,23 +19,23 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
   ...config,
-  name: 'IRLobby',
+  name: 'The Foyer',
   slug: 'irlobby',
   version: '1.0.0',
-  description: 'IRLobby — Get out. Get together. Real plans nearby.',
+  description: 'The Foyer — gatherings for Franconia Mennonite Church.',
   orientation: 'portrait',
   icon: './assets/AppIcon-1024.png',
   scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',
   userInterfaceStyle: 'automatic',
-  primaryColor: '#FF6B4A',
+  primaryColor: '#a2033f',
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#0A0814',
+    backgroundColor: '#f6f1ee',
     dark: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#0A0814',
+      backgroundColor: '#f6f1ee',
     },
   },
   updates: {
@@ -57,6 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
     ticketingEnabled: readExpoPublic('EXPO_PUBLIC_ENABLE_TICKETING'),
+    appMode: readExpoPublic('EXPO_PUBLIC_APP_MODE') || 'foyer',
     eas: {
       projectId: '9a2fdb59-af3e-4f3f-b6f1-e86d58bdf4fe',
     },
@@ -70,10 +71,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     infoPlist: {
       NSCameraUsageDescription:
-        'IRLobby uses the camera to scan guest tickets at the door and to capture photos for activities and profile updates.',
+        'The Foyer uses the camera to capture photos for gatherings and profile updates.',
       NSLocationWhenInUseUsageDescription: IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION,
       NSPhotoLibraryUsageDescription:
-        'IRLobby needs access to your photo library to upload activity images.',
+        'The Foyer needs access to your photo library to upload gathering and profile photos.',
+      CFBundleDisplayName: 'The Foyer',
     },
   },
   android: {
@@ -105,7 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-camera',
       {
         cameraPermission:
-          'IRLobby uses the camera to scan guest tickets at the door and to capture photos for activities and profile updates.',
+          'The Foyer uses the camera to capture photos for gatherings and profile updates.',
         recordAudioAndroid: false,
       },
     ],

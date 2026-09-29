@@ -21,6 +21,8 @@ import { Image, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
+import { FoyerHeader } from "@components/FoyerHeader";
+import { isTicketingUiEnabled } from "@constants/appMode";
 import { config } from "@constants/config";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
@@ -204,6 +206,7 @@ export const ProfileScreen = () => {
 
   return (
     <AppScrollView contentContainerStyle={styles.container}>
+      <FoyerHeader />
       <PageHeader
         eyebrow="Your vibe"
         title="Show people why they should say yes"
@@ -319,7 +322,7 @@ export const ProfileScreen = () => {
           title="Privacy"
           onPress={() => navigation.navigate("PrivacyPolicy")}
         />
-        {config.ticketingEnabled ? <GetPaidRow /> : null}
+        {isTicketingUiEnabled(config.ticketingEnabled) ? <GetPaidRow /> : null}
         <ProfileMenuRow
           icon="account-circle-outline"
           title="Account"
@@ -747,5 +750,6 @@ const styles = StyleSheet.create({
     gap: 0,
     paddingVertical: 6,
     overflow: "hidden",
+    borderRadius: radii.list,
   },
 });

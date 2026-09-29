@@ -164,7 +164,7 @@ export const MatchCelebration = ({
       void safeSelectionHaptic();
       const tail = activityTitle ? ` for ${activityTitle}` : '';
       await Share.share({
-        message: `Just matched with ${matchName} on IRLobby${tail}! 🎉`,
+        message: `Just matched with ${matchName} on The Foyer${tail}! 🎉`,
       });
     } catch {
       /* user cancelled or share unavailable — ignore */

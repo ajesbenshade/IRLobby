@@ -40,10 +40,10 @@ const UserDetail = lazy(() => import('@/pages/user-detail'));
 
 // Loading component for better UX
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-green-700">
+  <div className="min-h-screen flex items-center justify-center bg-[#f6f1ee]">
     <div className="text-center">
-      <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-white">Loading IRLobby...</p>
+      <div className="w-16 h-16 border-4 border-[#f9e8ee] border-t-[#a2033f] rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-[#222222]">Loading The Foyer...</p>
     </div>
   </div>
 );

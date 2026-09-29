@@ -17,7 +17,7 @@ describe('ticket fee math', () => {
   it('shows host payout as 90% of the ticket price', () => {
     expect(hostPayoutPerTicket(15)).toBe(13.5);
     expect(hostFeePreviewCopy(15)).toBe(
-      'IRLobby takes 10% + Stripe fees — you get ~$13.50/ticket',
+      'The Foyer takes 10% + Stripe fees — you get ~$13.50/ticket',
     );
   });
 

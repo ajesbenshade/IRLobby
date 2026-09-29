@@ -17,7 +17,7 @@ export const TWITTER_CANCELLED_MESSAGE =
   'X sign-in was cancelled. No account was connected.';
 
 export const TWITTER_NO_CALLBACK_MESSAGE =
-  'X sign-in did not return to IRLobby (no callback). If you didn’t cancel, the app never received irlobby://auth/twitter — often a portal reject that never redirected, or a deep-link miss.';
+  'X sign-in did not return to The Foyer (no callback). If you didn’t cancel, the app never received the sign-in redirect — often a portal reject that never redirected, or a deep-link miss.';
 
 export const TWITTER_MISSING_ACCESS_MESSAGE =
   'X sign-in did not return an access token (MISSING_ACCESS). This is usually a Twitter Developer Portal callback allowlist / env mismatch, not a missing deep link. Confirm the X app callback URL includes https://api.irlobby.com/api/auth/twitter/callback/ and that the app opened irlobby://auth/twitter. Try again in a standalone build (not Expo Go).';

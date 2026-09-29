@@ -31,9 +31,9 @@ import { Link, useLocation } from 'react-router-dom';
 const PRIMARY_NAV = [
   { to: '/app', label: 'Home', icon: Home, exact: true },
   { to: '/app/discovery', label: 'Discover', icon: Compass },
-  { to: '/app/matches', label: 'Matches', icon: MessageCircle },
+  { to: '/app/activities', label: 'Gatherings', icon: Calendar },
+  { to: '/app/matches', label: 'Chats', icon: MessageCircle },
   { to: '/app/connections', label: 'Connections', icon: Users },
-  { to: '/app/activities', label: 'My Events', icon: Calendar },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
 ];
 
@@ -62,8 +62,11 @@ export default function AppSidebar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-deep text-white shadow-float">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="font-display text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
-            IRLobby
+          <span className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <span className="font-display text-[22px] font-bold leading-none tracking-tight">
+              The Foyer
+            </span>
+            <span className="text-[11px] text-muted-foreground">Franconia Mennonite Church</span>
           </span>
         </Link>
       </SidebarHeader>
@@ -76,12 +79,12 @@ export default function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(location.pathname, '/app/create')}
-                  tooltip="Create activity"
+                  tooltip="Host"
                   className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                 >
                   <Link to="/app/create">
                     <Plus className="h-4 w-4" />
-                    <span>Create activity</span>
+                    <span>Host</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

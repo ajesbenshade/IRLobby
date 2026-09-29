@@ -34,7 +34,7 @@ const buildFallbackAvatarUrl = (seedParts: string[]) => {
     seedParts
       .map((part) => part.trim())
       .filter(Boolean)
-      .join(' ') || 'IRLobby';
+      .join(' ') || 'The Foyer';
   return `${FALLBACK_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed).slice(0, 80)}`;
 };
 

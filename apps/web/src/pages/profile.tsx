@@ -40,7 +40,7 @@ export default function Profile() {
   const eventsAttended = user.eventsAttended ?? 0;
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
+    <div className="bg-background min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
       {/* Header with Profile Info */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="p-4 text-center">

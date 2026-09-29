@@ -159,6 +159,6 @@ export const brandElevation = {
 } as const;
 
 export const brand = {
-  name: 'IRLobby',
-  tagline: 'Get out. Get together.',
+  name: 'The Foyer',
+  tagline: 'Gatherings for Franconia Mennonite Church',
 } as const;

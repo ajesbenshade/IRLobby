@@ -11,6 +11,7 @@ from users.stripe_connect import (
     StripeConnectError,
     assert_test_mode_api_key,
     create_connect_onboarding_link,
+    ensure_direct_charge_capability,
     get_stripe_client,
     platform_fee_amount_cents,
 )
@@ -74,6 +75,49 @@ class StripeConnectHelperTests(APITestCase):
         self.assertTrue(capabilities["stripe_transfers"]["requested"])
         self.assertTrue(capabilities["payouts"]["requested"])
         self.assertEqual(create_params["dashboard"], "express")
+        merchant = create_params["configuration"]["merchant"]["capabilities"]["card_payments"]
+        self.assertTrue(merchant["requested"])
+        mock_client.v2.core.accounts.update.assert_called_once()
+
+    @override_settings(STRIPE_API_KEY="sk_test_123")
+    @patch("users.stripe_connect.get_stripe_client")
+    def test_ensure_direct_charge_requests_card_payments(self, mock_get_client):
+        mock_client = Mock()
+        mock_get_client.return_value = mock_client
+        ensure_direct_charge_capability("acct_existing")
+        account_id, params = mock_client.v2.core.accounts.update.call_args.args
+        self.assertEqual(account_id, "acct_existing")
+        card_payments = params["configuration"]["merchant"]["capabilities"]["card_payments"]
+        self.assertTrue(card_payments["requested"])
+
+    @override_settings(
+        STRIPE_API_KEY="sk_test_123",
+        STRIPE_REDIRECT_BASE_URL="https://api.irlobby.com",
+        STRIPE_CONNECT_RETURN_URL="https://api.irlobby.com/stripe/connect/return",
+        STRIPE_CONNECT_REFRESH_URL="https://api.irlobby.com/stripe/connect/refresh",
+    )
+    @patch("users.stripe_connect.get_stripe_client")
+    @patch(
+        "users.stripe_connect.ensure_direct_charge_capability",
+        side_effect=RuntimeError("recipient only"),
+    )
+    def test_onboarding_continues_when_capability_update_fails(self, _mock_ensure, mock_get_client):
+        host = User.objects.create_user(
+            username="connect-host-2",
+            email="connect-host-2@example.com",
+            password="password123",
+            stripe_connect_account_id="acct_existing",
+        )
+        mock_client = Mock()
+        mock_client.v2.core.account_links.create.return_value = SimpleNamespace(
+            url="https://connect.stripe.com/setup/s/retry"
+        )
+        mock_get_client.return_value = mock_client
+
+        url = create_connect_onboarding_link(host)
+
+        self.assertEqual(url, "https://connect.stripe.com/setup/s/retry")
+        mock_client.v2.core.accounts.create.assert_not_called()
 
 
 class StripeConnectViewTests(APITestCase):

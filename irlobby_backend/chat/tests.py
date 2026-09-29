@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from activities.models import Activity
+from activities.models import Activity, ActivityParticipant
 from irlobby_backend.asgi import application
 from matches.models import Match
 from moderation.models import BlockedUser
@@ -62,6 +62,9 @@ class ConversationListTests(APITestCase):
             user_a=self.user, user_b=self.other, activity=self.activity
         )
         self.conversation = Conversation.objects.create(match=self.match)
+        ActivityParticipant.objects.create(
+            activity=self.activity, user=self.user, status="confirmed", include_self=True
+        )
 
     def test_conversation_list_returns_own_conversations(self):
         self.client.force_authenticate(self.user)
@@ -129,6 +132,10 @@ class MessageListTests(APITestCase):
         )
         self.match = Match.objects.create(user_a=self.user, user_b=self.other, activity=activity)
         self.conversation = Conversation.objects.create(match=self.match)
+        self.activity = activity
+        ActivityParticipant.objects.create(
+            activity=activity, user=self.user, status="confirmed", include_self=True
+        )
 
     def test_participant_can_list_messages(self):
         Message.objects.create(conversation=self.conversation, sender=self.user, text="Hello!")
@@ -277,6 +284,9 @@ class ChatPresenceTypingTests(TransactionTestCase):
             user_a=self.user, user_b=self.other, activity=self.activity
         )
         self.conversation = Conversation.objects.create(match=self.match)
+        ActivityParticipant.objects.create(
+            activity=self.activity, user=self.user, status="confirmed", include_self=True
+        )
 
     def _communicator(self, user):
         token = str(AccessToken.for_user(user))

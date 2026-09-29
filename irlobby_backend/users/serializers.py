@@ -2,6 +2,12 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
 
+from activities.household_rules import (
+    MINOR_DEPENDENT_ACCOUNT_ERROR,
+    account_age_error,
+    dependent_blocks_minor_account,
+)
+from activities.models import Church
 from utils.media import validate_image_reference, validate_image_reference_list
 from utils.sanitize import strip_html
 
@@ -37,6 +43,15 @@ class UserSerializer(serializers.ModelSerializer):
         source="stripe_connect_details_submitted", read_only=True
     )
     canSellTickets = serializers.SerializerMethodField()
+    church = serializers.SerializerMethodField()
+    church_id = serializers.PrimaryKeyRelatedField(
+        source="church",
+        queryset=Church.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    is_church_admin = serializers.SerializerMethodField()
+    household_child_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -73,8 +88,71 @@ class UserSerializer(serializers.ModelSerializer):
             "stripeConnectPayoutsEnabled",
             "stripeConnectDetailsSubmitted",
             "canSellTickets",
+            "date_of_birth",
+            "sex",
+            "church",
+            "church_id",
+            "is_church_admin",
+            "household_child_count",
         )
         read_only_fields = ("id",)
+
+    def to_internal_value(self, data):
+        if hasattr(data, "copy"):
+            normalized = data.copy()
+        else:
+            normalized = dict(data)
+        aliases = {
+            "birthDate": "date_of_birth",
+            "birth_date": "date_of_birth",
+            "churchId": "church_id",
+        }
+        for alias, name in aliases.items():
+            if alias in normalized and name not in normalized:
+                normalized[name] = normalized[alias]
+        if isinstance(normalized.get("sex"), str):
+            normalized["sex"] = normalized["sex"].strip().lower()
+        return super().to_internal_value(normalized)
+
+    def validate_date_of_birth(self, value):
+        error = account_age_error(value)
+        if error:
+            raise serializers.ValidationError(error)
+        return value
+
+    def validate_sex(self, value):
+        if value in (None, ""):
+            return ""
+        normalized = value.strip().lower()
+        if normalized not in {"male", "female"}:
+            raise serializers.ValidationError("Sex must be male or female.")
+        return normalized
+
+    def validate(self, attrs):
+        dob = attrs.get("date_of_birth", getattr(self.instance, "date_of_birth", None))
+        if dob is not None and ("date_of_birth" in attrs or self.instance is None):
+            first = attrs.get("first_name", getattr(self.instance, "first_name", ""))
+            last = attrs.get("last_name", getattr(self.instance, "last_name", ""))
+            username = attrs.get("username", getattr(self.instance, "username", ""))
+            if dependent_blocks_minor_account(
+                first_name=first, last_name=last, username=username, date_of_birth=dob
+            ):
+                raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
+        return attrs
+
+    def get_church(self, obj):
+        church = obj.church
+        if church is None:
+            return None
+        return {"id": church.id, "name": church.name, "is_verified": church.is_verified}
+
+    def get_is_church_admin(self, obj):
+        from activities.access import is_church_admin
+
+        return is_church_admin(obj)
+
+    def get_household_child_count(self, obj):
+        return obj.household_dependents.count()
 
     def get_canSellTickets(self, obj):
         from .stripe_connect import host_can_receive_payouts
@@ -120,14 +198,47 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    sex = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "first_name", "last_name")
+        fields = (
+            "username",
+            "email",
+            "password",
+            "password_confirm",
+            "first_name",
+            "last_name",
+            "date_of_birth",
+            "sex",
+        )
+
+    def validate_date_of_birth(self, value):
+        error = account_age_error(value)
+        if error:
+            raise serializers.ValidationError(error)
+        return value
+
+    def validate_sex(self, value):
+        if not value:
+            return ""
+        normalized = value.strip().lower()
+        if normalized not in {"male", "female"}:
+            raise serializers.ValidationError("Sex must be male or female.")
+        return normalized
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords don't match")
+        dob = attrs.get("date_of_birth")
+        if dob is not None and dependent_blocks_minor_account(
+            first_name=attrs.get("first_name", ""),
+            last_name=attrs.get("last_name", ""),
+            username=attrs.get("username", ""),
+            date_of_birth=dob,
+        ):
+            raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
         return attrs
 
     def create(self, validated_data):
@@ -240,13 +351,7 @@ class UserOnboardingSerializer(serializers.Serializer):
             return attrs
 
         raise serializers.ValidationError(
-            {
-                "detail": (
-                    "Before finishing onboarding, please "
-                    + ", ".join(missing)
-                    + "."
-                )
-            }
+            {"detail": ("Before finishing onboarding, please " + ", ".join(missing) + ".")}
         )
 
     def _has_onboarding_preferences(self, interests, activity_preferences) -> bool:

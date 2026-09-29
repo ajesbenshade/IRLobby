@@ -27,6 +27,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
 )
 
+from activities import foyer_views
 from irlobby_backend.legal_pages import privacy_policy, support_page
 from irlobby_backend.stripe_bounce import stripe_app_bounce
 from users.oauth_views import apple_mobile_login, google_mobile_login
@@ -237,6 +238,11 @@ urlpatterns = [
     path("api/auth/apple/mobile/", apple_mobile_login, name="apple_mobile_login"),
     path("api/auth/twitter/", include("users.oauth_urls")),
     path("api/users/", include("users.urls")),
+    path("api/churches/", foyer_views.church_list_create, name="church-list"),
+    path(
+        "api/public/calendar.ics", foyer_views.public_calendar_ics_view, name="public-calendar-ics"
+    ),
+    path("api/public/calendar", foyer_views.public_calendar, name="public-calendar"),
     path("api/activities/", include("activities.urls")),
     path("api/swipes/", include("swipes.urls")),
     path("api/matches/", include("matches.urls")),

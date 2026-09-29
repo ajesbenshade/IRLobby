@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from activities.models import Activity
+from activities.models import Activity, ActivityParticipant
 from chat.models import Conversation, Message
 from matches.models import Match
 from moderation.models import BlockedUser
@@ -129,6 +129,12 @@ class SwipeTests(APITestCase):
         self.assertEqual(swipe_response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(swipe_response.data["matched"])
         conversation_id = swipe_response.data["conversationId"]
+        ActivityParticipant.objects.create(
+            activity=self.activity,
+            user=self.user,
+            status="confirmed",
+            include_self=True,
+        )
 
         conversations_response = self.client.get(reverse("conversation-list"))
         self.assertEqual(conversations_response.status_code, status.HTTP_200_OK)

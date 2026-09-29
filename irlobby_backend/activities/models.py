@@ -4,9 +4,45 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django.core import signing
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from users.models import User
+
+FRANCONIA_CHURCH_NAME = "Franconia Mennonite Church"
+SEEDED_CHURCH_NAMES = (
+    FRANCONIA_CHURCH_NAME,
+    "Souderton Mennonite Church",
+    "Blooming Glen Mennonite Church",
+    "Plains Mennonite Church",
+    "Zion Mennonite Church",
+    "Perkasie Mennonite Church",
+    "Deep Run East Mennonite Church",
+    "Finland Mennonite Church",
+)
+
+
+class Church(models.Model):
+    name = models.CharField(max_length=255)
+    is_verified = models.BooleanField(default=False)
+    stripe_account_id = models.CharField(max_length=255, blank=True, default="")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="churches_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="unique_church_name_ci"),
+        ]
+
+    def __str__(self):
+        return self.name
 
 
 class Activity(models.Model):
@@ -21,7 +57,43 @@ class Activity(models.Model):
     location_point = models.PointField(geography=True, srid=4326, null=True, blank=True)
     time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
-    capacity = models.PositiveIntegerField(validators=[MaxValueValidator(10)])
+    # Null means unlimited. When set, the limit is people (not accounts), from 1 to 500.
+    capacity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        validators=[MinValueValidator(1), MaxValueValidator(500)],
+    )
+    audience_gender = models.CharField(
+        max_length=16,
+        choices=[
+            ("everyone", "Everyone"),
+            ("men", "Men"),
+            ("women", "Women"),
+        ],
+        default="everyone",
+    )
+    age_min = models.PositiveIntegerField(null=True, blank=True)
+    age_max = models.PositiveIntegerField(null=True, blank=True)
+    list_on_church_calendar = models.BooleanField(default=False)
+    calendar_approved = models.BooleanField(default=False)
+    donation_enabled = models.BooleanField(default=False)
+    suggested_donation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    host_kind = models.CharField(
+        max_length=16,
+        choices=[
+            ("person", "Person"),
+            ("church", "Church"),
+        ],
+        default="person",
+    )
+    host_church = models.ForeignKey(
+        Church,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hosted_activities",
+    )
     visibility = models.JSONField(default=list)
     is_private = models.BooleanField(default=False)
     requires_approval = models.BooleanField(default=False)
@@ -42,14 +114,36 @@ class Activity(models.Model):
     platform_fee_percent = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        default=10,
+        default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["list_on_church_calendar", "calendar_approved"],
+                name="activity_church_calendar_idx",
+            ),
+        ]
+
     def save(self, *args, **kwargs):
+        # The Foyer never keeps a platform cut, regardless of STRIPE_PLATFORM_FEE_PERCENT.
+        self.platform_fee_percent = 0
         if self.latitude is not None and self.longitude is not None:
             self.location_point = Point(self.longitude, self.latitude)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            fields = list(update_fields)
+            if "platform_fee_percent" not in fields:
+                fields.append("platform_fee_percent")
+            if (
+                self.latitude is not None
+                and self.longitude is not None
+                and "location_point" not in fields
+            ):
+                fields.append("location_point")
+            kwargs["update_fields"] = fields
         super().save(*args, **kwargs)
 
     @property
@@ -77,6 +171,12 @@ class ActivityParticipant(models.Model):
         User, on_delete=models.CASCADE, related_name="participating_activities"
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    include_self = models.BooleanField(default=True)
+    dependents = models.ManyToManyField(
+        "HouseholdDependent",
+        blank=True,
+        related_name="rsvps",
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -84,6 +184,59 @@ class ActivityParticipant(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.activity}"
+
+
+class HouseholdDependent(models.Model):
+    """A child a parent can RSVP for. Not an account."""
+
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name="household_dependents")
+    name = models.CharField(max_length=120)
+    date_of_birth = models.DateField()
+    sex = models.CharField(max_length=16, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date_of_birth", "id"]
+
+    def __str__(self):
+        return self.name
+
+
+class EventPhoto(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="photos")
+    image = models.ImageField(upload_to="event_photos/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"Photo {self.pk} for {self.activity_id}"
+
+
+class Gift(models.Model):
+    """Optional gift checkout. Separate from RSVP and from legacy tickets."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("paid", "Paid"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    giver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gifts")
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="gifts")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=8, default="USD")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    stripe_session_id = models.CharField(max_length=255, blank=True, default="")
+    stripe_account_id = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Gift {self.amount} for {self.activity_id}"
 
 
 class Ticket(models.Model):

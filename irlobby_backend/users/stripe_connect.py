@@ -1,4 +1,13 @@
-"""Stripe Connect helpers for marketplace ticket payouts."""
+"""Stripe Connect helpers for host payouts and gathering gifts.
+
+Onboarding creates an Accounts v2 **Express** account (`dashboard: "express"`), not a
+Standard account (`dashboard: "full"`). Until merchant `card_payments` is requested,
+the account is recipient-only (`stripe_transfers` + `payouts`) and can receive
+destination charges, not direct charges. Existing hosts created that way need to
+re-onboard so merchant configuration can be added. `fees_collector` and
+`losses_collector` stay `application` (they cannot be changed later). Direct gift
+charges set `application_fee_amount` to 0.
+"""
 
 from __future__ import annotations
 
@@ -167,6 +176,13 @@ def ensure_connect_account(user) -> str:
                 }
             },
             "configuration": {
+                # Merchant card_payments is required for direct charges (gifts).
+                # Recipient transfers keep the legacy destination-charge path working.
+                "merchant": {
+                    "capabilities": {
+                        "card_payments": {"requested": True},
+                    }
+                },
                 "recipient": {
                     "capabilities": {
                         "stripe_balance": {
@@ -175,7 +191,7 @@ def ensure_connect_account(user) -> str:
                             "payouts": {"requested": True},  # type: ignore[typeddict-unknown-key]
                         }
                     }
-                }
+                },
             },
             "include": ["configuration.recipient", "identity", "requirements"],
         }
@@ -196,8 +212,36 @@ def ensure_connect_account(user) -> str:
     return account_id
 
 
+def ensure_direct_charge_capability(account_id: str) -> None:
+    """Request merchant card_payments on an existing Express account.
+
+    Recipient-only accounts created before this change cannot take direct charges
+    until Stripe accepts this update and the host finishes any new requirements.
+    Responsibilities are left unchanged because Stripe does not allow editing them.
+    """
+    client = get_stripe_client()
+    client.v2.core.accounts.update(
+        account_id,
+        {
+            "configuration": {
+                "merchant": {
+                    "capabilities": {
+                        "card_payments": {"requested": True},
+                    }
+                }
+            }
+        },
+    )
+
+
 def create_connect_onboarding_link(user, *, return_url=None, refresh_url=None) -> str:
     account_id = ensure_connect_account(user)
+    try:
+        ensure_direct_charge_capability(account_id)
+    except Exception:
+        logger.exception(
+            "Could not request direct-charge capability for Stripe account %s", account_id
+        )
     client = get_stripe_client()
     return_url = _require_http_url(
         return_url or settings.STRIPE_CONNECT_RETURN_URL,
@@ -214,7 +258,7 @@ def create_connect_onboarding_link(user, *, return_url=None, refresh_url=None) -
             "use_case": {
                 "type": "account_onboarding",
                 "account_onboarding": {
-                    "configurations": ["recipient"],
+                    "configurations": ["merchant", "recipient"],
                     "return_url": return_url,
                     "refresh_url": refresh_url,
                 },
@@ -281,4 +325,47 @@ def create_destination_checkout_session(
             "success_url": success_url,
             "cancel_url": cancel_url,
         }
+    )
+
+
+def create_direct_checkout_session(
+    *,
+    connected_account_id: str,
+    unit_amount: int,
+    currency: str,
+    product_name: str,
+    description: str,
+    success_url: str,
+    cancel_url: str,
+    metadata: dict,
+):
+    """Checkout Session charged on the connected account. Application fee is always 0."""
+    client = get_stripe_client()
+    success_url = _require_http_url(success_url, "Checkout success URL")
+    cancel_url = _require_http_url(cancel_url, "Checkout cancel URL")
+    return client.v1.checkout.sessions.create(
+        {
+            "mode": "payment",
+            "line_items": [
+                {
+                    "price_data": {
+                        "currency": (currency or "usd").lower(),
+                        "product_data": {
+                            "name": product_name[:120],
+                            "description": (description or "")[:200],
+                        },
+                        "unit_amount": unit_amount,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            "payment_intent_data": {
+                "application_fee_amount": 0,
+                "metadata": metadata,
+            },
+            "metadata": metadata,
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        },
+        {"stripe_account": connected_account_id},
     )

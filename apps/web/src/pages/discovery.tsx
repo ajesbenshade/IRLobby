@@ -4,12 +4,13 @@ import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
-import { WhosComingDialog, YoureGoingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
+import { AddToCalendarDialog, WhosComingDialog, YoureGoingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
+import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
 import { audienceChipLabel, type GatheringLike } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
@@ -41,6 +42,7 @@ export default function Discovery() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
   const [goingActivity, setGoingActivity] = useState<(Activity & GatheringLike) | null>(null);
+  const [calendarActivity, setCalendarActivity] = useState<(Activity & GatheringLike) | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
   const navigate = useNavigate();
   const [pullDistance, setPullDistance] = useState(0);
@@ -148,7 +150,17 @@ export default function Discovery() {
         setGoingActivity(null);
         navigate('/app/matches');
       }}
+      onAddToCalendar={() => setCalendarActivity(goingActivity)}
       onDismiss={() => setGoingActivity(null)}
+    />
+  ) : null;
+
+  const calendarDialog = calendarActivity ? (
+    <AddToCalendarDialog
+      onGoogle={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).google)}
+      onOutlook={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).outlook)}
+      onApple={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).apple)}
+      onDismiss={() => setCalendarActivity(null)}
     />
   ) : null;
 
@@ -298,6 +310,7 @@ export default function Discovery() {
           currentFilters={filters}
         />
         {goingDialog}
+        {calendarDialog}
       </div>
     );
   }
@@ -441,6 +454,7 @@ export default function Discovery() {
         />
       ) : null}
       {goingDialog}
+      {calendarDialog}
       {currentActivity && (
         <>
           <ActivityDetailsModal

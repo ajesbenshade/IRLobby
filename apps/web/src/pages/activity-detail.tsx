@@ -1,13 +1,16 @@
+import { AddToCalendarDialog } from '@/components/foyer/FoyerSheets';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
 import { compressImageFile } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { format, isValid } from 'date-fns';
 import { ArrowLeft, Clock, MapPin, Star, Users } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -49,6 +52,7 @@ export default function ActivityDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const route = `${API_ROUTES.ACTIVITIES}${activityId}/`;
 
@@ -176,6 +180,13 @@ export default function ActivityDetailPage() {
           </span>
         </div>
       </div>
+      <button
+        type="button"
+        className="h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+        onClick={() => setShowCalendar(true)}
+      >
+        Add to calendar
+      </button>
 
       {a.description && (
         <Card>
@@ -250,6 +261,14 @@ export default function ActivityDetailPage() {
           {join.isPending ? 'Joining…' : 'Join event'}
         </Button>
       </div>
+      {showCalendar && activityId ? (
+        <AddToCalendarDialog
+          onGoogle={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).google)}
+          onOutlook={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).outlook)}
+          onApple={() => openCalendarUrl(gatheringCalendarUrls({ id: activityId, title: safeTitle, start: a.time ?? a.dateTime ?? a.date_time, location: a.location, description: a.description }).apple)}
+          onDismiss={() => setShowCalendar(false)}
+        />
+      ) : null}
     </div>
   );
 }

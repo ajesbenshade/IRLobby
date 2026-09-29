@@ -97,11 +97,13 @@ export function YoureGoingDialog({
   title,
   onPhotos,
   onChat,
+  onAddToCalendar,
   onDismiss,
 }: {
   title: string;
   onPhotos: () => void;
   onChat: () => void;
+  onAddToCalendar: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -123,8 +125,48 @@ export function YoureGoingDialog({
         >
           Chat
         </button>
+        <button
+          type="button"
+          className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+          onClick={onAddToCalendar}
+        >
+          Add to calendar
+        </button>
         <button type="button" className="mt-1 w-full font-semibold text-[#a2033f]" onClick={onDismiss}>
           Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function AddToCalendarDialog({
+  onGoogle,
+  onOutlook,
+  onApple,
+  onDismiss,
+}: {
+  onGoogle: () => void;
+  onOutlook: () => void;
+  onApple: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end bg-black/40" role="dialog" aria-label="Add to calendar">
+      <div className="w-full rounded-t-[22px] bg-white p-5">
+        <h2 className="font-display text-[26px] text-[#222222]">Add to calendar</h2>
+        <p className="mb-4 text-sm text-[#6e6a68]">Opens in your browser. The Foyer does not use your calendar.</p>
+        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onGoogle}>
+          Google Calendar
+        </button>
+        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onOutlook}>
+          Outlook
+        </button>
+        <button type="button" className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]" onClick={onApple}>
+          Apple Calendar
+        </button>
+        <button type="button" className="mt-1 w-full font-semibold text-[#a2033f]" onClick={onDismiss}>
+          Close
         </button>
       </div>
     </div>

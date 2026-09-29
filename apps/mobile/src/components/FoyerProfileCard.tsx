@@ -10,6 +10,7 @@ import { API_ROUTES } from '@shared/schema';
 import { Image, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { householdCountLabel } from '@foyer/logic';
+import { openChurchCalendarSubscription } from '@foyer/openCalendar';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
@@ -182,6 +183,9 @@ export const FoyerProfileCard = () => {
       >
         <Text style={styles.householdLabel}>Household</Text>
         <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
+      </Pressable>
+      <Pressable accessibilityRole="link" accessibilityLabel="Subscribe to church calendar" onPress={openChurchCalendarSubscription} style={styles.household}>
+        <Text style={styles.householdLabel}>Subscribe to church calendar</Text>
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {saveMutation.isPending ? <AppButton loading>Save</AppButton> : null}

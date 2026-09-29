@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { churchSubscribeUrl, openCalendarUrl } from '@/lib/calendar';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -86,6 +87,13 @@ export default function Profile() {
                 : `${user.householdChildCount} children`}
           </span>
         </Link>
+        <button
+          type="button"
+          className="mt-3 flex w-full items-center rounded-2xl bg-white px-4 py-4 text-left font-semibold shadow-sm"
+          onClick={() => openCalendarUrl(churchSubscribeUrl())}
+        >
+          Subscribe to church calendar
+        </button>
       </div>
 
       <div className="p-4 space-y-6">

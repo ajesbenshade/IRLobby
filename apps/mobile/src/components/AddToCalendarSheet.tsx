@@ -4,30 +4,29 @@ import { Text } from 'react-native-paper';
 import { View } from '@components/RNCompat';
 import { appColors, appTypography, radii } from '@theme/index';
 
-type GoingSheetProps = {
-  title: string;
-  onPhotos: () => void;
-  onChat: () => void;
-  onAddToCalendar: () => void;
+type AddToCalendarSheetProps = {
+  onGoogle: () => void;
+  onOutlook: () => void;
+  onApple: () => void;
   onDismiss: () => void;
 };
 
-export const GoingSheet = ({ title, onPhotos, onChat, onAddToCalendar, onDismiss }: GoingSheetProps) => (
+export const AddToCalendarSheet = ({ onGoogle, onOutlook, onApple, onDismiss }: AddToCalendarSheetProps) => (
   <View style={styles.sheet}>
     <View style={styles.handle} />
-    <Text style={styles.title}>You're going</Text>
-    <Text style={styles.subtitle}>{title}</Text>
-    <Pressable accessibilityRole="link" accessibilityLabel="Photos" onPress={onPhotos} style={styles.link}>
-      <Text style={styles.linkText}>Photos</Text>
+    <Text style={styles.title}>Add to calendar</Text>
+    <Text style={styles.helper}>Opens in Safari. The Foyer does not use your calendar.</Text>
+    <Pressable accessibilityRole="link" accessibilityLabel="Google Calendar" onPress={onGoogle} style={styles.link}>
+      <Text style={styles.linkText}>Google Calendar</Text>
     </Pressable>
-    <Pressable accessibilityRole="link" accessibilityLabel="Chat" onPress={onChat} style={styles.link}>
-      <Text style={styles.linkText}>Chat</Text>
+    <Pressable accessibilityRole="link" accessibilityLabel="Outlook" onPress={onOutlook} style={styles.link}>
+      <Text style={styles.linkText}>Outlook</Text>
     </Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="Add to calendar" onPress={onAddToCalendar} style={styles.link}>
-      <Text style={styles.linkText}>Add to calendar</Text>
+    <Pressable accessibilityRole="link" accessibilityLabel="Apple Calendar" onPress={onApple} style={styles.link}>
+      <Text style={styles.linkText}>Apple Calendar</Text>
     </Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="Done" onPress={onDismiss} style={styles.done}>
-      <Text style={styles.doneText}>Done</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Close calendar options" onPress={onDismiss} style={styles.done}>
+      <Text style={styles.doneText}>Close</Text>
     </Pressable>
   </View>
 );
@@ -53,10 +52,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: appColors.ink,
   },
-  subtitle: {
+  helper: {
     fontFamily: appTypography.bodyRegular,
-    fontSize: 15,
+    fontSize: 14,
     color: appColors.mutedInk,
+    lineHeight: 20,
     marginTop: -4,
   },
   link: {

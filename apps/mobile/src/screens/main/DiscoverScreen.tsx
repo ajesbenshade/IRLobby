@@ -14,6 +14,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { FoyerHeader } from '@components/FoyerHeader';
 import { GoingSheet } from '@components/GoingSheet';
 import { WhosComingSheet } from '@components/WhosComingSheet';
@@ -38,6 +39,7 @@ import {
   shouldSkipWhosComingSheet,
   type WhosComingResponse,
 } from '@foyer/logic';
+import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
@@ -121,6 +123,7 @@ export const DiscoverScreen = () => {
   const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
   const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
+  const [calendarActivity, setCalendarActivity] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
 
@@ -1000,7 +1003,24 @@ export const DiscoverScreen = () => {
                     setGoingActivity(null);
                     navigation.navigate('Chat');
                   }}
+                  onAddToCalendar={() => setCalendarActivity(goingActivity)}
                   onDismiss={() => setGoingActivity(null)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && calendarActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setCalendarActivity(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <AddToCalendarSheet
+                  onGoogle={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).google)}
+                  onOutlook={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).outlook)}
+                  onApple={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).apple)}
+                  onDismiss={() => setCalendarActivity(null)}
                 />
               </Modal>
             </Portal>

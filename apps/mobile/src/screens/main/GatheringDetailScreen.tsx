@@ -4,13 +4,15 @@ import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Modal, Portal, Text } from 'react-native-paper';
 
+import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { AppScrollView } from '@components/AppChrome';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
 import { audienceChipLabel, coverPhotoUrl, goingCountLabel, hostDisplayName } from '@foyer/logic';
+import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
@@ -23,6 +25,7 @@ export const GatheringDetailScreen = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const activityId = route.params.activityId;
 
   const activityQuery = useQuery({
@@ -91,6 +94,21 @@ export const GatheringDetailScreen = () => {
       <Text style={styles.meta}>{activity.location}</Text>
       {activity.description ? <Text style={styles.body}>{activity.description}</Text> : null}
       <Text style={styles.meta}>Hosted by {hostDisplayName(activity)}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Add to calendar" onPress={() => setShowCalendar(true)}>
+        <Text style={styles.add}>Add to calendar</Text>
+      </Pressable>
+      {showCalendar ? (
+        <Portal>
+          <Modal visible onDismiss={() => setShowCalendar(false)} contentContainerStyle={styles.sheetModal}>
+            <AddToCalendarSheet
+              onGoogle={() => openCalendarUrl(gatheringCalendarUrls(activity).google)}
+              onOutlook={() => openCalendarUrl(gatheringCalendarUrls(activity).outlook)}
+              onApple={() => openCalendarUrl(gatheringCalendarUrls(activity).apple)}
+              onDismiss={() => setShowCalendar(false)}
+            />
+          </Modal>
+        </Portal>
+      ) : null}
 
       <Text style={styles.section}>Photos</Text>
       <View style={styles.grid}>
@@ -140,4 +158,10 @@ const styles = StyleSheet.create({
   thumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: appColors.background },
   add: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   error: { color: appColors.danger, fontFamily: appTypography.bodyRegular },
+  sheetModal: {
+    backgroundColor: 'transparent',
+    marginHorizontal: 0,
+    marginBottom: 0,
+    justifyContent: 'flex-end',
+  },
 });

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { churchSubscribeUrl, openCalendarUrl } from '@/lib/calendar';
 import { apiRequest } from '@/lib/queryClient';
 import { coverPhotoUrl, isUpcomingGathering, whosGoingSummary, type GatheringLike } from '@/lib/foyer';
 
@@ -36,6 +37,13 @@ export default function GatheringsPage() {
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-28 pt-8">
       <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
+      <button
+        type="button"
+        className="mt-3 font-semibold text-[#a2033f]"
+        onClick={() => openCalendarUrl(churchSubscribeUrl())}
+      >
+        Subscribe to church calendar
+      </button>
       <div className="mt-4 flex rounded-xl bg-white p-1">
         {(['upcoming', 'past'] as const).map((value) => (
           <button

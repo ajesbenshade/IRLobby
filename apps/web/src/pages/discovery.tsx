@@ -4,7 +4,7 @@ import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
 import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
-import { WhosComingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
+import { WhosComingDialog, YoureGoingDialog, type WhosComingSheetData } from '@/components/foyer/FoyerSheets';
 import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shar
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, MapPin, Bell, RefreshCw, Map, WifiOff, Sparkles } from 'lucide-react';
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface SwipePayload {
   activityId: number;
@@ -40,7 +40,9 @@ export default function Discovery() {
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
+  const [goingActivity, setGoingActivity] = useState<(Activity & GatheringLike) | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
+  const navigate = useNavigate();
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
@@ -128,10 +130,27 @@ export default function Discovery() {
 
   const handleReject = () => handleSwipe('pass');
 
-  const advanceAfterRsvp = () => {
+  const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
     setWhosComing(null);
+    setGoingActivity(activity);
     setCurrentActivityIndex((index) => index + 1);
   };
+
+  const goingDialog = goingActivity ? (
+    <YoureGoingDialog
+      title={goingActivity.title}
+      onPhotos={() => {
+        const activityId = goingActivity.id;
+        setGoingActivity(null);
+        navigate(`/app/activity/${activityId}`);
+      }}
+      onChat={() => {
+        setGoingActivity(null);
+        navigate('/app/matches');
+      }}
+      onDismiss={() => setGoingActivity(null)}
+    />
+  ) : null;
 
   const confirmRsvp = async (
     activity: Activity & GatheringLike,
@@ -140,7 +159,7 @@ export default function Discovery() {
     setRsvpPending(true);
     try {
       await apiRequest('POST', `/api/activities/${activity.id}/rsvp/`, payload);
-      advanceAfterRsvp();
+      advanceAfterRsvp(activity);
     } finally {
       setRsvpPending(false);
     }
@@ -278,6 +297,7 @@ export default function Discovery() {
           onApplyFilters={handleApplyFilters}
           currentFilters={filters}
         />
+        {goingDialog}
       </div>
     );
   }
@@ -420,6 +440,7 @@ export default function Discovery() {
           onConfirm={(payload) => void confirmRsvp(currentActivity as Activity & GatheringLike, payload)}
         />
       ) : null}
+      {goingDialog}
       {currentActivity && (
         <>
           <ActivityDetailsModal

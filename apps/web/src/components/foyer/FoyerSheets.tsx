@@ -92,3 +92,41 @@ export function WhosComingDialog({
     </div>
   );
 }
+
+export function YoureGoingDialog({
+  title,
+  onPhotos,
+  onChat,
+  onDismiss,
+}: {
+  title: string;
+  onPhotos: () => void;
+  onChat: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end bg-black/40" role="dialog" aria-label="You're going">
+      <div className="w-full rounded-t-[22px] bg-white p-5">
+        <h2 className="font-display text-[26px] text-[#222222]">You're going</h2>
+        <p className="mb-4 text-sm text-[#6e6a68]">{title}</p>
+        <button
+          type="button"
+          className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+          onClick={onPhotos}
+        >
+          Photos
+        </button>
+        <button
+          type="button"
+          className="mb-2 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+          onClick={onChat}
+        >
+          Chat
+        </button>
+        <button type="button" className="mt-1 w-full font-semibold text-[#a2033f]" onClick={onDismiss}>
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}

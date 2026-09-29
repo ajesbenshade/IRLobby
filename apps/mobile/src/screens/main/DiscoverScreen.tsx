@@ -15,6 +15,7 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { FoyerHeader } from '@components/FoyerHeader';
+import { GoingSheet } from '@components/GoingSheet';
 import { WhosComingSheet } from '@components/WhosComingSheet';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
@@ -119,6 +120,7 @@ export const DiscoverScreen = () => {
   const foyerMode = isFoyerMode();
   const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
+  const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
 
@@ -304,8 +306,9 @@ export const DiscoverScreen = () => {
     [animateSwipe, currentActivity, isBusy, swipeMutation],
   );
 
-  const advanceAfterRsvp = useCallback(() => {
+  const advanceAfterRsvp = useCallback((activity: Activity) => {
     setWhosComing(null);
+    setGoingActivity(activity);
     setCurrentIndex((index) => index + 1);
   }, []);
 
@@ -315,7 +318,7 @@ export const DiscoverScreen = () => {
       setRsvpError(null);
       try {
         await postRsvp(activity.id, payload);
-        advanceAfterRsvp();
+        advanceAfterRsvp(activity);
       } catch (error) {
         setRsvpError(getErrorMessage(error, 'Unable to save your RSVP.'));
       } finally {
@@ -340,7 +343,7 @@ export const DiscoverScreen = () => {
       if (shouldSkipWhosComingSheet(sheet)) {
         const selection = defaultRsvpSelection(sheet);
         await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
-        advanceAfterRsvp();
+        advanceAfterRsvp(currentActivity);
         return;
       }
       setWhosComing(sheet);
@@ -975,6 +978,29 @@ export const DiscoverScreen = () => {
                   subtitle={`${currentActivity.title} · ${audienceLabel}`}
                   pending={rsvpPending}
                   onConfirm={(payload) => void confirmRsvp(currentActivity, payload)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && goingActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setGoingActivity(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <GoingSheet
+                  title={goingActivity.title}
+                  onPhotos={() => {
+                    const activityId = goingActivity.id;
+                    setGoingActivity(null);
+                    navigation.getParent()?.navigate('GatheringDetail', { activityId });
+                  }}
+                  onChat={() => {
+                    setGoingActivity(null);
+                    navigation.navigate('Chat');
+                  }}
+                  onDismiss={() => setGoingActivity(null)}
                 />
               </Modal>
             </Portal>

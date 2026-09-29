@@ -6,8 +6,8 @@
 
 :root {
   /* Soft light theme — Electric Midnight hierarchy */
-  --background: 250 33% 97%; /* #F7F6FB */
-  --foreground: 248 30% 14%; /* #1A1730 */
+  --background: 20 33% 95%; /* cream #f6f1ee */
+  --foreground: 0 0% 13%; /* ink #222222 */
   --muted: 250 30% 95%; /* #F0EEF7 */
   --muted-foreground: 248 14% 41%; /* #5C5878 */
   --popover: 0 0% 100%;
@@ -16,9 +16,9 @@
   --card-foreground: 248 30% 14%;
   --border: 250 28% 91%; /* #E4E0F0 */
   --input: 250 28% 91%;
-  --primary: 248 100% 65%; /* #5B4BFF */
+  --primary: 338 96% 32%; /* burgundy #a2033f */
   --primary-foreground: 0 0% 100%;
-  --primary-deep: 295 81% 47%; /* #C026D3 fuchsia */
+  --primary-deep: 338 97% 25%;
   --primary-deep-foreground: 0 0% 100%;
   --secondary: 188 100% 56%; /* #1EE8FF cyan — matches shared secondary */
   --secondary-foreground: 248 30% 14%;
@@ -57,9 +57,9 @@
   --card-foreground: 245 25% 97%;
   --border: 245 18% 18%; /* #2A2548 */
   --input: 245 18% 18%;
-  --primary: 248 100% 65%; /* #5B4BFF */
+  --primary: 338 96% 32%; /* burgundy #a2033f */
   --primary-foreground: 0 0% 100%;
-  --primary-deep: 295 81% 47%; /* #C026D3 */
+  --primary-deep: 338 97% 25%;
   --primary-deep-foreground: 0 0% 100%;
   --secondary: 188 100% 56%; /* #1EE8FF */
   --secondary-foreground: 245 25% 6%;

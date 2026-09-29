@@ -1,13 +1,65 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const TwitterCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [signupToken, setSignupToken] = useState<string | null>(null);
+  const [birthDate, setBirthDate] = useState('');
+  const [completing, setCompleting] = useState(false);
+
+  const storeSession = (data: {
+    tokens?: { access?: string; refresh?: string };
+    user?: { id?: string | number };
+  }) => {
+    if (!data.tokens?.access || data.user?.id === undefined || data.user?.id === null) {
+      throw new Error('Invalid response from authentication server');
+    }
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol !== 'https:' &&
+      data.tokens.refresh
+    ) {
+      localStorage.setItem('refreshToken', data.tokens.refresh);
+    }
+    localStorage.setItem('authToken', data.tokens.access);
+    localStorage.setItem('userId', String(data.user.id));
+    sessionStorage.removeItem('twitter_oauth_state');
+  };
+
+  const finishWithBirthDate = async () => {
+    if (!signupToken || !birthDate) {
+      return;
+    }
+    setCompleting(true);
+    try {
+      const response = await apiRequest('POST', API_ROUTES.AUTH_SOCIAL_COMPLETE, {
+        signup_token: signupToken,
+        birth_date: birthDate,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'A person under 13 cannot create an account.');
+      }
+      storeSession(data);
+      toast({ title: 'Success', description: 'Successfully logged in with X.' });
+      navigate('/', { replace: true });
+    } catch (error) {
+      toast({
+        title: 'Could not finish sign-in',
+        description: error instanceof Error ? error.message : 'Try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -42,32 +94,17 @@ const TwitterCallback = () => {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+          if (errorData.birth_date_required && errorData.signup_token) {
+            setSignupToken(errorData.signup_token);
+            return;
+          }
           console.error('Twitter OAuth callback failed:', response.status, errorData);
           throw new Error(errorData.error || `Authentication failed (${response.status})`);
         }
 
         const data = await response.json();
         console.log('Twitter OAuth successful');
-
-        // Validate response data
-        if (!data.tokens || !data.user) {
-          throw new Error('Invalid response from authentication server');
-        }
-
-        // Store tokens
-        if (
-          typeof window !== 'undefined' &&
-          window.location.protocol !== 'https:' &&
-          data.tokens.refresh
-        ) {
-          localStorage.setItem('refreshToken', data.tokens.refresh);
-        }
-
-        localStorage.setItem('authToken', data.tokens.access);
-        localStorage.setItem('userId', data.user.id);
-
-        // Clean up
-        sessionStorage.removeItem('twitter_oauth_state');
+        storeSession(data);
 
         toast({
           title: 'Success',
@@ -120,11 +157,33 @@ const TwitterCallback = () => {
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {'Connecting to Twitter...'}
+            {signupToken ? 'Birth date required' : 'Connecting to X...'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {'Please wait while we authenticate you.'}
+            {signupToken
+              ? 'Enter your birth date to finish creating an account. A person under 13 cannot sign up.'
+              : 'Please wait while we authenticate you.'}
           </p>
+          {signupToken ? (
+            <form
+              className="mt-6 space-y-3 text-left"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void finishWithBirthDate();
+              }}
+            >
+              <Input
+                type="date"
+                value={birthDate}
+                onChange={(event) => setBirthDate(event.target.value)}
+                required
+                aria-label="Birth date"
+              />
+              <Button type="submit" className="w-full" disabled={completing || !birthDate}>
+                {completing ? 'Saving...' : 'Continue'}
+              </Button>
+            </form>
+          ) : null}
         </div>
       </div>
     </div>

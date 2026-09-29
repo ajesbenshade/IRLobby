@@ -162,7 +162,12 @@ export default function Landing() {
             <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(91,75,255,0.28)] ring-1 ring-white/12">
               <img src="/app-icon.png" alt="" className="h-full w-full object-cover" />
             </span>
-            <span>IRLobby</span>
+            <span className="font-display">
+              The Foyer
+              <span className="mt-0.5 block text-[10px] font-medium normal-case tracking-normal opacity-70">
+                Franconia Mennonite Church
+              </span>
+            </span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-bold text-white/68 md:flex">
             <Link to="/how-it-works" className="transition hover:text-white">

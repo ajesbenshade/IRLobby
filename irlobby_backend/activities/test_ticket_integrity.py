@@ -58,6 +58,7 @@ class TicketFixture:
 
 
 @override_settings(ENABLE_TICKETING=True, STRIPE_WEBHOOK_SECRET="whsec_integrity")
+@override_settings(FOYER_MODE=False, STRIPE_API_KEY="sk_test_123")
 class TicketIntegrityTests(TicketFixture, APITestCase):
     def deliver_payment(self, event_type="checkout.session.completed", session_id="cs_integrity"):
         with patch("activities.views.stripe.Webhook.construct_event") as construct_event:
@@ -187,6 +188,7 @@ class TicketIntegrityTests(TicketFixture, APITestCase):
 
 @skipUnless(connection.vendor == "postgresql", "Concurrent row locking requires PostgreSQL")
 @override_settings(ENABLE_TICKETING=True)
+@override_settings(FOYER_MODE=False, STRIPE_API_KEY="sk_test_123")
 class ConcurrentTicketRedemptionTests(TicketFixture, APITransactionTestCase):
     def test_simultaneous_scans_admit_only_once(self):
         self.ticket.status = "paid"

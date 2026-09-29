@@ -22,6 +22,17 @@ class User(AbstractUser):
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
     privacy_accepted_at = models.DateTimeField(null=True, blank=True)
 
+    # The Foyer profile. Sex is used only for gendered audience eligibility.
+    birth_date = models.DateField(null=True, blank=True)
+    sex = models.CharField(max_length=16, blank=True, default="")
+    church = models.ForeignKey(
+        "activities.Church",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="members",
+    )
+
     # Stripe Connect (marketplace host payouts)
     stripe_connect_account_id = models.CharField(max_length=255, blank=True, default="")
     stripe_connect_payouts_enabled = models.BooleanField(default=False)

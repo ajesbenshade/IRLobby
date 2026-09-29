@@ -45,6 +45,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [birthDate, setBirthDate] = useState('');
+  const [sex, setSex] = useState<'male' | 'female' | ''>('');
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [socialError, setSocialError] = useState<unknown>(null);
 
@@ -57,8 +59,10 @@ export const RegisterScreen = ({ navigation }: Props) => {
       email.trim().length > 0 &&
       username.trim().length >= 3 &&
       passwordsMatch &&
-      acceptedLegal,
-    [acceptedLegal, email, firstName, lastName, passwordsMatch, username],
+      acceptedLegal &&
+      birthDate.trim().length > 0 &&
+      (sex === 'male' || sex === 'female'),
+    [acceptedLegal, birthDate, email, firstName, lastName, passwordsMatch, sex, username],
   );
 
   useEffect(() => {
@@ -90,6 +94,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
         email: email.trim().toLowerCase(),
         username: username.trim(),
         password,
+        birthDate: birthDate.trim(),
+        sex: sex || undefined,
       });
       await persistLegalAcceptance();
       return user;
@@ -102,7 +108,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
     error: googleError,
   } = useMutation({
     mutationFn: async (idToken: string) => {
-      const result = await signInWithGoogleIdToken(idToken);
+      const result = await signInWithGoogleIdToken(idToken, birthDate.trim());
       await persistLegalAcceptance();
       return result;
     },
@@ -134,6 +140,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
+        birthDate: birthDate.trim(),
       });
       await persistLegalAcceptance();
       return result;
@@ -162,9 +169,13 @@ export const RegisterScreen = ({ navigation }: Props) => {
     if (isBusy || !acceptedLegal) {
       return;
     }
+    if (!birthDate.trim()) {
+      setSocialError(new Error('Birth date is required.'));
+      return;
+    }
 
     await signInWithAppleAsync();
-  }, [acceptedLegal, isBusy, signInWithAppleAsync]);
+  }, [acceptedLegal, birthDate, isBusy, signInWithAppleAsync]);
 
   return (
     <AuthShell
@@ -200,6 +211,21 @@ export const RegisterScreen = ({ navigation }: Props) => {
           onChangeText={setLastName}
           autoCapitalize="words"
         />
+        <Field
+          label="Birth date"
+          value={birthDate}
+          onChangeText={setBirthDate}
+          placeholder="YYYY-MM-DD"
+          autoCapitalize="none"
+        />
+        <View style={styles.form}>
+          <Pressable onPress={() => setSex('male')}>
+            <Text style={{ color: sex === 'male' ? '#a2033f' : '#222222' }}>Male</Text>
+          </Pressable>
+          <Pressable onPress={() => setSex('female')}>
+            <Text style={{ color: sex === 'female' ? '#a2033f' : '#222222' }}>Female</Text>
+          </Pressable>
+        </View>
         <Field
           label="Email"
           value={email}
@@ -286,6 +312,10 @@ export const RegisterScreen = ({ navigation }: Props) => {
             label={authCopy.register.googleCta}
             notConfiguredHint={authCopy.register.googleNotConfigured}
             onIdToken={async (idToken) => {
+              if (!birthDate.trim()) {
+                setSocialError(new Error('Birth date is required.'));
+                return;
+              }
               setSocialError(null);
               await signInWithGoogleAsync(idToken);
             }}

@@ -5,6 +5,14 @@ from utils.client_urls import is_allowed_client_return_url
 from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
+from .foyer import (
+    PUBLIC_LOCATION_WARNING,
+    apply_foyer_host_rules,
+    foyer_mode,
+    gift_notice,
+    going_headcount,
+    is_congregational_admin,
+)
 from .models import Activity, ActivityParticipant, Ticket
 from .ticketing import ticketing_enabled
 
@@ -33,6 +41,12 @@ class ActivitySerializer(serializers.ModelSerializer):
     )
     ticketsAvailable = serializers.SerializerMethodField()
     isSoldOut = serializers.SerializerMethodField()
+    cover_photo_url = serializers.SerializerMethodField()
+    photos = serializers.SerializerMethodField()
+    gift_notice = serializers.SerializerMethodField()
+    public_location_warning = serializers.SerializerMethodField()
+    is_congregational_admin = serializers.SerializerMethodField()
+    headcount = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -61,6 +75,21 @@ class ActivitySerializer(serializers.ModelSerializer):
             "currency",
             "age_restriction",
             "ageRestriction",
+            "audience_gender",
+            "age_min",
+            "age_max",
+            "list_on_church_calendar",
+            "calendar_approved",
+            "donation_enabled",
+            "suggested_donation",
+            "host_kind",
+            "church",
+            "cover_photo_url",
+            "photos",
+            "gift_notice",
+            "public_location_warning",
+            "is_congregational_admin",
+            "headcount",
             "skill_level",
             "skillLevel",
             "equipment_provided",
@@ -86,7 +115,14 @@ class ActivitySerializer(serializers.ModelSerializer):
             "created_at",
             "participant_count",
         )
-        read_only_fields = ("id", "is_approved", "created_at", "tickets_sold")
+        read_only_fields = (
+            "id",
+            "is_approved",
+            "created_at",
+            "tickets_sold",
+            "calendar_approved",
+            "church",
+        )
 
     def to_internal_value(self, data):
         normalized_data = dict(data)
@@ -106,6 +142,13 @@ class ActivitySerializer(serializers.ModelSerializer):
             "maxTickets": "max_tickets",
             "platformFeePercent": "platform_fee_percent",
             "imageUrls": "images",
+            "audienceGender": "audience_gender",
+            "ageMin": "age_min",
+            "ageMax": "age_max",
+            "listOnChurchCalendar": "list_on_church_calendar",
+            "donationEnabled": "donation_enabled",
+            "suggestedDonation": "suggested_donation",
+            "hostKind": "host_kind",
         }
 
         for alias, normalized in aliases.items():
@@ -122,11 +165,19 @@ class ActivitySerializer(serializers.ModelSerializer):
         ticket_price = attrs.get("ticket_price", getattr(self.instance, "ticket_price", 0))
         max_tickets = attrs.get("max_tickets", getattr(self.instance, "max_tickets", 0))
 
-        # Platform fee is fixed by IRLobby policy (default 10%).
-        attrs["platform_fee_percent"] = getattr(settings, "STRIPE_PLATFORM_FEE_PERCENT", 10)
+        request = self.context.get("request")
+        host = getattr(request, "user", None) if request else None
+        if foyer_mode():
+            if host is None or not getattr(host, "is_authenticated", False):
+                if self.instance is not None:
+                    host = self.instance.host
+            attrs = apply_foyer_host_rules(attrs, host, self.instance)
+            is_ticketed = False
+        else:
+            # Platform fee is fixed by IRLobby policy (default 10%).
+            attrs["platform_fee_percent"] = getattr(settings, "STRIPE_PLATFORM_FEE_PERCENT", 10)
 
         newly_ticketed = is_ticketed and not getattr(self.instance, "is_ticketed", False)
-        request = self.context.get("request")
         if newly_ticketed and request is not None and not ticketing_enabled(request):
             raise serializers.ValidationError(
                 {"is_ticketed": "Ticketed events are not available yet."}
@@ -163,7 +214,33 @@ class ActivitySerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_images(self, images):
+        if foyer_mode():
+            limit = 1 if self.instance is None else 8
+            return validate_image_reference_list(images, max_items=limit, field_name="images")
         return validate_image_reference_list(images, max_items=5, field_name="images")
+
+    def validate_audience_gender(self, value):
+        if value not in {"everyone", "men", "women"}:
+            raise serializers.ValidationError("Audience must be everyone, men, or women.")
+        return value
+
+    def validate_capacity(self, value):
+        if value is None:
+            return value
+        if value < 1 or value > 500:
+            raise serializers.ValidationError("Capacity must be empty or between 1 and 500.")
+        return value
+
+    def create(self, validated_data):
+        images = list(validated_data.get("images") or [])
+        activity = super().create(validated_data)
+        if foyer_mode() and images:
+            request = self.context.get("request")
+            user = getattr(request, "user", None) if request else activity.host
+            from .photos import materialize_images
+
+            materialize_images(activity, images, user)
+        return activity
 
     def get_ticketsAvailable(self, obj):
         return obj.tickets_available
@@ -172,7 +249,47 @@ class ActivitySerializer(serializers.ModelSerializer):
         return obj.is_sold_out
 
     def get_participant_count(self, obj):
+        if foyer_mode():
+            return going_headcount(obj)
         return obj.participants.filter(status="confirmed").count()
+
+    def get_headcount(self, obj):
+        return self.get_participant_count(obj)
+
+    def get_cover_photo_url(self, obj):
+        request = self.context.get("request")
+        photo = obj.photos.order_by("created_at", "id").first()
+        return photo.public_url(request) if photo else ""
+
+    def get_photos(self, obj):
+        request = self.context.get("request")
+        return [photo.public_url(request) for photo in obj.photos.all() if photo.public_url(request)]
+
+    def get_gift_notice(self, obj):
+        if not foyer_mode() or not obj.donation_enabled:
+            return ""
+        return gift_notice(obj)
+
+    def get_public_location_warning(self, obj):
+        if foyer_mode() and obj.list_on_church_calendar:
+            return PUBLIC_LOCATION_WARNING
+        return ""
+
+    def get_is_congregational_admin(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        return bool(user and is_congregational_admin(user))
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if foyer_mode():
+            photo_urls = [url for url in (data.get("photos") or []) if url and not str(url).startswith("data:")]
+            data["photos"] = photo_urls
+            data["images"] = photo_urls
+            data["cover_photo_url"] = photo_urls[0] if photo_urls else ""
+            data["platform_fee_percent"] = "0.00"
+            data["platformFeePercent"] = "0.00"
+        return data
 
     def validate_description(self, value):
         return strip_html(value)

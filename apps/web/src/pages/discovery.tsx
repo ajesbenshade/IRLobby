@@ -1,4 +1,5 @@
 import ActivityDetailsModal from '@/components/ActivityDetailsModal';
+import FoyerGoingPanel from '@/components/FoyerGoingPanel';
 import { DiscoverySkeleton, PageState } from '@/components/AppState';
 import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
@@ -15,7 +16,7 @@ import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shar
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, MapPin, Bell, RefreshCw, Map, X, Info, Heart, WifiOff, Sparkles } from 'lucide-react';
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface SwipePayload {
   activityId: number;
@@ -27,6 +28,7 @@ interface SwipeMutationResult {
 }
 
 export default function Discovery() {
+  const navigate = useNavigate();
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showMatchSuccess, setShowMatchSuccess] = useState(false);
@@ -38,6 +40,7 @@ export default function Discovery() {
   const [tonightOnly, setTonightOnly] = useState(true);
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
@@ -137,7 +140,10 @@ export default function Discovery() {
   };
 
   const handleReject = () => handleSwipe('pass');
-  const handleJoin = () => handleSwipe('like');
+  const handleJoin = () => {
+    if (!currentActivity) return;
+    setGoingActivity(currentActivity);
+  };
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
@@ -458,6 +464,18 @@ export default function Discovery() {
           </Button>
         </div>
       </div>
+
+      {goingActivity ? (
+        <FoyerGoingPanel
+          activity={goingActivity}
+          onClose={() => setGoingActivity(null)}
+          onDone={() => {
+            setGoingActivity(null);
+            nextActivity();
+            navigate('/app/matches');
+          }}
+        />
+      ) : null}
 
       {/* Modals */}
       {currentActivity && (

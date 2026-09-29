@@ -37,6 +37,11 @@ class UserSerializer(serializers.ModelSerializer):
         source="stripe_connect_details_submitted", read_only=True
     )
     canSellTickets = serializers.SerializerMethodField()
+    birthDate = serializers.SerializerMethodField()
+    churchName = serializers.SerializerMethodField()
+    churchId = serializers.IntegerField(source="church_id", read_only=True)
+    isCongregationalAdmin = serializers.SerializerMethodField()
+    church_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
@@ -73,13 +78,72 @@ class UserSerializer(serializers.ModelSerializer):
             "stripeConnectPayoutsEnabled",
             "stripeConnectDetailsSubmitted",
             "canSellTickets",
+            "birth_date",
+            "birthDate",
+            "sex",
+            "church",
+            "churchId",
+            "churchName",
+            "church_name",
+            "isCongregationalAdmin",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "church")
 
     def get_canSellTickets(self, obj):
         from .stripe_connect import host_can_receive_payouts
 
         return host_can_receive_payouts(obj)
+
+    def get_birthDate(self, obj):
+        return obj.birth_date.isoformat() if obj.birth_date else None
+
+    def to_internal_value(self, data):
+        normalized = dict(data)
+        if "birthDate" in normalized and "birth_date" not in normalized:
+            normalized["birth_date"] = normalized.pop("birthDate")
+        else:
+            normalized.pop("birthDate", None)
+        if "churchName" in normalized and "church_name" not in normalized:
+            normalized["church_name"] = normalized.pop("churchName")
+        else:
+            normalized.pop("churchName", None)
+        return super().to_internal_value(normalized)
+
+    def get_churchName(self, obj):
+        return obj.church.name if obj.church_id else ""
+
+    def get_isCongregationalAdmin(self, obj):
+        from activities.foyer import is_congregational_admin
+
+        return is_congregational_admin(obj)
+
+    def validate_birth_date(self, value):
+        if value is None:
+            return value
+        from activities.foyer import assert_account_birth_date
+
+        assert_account_birth_date(value)
+        return value
+
+    def validate_sex(self, value):
+        if value in ("", None):
+            return ""
+        if value not in {"male", "female"}:
+            raise serializers.ValidationError("Sex is used only to match men or women gatherings.")
+        return value
+
+    def update(self, instance, validated_data):
+        church_name = (validated_data.pop("church_name", "") or "").strip()
+        if church_name:
+            from activities.foyer import VERIFIED_CHURCHES
+            from activities.models import Church
+
+            church, _created = Church.objects.get_or_create(
+                name=church_name,
+                defaults={"is_verified": church_name in VERIFIED_CHURCHES},
+            )
+            validated_data["church"] = church
+        return super().update(instance, validated_data)
 
     def get_interests(self, obj):
         return (obj.preferences or {}).get("interests", [])
@@ -120,19 +184,41 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    birth_date = serializers.DateField(required=False, allow_null=True)
+    sex = serializers.ChoiceField(choices=["male", "female"], required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "first_name", "last_name")
+        fields = (
+            "username",
+            "email",
+            "password",
+            "password_confirm",
+            "first_name",
+            "last_name",
+            "birth_date",
+            "sex",
+        )
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords don't match")
+        from activities.foyer import assert_account_birth_date, foyer_mode
+
+        if foyer_mode():
+            assert_account_birth_date(attrs.get("birth_date"))
+        elif attrs.get("birth_date") is not None:
+            assert_account_birth_date(attrs.get("birth_date"))
         return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
+        birth_date = validated_data.pop("birth_date", None)
+        sex = validated_data.pop("sex", "")
         user = User.objects.create_user(**validated_data)
+        user.birth_date = birth_date
+        user.sex = sex or ""
+        user.save(update_fields=["birth_date", "sex"])
         return user
 
 

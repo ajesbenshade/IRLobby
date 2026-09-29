@@ -13,6 +13,7 @@ export const API_ROUTES = {
   AUTH_TWITTER_URL: "/api/auth/twitter/url/",
   AUTH_TWITTER_CALLBACK: "/api/auth/twitter/callback/",
   AUTH_TWITTER_STATUS: "/api/auth/twitter/status/",
+  AUTH_SOCIAL_COMPLETE: "/api/auth/social/complete/",
   USER_PROFILE: "/api/users/profile/",
   USER_PROFILE_DELETE: "/api/users/profile/delete/",
   USER_PROFILE_EXPORT: "/api/users/profile/export/",

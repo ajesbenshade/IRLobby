@@ -72,7 +72,8 @@ export type TwitterAuthFailureReason =
   | 'cancelled'
   | 'missing_access'
   | 'missing_user'
-  | 'invalid_user';
+  | 'invalid_user'
+  | 'birth_date_required';
 
 export type TwitterAuthCallback =
   | { ok: true; access: string; refresh?: string; user: AuthUser }
@@ -81,6 +82,7 @@ export type TwitterAuthCallback =
       error: string;
       reason: TwitterAuthFailureReason;
       code?: string;
+      signupToken?: string;
     };
 
 const CANCELLED_ERROR_CODES = new Set([
@@ -185,6 +187,16 @@ export function parseTwitterAuthCallbackUrl(url: string): TwitterAuthCallback {
       error: formatTwitterCallbackError(error, errorDescription),
       reason: CANCELLED_ERROR_CODES.has(normalized) ? 'cancelled' : 'callback_error',
       code: error,
+    };
+  }
+
+  const birthDateRequired = readParam(params, 'birth_date_required');
+  if (birthDateRequired === 'true' || birthDateRequired === '1') {
+    return {
+      ok: false,
+      error: 'Birth date is required.',
+      reason: 'birth_date_required',
+      signupToken: readParam(params, 'signup_token') ?? undefined,
     };
   }
 

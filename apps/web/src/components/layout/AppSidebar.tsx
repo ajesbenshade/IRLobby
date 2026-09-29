@@ -62,8 +62,9 @@ export default function AppSidebar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-deep text-white shadow-float">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="font-display text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
-            IRLobby
+          <span className="group-data-[collapsible=icon]:hidden">
+            <span className="block font-display text-lg font-bold tracking-tight text-[#a2033f]">The Foyer</span>
+            <span className="block text-[10px] leading-tight text-[#222222]">Franconia Mennonite Church</span>
           </span>
         </Link>
       </SidebarHeader>

@@ -19,39 +19,39 @@ import {
  * Shared Electric Midnight tokens stay the web source of truth.
  */
 
-const coral = {
-  primary: '#FF6B4A',
-  primaryDeep: '#E25438',
-  primarySoft: '#FFE3DA',
-  primaryGlow: '#FF8B70',
+const burgundy = {
+  primary: '#a2033f',
+  primaryDeep: '#7c0230',
+  primarySoft: '#f3d5e0',
+  primaryGlow: '#c43b68',
 } as const;
 
 export const palette = {
-  primary: coral.primary,
-  primaryDeep: coral.primaryDeep,
-  primarySoft: coral.primarySoft,
-  primaryGlow: coral.primaryGlow,
+  primary: burgundy.primary,
+  primaryDeep: burgundy.primaryDeep,
+  primarySoft: burgundy.primarySoft,
+  primaryGlow: burgundy.primaryGlow,
 
-  secondary: coral.primaryDeep,
-  secondaryDeep: '#C6452C',
-  secondarySoft: '#FFD2C6',
+  secondary: burgundy.primaryDeep,
+  secondaryDeep: '#5c0224',
+  secondarySoft: '#f8e4eb',
 
-  accent: coral.primary,
-  accentDeep: coral.primaryDeep,
-  accentSoft: coral.primarySoft,
+  accent: burgundy.primary,
+  accentDeep: burgundy.primaryDeep,
+  accentSoft: burgundy.primarySoft,
 
   success: brandPalette.success,
   warning: brandPalette.warning,
   danger: brandPalette.danger,
 
-  ink: brandPalette.lightInk,
-  mutedInk: brandPalette.lightMutedInk,
-  softInk: brandPalette.lightSoftInk,
-  line: '#EDE4E0',
-  lineStrong: '#D9CDC7',
-  surface: brandPalette.white,
-  surfaceMuted: '#FFF0EA',
-  background: '#FFF6F2',
+  ink: '#222222',
+  mutedInk: '#5c534f',
+  softInk: '#8a7f7a',
+  line: '#eadfd9',
+  lineStrong: '#d9cdc7',
+  surface: '#ffffff',
+  surfaceMuted: '#f6f1ee',
+  background: '#f6f1ee',
   overlay: 'rgba(28, 21, 32, 0.48)',
   glass: 'rgba(255, 255, 255, 0.72)',
   glassBorder: 'rgba(255, 107, 74, 0.16)',
@@ -66,10 +66,10 @@ export const palette = {
   darkMutedInk: '#C4B6B0',
   darkSoftInk: '#8E827C',
 
-  lightBackground: '#FFF6F2',
-  lightSurface: brandPalette.white,
-  lightSurfaceMuted: '#FFF0EA',
-  lightInk: brandPalette.lightInk,
+  lightBackground: '#f6f1ee',
+  lightSurface: '#ffffff',
+  lightSurfaceMuted: '#f6f1ee',
+  lightInk: '#222222',
   lightMutedInk: brandPalette.lightMutedInk,
   lightSoftInk: brandPalette.lightSoftInk,
   lightLine: '#EDE4E0',
@@ -101,9 +101,9 @@ export const typography = {
   bodyRegular: brandTypography.bodyRegular,
   bodyMedium: brandTypography.bodyMedium,
   bodySemibold: brandTypography.bodySemibold,
-  heading: brandTypography.heading,
-  headingDisplay: brandTypography.headingDisplay,
-  display: brandTypography.display,
+  heading: 'Georgia',
+  headingDisplay: 'Georgia',
+  display: 'Georgia',
 } as const;
 
 export const fontSize = {
@@ -131,14 +131,14 @@ export const shadows = {
     elevation: brandElevation.card.elevation,
   },
   float: {
-    shadowColor: coral.primary,
+    shadowColor: burgundy.primary,
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: brandElevation.float.shadowOffset,
     elevation: brandElevation.float.elevation,
   },
   pop: {
-    shadowColor: coral.primaryDeep,
+    shadowColor: burgundy.primaryDeep,
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: brandElevation.pop.shadowOffset,

@@ -23,7 +23,12 @@ class MessageSerializer(serializers.ModelSerializer):
         return obj.sender.id
 
     def get_user(self, obj):
-        return {"id": obj.sender.id, "firstName": obj.sender.first_name, "email": obj.sender.email}
+        return {
+            "id": obj.sender.id,
+            "firstName": obj.sender.first_name,
+            "email": obj.sender.email,
+            "avatarUrl": obj.sender.avatar_url or "",
+        }
 
 
 class ConversationSerializer(serializers.ModelSerializer):

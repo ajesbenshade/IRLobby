@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlparse
 
@@ -336,6 +336,7 @@ class TwitterOAuthTests(APITestCase):
                 "code_verifier": "test-verifier",
                 "redirect_uri": "http://testserver/api/auth/twitter/callback/",
                 "mobile_redirect_uri": "irlobby://auth/twitter",
+                "birth_date": "1990-01-15",
             },
             timeout=600,
         )
@@ -399,6 +400,7 @@ class TwitterOAuthTests(APITestCase):
                 "code_verifier": "test-verifier",
                 "redirect_uri": "http://testserver/api/auth/twitter/callback/",
                 "mobile_redirect_uri": "irlobby://auth/twitter",
+                "birth_date": "1990-01-15",
             },
             timeout=600,
         )
@@ -463,6 +465,7 @@ class SocialMobileLoginTests(APITestCase):
             username="existing-user",
             email="existing@example.com",
             password="password123",
+            birth_date=date(1990, 1, 15),
         )
         mock_verify_google_identity_token.return_value = {
             "sub": "google-sub-123",
@@ -568,6 +571,7 @@ class SocialMobileLoginTests(APITestCase):
             username="linked-user",
             email="linked@example.com",
             password="password123",
+            birth_date=date(1990, 1, 15),
         )
         SocialAuthIdentity.objects.create(
             user=user,
@@ -610,6 +614,7 @@ class SocialMobileLoginTests(APITestCase):
                 "identity_token": "apple-token",
                 "first_name": "Apple",
                 "last_name": "User",
+                "birth_date": "1990-01-15",
             },
             format="json",
         )
@@ -1002,6 +1007,8 @@ class UserAccountWorkflowTests(APITestCase):
                 "email": "new-account@example.com",
                 "password": "password123",
                 "password_confirm": "password123",
+                "birth_date": "1990-05-01",
+                "sex": "female",
             },
             format="json",
         )

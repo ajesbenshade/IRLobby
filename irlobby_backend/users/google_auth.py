@@ -224,6 +224,25 @@ def google_sign_in(request):
         except ValueError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
 
+        from users.social_gate import (
+            BirthDateRequired,
+            Under13Rejected,
+            birth_date_required_response,
+            finish_social_birth_date,
+            under_13_response,
+        )
+
+        try:
+            user = finish_social_birth_date(
+                user,
+                created=created,
+                birth_date_raw=request.data.get("birth_date") or request.data.get("birthDate"),
+            )
+        except BirthDateRequired:
+            return birth_date_required_response()
+        except Under13Rejected:
+            return under_13_response()
+
         refresh = RefreshToken.for_user(user)
         return Response(
             {

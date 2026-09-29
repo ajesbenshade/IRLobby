@@ -14,6 +14,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { FoyerGoingSheet } from '@components/FoyerGoingSheet';
 import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
@@ -36,6 +37,7 @@ import {
 } from '@services/activityService';
 import { appColors, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import type { Activity } from '../../types/activity';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -90,6 +92,7 @@ export const DiscoverScreen = () => {
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
   const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
   const [safetyUserLabel, setSafetyUserLabel] = useState<string | undefined>(undefined);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -380,7 +383,9 @@ export const DiscoverScreen = () => {
   const currentTimeLabel = formatActivityTime(currentActivity?.time);
   const ticketed = currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
-  const coverImage = currentActivity?.images?.[0];
+  const coverImage =
+    (currentActivity as { cover_photo_url?: string } | undefined)?.cover_photo_url ||
+    currentActivity?.images?.[0];
 
   return (
     <>
@@ -696,8 +701,18 @@ export const DiscoverScreen = () => {
               <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
                 Details
               </AppButton>
-              <AppButton onPress={() => handleSwipe('right')} disabled={isBusy} style={styles.actionButton}>
-                I’m down
+              <AppButton
+                onPress={() => {
+                  if (config.foyerMode && currentActivity) {
+                    setGoingActivity(currentActivity);
+                    return;
+                  }
+                  handleSwipe('right');
+                }}
+                disabled={isBusy}
+                style={styles.actionButton}
+              >
+                {config.foyerMode ? "I'm going" : 'I’m down'}
               </AppButton>
             </View>
           ) : null}
@@ -762,7 +777,7 @@ export const DiscoverScreen = () => {
                     <AppButton variant="outline" onPress={() => setShowDetails(false)}>
                       Close
                     </AppButton>
-                    {ticketed ? (
+                    {ticketed && !config.foyerMode ? (
                       <AppButton
                         disabled={Boolean(currentActivity.isSoldOut)}
                         onPress={() => {
@@ -854,6 +869,14 @@ export const DiscoverScreen = () => {
       onDismiss={() => {
         setMatchMessage(null);
         setMatchContext(null);
+      }}
+    />
+    <FoyerGoingSheet
+      activity={goingActivity}
+      onClose={() => setGoingActivity(null)}
+      onJoined={() => {
+        setCurrentIndex((previous) => previous + 1);
+        navigation.getParent()?.navigate('Chat' as never);
       }}
     />
     <Snackbar

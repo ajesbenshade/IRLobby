@@ -24,6 +24,7 @@ import { SettingsScreen } from '@screens/main/SettingsScreen';
 import { VibeQuizModalScreen } from '@screens/main/vibeQuiz/VibeQuizModalScreen';
 import { VibeQuizResultsScreen } from '@screens/main/vibeQuiz/VibeQuizResultsScreen';
 import { WebContentScreen } from '@screens/main/WebContentScreen';
+import { config } from '@constants/config';
 import { appColors } from '@theme/index';
 
 import type { MainStackParamList, MainTabParamList } from './types';
@@ -201,21 +202,25 @@ export const MainNavigator = () => (
       component={VibeQuizResultsScreen}
       options={{ title: 'Your Vibe' }}
     />
-    <Stack.Screen
-      name="BuyTicket"
-      component={BuyTicketScreen}
-      options={{ headerShown: false, title: 'Buy ticket' }}
-    />
-    <Stack.Screen
-      name="TicketWallet"
-      component={TicketWalletScreen}
-      options={{ headerShown: false, title: 'Your ticket' }}
-    />
-    <Stack.Screen
-      name="DoorScan"
-      component={DoorScanScreen}
-      options={{ headerShown: false, title: 'Door scan' }}
-    />
+    {config.foyerMode ? null : (
+      <>
+        <Stack.Screen
+          name="BuyTicket"
+          component={BuyTicketScreen}
+          options={{ headerShown: false, title: 'Buy ticket' }}
+        />
+        <Stack.Screen
+          name="TicketWallet"
+          component={TicketWalletScreen}
+          options={{ headerShown: false, title: 'Your ticket' }}
+        />
+        <Stack.Screen
+          name="DoorScan"
+          component={DoorScanScreen}
+          options={{ headerShown: false, title: 'Door scan' }}
+        />
+      </>
+    )}
     <Stack.Screen
       name="GetPaid"
       component={GetPaidScreen}

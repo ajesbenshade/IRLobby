@@ -229,6 +229,61 @@ def create_connect_onboarding_link(user, *, return_url=None, refresh_url=None) -
     return url
 
 
+def create_foyer_gift_checkout_session(
+    *,
+    activity,
+    donation,
+    destination_account_id: str,
+    success_url: str,
+    cancel_url: str,
+):
+    """Destination charge for optional giving. The platform application fee is always 0."""
+    client = get_stripe_client()
+    success_url = _require_http_url(success_url, "Checkout success URL")
+    cancel_url = _require_http_url(cancel_url, "Checkout cancel URL")
+    unit_amount = int((Decimal(str(donation.amount)) * Decimal("100")).quantize(Decimal("1")))
+    if unit_amount <= 0:
+        raise StripeConnectError("Gift amount must be greater than zero.")
+    if not destination_account_id:
+        raise StripeConnectError("This gathering does not have a payout account yet.")
+
+    return client.v1.checkout.sessions.create(
+        {
+            "mode": "payment",
+            "line_items": [
+                {
+                    "price_data": {
+                        "currency": (activity.currency or "usd").lower(),
+                        "product_data": {
+                            "name": f"Gift for {activity.title}",
+                            "description": "Optional giving. The Foyer does not take a cut.",
+                        },
+                        "unit_amount": unit_amount,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            "payment_intent_data": {
+                "application_fee_amount": 0,
+                "transfer_data": {"destination": destination_account_id},
+                "metadata": {
+                    "donation_id": str(donation.id),
+                    "activity_id": str(activity.id),
+                    "kind": "foyer_gift",
+                },
+            },
+            "metadata": {
+                "donation_id": str(donation.id),
+                "activity_id": str(activity.id),
+                "kind": "foyer_gift",
+                "platform_fee_percent": "0",
+            },
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        }
+    )
+
+
 def create_destination_checkout_session(
     *,
     activity,

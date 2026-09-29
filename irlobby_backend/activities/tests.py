@@ -61,6 +61,7 @@ class ActivityPermissionsTests(APITestCase):
         self.assertTrue(Activity.objects.filter(id=self.activity.id).exists())
 
 
+@override_settings(FOYER_MODE=False)
 class ActivityApprovalWorkflowTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
@@ -122,13 +123,13 @@ class ActivityApprovalWorkflowTests(APITestCase):
         self.assertNotIn(activity.id, ids)
         self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_cannot_create_activity_with_capacity_above_ten(self):
+    def test_capacity_allows_up_to_five_hundred_and_rejects_more(self):
         self.client.force_authenticate(self.host)
         url = reverse("activity-list")
         payload = {
-            "title": "Too Large Event",
-            "description": "Should fail validation.",
-            "location": "Stadium",
+            "title": "Larger Event",
+            "description": "Capacity is no longer capped at ten.",
+            "location": "Fellowship Hall",
             "latitude": 40.0,
             "longitude": -74.0,
             "time": (timezone.now() + timedelta(days=3)).isoformat(),
@@ -138,9 +139,13 @@ class ActivityApprovalWorkflowTests(APITestCase):
         }
 
         response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("capacity", response.data)
+        payload["title"] = "Unbounded Event"
+        payload["capacity"] = 501
+        rejected = self.client.post(url, payload, format="json")
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("capacity", rejected.data)
 
     def test_join_rejected_when_activity_full(self):
         activity = Activity.objects.create(
@@ -271,7 +276,11 @@ class ActivityLocationQueryTests(APITestCase):
         self.assertIn(self.far.id, ids)
 
 
-@override_settings(STRIPE_WEBHOOK_SECRET="whsec_test", STRIPE_API_KEY="sk_test_123")
+@override_settings(
+    STRIPE_WEBHOOK_SECRET="whsec_test",
+    STRIPE_API_KEY="sk_test_123",
+    FOYER_MODE=False,
+)
 class TicketingTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
@@ -656,7 +665,7 @@ class TicketingTests(APITestCase):
         self.assertEqual(ticket.status, "pending")
 
 
-@override_settings(ENABLE_TICKETING=False)
+@override_settings(ENABLE_TICKETING=False, FOYER_MODE=False)
 class TicketingDisabledTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(

@@ -22,10 +22,19 @@ from .social_auth import (
     is_apple_oauth_configured,
     is_google_oauth_configured,
     normalize_email,
-    resolve_or_create_social_user,
     split_display_name,
     verify_apple_identity_token,
     verify_google_identity_token,
+)
+from .social_gate import (
+    BirthDateRequired,
+    Under13Rejected,
+    admit_social_user,
+    birth_date_required_response,
+    drop_social_signup,
+    pop_social_signup,
+    stash_social_signup,
+    under_13_response,
 )
 
 logger = logging.getLogger(__name__)
@@ -214,6 +223,7 @@ def twitter_oauth_url(request):
                 "code_verifier": code_verifier,
                 "redirect_uri": redirect_uri,
                 "mobile_redirect_uri": mobile_redirect_uri,
+                "birth_date": request.GET.get("birth_date") or request.GET.get("birthDate") or "",
             },
             timeout=600,
         )  # 10 minutes
@@ -373,14 +383,31 @@ def twitter_oauth_callback(request):
 
         twitter_user = user_response.json()["data"]
         first_name, last_name = split_display_name(twitter_user.get("name", ""))
+        birth_date_raw = None
+        if isinstance(oauth_session, dict):
+            birth_date_raw = oauth_session.get("birth_date") or None
+        profile = {
+            "provider": "twitter",
+            "provider_user_id": twitter_user["id"],
+            "username": twitter_user.get("username"),
+            "first_name": first_name,
+            "last_name": last_name,
+        }
         try:
-            user, created = resolve_or_create_social_user(
-                provider="twitter",
-                provider_user_id=twitter_user["id"],
-                username=twitter_user.get("username"),
-                first_name=first_name,
-                last_name=last_name,
-            )
+            user, created = admit_social_user(birth_date_raw=birth_date_raw, **profile)
+        except BirthDateRequired:
+            signup_token = stash_social_signup(profile)
+            if mobile_redirect_uri:
+                return _MobileAppRedirect(
+                    f"{mobile_redirect_uri}?{urlencode({'birth_date_required': 'true', 'signup_token': signup_token})}"
+                )
+            return birth_date_required_response(signup_token=signup_token)
+        except Under13Rejected:
+            if mobile_redirect_uri:
+                return _MobileAppRedirect(
+                    f"{mobile_redirect_uri}?{urlencode({'error': 'under_13', 'error_description': 'A person under 13 cannot create an account.'})}"
+                )
+            return under_13_response()
         except SocialAuthConflict as error:
             return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
         response_payload = build_auth_response(user, created=created)
@@ -444,14 +471,19 @@ def google_mobile_login(request):
         return build_auth_error("Google account email must be verified.")
 
     try:
-        user, created = resolve_or_create_social_user(
+        user, created = admit_social_user(
             provider="google",
             provider_user_id=payload["sub"],
             email=email,
             username=email.split("@", 1)[0],
             first_name=payload.get("given_name", "") or "",
             last_name=payload.get("family_name", "") or "",
+            birth_date_raw=request.data.get("birth_date") or request.data.get("birthDate"),
         )
+    except BirthDateRequired:
+        return birth_date_required_response()
+    except Under13Rejected:
+        return under_13_response()
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
     return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
@@ -481,16 +513,58 @@ def apple_mobile_login(request):
     email = normalize_email(payload.get("email") or request.data.get("email"))
 
     try:
-        user, created = resolve_or_create_social_user(
+        user, created = admit_social_user(
             provider="apple",
             provider_user_id=payload["sub"],
             email=email,
             username=email.split("@", 1)[0] if email else None,
             first_name=first_name,
             last_name=last_name,
+            birth_date_raw=request.data.get("birth_date") or request.data.get("birthDate"),
         )
+    except BirthDateRequired:
+        return birth_date_required_response()
+    except Under13Rejected:
+        return under_13_response()
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
+
+
+def _request_birth_date(request):
+    return request.data.get("birth_date") or request.data.get("birthDate")
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def complete_social_signup(request):
+    """Finish a social signup after the person supplies a birth date.
+
+    Used when X has already verified the identity and the account was not created.
+    """
+    token = request.data.get("signup_token") or request.data.get("signupToken")
+    pending = pop_social_signup(token)
+    if not pending or not pending.get("provider") or not pending.get("provider_user_id"):
+        return build_auth_error("This sign-in expired. Start again.")
+
+    try:
+        user, created = admit_social_user(
+            provider=pending["provider"],
+            provider_user_id=pending["provider_user_id"],
+            email=pending.get("email"),
+            username=pending.get("username"),
+            first_name=pending.get("first_name") or "",
+            last_name=pending.get("last_name") or "",
+            birth_date_raw=_request_birth_date(request),
+        )
+    except BirthDateRequired:
+        return birth_date_required_response(signup_token=token)
+    except Under13Rejected:
+        return under_13_response()
+    except SocialAuthConflict as error:
+        return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+
+    drop_social_signup(token)
     return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
 
 

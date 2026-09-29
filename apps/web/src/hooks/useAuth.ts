@@ -39,6 +39,10 @@ interface User {
   eventsHosted?: number;
   eventsAttended?: number;
   swipesRemainingToday?: number | null;
+  birthDate?: string;
+  sex?: string;
+  churchName?: string;
+  isCongregationalAdmin?: boolean;
 }
 
 const toOptionalNumber = (value: unknown): number | null | undefined => {
@@ -127,6 +131,14 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
     swipesRemainingToday: toOptionalNumber(
       profile.swipesRemainingToday ?? profile.swipes_remaining_today,
     ),
+    birthDate:
+      (typeof profile.birthDate === 'string' ? profile.birthDate : undefined) ??
+      (typeof profile.birth_date === 'string' ? profile.birth_date : undefined),
+    sex: typeof profile.sex === 'string' ? profile.sex : undefined,
+    churchName:
+      (typeof profile.churchName === 'string' ? profile.churchName : undefined) ??
+      (typeof profile.church_name === 'string' ? profile.church_name : undefined),
+    isCongregationalAdmin: Boolean(profile.isCongregationalAdmin),
   };
 };
 
@@ -142,6 +154,8 @@ type AuthResponsePayload = {
   };
   detail?: string;
   error?: string;
+  birth_date_required?: boolean;
+  signup_token?: string;
 };
 
 const resolveAuthTokens = (data: AuthResponsePayload) => {
@@ -300,13 +314,18 @@ export function useAuth() {
   );
 
   const loginWithGoogleIdToken = useCallback(
-    async (idToken: string) => {
+    async (idToken: string, birthDate?: string) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_GOOGLE_MOBILE, {
         id_token: idToken,
+        ...(birthDate ? { birth_date: birthDate } : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {
-        throw new Error(data.detail || data.error || 'Google sign-in failed');
+        const error = new Error(data.detail || data.error || 'Google sign-in failed');
+        if (data.birth_date_required) {
+          (error as Error & { birthDateRequired?: boolean }).birthDateRequired = true;
+        }
+        throw error;
       }
       await persistOAuthResponse(data);
     },
@@ -319,16 +338,22 @@ export function useAuth() {
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      birthDate?: string | null;
     }) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_APPLE_MOBILE, {
         identity_token: payload.identityToken,
         email: payload.email,
         first_name: payload.firstName,
         last_name: payload.lastName,
+        ...(payload.birthDate ? { birth_date: payload.birthDate } : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {
-        throw new Error(data.detail || data.error || 'Apple sign-in failed');
+        const error = new Error(data.detail || data.error || 'Apple sign-in failed');
+        if (data.birth_date_required) {
+          (error as Error & { birthDateRequired?: boolean }).birthDateRequired = true;
+        }
+        throw error;
       }
       await persistOAuthResponse(data);
     },

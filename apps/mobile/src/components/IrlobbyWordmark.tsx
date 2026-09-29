@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
@@ -17,30 +16,38 @@ export const IrlobbyWordmark = ({
   style,
   textStyle,
 }: IrlobbyWordmarkProps) => {
-  const iconSize = size === 'sm' ? 16 : 20;
   return (
-    <View style={[styles.row, style]}>
-      <MaterialCommunityIcons name="palm-tree" size={iconSize} color={color} />
+    <View style={[styles.wrap, style]} accessibilityRole="header" accessibilityLabel="The Foyer, Franconia Mennonite Church">
       <Text style={[styles.mark, size === 'sm' ? styles.markSm : null, { color }, textStyle]}>
-        IRLobby
+        The Foyer
+      </Text>
+      <Text style={[styles.church, size === 'sm' ? styles.churchSm : null, { color }]}>
+        Franconia Mennonite Church
       </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  wrap: {
+    alignItems: 'flex-start',
   },
   mark: {
     fontFamily: appTypography.heading,
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
-    letterSpacing: -0.4,
+    letterSpacing: 0.2,
   },
   markSm: {
-    fontSize: 14,
+    fontSize: 16,
+  },
+  church: {
+    marginTop: 1,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    opacity: 0.8,
+  },
+  churchSm: {
+    fontSize: 9,
   },
 });

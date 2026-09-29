@@ -11,12 +11,13 @@ import { apiRequest, extractApiErrorMessage } from '../lib/queryClient';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
-  loginWithGoogleIdToken?: (idToken: string) => Promise<void>;
+  loginWithGoogleIdToken?: (idToken: string, birthDate?: string) => Promise<void>;
   loginWithAppleIdentityToken?: (payload: {
     identityToken: string;
     email?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    birthDate?: string | null;
   }) => Promise<void>;
   onOAuthSuccess?: () => void;
 }
@@ -132,6 +133,9 @@ const AuthForm = ({
     firstName: '',
     lastName: '',
   });
+  const [birthDate, setBirthDate] = useState('');
+  const birthDateRef = useRef('');
+  birthDateRef.current = birthDate;
 
   const googleClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim() ?? '';
   const appleClientId = import.meta.env.VITE_APPLE_WEB_CLIENT_ID?.trim() ?? '';
@@ -206,7 +210,7 @@ const AuthForm = ({
             }
             try {
               setIsLoading(true);
-              await loginWithGoogleIdToken(response.credential);
+              await loginWithGoogleIdToken(response.credential, birthDateRef.current.trim());
               toast({ title: 'Success', description: 'Signed in with Google' });
               onOAuthSuccess?.();
             } catch (error) {
@@ -263,7 +267,23 @@ const AuthForm = ({
     };
   }, [appleClientId, appleRedirectUri, loginWithAppleIdentityToken]);
 
+  const requireBirthDate = () => {
+    if (birthDate.trim()) {
+      return true;
+    }
+    toast({
+      title: 'Birth date required',
+      description:
+        'Enter your birth date before continuing. A person under 13 cannot create an account.',
+      variant: 'destructive',
+    });
+    return false;
+  };
+
   const handleGoogleSignIn = () => {
+    if (!requireBirthDate()) {
+      return;
+    }
     if (!googleReady || !window.google?.accounts?.id) {
       toast({
         title: 'Google sign-in unavailable',
@@ -278,6 +298,9 @@ const AuthForm = ({
   };
 
   const handleAppleSignIn = async () => {
+    if (!requireBirthDate()) {
+      return;
+    }
     if (!appleReady || !window.AppleID?.auth || !loginWithAppleIdentityToken) {
       toast({
         title: 'Apple sign-in unavailable',
@@ -301,6 +324,7 @@ const AuthForm = ({
         email: response.user?.email ?? null,
         firstName: response.user?.name?.firstName ?? null,
         lastName: response.user?.name?.lastName ?? null,
+        birthDate: birthDate.trim(),
       });
       toast({ title: 'Success', description: 'Signed in with Apple' });
       onOAuthSuccess?.();
@@ -316,6 +340,9 @@ const AuthForm = ({
   };
 
   const handleTwitterOAuth = async () => {
+    if (!requireBirthDate()) {
+      return;
+    }
     if (!isTwitterAvailable) {
       toast({
         title: 'Twitter OAuth Unavailable',
@@ -329,7 +356,10 @@ const AuthForm = ({
     try {
       setIsLoading(true);
 
-      const response = await apiRequest('GET', API_ROUTES.AUTH_TWITTER_URL);
+      const response = await apiRequest(
+        'GET',
+        `${API_ROUTES.AUTH_TWITTER_URL}?birth_date=${encodeURIComponent(birthDate.trim())}`,
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -455,6 +485,9 @@ const AuthForm = ({
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!requireBirthDate()) {
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -465,6 +498,7 @@ const AuthForm = ({
         password_confirm: formData.passwordConfirm,
         first_name: formData.firstName,
         last_name: formData.lastName,
+        birth_date: birthDate.trim(),
       });
 
       const data = (await response.json()) as AuthResponsePayload;
@@ -678,6 +712,19 @@ const AuthForm = ({
             </div>
           </div>
           <div className="mt-4 grid gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="socialBirthDate">Birth date</Label>
+              <Input
+                id="socialBirthDate"
+                type="date"
+                value={birthDate}
+                onChange={(event) => setBirthDate(event.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Required before Google, Apple, or X can create an account. A person under 13 cannot sign up.
+              </p>
+            </div>
             {loginWithGoogleIdToken ? (
               <Button
                 variant="outline"

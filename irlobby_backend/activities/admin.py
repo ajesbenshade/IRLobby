@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
+from .models import (
+    Activity,
+    ActivityParticipant,
+    Church,
+    Donation,
+    EventPhoto,
+    HouseholdDependent,
+    Ticket,
+    TicketRedemptionLog,
+)
 
 
 @admin.register(Activity)
@@ -18,6 +27,30 @@ class ActivityAdmin(admin.ModelAdmin):
     @admin.action(description="Reject (unapprove) selected activities")
     def reject_activities(self, request, queryset):
         queryset.update(is_approved=False)
+
+
+@admin.register(Church)
+class ChurchAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_verified", "stripe_connect_payouts_enabled")
+    search_fields = ("name",)
+
+
+@admin.register(HouseholdDependent)
+class HouseholdDependentAdmin(admin.ModelAdmin):
+    list_display = ("first_name", "last_name", "guardian", "birth_date", "sex")
+    raw_id_fields = ("guardian",)
+
+
+@admin.register(EventPhoto)
+class EventPhotoAdmin(admin.ModelAdmin):
+    list_display = ("activity", "uploaded_by", "created_at")
+    raw_id_fields = ("activity", "uploaded_by")
+
+
+@admin.register(Donation)
+class DonationAdmin(admin.ModelAdmin):
+    list_display = ("activity", "donor", "amount", "status", "created_at")
+    raw_id_fields = ("activity", "donor")
 
 
 @admin.register(ActivityParticipant)

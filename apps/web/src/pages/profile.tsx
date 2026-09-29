@@ -1,4 +1,5 @@
 import EditProfileModal from '@/components/EditProfileModal';
+import HouseholdSection from '@/components/HouseholdSection';
 import FriendsModal from '@/components/FriendsModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,13 @@ export default function Profile() {
           </h2>
 
           {user.bio && <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>}
+          <p className="mt-2 text-xs text-[#5c534f]">
+            Profile for The Foyer is your name, birth date, and sex. Sex is only used for men or women gatherings.
+          </p>
+          <p className="text-sm text-[#222222]">
+            {user.birthDate || 'Add a birth date'} · {user.sex || 'sex not set'}
+            {user.churchName ? ` · ${user.churchName}` : ''}
+          </p>
 
           <div className="flex items-center justify-center mt-2">
             <Star className="w-4 h-4 text-yellow-500 mr-1" />
@@ -92,6 +100,8 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        <HouseholdSection birthDate={user.birthDate} />
 
         {/* Interests */}
         <Card className="bg-white dark:bg-gray-800 shadow-sm">

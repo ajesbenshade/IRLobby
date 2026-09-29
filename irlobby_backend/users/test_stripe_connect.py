@@ -13,6 +13,7 @@ from users.stripe_connect import (
     create_connect_onboarding_link,
     get_stripe_client,
     platform_fee_amount_cents,
+    sync_connect_account_status,
 )
 
 
@@ -74,6 +75,55 @@ class StripeConnectHelperTests(APITestCase):
         self.assertTrue(capabilities["stripe_transfers"]["requested"])
         self.assertTrue(capabilities["payouts"]["requested"])
         self.assertEqual(create_params["dashboard"], "express")
+
+    @override_settings(STRIPE_API_KEY="sk_test_123")
+    def test_sync_without_an_account_is_disconnected(self):
+        host = User.objects.create_user(
+            username="no-connect",
+            email="no-connect@example.com",
+            password="password123",
+        )
+        status_payload = sync_connect_account_status(host)
+        self.assertFalse(status_payload["connected"])
+        self.assertIsNone(status_payload["accountId"])
+
+    @override_settings(STRIPE_API_KEY="sk_test_123")
+    @patch("users.stripe_connect.get_stripe_client")
+    def test_sync_marks_payouts_and_outstanding_requirements(self, mock_get_client):
+        host = User.objects.create_user(
+            username="sync-host",
+            email="sync-host@example.com",
+            password="password123",
+            stripe_connect_account_id="acct_sync",
+        )
+        entry = SimpleNamespace(
+            minimum_deadline=SimpleNamespace(status="currently_due"),
+            status="currently_due",
+        )
+        account = SimpleNamespace(
+            configuration=SimpleNamespace(
+                recipient=SimpleNamespace(
+                    capabilities=SimpleNamespace(
+                        stripe_balance=SimpleNamespace(
+                            stripe_transfers=SimpleNamespace(status="pending")
+                        )
+                    )
+                )
+            ),
+            requirements=SimpleNamespace(currently_due=[], entries=[entry]),
+        )
+        mock_client = Mock()
+        mock_client.v2.core.accounts.retrieve.return_value = account
+        mock_get_client.return_value = mock_client
+
+        status_payload = sync_connect_account_status(host)
+
+        host.refresh_from_db()
+        self.assertFalse(status_payload["payoutsEnabled"])
+        self.assertFalse(status_payload["detailsSubmitted"])
+        self.assertEqual(status_payload["accountId"], "acct_sync")
+        self.assertFalse(host.stripe_connect_payouts_enabled)
+        self.assertFalse(host.stripe_connect_details_submitted)
 
 
 class StripeConnectViewTests(APITestCase):

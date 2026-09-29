@@ -163,10 +163,6 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         if skill_level:
             queryset = queryset.filter(skill_level__icontains=skill_level)
 
-        age_restriction = self.request.query_params.get("age_restriction")
-        if age_restriction:
-            queryset = queryset.filter(age_restriction__icontains=age_restriction)
-
         visibility = self.request.query_params.get("visibility")
         if visibility:
             queryset = queryset.filter(visibility__icontains=visibility)
@@ -274,7 +270,6 @@ class ActivityTicketPurchaseView(APIView):
             StripeConnectError,
             create_destination_checkout_session,
             host_can_receive_payouts,
-            platform_fee_amount_cents,
         )
 
         if not host_can_receive_payouts(host):
@@ -289,8 +284,9 @@ class ActivityTicketPurchaseView(APIView):
         cancel_url = serializer.validated_data.get("cancelUrl") or settings.STRIPE_CANCEL_URL
 
         unit_amount = int(activity.ticket_price * 100)
-        fee_percent = activity.platform_fee_percent or settings.STRIPE_PLATFORM_FEE_PERCENT
-        application_fee_amount = platform_fee_amount_cents(activity.ticket_price, fee_percent)
+        # Gatherings no longer take a platform cut, including leftover ticket checkout.
+        fee_percent = 0
+        application_fee_amount = 0
         if application_fee_amount < 0 or application_fee_amount >= unit_amount:
             return Response(
                 {"message": "Invalid platform fee configuration for this ticket."},
@@ -569,11 +565,12 @@ def join_activity(request, pk):
             {"message": "Already requested to join"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    confirmed_count = ActivityParticipant.objects.filter(
-        activity=activity, status="confirmed"
-    ).count()
-    if confirmed_count >= activity.capacity:
-        return Response({"message": "Activity is full"}, status=status.HTTP_400_BAD_REQUEST)
+    from .eligibility import confirmed_people_count
+
+    if activity.capacity is not None:
+        confirmed_count = confirmed_people_count(activity)
+        if confirmed_count >= activity.capacity:
+            return Response({"message": "Activity is full"}, status=status.HTTP_400_BAD_REQUEST)
 
     ActivityParticipant.objects.create(activity=activity, user=user, status="pending")
 
@@ -589,7 +586,9 @@ def join_activity(request, pk):
 def remove_activity_participant(request, pk, user_id):
     """Allow the host to remove a participant from their activity."""
     activity = get_object_or_404(Activity, pk=pk)
-    if activity.host_id != request.user.id:
+    from .access import is_activity_host
+
+    if not is_activity_host(request.user, activity):
         return Response(
             {"detail": "Only the host can remove participants."}, status=status.HTTP_403_FORBIDDEN
         )
@@ -630,8 +629,9 @@ def activity_chat(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
 
-    # Check if user is a participant
-    if not ActivityParticipant.objects.filter(activity=activity, user=user).exists():
+    from .access import user_can_access_activity_chat
+
+    if not user_can_access_activity_chat(user, activity):
         return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":

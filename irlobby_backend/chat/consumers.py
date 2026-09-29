@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -8,10 +9,23 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from redis.asyncio import Redis
 
+from activities.access import user_can_access_activity_chat
 from activities.models import Activity, ActivityParticipant
 from matches.models import Match
 
 from .models import Conversation, Message
+
+
+def _query_activity_id(scope):
+    raw = scope.get("query_string", b"") or b""
+    if isinstance(raw, str):
+        raw = raw.encode()
+    params = parse_qs(raw.decode("utf-8", errors="ignore"))
+    values = params.get("activityId") or params.get("activity_id") or []
+    if not values or not str(values[0]).strip():
+        return None
+    return values[0]
+
 
 PRESENCE_TTL_SECONDS = 120
 TYPING_TTL_SECONDS = 10
@@ -50,6 +64,13 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
         if user.is_anonymous:
             await self.close()
             return
+
+        activity_id = _query_activity_id(self.scope)
+        if activity_id is not None:
+            is_authorized = await self.check_activity_access(user, activity_id)
+            if not is_authorized:
+                await self.close()
+                return
 
         await self.accept()
         self.user = user
@@ -257,11 +278,9 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
     def check_activity_access(self, user, activity_id):
         try:
             activity = Activity.objects.get(id=activity_id)
-            return ActivityParticipant.objects.filter(
-                activity=activity, user=user, status="confirmed"
-            ).exists()
-        except Activity.DoesNotExist:
+        except (Activity.DoesNotExist, ValueError, TypeError):
             return False
+        return user_can_access_activity_chat(user, activity)
 
     @database_sync_to_async
     def save_activity_message(self, user, activity_id, message_text):
@@ -508,10 +527,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_conversation_access(self, user, conversation_id):
         try:
-            conversation = Conversation.objects.get(id=conversation_id)
-            return user in [conversation.match.user_a, conversation.match.user_b]
+            conversation = Conversation.objects.select_related("match__activity").get(
+                id=conversation_id
+            )
         except Conversation.DoesNotExist:
             return False
+        match = conversation.match
+        if user.id not in (match.user_a_id, match.user_b_id):
+            return False
+        activity = match.activity
+        if activity is not None and not user_can_access_activity_chat(user, activity):
+            return False
+        return True
 
     @database_sync_to_async
     def get_conversation_participant_ids(self, conversation_id):

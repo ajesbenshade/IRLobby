@@ -1,11 +1,14 @@
-from django.conf import settings
 from rest_framework import serializers
 
 from utils.client_urls import is_allowed_client_return_url
 from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
-from .models import Activity, ActivityParticipant, Ticket
+from .access import is_church_admin
+from .eligibility import audience_label, confirmed_people_count, host_display_name
+from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
+from .photos import absolute_photo_url, cover_photo_url
+from .public_calendar import build_calendar_links
 from .ticketing import ticketing_enabled
 
 
@@ -33,6 +36,19 @@ class ActivitySerializer(serializers.ModelSerializer):
     )
     ticketsAvailable = serializers.SerializerMethodField()
     isSoldOut = serializers.SerializerMethodField()
+    audience = serializers.SerializerMethodField()
+    host_name = serializers.SerializerMethodField()
+    host_church_id = serializers.PrimaryKeyRelatedField(
+        source="host_church",
+        queryset=Church.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    cover_photo_url = serializers.SerializerMethodField()
+    going_count = serializers.SerializerMethodField()
+    my_rsvp = serializers.SerializerMethodField()
+    photos = serializers.SerializerMethodField()
+    calendar_links = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -85,8 +101,28 @@ class ActivitySerializer(serializers.ModelSerializer):
             "images",
             "created_at",
             "participant_count",
+            "audience_gender",
+            "age_min",
+            "age_max",
+            "audience",
+            "list_on_church_calendar",
+            "calendar_approved",
+            "host_kind",
+            "host_church_id",
+            "host_name",
+            "cover_photo_url",
+            "going_count",
+            "my_rsvp",
+            "photos",
+            "calendar_links",
         )
-        read_only_fields = ("id", "is_approved", "created_at", "tickets_sold")
+        read_only_fields = (
+            "id",
+            "is_approved",
+            "created_at",
+            "tickets_sold",
+            "calendar_approved",
+        )
 
     def to_internal_value(self, data):
         normalized_data = dict(data)
@@ -106,6 +142,12 @@ class ActivitySerializer(serializers.ModelSerializer):
             "maxTickets": "max_tickets",
             "platformFeePercent": "platform_fee_percent",
             "imageUrls": "images",
+            "audienceGender": "audience_gender",
+            "ageMin": "age_min",
+            "ageMax": "age_max",
+            "listOnChurchCalendar": "list_on_church_calendar",
+            "hostKind": "host_kind",
+            "hostChurchId": "host_church_id",
         }
 
         for alias, normalized in aliases.items():
@@ -122,8 +164,27 @@ class ActivitySerializer(serializers.ModelSerializer):
         ticket_price = attrs.get("ticket_price", getattr(self.instance, "ticket_price", 0))
         max_tickets = attrs.get("max_tickets", getattr(self.instance, "max_tickets", 0))
 
-        # Platform fee is fixed by IRLobby policy (default 10%).
-        attrs["platform_fee_percent"] = getattr(settings, "STRIPE_PLATFORM_FEE_PERCENT", 10)
+        # The Foyer takes no cut. Ignore STRIPE_PLATFORM_FEE_PERCENT and any client value.
+        attrs["platform_fee_percent"] = 0
+
+        host_kind = attrs.get("host_kind", getattr(self.instance, "host_kind", "person"))
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if host_kind == "church" and not is_church_admin(user):
+            raise serializers.ValidationError(
+                {"host_kind": "Only church admins can host as the church."}
+            )
+
+        age_min = attrs.get("age_min", getattr(self.instance, "age_min", None))
+        age_max = attrs.get("age_max", getattr(self.instance, "age_max", None))
+        if age_min is not None and age_max is not None and age_max < age_min:
+            raise serializers.ValidationError(
+                {"age_max": "Maximum age must be greater than or equal to minimum age."}
+            )
+        if age_min is not None and age_min > 120:
+            raise serializers.ValidationError({"age_min": "Enter an age of 120 or less."})
+        if age_max is not None and age_max > 120:
+            raise serializers.ValidationError({"age_max": "Enter an age of 120 or less."})
 
         newly_ticketed = is_ticketed and not getattr(self.instance, "is_ticketed", False)
         request = self.context.get("request")
@@ -162,6 +223,44 @@ class ActivitySerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _apply_hosting_rules(self, validated_data, *, instance=None):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        admin = is_church_admin(user)
+        host_kind = validated_data.get(
+            "host_kind", getattr(instance, "host_kind", "person") if instance else "person"
+        )
+        list_on = validated_data.get(
+            "list_on_church_calendar",
+            getattr(instance, "list_on_church_calendar", False) if instance else False,
+        )
+        validated_data["platform_fee_percent"] = 0
+        if host_kind == "church":
+            validated_data["calendar_approved"] = True
+            if not validated_data.get("host_church") and not (instance and instance.host_church_id):
+                church = Church.objects.filter(name=FRANCONIA_CHURCH_NAME).first()
+                if church is None:
+                    raise serializers.ValidationError(
+                        {"host_kind": "Franconia Mennonite Church is not configured."}
+                    )
+                validated_data["host_church"] = church
+        elif list_on and admin:
+            validated_data["calendar_approved"] = True
+        elif instance is None or (
+            list_on and instance is not None and not instance.list_on_church_calendar
+        ):
+            validated_data["calendar_approved"] = False
+        return validated_data
+
+    def create(self, validated_data):
+        return super().create(self._apply_hosting_rules(validated_data))
+
+    def update(self, instance, validated_data):
+        validated_data.pop("calendar_approved", None)
+        return super().update(
+            instance, self._apply_hosting_rules(validated_data, instance=instance)
+        )
+
     def validate_images(self, images):
         return validate_image_reference_list(images, max_items=5, field_name="images")
 
@@ -173,6 +272,47 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     def get_participant_count(self, obj):
         return obj.participants.filter(status="confirmed").count()
+
+    def get_audience(self, obj):
+        return audience_label(obj)
+
+    def get_host_name(self, obj):
+        return host_display_name(obj)
+
+    def get_cover_photo_url(self, obj):
+        request = self.context.get("request")
+        return cover_photo_url(obj, request)
+
+    def get_going_count(self, obj):
+        return confirmed_people_count(obj)
+
+    def get_my_rsvp(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if not user or not getattr(user, "is_authenticated", False):
+            return None
+        participant = obj.participants.filter(user=user).prefetch_related("dependents").first()
+        if participant is None:
+            return None
+        dependent_ids = [dependent.id for dependent in participant.dependents.all()]
+        people = (1 if participant.include_self else 0) + len(dependent_ids)
+        return {
+            "status": participant.status,
+            "include_self": participant.include_self,
+            "dependent_ids": dependent_ids,
+            "people_count": people,
+        }
+
+    def get_photos(self, obj):
+        request = self.context.get("request")
+        return [
+            {"id": photo.id, "url": absolute_photo_url(photo, request)}
+            for photo in obj.photos.all()
+            if photo.image
+        ]
+
+    def get_calendar_links(self, obj):
+        return build_calendar_links(obj, self.context.get("request"))
 
     def validate_description(self, value):
         return strip_html(value)

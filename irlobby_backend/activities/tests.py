@@ -122,7 +122,7 @@ class ActivityApprovalWorkflowTests(APITestCase):
         self.assertNotIn(activity.id, ids)
         self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_cannot_create_activity_with_capacity_above_ten(self):
+    def test_cannot_create_activity_with_capacity_above_five_hundred(self):
         self.client.force_authenticate(self.host)
         url = reverse("activity-list")
         payload = {
@@ -132,7 +132,7 @@ class ActivityApprovalWorkflowTests(APITestCase):
             "latitude": 40.0,
             "longitude": -74.0,
             "time": (timezone.now() + timedelta(days=3)).isoformat(),
-            "capacity": 11,
+            "capacity": 501,
             "tags": [],
             "images": [],
         }
@@ -339,7 +339,7 @@ class TicketingTests(APITestCase):
 
         kwargs = mock_session_create.call_args.kwargs
         self.assertEqual(kwargs["host"].stripe_connect_account_id, "acct_test_host")
-        self.assertEqual(kwargs["application_fee_amount"], 250)
+        self.assertEqual(kwargs["application_fee_amount"], 0)
         self.assertEqual(
             kwargs["success_url"],
             "irlobby://tickets/success?session_id={CHECKOUT_SESSION_ID}",

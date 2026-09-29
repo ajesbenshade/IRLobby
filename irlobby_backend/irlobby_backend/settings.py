@@ -299,6 +299,14 @@ raw_cors_origins = config(
     default=DEV_WEB_ORIGINS if DEBUG else "",
 )
 CORS_ALLOWED_ORIGINS = parse_origin_list(raw_cors_origins)
+# The church website reads the public calendar without an authenticated app origin.
+FOYER_PUBLIC_CALENDAR_ORIGINS = ["https://franconiamennonite.org"]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*CORS_ALLOWED_ORIGINS, *FOYER_PUBLIC_CALENDAR_ORIGINS]))
+FOYER_CHURCH_ADMIN_EMAILS = [
+    "ajesbenshade@gmail.com",
+    "ajesbenshade@outlook.com",
+    "aesbenshade@dock.org",
+]
 
 raw_csrf_origins = config(
     "CSRF_TRUSTED_ORIGINS",
@@ -435,6 +443,10 @@ CELERY_BEAT_SCHEDULE = {
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Default primary key field type

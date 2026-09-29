@@ -27,6 +27,17 @@ class User(AbstractUser):
     stripe_connect_payouts_enabled = models.BooleanField(default=False)
     stripe_connect_details_submitted = models.BooleanField(default=False)
 
+    # Profile fields used for gathering eligibility. Nullable so existing accounts migrate.
+    date_of_birth = models.DateField(null=True, blank=True)
+    sex = models.CharField(max_length=16, blank=True, default="")
+    church = models.ForeignKey(
+        "activities.Church",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="members",
+    )
+
     class Meta:
         # Add unique constraint on email to prevent duplicates
         constraints = [models.UniqueConstraint(fields=["email"], name="unique_user_email")]

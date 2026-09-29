@@ -12,7 +12,7 @@ import { Surface, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KeyboardAvoidingView, ScrollView, View } from '@components/RNCompat';
-import { appColors, appTypography, radii, shadows, spacing } from '@theme/index';
+import { appColors, appTypography, fontSize, radii, shadows, spacing } from '@theme/index';
 
 const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
@@ -287,21 +287,21 @@ const styles = StyleSheet.create({
     height: 280,
     top: -90,
     right: -60,
-    backgroundColor: 'rgba(255, 107, 74, 0.22)',
+    backgroundColor: 'rgba(162, 3, 63, 0.16)',
   },
   glowOrbWarm: {
     width: 200,
     height: 200,
     top: 180,
     left: -80,
-    backgroundColor: 'rgba(255, 139, 112, 0.16)',
+    backgroundColor: 'rgba(249, 232, 238, 0.9)',
   },
   glowOrbSoft: {
     width: 240,
     height: 240,
     bottom: 80,
     right: -100,
-    backgroundColor: 'rgba(255, 227, 218, 0.55)',
+    backgroundColor: 'rgba(249, 232, 238, 0.7)',
   },
   headerRow: {
     flexDirection: 'row',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontFamily: appTypography.heading,
     fontWeight: '600',
-    fontSize: 28,
+    fontSize: fontSize.screenTitle,
     lineHeight: 34,
     letterSpacing: -0.6,
   },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontFamily: appTypography.heading,
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: fontSize.cardTitle,
     letterSpacing: -0.4,
   },
   sectionSubtitle: {
@@ -400,12 +400,12 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   panelAccent: {
-    backgroundColor: 'rgba(255, 107, 74, 0.12)',
-    borderColor: 'rgba(255, 107, 74, 0.28)',
+    backgroundColor: appColors.primarySoft,
+    borderColor: 'rgba(162, 3, 63, 0.22)',
   },
   panelWarm: {
-    backgroundColor: 'rgba(232, 200, 114, 0.1)',
-    borderColor: 'rgba(232, 200, 114, 0.28)',
+    backgroundColor: appColors.warnBg,
+    borderColor: 'rgba(138, 84, 10, 0.22)',
   },
   panelDark: {
     backgroundColor: appColors.cardStrong,
@@ -436,22 +436,22 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: 'flex-start',
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255, 107, 74, 0.16)',
+    backgroundColor: appColors.primarySoft,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 107, 74, 0.28)',
+    borderColor: 'rgba(162, 3, 63, 0.22)',
   },
   pillSecondary: {
-    backgroundColor: 'rgba(255, 227, 218, 0.9)',
-    borderColor: 'rgba(255, 107, 74, 0.28)',
+    backgroundColor: appColors.primarySoft,
+    borderColor: 'rgba(162, 3, 63, 0.22)',
   },
   pillNeutral: {
     backgroundColor: appColors.cardStrong,
     borderColor: appColors.line,
   },
   pillText: {
-    color: appColors.primaryGlow,
+    color: appColors.primary,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.2,

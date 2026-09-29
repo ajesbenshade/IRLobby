@@ -63,22 +63,21 @@ const featureHighlights = [
 function PhonePreview() {
   return (
     <div className="relative mx-auto w-full max-w-[342px] sm:max-w-[380px] lg:max-w-[404px]">
-      <div className="public-phone-shadow rounded-[42px] border border-white/12 bg-[#0A0814] p-3">
-        <div className="overflow-hidden rounded-[32px] bg-[#0A0814] text-[#F4F3FA]">
-          <div className="flex items-center justify-between px-6 pt-5 text-xs font-semibold text-[#A5A1C2]">
+      <div className="public-phone-shadow rounded-[42px] border border-[#e1dbd7] bg-[#f6f1ee] p-3">
+        <div className="overflow-hidden rounded-[32px] bg-[#f6f1ee] text-[#222222]">
+          <div className="flex items-center justify-between px-6 pt-5 text-xs font-semibold text-[#6e6a68]">
             <span>9:41</span>
             <span>Tonight</span>
           </div>
           <div className="relative min-h-[690px] px-5 pb-5 pt-6">
             <div className="relative">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A5A1C2]">
-                For you
-              </p>
-              <h2 className="mt-3 max-w-[260px] font-display text-3xl font-semibold leading-[1.05] text-[#F4F3FA]">
-                Plans worth leaving for
+              <p className="font-display text-[22px] font-bold leading-none text-[#222222]">The Foyer</p>
+              <p className="mt-1 text-[11px] text-[#6e6a68]">Franconia Mennonite Church</p>
+              <h2 className="mt-4 max-w-[260px] font-display text-[25px] font-bold leading-[1.1] text-[#222222]">
+                Gatherings near you
               </h2>
-              <p className="mt-3 max-w-[260px] text-sm leading-relaxed text-[#A5A1C2]">
-                Swipe through what is happening near you tonight.
+              <p className="mt-3 max-w-[260px] text-sm leading-relaxed text-[#6e6a68]">
+                Swipe to pass, or say you’re going.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F4F3FA]">
@@ -90,15 +89,12 @@ function PhonePreview() {
               </div>
             </div>
 
-            <div className="relative mt-6 overflow-hidden rounded-[28px] border border-[#E8C872]/40">
-              <div className="h-72 bg-gradient-to-br from-[#5B4BFF] to-[#C026D3]" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0A0814] via-[#0A0814]/80 to-transparent p-4">
+            <div className="relative mt-6 overflow-hidden rounded-[22px] border border-[#e1dbd7]">
+              <div className="h-72 bg-gradient-to-br from-[#a2033f] to-[#7c0230]" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#222222] via-[#222222]/80 to-transparent p-4 text-[#222222]">
                 <div className="mb-2 flex gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-medium">
-                    rooftop
-                  </span>
-                  <span className="rounded-full border border-[#E8C872]/40 bg-[#E8C872]/15 px-3 py-1 text-[11px] font-medium text-[#E8C872]">
-                    Ticket · $24
+                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-medium">
+                    fellowship
                   </span>
                 </div>
                 <h3 className="font-display text-xl font-semibold leading-tight">
@@ -109,22 +105,19 @@ function PhonePreview() {
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-3">
-              <span className="grid h-11 w-24 place-items-center rounded-full border border-white/12 text-sm font-medium text-[#F4F3FA]">
+              <span className="grid h-11 w-24 place-items-center rounded-full border border-[#e1dbd7] bg-white text-sm font-medium text-[#222222]">
                 Pass
               </span>
-              <span className="grid h-11 w-24 place-items-center rounded-full bg-[#5B4BFF] text-sm font-medium text-white">
-                I&apos;m down
+              <span className="grid h-[54px] w-28 place-items-center rounded-full bg-[#a2033f] px-5 text-sm font-medium text-white">
+                I&apos;m going
               </span>
             </div>
 
-            <div className="absolute bottom-5 left-5 right-5 rounded-[20px] border border-white/10 bg-[#161330]/92 px-4 py-3 backdrop-blur-xl">
-              <div className="grid grid-cols-5 items-center gap-1 text-center text-[11px] font-medium text-[#7A7599]">
-                <span className="text-[#5B4BFF]">Discover</span>
-                <span>Events</span>
-                <span className="mx-auto grid h-8 w-8 place-items-center rounded-xl bg-[#5B4BFF] text-white">
-                  +
-                </span>
-                <span>Chat</span>
+            <div className="absolute bottom-5 left-5 right-5 rounded-[16px] border border-[#e1dbd7] bg-white px-3 py-3 shadow-sm">
+              <div className="grid grid-cols-4 items-center gap-1 text-center text-[11px] font-medium text-[#6e6a68]">
+                <span className="text-[#a2033f]">Discover</span>
+                <span>Gatherings</span>
+                <span className="text-[#a2033f]">Host</span>
                 <span>Profile</span>
               </div>
             </div>
@@ -149,35 +142,38 @@ export default function Landing() {
   };
 
   return (
-    <div className="public-site-bg min-h-screen overflow-hidden text-white">
+    <div className="public-site-bg min-h-screen overflow-hidden text-[#222222]">
       <PublicMetadata
-        title="IRLobby - Real Plans Nearby"
-        description="IRLobby helps you swipe through nearby activities, match with people who want the same plan, and coordinate instantly."
+        title="The Foyer — Franconia Mennonite Church"
+        description="The Foyer is the gatherings app for Franconia Mennonite Church."
         canonicalPath="/"
       />
 
       <header className="relative z-20 px-6 pt-5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 rounded-full border border-white/8 bg-[#0f172a]/52 px-4 py-3 shadow-2xl backdrop-blur-2xl sm:px-5">
-          <Link to="/" className="flex shrink-0 items-center gap-3 font-display text-lg font-black">
-            <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(91,75,255,0.28)] ring-1 ring-white/12">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 rounded-full border border-[#e1dbd7] bg-white px-4 py-3 shadow-sm sm:px-5">
+          <Link to="/" className="flex shrink-0 items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-white ring-1 ring-[#e1dbd7]">
               <img src="/app-icon.png" alt="" className="h-full w-full object-cover" />
             </span>
-            <span>IRLobby</span>
+            <span className="flex flex-col">
+              <span className="font-display text-[22px] font-bold leading-none">The Foyer</span>
+              <span className="text-[11px] text-[#6e6a68]">Franconia Mennonite Church</span>
+            </span>
           </Link>
-          <nav className="hidden items-center gap-7 text-sm font-bold text-white/68 md:flex">
-            <Link to="/how-it-works" className="transition hover:text-white">
+          <nav className="hidden items-center gap-7 text-sm font-semibold text-[#6e6a68] md:flex">
+            <Link to="/how-it-works" className="transition hover:text-[#a2033f]">
               How it works
             </Link>
-            <Link to="/features" className="transition hover:text-white">
+            <Link to="/features" className="transition hover:text-[#a2033f]">
               Features
             </Link>
-            <Link to="/support" className="transition hover:text-white">
+            <Link to="/support" className="transition hover:text-[#a2033f]">
               Support
             </Link>
           </nav>
           <Link
             to="/download"
-            className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-black text-[#0f172a] transition hover:scale-[1.02] sm:px-5"
+            className="inline-flex h-[54px] items-center justify-center rounded-full bg-[#a2033f] px-5 text-sm font-semibold text-white transition hover:bg-[#7c0230] sm:px-5"
           >
             Download
           </Link>
@@ -188,34 +184,33 @@ export default function Landing() {
         <div className="absolute left-1/2 top-0 h-px w-[82vw] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/7 px-4 py-2 text-sm font-bold text-white/78 shadow-2xl backdrop-blur-xl">
+            <div className="inline-flex items-center gap-3 rounded-full border border-[#e1dbd7] bg-white px-4 py-2 text-sm font-semibold text-[#6e6a68]">
               <img
                 src="/app-icon.png"
                 alt=""
                 className="h-7 w-7 rounded-xl bg-white object-cover"
               />
-              <span>IRLobby for iPhone · Android testing underway</span>
+              <span>The Foyer for Franconia Mennonite Church</span>
             </div>
 
-            <h1 className="mt-7 max-w-4xl font-display text-5xl font-black leading-[0.96] text-white sm:text-6xl lg:text-7xl">
-              IRLobby turns swipes into <span className="public-text-gradient">actual plans.</span>
+            <h1 className="mt-7 max-w-4xl font-display text-5xl font-bold leading-[0.96] text-[#222222] sm:text-6xl lg:text-7xl">
+              The Foyer turns swipes into <span className="public-text-gradient">gatherings.</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/72 sm:text-xl">
-              Discover real activities near you, match with people who want the same night out, and
-              move straight into a chat that already knows the plan.
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#6e6a68] sm:text-xl">
+              See gatherings at Franconia Mennonite Church, say you’re going, and coordinate with the people who are coming too.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/download"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#5B4BFF] px-7 py-4 text-base font-black text-white shadow-[0_22px_64px_rgba(91,75,255,0.34)] transition hover:scale-[1.02] hover:bg-[#4A3BE6]"
+                className="inline-flex h-[54px] items-center justify-center gap-2 rounded-full bg-[#a2033f] px-5 text-base font-semibold text-white transition hover:bg-[#7c0230]"
               >
                 Download the app
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="#auth"
-                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/7 px-7 py-4 text-base font-bold text-white transition hover:bg-white/12"
+                className="inline-flex h-[54px] items-center justify-center rounded-full border border-[#e1dbd7] bg-white px-5 text-base font-semibold text-[#222222] transition hover:bg-[#f9e8ee]"
               >
                 Create account
               </a>
@@ -225,12 +220,12 @@ export default function Landing() {
               {proofPoints.map((point) => (
                 <div
                   key={point.label}
-                  className="rounded-[24px] border border-white/8 bg-white/6 p-4 backdrop-blur-xl"
+                  className="rounded-[22px] border border-[#e1dbd7] bg-white p-4"
                 >
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/42">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a09b98]">
                     {point.label}
                   </p>
-                  <p className="mt-2 font-display text-xl font-black text-white">{point.value}</p>
+                  <p className="mt-2 font-display text-xl font-bold text-[#222222]">{point.value}</p>
                 </div>
               ))}
             </div>
@@ -251,15 +246,15 @@ export default function Landing() {
                   className="public-glass public-card-hover rounded-[28px] p-6 sm:p-7"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#5B4BFF]/16 text-[#C026D3]">
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#f9e8ee] text-[#a2033f]">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="font-display text-4xl font-black text-white/12">
+                    <span className="font-display text-4xl font-bold text-[#a2033f]/20">
                       0{index + 1}
                     </span>
                   </div>
-                  <h2 className="mt-7 font-display text-2xl font-black text-white">{item.title}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-white/66">{item.description}</p>
+                  <h2 className="mt-7 font-display text-[25px] font-bold text-[#222222]">{item.title}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-[#6e6a68]">{item.description}</p>
                 </article>
               );
             })}
@@ -268,12 +263,12 @@ export default function Landing() {
       </section>
 
       <section className="px-6 pb-24">
-        <div className="mx-auto grid max-w-7xl gap-8 rounded-[36px] border border-white/8 bg-white/5 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:p-10 lg:grid-cols-[1fr_410px] lg:p-12">
+        <div className="mx-auto grid max-w-7xl gap-8 rounded-[22px] border border-[#e1dbd7] bg-white p-6 shadow-sm sm:p-10 lg:grid-cols-[1fr_410px] lg:p-12">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.24em] text-[#C026D3]">
+            <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#a2033f]">
               Why it feels different
             </p>
-            <h2 className="mt-4 max-w-3xl font-display text-4xl font-black leading-tight text-white sm:text-5xl">
+            <h2 className="mt-4 max-w-3xl font-display text-4xl font-bold leading-tight text-[#222222] sm:text-5xl">
               Built for the moment you decide you do not want another night stuck scrolling.
             </h2>
             <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -282,13 +277,13 @@ export default function Landing() {
                 return (
                   <article
                     key={feature.title}
-                    className="rounded-[26px] border border-white/8 bg-[#0f172a]/38 p-5"
+                    className="rounded-[16px] border border-[#e1dbd7] bg-[#f6f1ee] p-5"
                   >
-                    <Icon className="h-6 w-6 text-[#22d3ee]" />
-                    <h3 className="mt-4 font-display text-lg font-black text-white">
+                    <Icon className="h-6 w-6 text-[#a2033f]" />
+                    <h3 className="mt-4 font-display text-[25px] font-bold text-[#222222]">
                       {feature.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/62">
+                    <p className="mt-2 text-sm leading-relaxed text-[#6e6a68]">
                       {feature.description}
                     </p>
                   </article>
@@ -298,15 +293,15 @@ export default function Landing() {
           </div>
 
           <div id="auth" className="scroll-mt-28">
-            <div className="mb-4 rounded-[28px] border border-white/8 bg-white/6 p-5">
-              <div className="flex items-center gap-2 text-[#22d3ee]">
+            <div className="mb-4 rounded-[22px] border border-[#e1dbd7] bg-[#f9e8ee] p-5">
+              <div className="flex items-center gap-2 text-[#a2033f]">
                 <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-black uppercase tracking-[0.18em]">Join IRLobby</span>
+                <span className="text-sm font-bold uppercase tracking-[0.18em]">Join The Foyer</span>
               </div>
-              <h2 className="mt-4 font-display text-3xl font-black text-white">
+              <h2 className="mt-4 font-display text-[25px] font-bold text-[#222222]">
                 Start with the same account on web and mobile.
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-white/64">
+              <p className="mt-3 text-sm leading-relaxed text-[#6e6a68]">
                 Create an account here or jump back in before opening the app.
               </p>
             </div>

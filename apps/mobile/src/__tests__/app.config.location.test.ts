@@ -6,7 +6,7 @@ import type { ConfigContext } from 'expo/config';
 import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION } from '../../app.config';
 
 const REQUIRED_LOCATION_COPY =
-  'IRLobby uses your location to show hangouts near you on Discover — for example, a rooftop hang a few miles away tonight.';
+  'The Foyer uses your location to show gatherings near you on Discover — for example, a church event a few miles away tonight.';
 
 describe('iOS location usage description', () => {
   it('sets every NSLocation* Info.plist string to the App Review copy', () => {
@@ -74,27 +74,30 @@ describe('Google client IDs in extra', () => {
 });
 
 describe('production app icon', () => {
-  it('points Expo, Android adaptive, and notification icons at the IR lettermark 1024', () => {
+  it('points Expo and iOS at the opaque Foyer F, and Android adaptive at the transparent mark', () => {
     const config = appConfig({ config: {} } as ConfigContext);
     const iconPath = './assets/AppIcon-1024.png';
 
     expect(config.icon).toBe(iconPath);
-    expect(config.android?.adaptiveIcon?.foregroundImage).toBe(iconPath);
-    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#FF6B4A');
+    expect(config.ios?.icon).toBe(iconPath);
+    expect(config.android?.adaptiveIcon?.foregroundImage).toBe('./assets/adaptive-icon.png');
+    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#a2033f');
+    expect(config.splash?.backgroundColor).toBe('#a2033f');
 
     const notificationPlugin = (config.plugins ?? []).find(
       (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications',
     ) as [string, { icon?: string; color?: string }] | undefined;
-    expect(notificationPlugin?.[1]?.icon).toBe(iconPath);
-    expect(notificationPlugin?.[1]?.color).toBe('#FF6B4A');
+    expect(notificationPlugin?.[1]?.icon).toBe('./assets/notification-icon.png');
+    expect(notificationPlugin?.[1]?.color).toBe('#a2033f');
 
     const assetsDir = path.resolve(__dirname, '../../assets');
     const master = path.join(assetsDir, 'AppIcon-1024.png');
     const iconPng = path.join(assetsDir, 'icon.png');
     const adaptivePng = path.join(assetsDir, 'adaptive-icon.png');
     expect(fs.existsSync(master)).toBe(true);
+    expect(fs.existsSync(path.join(assetsDir, 'notification-icon.png'))).toBe(true);
     expect(fs.readFileSync(iconPng).equals(fs.readFileSync(master))).toBe(true);
-    expect(fs.readFileSync(adaptivePng).equals(fs.readFileSync(master))).toBe(true);
+    expect(fs.readFileSync(adaptivePng).equals(fs.readFileSync(master))).toBe(false);
 
     const contents = JSON.parse(
       fs.readFileSync(path.join(assetsDir, 'AppIcon.appiconset/Contents.json'), 'utf8'),

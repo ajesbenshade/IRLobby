@@ -14,7 +14,7 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
-import { IrlobbyWordmark } from '@components/IrlobbyWordmark';
+import { FoyerHeader } from '@components/FoyerHeader';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
@@ -24,6 +24,7 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
+import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
@@ -34,7 +35,7 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
-import { appColors, radii } from '@theme/index';
+import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -173,7 +174,9 @@ export const DiscoverScreen = () => {
     queryFn: () => fetchActivities(discoverFilters),
     // Paid events can't be joined for free, so hide them while ticket sales are off.
     select: (items) =>
-      config.ticketingEnabled ? items : items.filter((item) => !isActivityTicketed(item)),
+      isTicketingUiEnabled(config.ticketingEnabled)
+        ? items
+        : items.filter((item) => !isActivityTicketed(item)),
   });
 
   const swipeMutation = useMutation({
@@ -378,7 +381,8 @@ export const DiscoverScreen = () => {
           currentActivity.host.email ||
           'Community host';
   const currentTimeLabel = formatActivityTime(currentActivity?.time);
-  const ticketed = currentActivity ? isActivityTicketed(currentActivity) : false;
+  const showTickets = isTicketingUiEnabled(config.ticketingEnabled);
+  const ticketed = showTickets && currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
   const coverImage = currentActivity?.images?.[0];
 
@@ -388,17 +392,15 @@ export const DiscoverScreen = () => {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
+      <FoyerHeader />
       <PageHeader
-        eyebrow="For you"
-        title="Plans worth leaving for"
-        subtitle="Swipe through what's happening near you tonight."
+        eyebrow="Discover"
+        title="Gatherings near you"
+        subtitle="Swipe to pass, or say you’re going."
         rightContent={
-          <View style={{ alignItems: 'flex-end', gap: 8 }}>
-            <IrlobbyWordmark size="sm" />
-            <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
-              Pings
-            </AppButton>
-          </View>
+          <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
+            Pings
+          </AppButton>
         }
       />
 
@@ -697,7 +699,7 @@ export const DiscoverScreen = () => {
                 Details
               </AppButton>
               <AppButton onPress={() => handleSwipe('right')} disabled={isBusy} style={styles.actionButton}>
-                I’m down
+                I'm going
               </AppButton>
             </View>
           ) : null}
@@ -820,7 +822,7 @@ export const DiscoverScreen = () => {
                         handleSwipe('right');
                       }}
                     >
-                      I’m down
+                      I'm going
                     </AppButton>
                   </View>
                 </ScrollView>
@@ -989,8 +991,9 @@ const styles = StyleSheet.create({
   },
   photoTitle: {
     color: appColors.white,
-    fontSize: 26,
-    fontWeight: '600',
+    fontFamily: appTypography.heading,
+    fontSize: 25,
+    fontWeight: '700',
     letterSpacing: -0.5,
   },
   photoMeta: {

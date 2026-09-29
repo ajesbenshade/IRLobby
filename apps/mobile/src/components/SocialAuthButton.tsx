@@ -120,7 +120,7 @@ export const SocialAuthButton = ({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 52,
+    minHeight: 54,
     borderRadius: radii.pill,
     paddingHorizontal: 20,
     alignItems: 'center',

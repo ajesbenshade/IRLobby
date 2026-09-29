@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import { ActivityIndicator } from 'react-native';
 
 import { View } from '@components/RNCompat';
+import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import { AccountDeletedScreen } from '@screens/auth/AccountDeletedScreen';
@@ -46,7 +47,7 @@ const linking: LinkingOptions<RootStackParamList> = {
             },
           },
           Notifications: 'notifications',
-          ...(config.ticketingEnabled
+          ...(isTicketingUiEnabled(config.ticketingEnabled)
             ? {
                 BuyTicket: 'tickets/buy/:activityId',
                 TicketWallet: 'tickets/success',

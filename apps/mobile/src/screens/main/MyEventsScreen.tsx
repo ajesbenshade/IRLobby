@@ -7,6 +7,8 @@ import { Button, Text } from 'react-native-paper';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
+import { FoyerHeader } from '@components/FoyerHeader';
+import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
@@ -99,9 +101,10 @@ export const MyEventsScreen = () => {
         />
       }
     >
+      <FoyerHeader />
       <PageHeader
-        eyebrow="Activity"
-        title={activeSegment === 'events' ? 'Plans you are driving' : 'People already aligned'}
+        eyebrow="Gatherings"
+        title={activeSegment === 'events' ? 'Plans you are hosting' : 'People already aligned'}
         subtitle={
           activeSegment === 'events'
             ? 'Keep hosted plans, recent traction, and your next hosting move in one place without crowding the bottom bar.'
@@ -123,8 +126,9 @@ export const MyEventsScreen = () => {
         </View>
         <View style={styles.segmentRow}>
           {([
-            { value: 'events', label: 'My Events' },
+            { value: 'events', label: 'My gatherings' },
             { value: 'matches', label: 'Matches' },
+            { value: 'chats', label: 'Chats' },
           ] as const).map((segment) => {
             const selected = activeSegment === segment.value;
             return (
@@ -132,7 +136,13 @@ export const MyEventsScreen = () => {
                 key={segment.value}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
-                onPress={() => setActiveSegment(segment.value)}
+                onPress={() => {
+                  if (segment.value === 'chats') {
+                    navigation.navigate('Chat');
+                    return;
+                  }
+                  setActiveSegment(segment.value);
+                }}
                 style={[styles.segmentTab, selected ? styles.segmentTabSelected : null]}
               >
                 <Text style={[styles.segmentTabLabel, selected ? styles.segmentTabLabelSelected : null]}>
@@ -229,7 +239,7 @@ export const MyEventsScreen = () => {
                       >
                         Edit
                       </AppButton>
-                      {config.ticketingEnabled ? (
+                      {isTicketingUiEnabled(config.ticketingEnabled) ? (
                         <AppButton
                           compact
                           variant="outline"

@@ -6,7 +6,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Libre Baskerville"', 'Georgia', 'serif'],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -22,8 +23,8 @@ export default {
       },
       boxShadow: {
         card: "0 8px 24px rgba(0, 0, 0, 0.18)",
-        float: "0 14px 40px rgba(91, 75, 255, 0.22)",
-        pop: "0 6px 18px rgba(192, 38, 211, 0.28)",
+        float: "0 14px 40px rgba(162, 3, 63, 0.18)",
+        pop: "0 6px 18px rgba(162, 3, 63, 0.22)",
         soft: "0 4px 16px rgba(0, 0, 0, 0.08)",
       },
       colors: {

@@ -1,6 +1,5 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, MessageCircle, Plus, Calendar, User } from 'lucide-react';
+import { Search, Plus, Calendar, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function BottomNavigation() {
@@ -15,24 +14,17 @@ export default function BottomNavigation() {
       icon: Search,
     },
     {
-      id: 'matches',
-      route: '/app/matches',
-      label: 'Matches',
-      icon: MessageCircle,
-      badge: 0,
+      id: 'gatherings',
+      route: '/app/activities',
+      label: 'Gatherings',
+      icon: Calendar,
     },
     {
       id: 'create',
       route: '/app/create',
-      label: 'Create',
+      label: 'Host',
       icon: Plus,
       isSpecial: true,
-    },
-    {
-      id: 'activities',
-      route: '/app/activities',
-      label: 'My Events',
-      icon: Calendar,
     },
     {
       id: 'profile',
@@ -45,14 +37,11 @@ export default function BottomNavigation() {
   const getCurrentScreen = () => {
     const path = location.pathname;
 
-    if (path.startsWith('/app/matches')) {
-      return 'matches';
+    if (path.startsWith('/app/matches') || path.startsWith('/app/activities')) {
+      return 'gatherings';
     }
     if (path.startsWith('/app/create')) {
       return 'create';
-    }
-    if (path.startsWith('/app/activities')) {
-      return 'activities';
     }
     if (
       path.startsWith('/app/profile') ||
@@ -96,15 +85,6 @@ export default function BottomNavigation() {
               )}
 
               <span className="text-xs font-medium text-center">{item.label}</span>
-
-              {item.badge && item.badge > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute top-1 right-2 w-5 h-5 p-0 text-xs flex items-center justify-center"
-                >
-                  {item.badge}
-                </Badge>
-              )}
             </Button>
           );
         })}

@@ -100,7 +100,7 @@ const VibeQuizScene = () => (
     <View style={styles.heroBlock}>
       <NativeText style={styles.eyebrow}>Vibe quiz</NativeText>
       <NativeText style={styles.heroTitle}>Five swipes and your night gets smarter.</NativeText>
-      <NativeText style={styles.heroBody}>Tell IRLobby what feels right tonight and we’ll tune Discover instantly.</NativeText>
+      <NativeText style={styles.heroBody}>Tell The Foyer what feels right tonight and we’ll tune Discover instantly.</NativeText>
     </View>
     <View style={styles.progressTrack}>
       <View style={[styles.progressFill, { width: '60%' }]} />
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   statusTime: {
     color: palette.ink,
     fontSize: 24,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   statusIcons: {
     flexDirection: 'row',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   batteryText: {
     color: palette.ink,
     fontSize: 12,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   heroBlock: {
     marginTop: spacing.md,
@@ -367,21 +367,21 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: palette.primary,
     fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   heroTitle: {
     color: palette.ink,
     fontSize: 46,
     lineHeight: 48,
     letterSpacing: -1.8,
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: 'LibreBaskerville_700Bold',
     maxWidth: 360,
   },
   heroBody: {
     color: palette.mutedInk,
     fontSize: 18,
     lineHeight: 28,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Inter_400Regular',
     maxWidth: 360,
   },
   progressTrack: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     color: palette.mutedInk,
     marginTop: spacing.sm,
     fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   quizCard: {
     marginTop: spacing.lg,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 28,
     lineHeight: 34,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   quizOption: {
     paddingVertical: 18,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   quizOptionLabel: {
     color: palette.ink,
     fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   quizOptionLabelSelected: {
     color: palette.primaryDeep,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   filterPillStrongText: {
     color: palette.primary,
     fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   filterPill: {
     paddingHorizontal: 18,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   filterPillText: {
     color: palette.primary,
     fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   liveNowPill: {
     alignSelf: 'flex-start',
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   liveNowText: {
     color: palette.primary,
     fontSize: 15,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   activityCardWrap: {
     marginTop: spacing.xl,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   mediaBadgeText: {
     color: appColors.white,
     fontSize: 14,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   activityBody: {
     padding: spacing.lg,
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 28,
     lineHeight: 32,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   activityMeta: {
     color: palette.mutedInk,
     fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   tagRow: {
     flexDirection: 'row',
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   tagText: {
     color: palette.mutedInk,
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   swipeRow: {
     flexDirection: 'row',
@@ -598,18 +598,18 @@ const styles = StyleSheet.create({
   matchBackgroundEyebrow: {
     color: palette.primary,
     fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   matchBackgroundTitle: {
     color: palette.ink,
     fontSize: 30,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   matchBackgroundBody: {
     color: palette.mutedInk,
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Inter_400Regular',
   },
   matchOverlay: {
     position: 'absolute',
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     lineHeight: 50,
     textAlign: 'center',
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   matchSubline: {
     color: appColors.white,
@@ -666,14 +666,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 22,
     lineHeight: 30,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     marginTop: spacing.sm,
   },
   matchActivity: {
     color: '#FFF0B8',
     fontSize: 18,
     textAlign: 'center',
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
     marginTop: spacing.md,
   },
   matchPrimaryButton: {
@@ -686,12 +686,12 @@ const styles = StyleSheet.create({
   matchPrimaryText: {
     color: palette.primary,
     fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   matchSecondaryText: {
     color: appColors.white,
     fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     marginTop: spacing.md,
   },
   chatHeader: {
@@ -714,12 +714,12 @@ const styles = StyleSheet.create({
   chatTitle: {
     color: palette.ink,
     fontSize: 24,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   chatSubtitle: {
     color: palette.mutedInk,
     fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   chatDatePill: {
     alignSelf: 'center',
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   chatDateText: {
     color: palette.mutedInk,
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   chatThread: {
     marginTop: spacing.xl,
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 18,
     lineHeight: 26,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   chatBubbleOutbound: {
     alignSelf: 'flex-end',
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     color: appColors.white,
     fontSize: 18,
     lineHeight: 26,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   chatComposer: {
     marginTop: 'auto',
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: palette.softInk,
     fontSize: 17,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   chatSendButton: {
     width: 42,
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
   profileName: {
     color: palette.ink,
     fontSize: 34,
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: 'LibreBaskerville_700Bold',
     marginTop: spacing.md,
   },
   profileHandle: {
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
     marginTop: spacing.xs,
     paddingHorizontal: spacing.lg,
   },
@@ -837,12 +837,12 @@ const styles = StyleSheet.create({
   statValue: {
     color: palette.primary,
     fontSize: 28,
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   statLabel: {
     color: palette.mutedInk,
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   resultsCard: {
     marginTop: spacing.xl,
@@ -856,18 +856,18 @@ const styles = StyleSheet.create({
   resultsEyebrow: {
     color: palette.primary,
     fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   resultsTitle: {
     color: palette.ink,
     fontSize: 30,
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   resultsBody: {
     color: palette.mutedInk,
     fontSize: 17,
     lineHeight: 26,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
   tagPillStrong: {
     paddingHorizontal: 12,
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
   tagTextStrong: {
     color: palette.primaryDeep,
     fontSize: 14,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
   tabBar: {
     position: 'absolute',
@@ -919,10 +919,10 @@ const styles = StyleSheet.create({
     color: palette.softInk,
     fontSize: 12,
     marginTop: 6,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
   },
   tabLabelActive: {
     color: palette.primary,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'LibreBaskerville_700Bold',
   },
 });

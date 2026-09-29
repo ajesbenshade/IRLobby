@@ -6,8 +6,8 @@ export default function HowItWorksPage() {
   return (
     <PublicSiteLayout activePath="/how-it-works">
       <PublicMetadata
-        title="How IRLobby Works - From Match to Real Meetup"
-        description="See the IRLobby flow: vibe quiz, swipe nearby activities, then coordinate in chat when interest is mutual."
+        title="How The Foyer Works - From Match to Real Meetup"
+        description="See the The Foyer flow: vibe quiz, swipe nearby activities, then coordinate in chat when interest is mutual."
         canonicalPath="/how-it-works"
       />
       <PublicHeroHeader
@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
             From scroll-paralysis to <span className="public-text-gradient">actual plans.</span>
           </>
         }
-        description="IRLobby cuts the back-and-forth. Tell it your vibe, swipe real activities near you, and coordinate the moment interest is mutual."
+        description="The Foyer cuts the back-and-forth. Tell it your vibe, swipe real activities near you, and coordinate the moment interest is mutual."
       />
 
       <section className="pb-20">
@@ -26,21 +26,21 @@ export default function HowItWorksPage() {
             <article key={step.step} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
               <div className={index % 2 === 1 ? 'md:order-2' : undefined}>
                 <div className="inline-flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#7c3aed]/15 text-lg font-bold text-[#ec4899]">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#a2033f]/15 text-lg font-bold text-[#a2033f]">
                     {step.step}
                   </span>
-                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-[#ec4899]">
+                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-[#a2033f]">
                     {step.label}
                   </span>
                 </div>
-                <h2 className="mt-6 font-display text-4xl font-black leading-tight text-white sm:text-5xl">
+                <h2 className="mt-6 font-display text-4xl font-black leading-tight text-[#222222] sm:text-5xl">
                   {step.title}
                 </h2>
-                <p className="mt-4 text-lg leading-relaxed text-white/70">{step.description}</p>
-                <ul className="mt-6 space-y-3 text-white/70">
+                <p className="mt-4 text-lg leading-relaxed text-[#6e6a68]">{step.description}</p>
+                <ul className="mt-6 space-y-3 text-[#6e6a68]">
                   {step.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-3">
-                      <span className="text-[#ec4899]">●</span>
+                      <span className="text-[#a2033f]">●</span>
                       <span>{bullet}</span>
                     </li>
                   ))}

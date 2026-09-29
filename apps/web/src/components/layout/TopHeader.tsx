@@ -1,29 +1,29 @@
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
-import { Bell, LogOut, Search, Settings, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Bell, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TopHeaderProps {
   onOpenCommandPalette: () => void;
+  showSidebarTrigger?: boolean;
 }
 
-export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
+export default function TopHeader({ onOpenCommandPalette, showSidebarTrigger = false }: TopHeaderProps) {
+  const { user } = useAuth();
 
   const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('') || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
-      <SidebarTrigger className="-ml-1 hidden md:flex" />
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl">
+      {showSidebarTrigger ? <SidebarTrigger className="-ml-1 hidden md:flex" /> : null}
+      <Link to="/app" className="flex min-w-0 flex-col">
+        <span className="font-display text-[22px] font-bold leading-none text-foreground md:text-[26px]">
+          The Foyer
+        </span>
+        <span className="truncate text-[11px] text-muted-foreground">Franconia Mennonite Church</span>
+      </Link>
       <Separator orientation="vertical" className="hidden h-6 md:block" />
 
       <button
@@ -45,59 +45,21 @@ export default function TopHeader({ onOpenCommandPalette }: TopHeaderProps) {
           </Link>
         </Button>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="ml-1 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-medium hover:ring-2 hover:ring-primary/40"
-              aria-label="Open user menu"
-            >
-              {user?.profileImageUrl ? (
-                <img
-                  src={user.profileImageUrl}
-                  alt={user.firstName ?? 'You'}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-56 p-1">
-            <div className="px-2 py-2">
-              <div className="text-sm font-medium leading-tight">
-                {user?.firstName ?? 'Member'} {user?.lastName ?? ''}
-              </div>
-              {user?.email && (
-                <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-              )}
-            </div>
-            <Separator />
-            <Link
-              to="/app/profile"
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
-            >
-              <User className="h-4 w-4" />
-              Profile
-            </Link>
-            <Link
-              to="/app/settings"
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-            <Separator className="my-1" />
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-            >
-              <LogOut className="h-4 w-4" />
-              Log out
-            </button>
-          </PopoverContent>
-        </Popover>
+        <Link
+          to="/app/profile"
+          className="ml-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border bg-[#f9e8ee] text-sm font-semibold text-[#a2033f] hover:ring-2 hover:ring-primary/40"
+          aria-label="Profile"
+        >
+          {user?.profileImageUrl ? (
+            <img
+              src={user.profileImageUrl}
+              alt={user.firstName ?? 'You'}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </Link>
       </div>
     </header>
   );

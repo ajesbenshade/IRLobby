@@ -22,7 +22,8 @@ export default function AppShell({ children }: AppShellProps) {
 
   if (isMobile) {
     return (
-      <div className="w-full bg-white min-h-screen relative overflow-hidden">
+      <div className="w-full bg-background min-h-screen relative overflow-hidden">
+        <TopHeader onOpenCommandPalette={() => setPaletteOpen(true)} />
         {children}
         {!hideBottomNav && <BottomNavigation />}
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
@@ -34,7 +35,7 @@ export default function AppShell({ children }: AppShellProps) {
     <SidebarProvider defaultOpen>
       <AppSidebar />
       <SidebarInset className="flex min-h-screen flex-col">
-        <TopHeader onOpenCommandPalette={() => setPaletteOpen(true)} />
+        <TopHeader showSidebarTrigger onOpenCommandPalette={() => setPaletteOpen(true)} />
         <div className="flex flex-1 min-h-0">
           <main className="flex-1 min-w-0 overflow-y-auto">
             <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-6">{children}</div>

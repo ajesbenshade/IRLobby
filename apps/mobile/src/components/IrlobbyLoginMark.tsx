@@ -1,7 +1,7 @@
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
-import { appColors, appTypography } from '@theme/index';
+import { appColors, appTypography, brand, fontSize } from '@theme/index';
 
 type IrlobbyLoginMarkProps = {
   size?: 'md' | 'lg';
@@ -18,7 +18,7 @@ export const IrlobbyLoginMark = ({
   const dotSize = size === 'lg' ? 7 : 5;
 
   return (
-    <View style={[styles.wrap, style]} accessibilityRole="image" accessibilityLabel="IRLobby">
+    <View style={[styles.wrap, style]} accessibilityRole="image" accessibilityLabel={brand.name}>
       <View
         style={[
           styles.bubble,
@@ -52,10 +52,18 @@ export const IrlobbyLoginMark = ({
           ]}
         />
       </View>
-      <Text style={[styles.wordmark, size === 'md' ? styles.wordmarkMd : null]}>
-        <Text style={[styles.ir, inverted ? styles.irInverted : null]}>IR</Text>
-        <Text style={[styles.lobby, inverted ? styles.lobbyInverted : null]}>Lobby</Text>
-      </Text>
+      <View style={styles.copy}>
+        <Text
+          style={[
+            styles.wordmark,
+            size === 'md' ? styles.wordmarkMd : null,
+            inverted ? styles.wordmarkInverted : null,
+          ]}
+        >
+          {brand.name}
+        </Text>
+        <Text style={[styles.church, inverted ? styles.churchInverted : null]}>{brand.church}</Text>
+      </View>
     </View>
   );
 };
@@ -83,27 +91,29 @@ const styles = StyleSheet.create({
   dotInverted: {
     backgroundColor: appColors.primary,
   },
+  copy: {
+    gap: 2,
+  },
   wordmark: {
     fontFamily: appTypography.headingDisplay,
-    fontSize: 36,
-    letterSpacing: -1.2,
+    fontSize: fontSize.wordmark,
+    lineHeight: 32,
+    color: appColors.primary,
+    fontWeight: '700',
   },
   wordmarkMd: {
-    fontSize: 24,
-    letterSpacing: -0.6,
+    fontSize: 22,
+    lineHeight: 28,
   },
-  ir: {
-    color: appColors.primary,
-    fontWeight: '800',
-  },
-  lobby: {
-    color: appColors.ink,
-    fontWeight: '800',
-  },
-  irInverted: {
+  wordmarkInverted: {
     color: appColors.white,
   },
-  lobbyInverted: {
-    color: appColors.white,
+  church: {
+    fontFamily: appTypography.bodyMedium,
+    fontSize: 13,
+    color: appColors.mutedInk,
+  },
+  churchInverted: {
+    color: 'rgba(255,255,255,0.82)',
   },
 });

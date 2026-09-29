@@ -1,8 +1,8 @@
 /**
  * Centralized user-facing strings for the mobile app.
  *
- * Voice & tone: short, confident, warm, low-friction. Pair with the brand
- * tagline "Get out. Get together." Keep new strings under ~10 words for
+ * Voice & tone: short, confident, warm, low-friction. Pair with The Foyer
+ * and Franconia Mennonite Church. Keep new strings under ~10 words for
  * headlines and ~18 for subtitles.
  *
  * Add new strings here rather than inline so future copy passes (and
@@ -11,13 +11,13 @@
 
 import { brand } from '@theme/index';
 
-export const tagline = brand.tagline; // "Get out. Get together."
+export const tagline = brand.tagline;
 
 export const auth = {
   login: {
     eyebrow: brand.name,
     title: 'Login',
-    subtitle: 'Get out. Get together. For real.',
+    subtitle: 'Gatherings at Franconia Mennonite Church.',
     pillText: 'Real plans, real fast',
     primaryCta: 'Continue with email',
     twitterCta: 'Continue with X',
@@ -71,7 +71,7 @@ export const auth = {
 
 export const tabs = {
   Discover: 'Discover',
-  Activity: 'Events',
+  Activity: 'Gatherings',
   Create: 'Host',
   Chat: 'Chat',
   Profile: 'Profile',
@@ -169,7 +169,7 @@ export const account = {
   confirmPrimary: 'Delete account',
   confirmCancel: 'Cancel',
   deletedTitle: 'Account deleted',
-  deletedBody: 'Your IRLobby account is gone. You’re signed out.',
+  deletedBody: 'Your account on The Foyer is gone. You’re signed out.',
   backToWelcome: 'Back to welcome',
   deleteError: 'Unable to delete your account.',
 };

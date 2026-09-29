@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 48,
-    borderRadius: radii.md,
+    borderRadius: radii.input,
     paddingHorizontal: spacing.md,
     backgroundColor: appColors.white,
     borderWidth: StyleSheet.hairlineWidth,

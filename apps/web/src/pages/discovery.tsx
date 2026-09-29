@@ -217,9 +217,9 @@ export default function Discovery() {
       <div className="min-h-screen bg-background">
         <header className="bg-card shadow-sm p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Discover Events</h2>
+            <h2 className="font-display text-[28px] font-bold text-foreground">Discover</h2>
             <p className="text-sm text-muted-foreground">
-              {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
+              {tonightOnly ? 'Gatherings in the next 8 hours' : 'Gatherings near you'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -313,9 +313,9 @@ export default function Discovery() {
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Discover Events</h2>
+          <h2 className="font-display text-[28px] font-bold text-foreground">Discover</h2>
           <p className="text-sm text-muted-foreground">
-            {tonightOnly ? 'Tonight (next 8 hours)' : 'Find activities near you'}
+            {tonightOnly ? 'Gatherings in the next 8 hours' : 'Gatherings near you'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -430,31 +430,30 @@ export default function Discovery() {
             size="lg"
             onClick={handleReject}
             disabled={swipeMutation.isPending}
-            className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-lg bg-white"
+            className="h-[54px] rounded-full border-2 border-border bg-white px-5 text-[#222222] shadow-lg"
             aria-label="Pass on this activity"
           >
-            <X className="h-6 w-6" />
+            Pass
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowDetailsModal(true)}
-            className="w-12 h-12 rounded-full border-2 border-border text-muted-foreground hover:bg-muted shadow-lg bg-card"
+            className="h-12 w-12 rounded-full border-2 border-border text-muted-foreground hover:bg-muted shadow-lg bg-card"
             aria-label="View activity details"
           >
             <Info className="h-4 w-4" />
           </Button>
 
           <Button
-            variant="outline"
             size="lg"
             onClick={handleJoin}
             disabled={swipeMutation.isPending}
-            className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 shadow-lg bg-white"
-            aria-label="Join this activity"
+            className="h-[54px] rounded-full bg-primary px-5 text-white shadow-lg hover:bg-primary/90"
+            aria-label="I'm going to this activity"
           >
-            <Heart className="h-6 w-6" />
+            I'm going
           </Button>
         </div>
       </div>

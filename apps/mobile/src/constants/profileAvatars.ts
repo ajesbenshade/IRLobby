@@ -10,10 +10,10 @@ const avatarUrl = (seed: string) =>
   )}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&radius=50`;
 
 export const DEFAULT_PROFILE_AVATARS: DefaultProfileAvatar[] = [
-  { id: "sprout", label: "Sprout", url: avatarUrl("IRLobby Sprout") },
-  { id: "spark", label: "Spark", url: avatarUrl("IRLobby Spark") },
-  { id: "orbit", label: "Orbit", url: avatarUrl("IRLobby Orbit") },
-  { id: "sunny", label: "Sunny", url: avatarUrl("IRLobby Sunny") },
-  { id: "river", label: "River", url: avatarUrl("IRLobby River") },
-  { id: "muse", label: "Muse", url: avatarUrl("IRLobby Muse") },
+  { id: "sprout", label: "Sprout", url: avatarUrl("Foyer Sprout") },
+  { id: "spark", label: "Spark", url: avatarUrl("Foyer Spark") },
+  { id: "orbit", label: "Orbit", url: avatarUrl("Foyer Orbit") },
+  { id: "sunny", label: "Sunny", url: avatarUrl("Foyer Sunny") },
+  { id: "river", label: "River", url: avatarUrl("Foyer River") },
+  { id: "muse", label: "Muse", url: avatarUrl("Foyer Muse") },
 ];

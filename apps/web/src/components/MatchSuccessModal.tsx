@@ -12,7 +12,7 @@ interface MatchSuccessModalProps {
 export default function MatchSuccessModal({ activity, isOpen, onClose }: MatchSuccessModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto bg-gradient-to-br from-green-500 to-green-600 border-0 text-white">
+      <DialogContent className="max-w-md mx-auto bg-gradient-to-br from-[#a2033f] to-[#7c0230] border-0 text-white">
         <div className="text-center py-8">
           <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-bounce">
             <Heart className="w-16 h-16 text-green-500" fill="currentColor" />

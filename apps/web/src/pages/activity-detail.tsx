@@ -137,7 +137,7 @@ export default function ActivityDetailPage() {
           {a.images && a.images.length > 0 ? (
             <img src={a.images[0]} alt={safeTitle} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full items-center justify-center text-4xl font-bold text-white/70">
+            <div className="flex h-full items-center justify-center text-4xl font-bold text-[#6e6a68]">
               {safeTitle.charAt(0)}
             </div>
           )}

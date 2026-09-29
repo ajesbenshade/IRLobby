@@ -1,11 +1,10 @@
 import {
-  Outfit_400Regular,
-  Outfit_500Medium,
-  Outfit_600SemiBold,
-  Outfit_700Bold,
-  Outfit_800ExtraBold,
-  useFonts,
-} from '@expo-google-fonts/outfit';
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import { LibreBaskerville_700Bold, useFonts } from '@expo-google-fonts/libre-baskerville';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -24,11 +23,11 @@ initAnalytics();
 
 function App() {
   const [fontsLoaded] = useFonts({
-    Outfit_400Regular,
-    Outfit_500Medium,
-    Outfit_600SemiBold,
-    Outfit_700Bold,
-    Outfit_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    LibreBaskerville_700Bold,
   });
 
   const theme = lightTheme;

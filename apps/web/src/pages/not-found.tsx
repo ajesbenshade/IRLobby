@@ -7,37 +7,37 @@ export default function NotFound() {
   return (
     <PublicSiteLayout>
       <PublicMetadata
-        title="Page Not Found - IRLobby"
-        description="The page you requested could not be found. Return to IRLobby home, features, support, or download."
+        title="Page Not Found - The Foyer"
+        description="The page you requested could not be found. Return to The Foyer home, features, support, or download."
         canonicalPath="/404"
       />
       <section className="px-6 py-28">
         <div className="public-glass mx-auto max-w-2xl rounded-[32px] p-10 text-center">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#7c3aed]/15 text-[#ec4899]">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#a2033f]/15 text-[#a2033f]">
             <AlertCircle className="h-8 w-8" />
           </div>
-          <h1 className="mt-6 font-display text-4xl font-black text-white">Page not found</h1>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70">
-            That URL does not exist in the latest IRLobby web app. Use one of the links below to get
+          <h1 className="mt-6 font-display text-4xl font-black text-[#222222]">Page not found</h1>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#6e6a68]">
+            That URL does not exist in the latest The Foyer web app. Use one of the links below to get
             back on track.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/"
-              className="rounded-full bg-[#7c3aed] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#6d28d9]"
+              className="rounded-full bg-[#a2033f] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c0230]"
             >
               Go home
             </Link>
             <Link
               to="/features"
-              className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-[#222222] transition hover:bg-white/10"
             >
               View features
             </Link>
             <Link
               to="/support"
-              className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-[#222222] transition hover:bg-white/10"
             >
               Support
             </Link>

@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   regular: {
-    minHeight: 48,
+    minHeight: 54,
     paddingHorizontal: 20,
   },
   compact: {

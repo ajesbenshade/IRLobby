@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
-import { appColors, appTypography } from '@theme/index';
+import { appColors, appTypography, brand, fontSize } from '@theme/index';
 
 type IrlobbyWordmarkProps = {
   color?: string;
@@ -22,7 +22,7 @@ export const IrlobbyWordmark = ({
     <View style={[styles.row, style]}>
       <MaterialCommunityIcons name="palm-tree" size={iconSize} color={color} />
       <Text style={[styles.mark, size === 'sm' ? styles.markSm : null, { color }, textStyle]}>
-        IRLobby
+        {brand.name}
       </Text>
     </View>
   );
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   mark: {
     fontFamily: appTypography.heading,
-    fontSize: 18,
+    fontSize: fontSize.wordmark,
     fontWeight: '700',
     letterSpacing: -0.4,
   },

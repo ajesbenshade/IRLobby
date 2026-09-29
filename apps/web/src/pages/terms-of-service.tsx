@@ -5,8 +5,8 @@ export default function TermsOfService() {
   return (
     <PublicSiteLayout activePath="/terms">
       <PublicMetadata
-        title="IRLobby Terms of Service"
-        description="Review the terms, responsibilities, and legal conditions for using IRLobby."
+        title="The Foyer Terms of Service"
+        description="Review the terms, responsibilities, and legal conditions for using The Foyer."
         canonicalPath="/terms"
       />
       <PublicHeroHeader
@@ -16,11 +16,11 @@ export default function TermsOfService() {
       />
 
       <section className="px-6 pb-24">
-        <div className="prose prose-invert prose-headings:font-display prose-headings:text-white prose-p:text-white/75 prose-li:text-white/75 mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-white/95 p-8 text-slate-900 shadow-[0_25px_100px_rgba(0,0,0,0.22)] sm:p-10 prose-h2:text-slate-900 prose-h3:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900">
+        <div className="prose prose-invert prose-headings:font-display prose-headings:text-[#222222] prose-p:text-[#6e6a68] prose-li:text-[#6e6a68] mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-white/95 p-8 text-slate-900 shadow-[0_25px_100px_rgba(0,0,0,0.22)] sm:p-10 prose-h2:text-slate-900 prose-h3:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900">
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-700 leading-relaxed">
-              By accessing and using IRLobby (&ldquo;the Service&rdquo;), you accept and agree to be
+              By accessing and using The Foyer (&ldquo;the Service&rdquo;), you accept and agree to be
               bound by the terms and provision of this agreement. If you do not agree to abide by
               the above, please do not use this service.
             </p>
@@ -29,7 +29,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">2. Description of Service</h2>
             <p className="text-gray-700 leading-relaxed">
-              IRLobby is a platform that connects people for real-life activities and meetups. Our
+              The Foyer is a platform that connects people for real-life activities and meetups. Our
               service allows users to discover, create, and participate in various activities in
               their local area.
             </p>
@@ -119,7 +119,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">8. Limitation of Liability</h2>
             <p className="text-gray-700 leading-relaxed">
-              In no event shall IRLobby be liable for any indirect, incidental, special,
+              In no event shall The Foyer be liable for any indirect, incidental, special,
               consequential, or punitive damages arising out of or related to your use of the
               service.
             </p>
@@ -128,7 +128,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-primary mb-4">9. Indemnification</h2>
             <p className="text-gray-700 leading-relaxed">
-              You agree to indemnify and hold harmless IRLobby and its affiliates from any claims,
+              You agree to indemnify and hold harmless The Foyer and its affiliates from any claims,
               damages, losses, or expenses arising from your use of the service or violation of
               these terms.
             </p>
@@ -160,7 +160,7 @@ export default function TermsOfService() {
               <p className="text-gray-700">
                 <strong>Email:</strong> legal@irlobby.com
                 <br />
-                <strong>Address:</strong> IRLobby Legal Team
+                <strong>Address:</strong> The Foyer Legal Team
               </p>
             </div>
           </section>

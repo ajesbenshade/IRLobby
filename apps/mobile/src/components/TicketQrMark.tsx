@@ -15,7 +15,7 @@ const hashSeed = (value: string) => {
 };
 
 const buildModules = (value: string) => {
-  const seed = hashSeed(value || 'IRLobby');
+  const seed = hashSeed(value || 'The Foyer');
   const cells: boolean[][] = [];
 
   for (let row = 0; row < MODULES; row += 1) {

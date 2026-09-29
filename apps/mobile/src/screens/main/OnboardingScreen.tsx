@@ -47,7 +47,7 @@ const STEP_COPY: Record<
 > = {
   location: {
     eyebrow: 'Step 1 of 3',
-    title: 'IRLobby only works nearby',
+    title: 'The Foyer works best nearby',
     subtitle:
       'We use your location to show plans within a few miles. You can type your city if you prefer not to share GPS yet.',
   },
@@ -276,7 +276,7 @@ export const OnboardingScreen = () => {
       <SectionIntro
         eyebrow="Nearby plans"
         title="Share location or type your city"
-        subtitle="IRLobby is built for plans within a few miles. Location makes the feed useful on day one."
+        subtitle="The Foyer is built for gatherings within a few miles. Location makes the feed useful on day one."
       />
       <AppButton onPress={() => void requestLocationPermission()}>
         {locationStatus === 'granted' ? 'Location enabled' : 'Use my location'}

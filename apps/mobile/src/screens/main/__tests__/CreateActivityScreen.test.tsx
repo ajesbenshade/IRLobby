@@ -87,7 +87,35 @@ const renderScreen = () => {
   );
 };
 
-describe('CreateActivityScreen ticketed toggle', () => {
+describe('CreateActivityScreen in foyer mode', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
+  });
+
+  it('hides the ticketed toggle, fee preview, and 10% copy even when ticketing is enabled', async () => {
+    renderScreen();
+
+    expect(await screen.findByText('Photos')).toBeTruthy();
+    expect(screen.queryByLabelText('Ticketed event')).toBeNull();
+    expect(screen.queryByLabelText('Ticket price')).toBeNull();
+    expect(screen.queryByText('Require QR check-in')).toBeNull();
+    expect(screen.queryByText(/takes 10%/)).toBeNull();
+    expect(screen.queryByText('Set up payouts')).toBeNull();
+    expect(screen.getByText(CREATE_EVENT_PUBLISH_LABEL)).toBeTruthy();
+    expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
+  });
+});
+
+describe('CreateActivityScreen ticketed toggle when app mode is irlobby', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'irlobby';
+    mockConfig.ticketingEnabled = true;
+  });
+
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
+  });
+
   it('defaults to a non-ticketed event with ticket fields hidden and Publish as the CTA', async () => {
     renderScreen();
 
@@ -95,7 +123,7 @@ describe('CreateActivityScreen ticketed toggle', () => {
     expect(ticketedToggle.props.value).toBe(false);
     expect(screen.queryByLabelText('Ticket price')).toBeNull();
     expect(screen.queryByText('Require QR check-in')).toBeNull();
-    expect(screen.queryByText(/IRLobby takes 10%/)).toBeNull();
+    expect(screen.queryByText(/The Foyer takes 10%/)).toBeNull();
     expect(screen.getByText(CREATE_EVENT_PUBLISH_LABEL)).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
   });
@@ -110,7 +138,7 @@ describe('CreateActivityScreen ticketed toggle', () => {
     });
     expect(screen.getByLabelText('Capacity')).toBeTruthy();
     expect(screen.getByText('Require QR check-in')).toBeTruthy();
-    expect(screen.getByText(/IRLobby takes 10%/)).toBeTruthy();
+    expect(screen.getByText(/The Foyer takes 10%/)).toBeTruthy();
     expect(screen.getByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_PUBLISH_LABEL)).toBeNull();
   });

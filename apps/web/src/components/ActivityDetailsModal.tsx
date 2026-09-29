@@ -74,7 +74,7 @@ export default function ActivityDetailsModal({
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
                   <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
                 </div>
-                <p className="text-white/80 font-medium">
+                <p className="text-[#6e6a68] font-medium">
                   {safeTags.length > 0 ? safeTags[0] : 'Activity'}
                 </p>
               </div>
@@ -181,7 +181,7 @@ export default function ActivityDetailsModal({
             </Link>
           </Button>
           <Button onClick={handleJoin} className="flex-1 bg-green-600 hover:bg-green-700">
-            Join Event
+            I'm going
           </Button>
         </div>
       </DialogContent>

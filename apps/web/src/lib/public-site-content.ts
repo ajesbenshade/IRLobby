@@ -116,7 +116,7 @@ export const howItWorksSteps = [
   {
     step: '1',
     label: 'Vibe Quiz',
-    title: 'Tell IRLobby your vibe in about a minute.',
+    title: 'Tell The Foyer your vibe in about a minute.',
     description:
       'Five quick cards replace a giant onboarding form. You can skip, revisit, and retune the signal later without starting over.',
     bullets: [
@@ -181,7 +181,7 @@ export const supportFaqs = [
       'Use the overflow menu from a profile, activity, or chat thread. You can block, report, or do both depending on the situation.',
   },
   {
-    question: 'Can I use IRLobby without sharing my location?',
+    question: 'Can I use The Foyer without sharing my location?',
     answer:
       'You can, but discovery quality drops sharply because nearby context is core to matching and ranking activities.',
   },

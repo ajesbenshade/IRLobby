@@ -150,6 +150,24 @@ def _sync_legacy_oauth_fields(user, provider, provider_user_id):
         user.save(update_fields=updates)
 
 
+def find_social_user(*, provider, provider_user_id, email=None):
+    """Return the user this social identity would attach to, without creating one."""
+    identity = (
+        SocialAuthIdentity.objects.select_related("user")
+        .filter(provider=provider, provider_user_id=provider_user_id)
+        .first()
+    )
+    if identity:
+        return identity.user
+    user = User.objects.filter(oauth_provider=provider, oauth_id=provider_user_id).first()
+    if user:
+        return user
+    normalized_email = normalize_email(email)
+    if normalized_email:
+        return User.objects.filter(email=normalized_email).first()
+    return None
+
+
 @transaction.atomic
 def resolve_or_create_social_user(
     *,

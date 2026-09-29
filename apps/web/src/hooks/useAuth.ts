@@ -154,6 +154,8 @@ type AuthResponsePayload = {
   };
   detail?: string;
   error?: string;
+  birth_date_required?: boolean;
+  signup_token?: string;
 };
 
 const resolveAuthTokens = (data: AuthResponsePayload) => {
@@ -312,13 +314,18 @@ export function useAuth() {
   );
 
   const loginWithGoogleIdToken = useCallback(
-    async (idToken: string) => {
+    async (idToken: string, birthDate?: string) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_GOOGLE_MOBILE, {
         id_token: idToken,
+        ...(birthDate ? { birth_date: birthDate } : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {
-        throw new Error(data.detail || data.error || 'Google sign-in failed');
+        const error = new Error(data.detail || data.error || 'Google sign-in failed');
+        if (data.birth_date_required) {
+          (error as Error & { birthDateRequired?: boolean }).birthDateRequired = true;
+        }
+        throw error;
       }
       await persistOAuthResponse(data);
     },
@@ -331,16 +338,22 @@ export function useAuth() {
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      birthDate?: string | null;
     }) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_APPLE_MOBILE, {
         identity_token: payload.identityToken,
         email: payload.email,
         first_name: payload.firstName,
         last_name: payload.lastName,
+        ...(payload.birthDate ? { birth_date: payload.birthDate } : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {
-        throw new Error(data.detail || data.error || 'Apple sign-in failed');
+        const error = new Error(data.detail || data.error || 'Apple sign-in failed');
+        if (data.birth_date_required) {
+          (error as Error & { birthDateRequired?: boolean }).birthDateRequired = true;
+        }
+        throw error;
       }
       await persistOAuthResponse(data);
     },

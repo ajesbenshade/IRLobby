@@ -1,4 +1,5 @@
 import EditProfileModal from '@/components/EditProfileModal';
+import HouseholdSection from '@/components/HouseholdSection';
 import FriendsModal from '@/components/FriendsModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,8 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        <HouseholdSection birthDate={user.birthDate} />
 
         {/* Interests */}
         <Card className="bg-white dark:bg-gray-800 shadow-sm">

@@ -431,7 +431,53 @@ const collectTwitterCallbackUrl = async (
   }
 };
 
-export async function loginWithTwitter(): Promise<AuthResponse> {
+export class SocialBirthDateRequiredError extends Error {
+  signupToken?: string;
+
+  constructor(message: string, signupToken?: string) {
+    super(message);
+    this.name = 'SocialBirthDateRequiredError';
+    this.signupToken = signupToken;
+  }
+}
+
+const birthDateRequiredFrom = (data: unknown): SocialBirthDateRequiredError | null => {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+  const record = data as Record<string, unknown>;
+  if (!record.birth_date_required) {
+    return null;
+  }
+  const message =
+    typeof record.error === 'string' ? record.error : 'Birth date is required.';
+  const signupToken =
+    typeof record.signup_token === 'string' ? record.signup_token : undefined;
+  return new SocialBirthDateRequiredError(message, signupToken);
+};
+
+export async function completeSocialSignup(
+  signupToken: string,
+  birthDate: string,
+): Promise<AuthResponse> {
+  try {
+    const response = await api.post<AuthResponse>(API_ROUTES.AUTH_SOCIAL_COMPLETE, {
+      signup_token: signupToken,
+      birth_date: birthDate,
+    });
+    return persistAuthResponse(response.data);
+  } catch (error) {
+    const required = birthDateRequiredFrom(
+      (error as { response?: { data?: unknown } })?.response?.data,
+    );
+    if (required) {
+      throw required;
+    }
+    throw error;
+  }
+}
+
+export async function loginWithTwitter(birthDate?: string): Promise<AuthResponse> {
   // Always advertise the app scheme so the backend uses
   // https://api.irlobby.com/api/auth/twitter/callback/ — never the apex stub.
   const returnUrl = getTwitterMobileRedirectUri();
@@ -448,6 +494,7 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
     {
       params: {
         mobile_redirect_uri: returnUrl,
+        ...(birthDate ? { birth_date: birthDate } : {}),
       },
     }
   );
@@ -460,6 +507,9 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
   const callbackUrl = await collectTwitterCallbackUrl(authUrl, returnUrl);
   const parsed = parseTwitterAuthCallbackUrl(callbackUrl);
   if (!parsed.ok) {
+    if (parsed.reason === 'birth_date_required') {
+      throw new SocialBirthDateRequiredError(parsed.error, parsed.signupToken);
+    }
     throw new Error(parsed.error);
   }
 
@@ -475,7 +525,8 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 }
 
 export async function loginWithGoogleIdToken(
-  idToken: string
+  idToken: string,
+  birthDate?: string,
 ): Promise<AuthResponse> {
   const trimmedToken = typeof idToken === 'string' ? idToken.trim() : '';
   if (!trimmedToken) {
@@ -488,10 +539,17 @@ export async function loginWithGoogleIdToken(
   try {
     const response = await api.post<unknown>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
       id_token: trimmedToken,
+      ...(birthDate ? { birth_date: birthDate } : {}),
     });
     const payload = unwrapGoogleAuthPayload(response.data);
     return persistAuthResponse(payload as unknown as AuthResponse);
   } catch (error) {
+    const required = birthDateRequiredFrom(
+      (error as { response?: { data?: unknown } })?.response?.data,
+    );
+    if (required) {
+      throw required;
+    }
     throw wrapGoogleExchangeError(error, trimmedToken);
   }
 }
@@ -501,14 +559,26 @@ export async function loginWithAppleIdentityToken(payload: {
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  birthDate?: string | null;
 }): Promise<AuthResponse> {
-  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_APPLE_MOBILE, {
-    identity_token: payload.identityToken,
-    email: payload.email,
-    first_name: payload.firstName,
-    last_name: payload.lastName,
-  });
-  return persistAuthResponse(response.data);
+  try {
+    const response = await api.post<AuthResponse>(API_ROUTES.AUTH_APPLE_MOBILE, {
+      identity_token: payload.identityToken,
+      email: payload.email,
+      first_name: payload.firstName,
+      last_name: payload.lastName,
+      ...(payload.birthDate ? { birth_date: payload.birthDate } : {}),
+    });
+    return persistAuthResponse(response.data);
+  } catch (error) {
+    const required = birthDateRequiredFrom(
+      (error as { response?: { data?: unknown } })?.response?.data,
+    );
+    if (required) {
+      throw required;
+    }
+    throw error;
+  }
 }
 
 export async function logout(): Promise<void> {

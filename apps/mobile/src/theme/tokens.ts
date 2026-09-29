@@ -131,14 +131,14 @@ export const shadows = {
     elevation: brandElevation.card.elevation,
   },
   float: {
-    shadowColor: coral.primary,
+    shadowColor: burgundy.primary,
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: brandElevation.float.shadowOffset,
     elevation: brandElevation.float.elevation,
   },
   pop: {
-    shadowColor: coral.primaryDeep,
+    shadowColor: burgundy.primaryDeep,
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: brandElevation.pop.shadowOffset,

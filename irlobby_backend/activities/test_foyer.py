@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -333,3 +334,155 @@ class FoyerTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(HouseholdDependent.objects.filter(first_name="Ada").exists())
+
+    def test_parent_can_remove_a_household_child(self):
+        self.member.birth_date = date(1988, 3, 3)
+        self.member.save(update_fields=["birth_date"])
+        self.client.force_authenticate(self.member)
+        created = self.client.post(
+            reverse("household-dependents"),
+            {
+                "first_name": "Sam",
+                "last_name": "Member",
+                "birth_date": "2016-05-05",
+                "sex": "male",
+            },
+            format="json",
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        removed = self.client.delete(reverse("household-dependent-detail", args=[created.data["id"]]))
+        self.assertEqual(removed.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HouseholdDependent.objects.filter(pk=created.data["id"]).exists())
+
+
+@override_settings(FOYER_MODE=True, GOOGLE_OAUTH_CLIENT_IDS=["google-client-id"])
+class SocialSignupGateTests(APITestCase):
+    def setUp(self):
+        self.google_url = reverse("google_mobile_login")
+
+    def _google(self, *, sub, email, birth_date=None):
+        payload = {"id_token": "aaa.bbb.ccc"}
+        if birth_date:
+            payload["birth_date"] = birth_date
+        with patch("users.oauth_views.verify_google_identity_token") as verify:
+            verify.return_value = {
+                "sub": sub,
+                "email": email,
+                "email_verified": True,
+                "given_name": "New",
+                "family_name": "Person",
+            }
+            return self.client.post(self.google_url, payload, format="json")
+
+    def test_google_signup_without_birth_date_creates_no_account(self):
+        response = self._google(sub="google-new", email="new-person@example.com")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data["birth_date_required"])
+        self.assertFalse(User.objects.filter(email="new-person@example.com").exists())
+
+    def test_google_signup_under_13_creates_no_account(self):
+        response = self._google(
+            sub="google-child",
+            email="child-person@example.com",
+            birth_date="2020-01-01",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("under 13", response.data["error"])
+        self.assertFalse(User.objects.filter(email="child-person@example.com").exists())
+
+    def test_google_signup_with_adult_birth_date_can_use_the_foyer(self):
+        response = self._google(
+            sub="google-adult",
+            email="adult-person@example.com",
+            birth_date="1991-04-04",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(email="adult-person@example.com")
+        self.assertEqual(user.birth_date, date(1991, 4, 4))
+        self.assertIn("access", response.data["tokens"])
+
+    def test_existing_social_account_without_birth_date_gets_no_session(self):
+        user = User.objects.create_user(
+            username="shell",
+            email="shell@example.com",
+            password="password123",
+        )
+        response = self._google(sub="google-shell", email="shell@example.com")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data["birth_date_required"])
+        self.assertNotIn("tokens", response.data)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertIsNone(user.birth_date)
+
+        under = self._google(sub="google-shell", email="shell@example.com", birth_date="2018-06-01")
+        self.assertEqual(under.status_code, status.HTTP_400_BAD_REQUEST)
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+        self.assertIsNone(user.birth_date)
+
+    @override_settings(
+        TWITTER_CLIENT_ID="twitter-client-id",
+        TWITTER_CLIENT_SECRET="twitter-client-secret",
+    )
+    @patch("users.oauth_views.requests.get")
+    @patch("users.oauth_views.exchange_twitter_token")
+    def test_twitter_signup_waits_for_birth_date_and_rejects_under_13(
+        self, mock_exchange, mock_get
+    ):
+        cache.set(
+            "twitter_oauth_pending-state",
+            {
+                "code_verifier": "test-verifier",
+                "redirect_uri": "http://testserver/api/auth/twitter/callback/",
+                "mobile_redirect_uri": None,
+            },
+            timeout=600,
+        )
+        mock_exchange.return_value = type(
+            "Response",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {"access_token": "twitter-access-token"},
+                "text": "{}",
+                "headers": {},
+            },
+        )()
+        mock_get.return_value = type(
+            "Response",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "data": {"id": "twitter-pending", "username": "pending", "name": "Pending Person"}
+                },
+            },
+        )()
+
+        pending = self.client.get(
+            reverse("twitter_oauth_callback"),
+            {"code": "oauth-code", "state": "pending-state"},
+        )
+        self.assertEqual(pending.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(pending.data["birth_date_required"])
+        signup_token = pending.data["signup_token"]
+        self.assertFalse(User.objects.filter(oauth_id="twitter-pending").exists())
+
+        too_young = self.client.post(
+            reverse("social-signup-complete"),
+            {"signup_token": signup_token, "birth_date": "2019-02-02"},
+            format="json",
+        )
+        self.assertEqual(too_young.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(User.objects.filter(oauth_id="twitter-pending").exists())
+
+        adult = self.client.post(
+            reverse("social-signup-complete"),
+            {"signup_token": signup_token, "birth_date": "1989-02-02"},
+            format="json",
+        )
+        self.assertEqual(adult.status_code, status.HTTP_200_OK)
+        created = User.objects.get(oauth_id="twitter-pending")
+        self.assertEqual(created.birth_date, date(1989, 2, 2))
+        self.assertTrue(created.is_active)

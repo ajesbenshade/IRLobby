@@ -13,6 +13,7 @@ import { deactivatePushTokens } from '@services/pushNotificationService';
 import {
   fetchProfile,
   login,
+  completeSocialSignup,
   loginWithAppleIdentityToken,
   loginWithGoogleIdToken,
   loginWithTwitter,
@@ -35,14 +36,16 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   accountDeleted: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
-  signInWithTwitter: () => Promise<AuthUser>;
-  signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
+  signInWithTwitter: (birthDate?: string) => Promise<AuthUser>;
+  signInWithGoogleIdToken: (idToken: string, birthDate?: string) => Promise<AuthUser>;
   signInWithAppleIdentityToken: (payload: {
     identityToken: string;
     email?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    birthDate?: string | null;
   }) => Promise<AuthUser>;
+  completeSocialSignup: (signupToken: string, birthDate: string) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   markAccountDeleted: () => void;
@@ -119,16 +122,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
-  const signInWithTwitter = useCallback(async () => {
-    const { user: nextUser } = await loginWithTwitter();
+  const signInWithTwitter = useCallback(async (birthDate?: string) => {
+    const { user: nextUser } = await loginWithTwitter(birthDate);
     setUser(nextUser);
     setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'twitter' });
     return nextUser;
   }, []);
 
-  const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
-    const { user: nextUser } = await loginWithGoogleIdToken(idToken);
+  const finishSocialSignup = useCallback(async (signupToken: string, birthDate: string) => {
+    const { user: nextUser } = await completeSocialSignup(signupToken, birthDate);
+    setUser(nextUser);
+    setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
+    track('sign_up', { method: 'social' });
+    return nextUser;
+  }, []);
+
+  const signInWithGoogleIdToken = useCallback(async (idToken: string, birthDate?: string) => {
+    const { user: nextUser } = await loginWithGoogleIdToken(idToken, birthDate);
     if (nextUser == null || nextUser.id === undefined || nextUser.id === null) {
       throw new Error('Google sign-in did not return a user.');
     }
@@ -144,6 +155,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      birthDate?: string | null;
     }) => {
       const { user: nextUser } = await loginWithAppleIdentityToken(payload);
       setUser(nextUser);
@@ -209,6 +221,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signInWithTwitter,
       signInWithGoogleIdToken,
       signInWithAppleIdentityToken,
+      completeSocialSignup: finishSocialSignup,
       signUp,
       signOut,
       markAccountDeleted,
@@ -229,6 +242,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signInWithTwitter,
       signInWithGoogleIdToken,
       signInWithAppleIdentityToken,
+      finishSocialSignup,
       signOut,
       signUp,
       user,

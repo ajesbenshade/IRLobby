@@ -57,6 +57,7 @@ export const LoginScreen = ({ navigation }: Props) => {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [signInToast, setSignInToast] = useState<'google' | null>(null);
   const [googleRetryNonce, setGoogleRetryNonce] = useState(0);
+  const [birthDate, setBirthDate] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -88,7 +89,10 @@ export const LoginScreen = ({ navigation }: Props) => {
     isPending: isGooglePending,
     error: googleError,
   } = useMutation({
-    mutationFn: (idToken: string) => signInWithGoogleIdToken(idToken),
+    mutationFn: (idToken: string) => {
+      const date = birthDate.trim();
+      return date ? signInWithGoogleIdToken(idToken, date) : signInWithGoogleIdToken(idToken);
+    },
   });
 
   const {
@@ -112,11 +116,13 @@ export const LoginScreen = ({ navigation }: Props) => {
         throw new Error('Apple sign-in did not return an identity token.');
       }
 
+      const date = birthDate.trim();
       return signInWithAppleIdentityToken({
         identityToken: credential.identityToken,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
+        ...(date ? { birthDate: date } : {}),
       });
     },
   });
@@ -193,6 +199,16 @@ export const LoginScreen = ({ navigation }: Props) => {
 
             <View style={styles.stack}>
               <Text style={styles.heading}>{authCopy.login.title}</Text>
+              <Field
+                label="Birth date"
+                value={birthDate}
+                onChangeText={setBirthDate}
+                placeholder="YYYY-MM-DD"
+                autoCapitalize="none"
+              />
+              <Text style={styles.birthHint}>
+                Required the first time you use Google or Apple. A person under 13 cannot create an account.
+              </Text>
               {isAppleAvailable ? (
                 <AppleSignInButton
                   mode="continue"
@@ -375,6 +391,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     textAlign: 'center',
     marginBottom: 4,
+  },
+  birthHint: {
+    color: appColors.mutedInk,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   stack: {
     gap: 12,

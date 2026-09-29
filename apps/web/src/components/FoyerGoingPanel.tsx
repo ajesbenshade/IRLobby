@@ -1,7 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiRequest } from '@/lib/queryClient';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+type HouseholdChild = {
+  id: number;
+  first_name: string;
+  last_name: string;
+};
 
 type FoyerGoingPanelProps = {
   activity: { id: number | string; title: string; host_kind?: string; gift_notice?: string; donation_enabled?: boolean };
@@ -11,16 +17,35 @@ type FoyerGoingPanelProps = {
 
 export default function FoyerGoingPanel({ activity, onDone, onClose }: FoyerGoingPanelProps) {
   const [includeSelf, setIncludeSelf] = useState(true);
+  const [children, setChildren] = useState<HouseholdChild[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [step, setStep] = useState<'who' | 'give' | 'next'>('who');
   const [amount, setAmount] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const response = await apiRequest('GET', '/api/household/dependents/');
+      if (!response.ok || cancelled) {
+        return;
+      }
+      const body = (await response.json()) as HouseholdChild[];
+      if (!cancelled) {
+        setChildren(body);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activity.id]);
+
   const rsvp = async () => {
     setError('');
     const response = await apiRequest('POST', `/api/activities/${activity.id}/rsvp/`, {
       include_self: includeSelf,
-      dependent_ids: [],
+      dependent_ids: selected,
     });
     if (!response.ok) {
       setError(await response.text());
@@ -66,7 +91,25 @@ export default function FoyerGoingPanel({ activity, onDone, onClose }: FoyerGoin
             <input type="checkbox" checked={includeSelf} onChange={(event) => setIncludeSelf(event.target.checked)} />
             Me
           </label>
-          <p className="text-xs text-[#5c534f]">Eligible children in your household can be added from your profile household list.</p>
+          {children.map((child) => (
+            <label key={child.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(child.id)}
+                onChange={() =>
+                  setSelected((current) =>
+                    current.includes(child.id)
+                      ? current.filter((id) => id !== child.id)
+                      : [...current, child.id],
+                  )
+                }
+              />
+              {child.first_name} {child.last_name}
+            </label>
+          ))}
+          <p className="text-xs text-[#5c534f]">
+            Add children under 18 from your profile. A 13–17 year old with their own account is not listed here.
+          </p>
           <Button type="button" onClick={() => void rsvp()}>
             I&apos;m going
           </Button>

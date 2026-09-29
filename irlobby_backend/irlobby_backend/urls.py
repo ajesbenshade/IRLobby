@@ -29,13 +29,14 @@ from rest_framework_simplejwt.views import (
 
 from activities.foyer_views import (
     ChurchListCreateView,
+    HouseholdDependentDetailView,
     HouseholdDependentListCreateView,
     foyer_mode_status,
 )
 from activities.public_calendar import PublicCalendarIcsView, PublicCalendarView
 from irlobby_backend.legal_pages import privacy_policy, support_page
 from irlobby_backend.stripe_bounce import stripe_app_bounce
-from users.oauth_views import apple_mobile_login, google_mobile_login
+from users.oauth_views import apple_mobile_login, complete_social_signup, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
     logout_view,
@@ -241,6 +242,7 @@ urlpatterns = [
     path("api/auth/reset-password/", password_reset_confirm, name="reset-password"),
     path("api/auth/google/mobile/", google_mobile_login, name="google_mobile_login"),
     path("api/auth/apple/mobile/", apple_mobile_login, name="apple_mobile_login"),
+    path("api/auth/social/complete/", complete_social_signup, name="social-signup-complete"),
     path("api/auth/twitter/", include("users.oauth_urls")),
     path("api/users/", include("users.urls")),
     path("api/activities/", include("activities.urls")),
@@ -249,6 +251,11 @@ urlpatterns = [
     path("api/public/calendar.ics", PublicCalendarIcsView.as_view(), name="public-calendar-ics"),
     path("api/churches/", ChurchListCreateView.as_view(), name="church-list"),
     path("api/household/dependents/", HouseholdDependentListCreateView.as_view(), name="household-dependents"),
+    path(
+        "api/household/dependents/<int:pk>/",
+        HouseholdDependentDetailView.as_view(),
+        name="household-dependent-detail",
+    ),
     path("api/foyer/", foyer_mode_status, name="foyer-status"),
     path("api/swipes/", include("swipes.urls")),
     path("api/matches/", include("matches.urls")),

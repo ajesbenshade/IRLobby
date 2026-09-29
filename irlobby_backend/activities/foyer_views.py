@@ -110,6 +110,15 @@ class HouseholdDependentListCreateView(APIView):
         return Response(_dependent_payload(dependent), status=status.HTTP_201_CREATED)
 
 
+class HouseholdDependentDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        dependent = get_object_or_404(HouseholdDependent, pk=pk, guardian=request.user)
+        dependent.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 def _dependent_payload(dependent):
     return {
         "id": dependent.id,

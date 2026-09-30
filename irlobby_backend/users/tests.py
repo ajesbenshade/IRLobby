@@ -1227,3 +1227,55 @@ class SeedReviewAccountTests(APITestCase):
 
         with self.assertRaises(CommandError):
             call_command("seed_review_account")
+
+    def test_seed_review_account_includes_images_and_descriptions(self):
+        from django.core.management import call_command
+
+        call_command("seed_review_account", password="Review-pass-123")
+        activities = list(Activity.objects.filter(is_approved=True))
+        self.assertEqual(len(activities), 6)
+        for activity in activities:
+            self.assertTrue(activity.images, msg=f"{activity.title} missing images")
+            self.assertTrue(
+                all(url.startswith("https://") for url in activity.images),
+                msg=f"{activity.title} has non-https image",
+            )
+            self.assertGreater(len(activity.description), 40)
+            self.assertTrue(activity.location)
+            self.assertTrue(activity.category)
+
+
+class SeedBetaEventsTests(APITestCase):
+    def test_seeds_complete_swipeable_activities(self):
+        from django.core.management import call_command
+
+        call_command("seed_beta_events", hub="youngstown")
+        # Idempotent refresh keeps a fixed deck size.
+        call_command("seed_beta_events", hub="youngstown")
+
+        activities = list(
+            Activity.objects.filter(host__preferences__beta_seed_host=True, is_approved=True)
+        )
+        self.assertGreaterEqual(len(activities), 12)
+        for activity in activities:
+            self.assertTrue(activity.images)
+            self.assertTrue(all(url.startswith("https://") for url in activity.images))
+            self.assertGreater(len(activity.description), 40)
+            self.assertIn("Youngstown", activity.location)
+            self.assertLessEqual(activity.capacity, 10)
+            self.assertIsNotNone(activity.latitude)
+            self.assertIsNotNone(activity.longitude)
+            self.assertTrue(activity.tags)
+            self.assertTrue(activity.category)
+
+        hosts = User.objects.filter(preferences__beta_seed_host=True)
+        self.assertGreaterEqual(hosts.count(), 4)
+        self.assertTrue(all(h.avatar_url.startswith("https://") for h in hosts))
+
+    def test_seed_data_delegates_to_beta_events(self):
+        from django.core.management import call_command
+
+        call_command("seed_data", hub="cupertino")
+        activities = Activity.objects.filter(is_approved=True)
+        self.assertTrue(activities.exists())
+        self.assertTrue(any("Cupertino" in a.location for a in activities))

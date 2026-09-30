@@ -328,6 +328,24 @@ jobs:
               'IFS= read -r REVIEW_ACCOUNT_PASSWORD; export REVIEW_ACCOUNT_PASSWORD; docker exec -e REVIEW_ACCOUNT_PASSWORD irlobby_backend-web-1 python manage.py seed_review_account'
           fi
 
+          # Seed complete swipeable beta events (photos, descriptions, locations).
+          # Default hub is Youngstown, OH — override with BETA_SEED_HUB secret if needed.
+          if [ "${DEPLOY_MODE}" != "full" ]; then
+            echo "Hotpatch mode does not ship seed commands; skipping beta event seed."
+          else
+            BETA_HUB="${BETA_SEED_HUB:-youngstown}"
+            case "${BETA_HUB}" in
+              youngstown|cupertino|san_francisco) ;;
+              *)
+                echo "Invalid BETA_SEED_HUB='${BETA_HUB}', falling back to youngstown."
+                BETA_HUB="youngstown"
+                ;;
+            esac
+            ssh -o BatchMode=yes -o ConnectTimeout=20 \
+              -o StrictHostKeyChecking=accept-new "${EFFECTIVE_USER}@${SSH_HOST}" \
+              "docker exec irlobby_backend-web-1 python manage.py seed_beta_events --hub ${BETA_HUB}"
+          fi
+
       - name: Verify auth routes
         run: |
           set -euo pipefail

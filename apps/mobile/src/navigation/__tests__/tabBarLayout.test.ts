@@ -5,6 +5,8 @@ import {
   TAB_BAR_MIN_LABEL_CLEARANCE,
   TAB_ICON_SIZE,
   TAB_LABEL_LINE_HEIGHT,
+  TIGHT_CHROME_MAX_FONT_SCALE,
+  getSheetBottomPadding,
   getTabBarLayout,
 } from '../tabBarLayout';
 
@@ -43,7 +45,7 @@ describe('getTabBarLayout', () => {
 
   it('grows with Dynamic Type so labels are never squeezed', () => {
     const base = getTabBarLayout(34, 1);
-    const large = getTabBarLayout(34, 2);
+    const large = getTabBarLayout(34, TIGHT_CHROME_MAX_FONT_SCALE);
 
     expect(large.height).toBeGreaterThan(base.height);
     expect(large.scrollBottomPadding).toBe(large.height + large.bottomOffset + TAB_BAR_CONTENT_GAP);
@@ -51,5 +53,19 @@ describe('getTabBarLayout', () => {
 
   it('ignores font scales below 1 and negative insets', () => {
     expect(getTabBarLayout(-5, 0.5)).toEqual(getTabBarLayout(0, 1));
+  });
+});
+
+describe('tab bar vs. capped tab labels', () => {
+  it('stops growing at the label cap, because tab labels stop scaling there', () => {
+    expect(getTabBarLayout(34, 3)).toEqual(getTabBarLayout(34, TIGHT_CHROME_MAX_FONT_SCALE));
+  });
+});
+
+describe('getSheetBottomPadding', () => {
+  it('adds 16pt of breathing room on top of the real safe-area inset', () => {
+    expect(getSheetBottomPadding(34)).toBe(50);
+    expect(getSheetBottomPadding(0)).toBe(16);
+    expect(getSheetBottomPadding(-4)).toBe(16);
   });
 });

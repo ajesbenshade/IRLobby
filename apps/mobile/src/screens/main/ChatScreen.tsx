@@ -548,7 +548,7 @@ export const ChatScreen = () => {
                       </AccentPill>
                     </View>
                     <Text style={styles.cardTitle}>{item.match}</Text>
-                    <NativeText style={styles.cardSubtitle} numberOfLines={2}>
+                    <NativeText style={styles.cardSubtitle}>
                       {lastMessage?.message ?? 'No messages yet.'}
                     </NativeText>
                   </View>

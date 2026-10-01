@@ -8,10 +8,15 @@ import { Modal, Portal, Text } from 'react-native-paper';
 
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { AppScrollView } from '@components/AppChrome';
-import { View } from '@components/RNCompat';
-import { AppButton } from '@components/ui/Button';
+import { RefreshControl, View } from '@components/RNCompat';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
-import { audienceChipLabel, coverPhotoUrl, goingCountLabel, hostDisplayName } from '@foyer/logic';
+import {
+  audienceChipLabel,
+  coverPhotoUrl,
+  gatheringLocationLabel,
+  goingCountLabel,
+  hostDisplayName,
+} from '@foyer/logic';
 import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { calendarEventSummary } from '@shared/calendarLinks';
 import { useAuth } from '@hooks/useAuth';
@@ -87,12 +92,17 @@ export const GatheringDetailScreen = () => {
   const cover = coverPhotoUrl(activity);
 
   return (
-    <AppScrollView contentContainerStyle={styles.container}>
+    <AppScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={activityQuery.isRefetching} onRefresh={() => void activityQuery.refetch()} />
+      }
+    >
       {cover ? <Image source={{ uri: cover }} style={styles.cover} /> : <View style={styles.cover} />}
       <Text style={styles.chip}>{audienceChipLabel(activity)}</Text>
       <Text style={styles.title}>{activity.title}</Text>
       <Text style={styles.meta}>{goingCountLabel(activity.going_count ?? activity.participant_count ?? 0)}</Text>
-      <Text style={styles.meta}>{activity.location}</Text>
+      <Text style={styles.meta}>{gatheringLocationLabel(activity.location)}</Text>
       {activity.description ? <Text style={styles.body}>{activity.description}</Text> : null}
       <Text style={styles.meta}>Hosted by {hostDisplayName(activity)}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Add to calendar" onPress={() => setShowCalendar(true)}>
@@ -100,7 +110,12 @@ export const GatheringDetailScreen = () => {
       </Pressable>
       {showCalendar ? (
         <Portal>
-          <Modal visible onDismiss={() => setShowCalendar(false)} contentContainerStyle={styles.sheetModal}>
+          <Modal
+            visible
+            onDismiss={() => setShowCalendar(false)}
+            style={styles.sheetWrapper}
+            contentContainerStyle={styles.sheetModal}
+          >
             <AddToCalendarSheet
               summary={calendarEventSummary(activity.title, activity.time)}
               onGoogle={() => openCalendarUrl(gatheringCalendarUrls(activity).google)}
@@ -132,9 +147,6 @@ export const GatheringDetailScreen = () => {
         </Text>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <AppButton variant="ghost" onPress={() => activityQuery.refetch()}>
-        Refresh
-      </AppButton>
     </AppScrollView>
   );
 };
@@ -151,15 +163,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     fontFamily: appTypography.bodySemibold,
+    maxWidth: '100%',
   },
-  title: { fontFamily: appTypography.heading, fontSize: 28, color: appColors.ink },
-  meta: { fontFamily: appTypography.bodyRegular, color: appColors.mutedInk, fontSize: 14 },
+  title: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
+  meta: { fontFamily: appTypography.bodyRegular, color: appColors.mutedInk, fontSize: 14, lineHeight: 20 },
   body: { fontFamily: appTypography.bodyRegular, color: appColors.ink, fontSize: 15, lineHeight: 22 },
   section: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink, marginTop: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   thumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: appColors.background },
   add: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   error: { color: appColors.danger, fontFamily: appTypography.bodyRegular },
+  sheetWrapper: { marginBottom: 0 },
   sheetModal: {
     backgroundColor: 'transparent',
     marginHorizontal: 0,

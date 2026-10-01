@@ -42,10 +42,13 @@ export const HouseholdScreen = () => {
 
   return (
     <AppScrollView contentContainerStyle={styles.container}>
-      <Pressable accessibilityRole="button" onPress={() => navigation.goBack()}>
-        <Text style={styles.back}>Profile</Text>
-      </Pressable>
-      <Text style={styles.title}>Household</Text>
+      <View style={styles.topRow}>
+        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.back}>Profile</Text>
+        </Pressable>
+        <Text accessibilityRole="header" style={styles.title}>Household</Text>
+        <View style={styles.backButton} />
+      </View>
       <Text style={styles.intro}>
         Add children under 18 so you can RSVP for them. Only you can see this list.
       </Text>
@@ -114,17 +117,19 @@ export const HouseholdScreen = () => {
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 14, paddingBottom: 48 },
   back: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
-  title: { fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink, textAlign: 'center', marginTop: -28 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  backButton: { minWidth: 72, minHeight: 44, justifyContent: 'center' },
+  title: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink, textAlign: 'center' },
   intro: { fontFamily: appTypography.bodyRegular, fontSize: 15, color: appColors.ink, lineHeight: 22 },
   section: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.mutedInk, letterSpacing: 0.4 },
   list: { backgroundColor: appColors.white, borderRadius: radii.list, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: appColors.line },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: appColors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 12 },
-  copy: { flex: 1 },
+  copy: { flex: 1, flexShrink: 1 },
   name: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink },
   meta: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk },
-  remove: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  remove: { color: appColors.primary, fontFamily: appTypography.bodySemibold, paddingVertical: 8 },
   form: { gap: 10 },
   input: {
     minHeight: 48,

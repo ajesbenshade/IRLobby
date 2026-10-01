@@ -27,6 +27,10 @@ export const TAB_ICON_SIZE = 20;
 /** Label line height at 1x Dynamic Type, plus the 1pt gap under the icon. */
 export const TAB_LABEL_LINE_HEIGHT = 13;
 const TAB_LABEL_GAP = 1;
+/** Tight chrome (tab labels, pills) stops scaling here; everything else grows with Dynamic Type. */
+export const TIGHT_CHROME_MAX_FONT_SCALE = 1.4;
+/** Minimum bottom padding for a bottom sheet or pinned footer, on top of the safe-area inset. */
+export const SHEET_BOTTOM_GAP = 16;
 
 export type TabBarLayout = {
   /** Height of the bar itself (the ~50pt area above the inset). */
@@ -41,7 +45,8 @@ export type TabBarLayout = {
 
 export const getTabBarLayout = (bottomInset: number, fontScale = 1): TabBarLayout => {
   const inset = Math.max(0, bottomInset);
-  const scale = Math.max(fontScale, 1);
+  // Tab labels cap their own scaling (see TIGHT_CHROME_MAX_FONT_SCALE), so the bar does too.
+  const scale = Math.min(Math.max(fontScale, 1), TIGHT_CHROME_MAX_FONT_SCALE);
   // Grows with Dynamic Type so larger labels are never squeezed.
   const height = Math.max(
     TAB_BAR_CONTENT_HEIGHT,
@@ -80,4 +85,14 @@ export const useTabScreenBottomPadding = (): number | undefined => {
     return undefined;
   }
   return getTabBarLayout(insets?.bottom ?? 0, fontScale).scrollBottomPadding;
+};
+
+/** Bottom padding for a sheet or pinned footer so its last control clears the home indicator. */
+export const getSheetBottomPadding = (bottomInset: number): number =>
+  Math.max(0, bottomInset) + SHEET_BOTTOM_GAP;
+
+/** Same as `getSheetBottomPadding`, reading the safe-area inset (0 when no provider is mounted). */
+export const useSheetBottomPadding = (): number => {
+  const insets = useContext(SafeAreaInsetsContext);
+  return getSheetBottomPadding(insets?.bottom ?? 0);
 };

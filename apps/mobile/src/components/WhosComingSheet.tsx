@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { View } from '@components/RNCompat';
+import { SheetScaffold } from '@components/SheetScaffold';
 import { AppButton } from '@components/ui/Button';
 import {
   WHOS_COMING_NOTE,
@@ -19,10 +20,12 @@ type WhosComingSheetProps = {
   response: WhosComingResponse;
   subtitle?: string;
   pending?: boolean;
+  /** Inline error from the last Confirm attempt, shown inside the sheet. */
+  error?: string | null;
   onConfirm: (payload: { include_self: boolean; dependent_ids: number[] }) => void;
 };
 
-export const WhosComingSheet = ({ response, subtitle, pending, onConfirm }: WhosComingSheetProps) => {
+export const WhosComingSheet = ({ response, subtitle, pending, error, onConfirm }: WhosComingSheetProps) => {
   const initial = useMemo(() => defaultRsvpSelection(response), [response]);
   const [includeSelf, setIncludeSelf] = useState(initial.includeSelf);
   const [dependentIds, setDependentIds] = useState<number[]>(initial.dependentIds);
@@ -35,8 +38,24 @@ export const WhosComingSheet = ({ response, subtitle, pending, onConfirm }: Whos
   };
 
   return (
-    <View style={styles.sheet}>
-      <View style={styles.handle} />
+    <SheetScaffold
+      footer={
+        <>
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {error}
+          </Text>
+        ) : null}
+        <AppButton
+          disabled={pending || count < 1}
+          loading={pending}
+          onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
+        >
+          {confirmGoingLabel(count)}
+        </AppButton>
+        </>
+      }
+    >
       <Text style={styles.title}>Who's coming?</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
@@ -53,7 +72,9 @@ export const WhosComingSheet = ({ response, subtitle, pending, onConfirm }: Whos
         </View>
         <View style={styles.copy}>
           <Text style={styles.name}>Me</Text>
-          <Text style={styles.meta}>{response.me.eligible ? 'Your RSVP' : response.me.reason}</Text>
+          <Text style={[styles.meta, !response.me.eligible ? styles.metaOff : null]}>
+            {response.me.eligible ? 'Your RSVP' : response.me.reason}
+          </Text>
         </View>
       </Pressable>
 
@@ -77,7 +98,7 @@ export const WhosComingSheet = ({ response, subtitle, pending, onConfirm }: Whos
               <Text style={[styles.name, !child.eligible ? styles.nameOff : null]}>
                 {childDisplayName(child.name, child.age)}
               </Text>
-              <Text style={styles.meta}>
+              <Text style={[styles.meta, !child.eligible ? styles.metaOff : null]}>
                 {child.eligible ? 'In your household' : child.reason || 'Outside this event\'s age range'}
               </Text>
             </View>
@@ -86,41 +107,21 @@ export const WhosComingSheet = ({ response, subtitle, pending, onConfirm }: Whos
       })}
 
       <Text style={styles.note}>{response.note || WHOS_COMING_NOTE}</Text>
-      <AppButton
-        disabled={pending || count < 1}
-        loading={pending}
-        onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
-      >
-        {confirmGoingLabel(count)}
-      </AppButton>
-    </View>
+    </SheetScaffold>
   );
 };
 
 const styles = StyleSheet.create({
-  sheet: {
-    backgroundColor: appColors.white,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-    padding: 20,
-    gap: 12,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 42,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: appColors.line,
-    marginBottom: 4,
-  },
   title: {
     fontFamily: appTypography.heading,
     fontSize: 26,
+    lineHeight: 34,
     color: appColors.ink,
   },
   subtitle: {
     fontFamily: appTypography.bodyRegular,
     fontSize: 14,
+    lineHeight: 20,
     color: appColors.mutedInk,
     marginTop: -6,
   },
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.primaryWash,
   },
   rowOff: {
-    opacity: 0.55,
+    backgroundColor: '#efe9e5',
   },
   box: {
     width: 22,
@@ -172,7 +173,17 @@ const styles = StyleSheet.create({
     color: appColors.ink,
   },
   nameOff: {
-    color: appColors.softInk,
+    color: appColors.mutedInk,
+  },
+  error: {
+    color: appColors.danger,
+    fontFamily: appTypography.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  metaOff: {
+    color: '#7a7572',
   },
   meta: {
     fontFamily: appTypography.bodyRegular,

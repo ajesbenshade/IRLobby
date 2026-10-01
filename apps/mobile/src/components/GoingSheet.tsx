@@ -2,6 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { View } from '@components/RNCompat';
+import { SheetScaffold } from '@components/SheetScaffold';
 import { appColors, appTypography, radii } from '@theme/index';
 
 type GoingSheetProps = {
@@ -13,8 +14,7 @@ type GoingSheetProps = {
 };
 
 export const GoingSheet = ({ title, onPhotos, onChat, onAddToCalendar, onDismiss }: GoingSheetProps) => (
-  <View style={styles.sheet}>
-    <View style={styles.handle} />
+  <SheetScaffold>
     <Text style={styles.title}>You're going</Text>
     <Text style={styles.subtitle}>{title}</Text>
     <Pressable accessibilityRole="link" accessibilityLabel="Photos" onPress={onPhotos} style={styles.link}>
@@ -29,28 +29,14 @@ export const GoingSheet = ({ title, onPhotos, onChat, onAddToCalendar, onDismiss
     <Pressable accessibilityRole="button" accessibilityLabel="Done" onPress={onDismiss} style={styles.done}>
       <Text style={styles.doneText}>Done</Text>
     </Pressable>
-  </View>
+  </SheetScaffold>
 );
 
 const styles = StyleSheet.create({
-  sheet: {
-    backgroundColor: appColors.white,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-    padding: 20,
-    gap: 12,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 42,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: appColors.line,
-    marginBottom: 4,
-  },
   title: {
     fontFamily: appTypography.heading,
     fontSize: 26,
+    lineHeight: 34,
     color: appColors.ink,
   },
   subtitle: {

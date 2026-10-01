@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
+import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
 
 import {
@@ -10,10 +10,11 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
-import { View } from '@components/RNCompat';
+import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { account as accountCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
+import { useSheetBottomPadding } from '@navigation/tabBarLayout';
 import { deleteCurrentAccount } from '@services/accountService';
 import { appColors, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -21,6 +22,8 @@ import { getErrorMessage } from '@utils/error';
 export const AccountScreen = () => {
   const { signOut, markAccountDeleted } = useAuth();
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const { height: windowHeight } = useWindowDimensions();
+  const sheetBottomPadding = useSheetBottomPadding();
 
   const deleteAccountMutation = useMutation({
     mutationFn: deleteCurrentAccount,
@@ -79,7 +82,11 @@ export const AccountScreen = () => {
         onRequestClose={closeConfirm}
       >
         <Pressable style={styles.backdrop} onPress={closeConfirm}>
-          <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+          <Pressable
+            style={[styles.sheet, { maxHeight: Math.round(windowHeight * 0.9), paddingBottom: sheetBottomPadding }]}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetScroll}>
             <Text variant="titleLarge" style={styles.sheetTitle}>
               {accountCopy.confirmTitle}
             </Text>
@@ -102,6 +109,7 @@ export const AccountScreen = () => {
                 {accountCopy.confirmCancel}
               </AppButton>
             </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -138,12 +146,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+  },
+  sheetScroll: {
     gap: spacing.sm,
   },
   sheetTitle: {
     color: appColors.ink,
     fontWeight: '800',
+    lineHeight: 32,
     letterSpacing: -0.4,
   },
   sheetBody: {

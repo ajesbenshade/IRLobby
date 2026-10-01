@@ -4,6 +4,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { View } from '@components/RNCompat';
+import { SheetScaffold } from '@components/SheetScaffold';
 import { appColors, appTypography, radii } from '@theme/index';
 
 type AddToCalendarSheetProps = {
@@ -20,8 +21,7 @@ const openAndClose = (open: () => void, close: () => void) => {
 };
 
 export const AddToCalendarSheet = ({ summary, onGoogle, onOutlook, onApple, onDismiss }: AddToCalendarSheetProps) => (
-  <View style={styles.sheet}>
-    <View style={styles.handle} />
+  <SheetScaffold>
     <Text style={styles.title}>Add to calendar</Text>
     <Text style={styles.summary}>{summary}</Text>
     <CalendarRow icon="calendar-month-outline" label="Google Calendar" onPress={() => openAndClose(onGoogle, onDismiss)} />
@@ -36,7 +36,7 @@ export const AddToCalendarSheet = ({ summary, onGoogle, onOutlook, onApple, onDi
     <Pressable accessibilityRole="button" accessibilityLabel="Cancel" onPress={onDismiss} style={styles.cancel}>
       <Text style={styles.cancelText}>Cancel</Text>
     </Pressable>
-  </View>
+  </SheetScaffold>
 );
 
 const CalendarRow = ({
@@ -63,26 +63,10 @@ const CalendarRow = ({
 );
 
 const styles = StyleSheet.create({
-  sheet: {
-    backgroundColor: appColors.white,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 42,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: appColors.line,
-    marginBottom: 6,
-  },
   title: {
     fontFamily: appTypography.heading,
     fontSize: 26,
+    lineHeight: 34,
     color: appColors.ink,
   },
   summary: {
@@ -116,6 +100,7 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 16,
+    lineHeight: 22,
     color: appColors.ink,
   },
   rowNote: {

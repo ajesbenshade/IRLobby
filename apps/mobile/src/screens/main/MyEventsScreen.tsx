@@ -229,7 +229,7 @@ const MyEventsScreenLegacy = () => {
                       <Text style={styles.eventMeta}>
                         {formatDateLabel(activity.time)} · {activity.location || 'Location pending'}
                       </Text>
-                      <NativeText style={styles.eventDescription} numberOfLines={2}>
+                      <NativeText style={styles.eventDescription}>
                         {activity.description || 'No description added yet.'}
                       </NativeText>
                     </View>

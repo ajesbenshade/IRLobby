@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
+import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { Button, HelperText, RadioButton, Text } from 'react-native-paper';
 
 import { TextInput } from '@components/PaperCompat';
-import { View } from '@components/RNCompat';
+import { ScrollView, View } from '@components/RNCompat';
+import { useSheetBottomPadding } from '@navigation/tabBarLayout';
 import {
   REPORT_REASON_OPTIONS,
   blockUser,
@@ -31,6 +32,8 @@ export const SafetyActionsModal = ({
   onBlocked,
   onReported,
 }: SafetyActionsModalProps) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const sheetBottomPadding = useSheetBottomPadding();
   const [mode, setMode] = useState<'menu' | 'report'>('menu');
   const [reason, setReason] = useState<ReportReason>('inappropriate');
   const [description, setDescription] = useState('');
@@ -93,7 +96,15 @@ export const SafetyActionsModal = ({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { maxHeight: Math.round(windowHeight * 0.9), paddingBottom: sheetBottomPadding }]}
+          onPress={(event) => event.stopPropagation()}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.sheetScroll}
+          >
           <Text variant="titleMedium" style={styles.title}>
             Safety
           </Text>
@@ -176,6 +187,7 @@ export const SafetyActionsModal = ({
               </Button>
             </View>
           )}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -194,7 +206,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 28,
+  },
+  sheetScroll: {
     gap: 12,
   },
   title: {

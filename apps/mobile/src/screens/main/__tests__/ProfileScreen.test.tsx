@@ -46,6 +46,13 @@ jest.mock('expo-image-picker', () => ({}));
 
 jest.mock('@components/ProfileCompletionRing', () => ({ ProfileCompletionRing: () => null }));
 
+// The legacy Profile layout renders only outside Foyer mode; each test picks its mode.
+const mockIsFoyerMode = jest.fn(() => false);
+jest.mock('@constants/appMode', () => ({
+  ...jest.requireActual('@constants/appMode'),
+  isFoyerMode: () => mockIsFoyerMode(),
+}));
+
 jest.mock('@expo/vector-icons', () => ({
   MaterialCommunityIcons: 'MaterialCommunityIcons',
 }));
@@ -61,8 +68,9 @@ const renderScreen = () => {
   );
 };
 
-describe('ProfileScreen', () => {
+describe('ProfileScreen (legacy layout, not Foyer mode)', () => {
   beforeEach(() => {
+    mockIsFoyerMode.mockReturnValue(false);
     mockRefreshProfile.mockClear();
     mockPatch.mockClear();
     mockUpdateOnboarding.mockClear();
@@ -106,6 +114,43 @@ describe('ProfileScreen', () => {
 
     await act(async () => {
       refreshControl.props.onRefresh();
+    });
+
+    await waitFor(() => expect(mockRefreshProfile).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('ProfileScreen (Foyer mode)', () => {
+  beforeEach(() => {
+    mockIsFoyerMode.mockReturnValue(true);
+    mockRefreshProfile.mockClear();
+  });
+
+  afterEach(() => {
+    mockIsFoyerMode.mockReturnValue(false);
+  });
+
+  it('shows the Foyer profile with Settings, Account, Help and Log out, and no legacy sections', () => {
+    renderScreen();
+
+    expect(screen.getByLabelText('Settings')).toBeTruthy();
+    expect(screen.getByLabelText('Account')).toBeTruthy();
+    expect(screen.getByLabelText('Help')).toBeTruthy();
+    expect(screen.getByLabelText('Log out')).toBeTruthy();
+    expect(screen.getByText('Church calendar')).toBeTruthy();
+    expect(screen.queryByText('Photo album (0/12)')).toBeNull();
+    expect(screen.queryByText('Starter avatars')).toBeNull();
+    expect(screen.queryByLabelText('Connections')).toBeNull();
+  });
+
+  it('refreshes the profile by pulling down', async () => {
+    renderScreen();
+
+    const scroll = screen.UNSAFE_getByType(require('react-native').ScrollView);
+    expect(scroll.props.refreshControl).toBeTruthy();
+
+    await act(async () => {
+      scroll.props.refreshControl.props.onRefresh();
     });
 
     await waitFor(() => expect(mockRefreshProfile).toHaveBeenCalledTimes(1));

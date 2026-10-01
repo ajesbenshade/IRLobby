@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Share, StyleSheet } from 'react-native';
-import { Button, HelperText, Switch, Text } from 'react-native-paper';
+import { HelperText, Switch, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -16,6 +16,7 @@ import {
   SectionIntro,
 } from '@components/AppChrome';
 import { View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
 import { account as accountCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
@@ -112,6 +113,10 @@ const loadSettings = async (): Promise<UserSettings> => {
     },
   };
 };
+
+/** Location lives in its own section: it is a device preference, not something other people see. */
+export const LOCATION_TOGGLE_LABEL = 'Use my location to find nearby gatherings';
+export const LOCATION_TOGGLE_HELPER = 'Never shown to other people.';
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -283,9 +288,9 @@ export const SettingsScreen = () => {
               {message}
             </HelperText>
           ))}
-          <Button mode="outlined" onPress={() => void refetch()} loading={isRefetching} disabled={isBusy}>
-            {isRefetching ? 'Retrying...' : 'Refresh settings'}
-          </Button>
+          <AppButton variant="outline" onPress={() => void refetch()} loading={isRefetching} disabled={isBusy}>
+            {isRefetching ? 'Retrying...' : 'Try again'}
+          </AppButton>
         </PanelCard>
       ) : null}
 
@@ -361,21 +366,26 @@ export const SettingsScreen = () => {
       </PanelCard>
 
       <PanelCard>
-        <SectionIntro
-          eyebrow="Privacy"
-          title="Control what people can see"
-          subtitle="These settings shape how visible your profile is and how much personal context you expose to others."
-        />
+        <SectionIntro title="Location" />
         <DetailRow
-          title="Location sharing"
-          subtitle="Use location to make discovery and activity placement more relevant."
+          title={LOCATION_TOGGLE_LABEL}
+          subtitle={LOCATION_TOGGLE_HELPER}
           accessory={
             <Switch
+              accessibilityLabel={LOCATION_TOGGLE_LABEL}
               value={settings.privacy.locationSharing}
               onValueChange={() => toggleSetting('privacy', 'locationSharing')}
               disabled={isBusy}
             />
           }
+        />
+      </PanelCard>
+
+      <PanelCard>
+        <SectionIntro
+          eyebrow="Privacy"
+          title="Control what people can see"
+          subtitle="These settings shape how visible your profile is and how much personal context you expose to others."
         />
         <DetailRow
           title="Show age"
@@ -403,9 +413,9 @@ export const SettingsScreen = () => {
           title="Profile visibility"
           subtitle="Cycle between public, friends-only, and private profile visibility."
           accessory={
-            <Button mode="outlined" compact onPress={cycleProfileVisibility} disabled={isBusy}>
+            <AppButton variant="outline" compact onPress={cycleProfileVisibility} disabled={isBusy}>
               {titleCase(settings.privacy.profileVisibility)}
-            </Button>
+            </AppButton>
           }
         />
       </PanelCard>
@@ -420,8 +430,8 @@ export const SettingsScreen = () => {
           title="Theme"
           subtitle="Switch between light, dark, and system-following display behavior."
           accessory={
-            <Button
-              mode="outlined"
+            <AppButton
+              variant="outline"
               compact
               onPress={() => {
                 const sequence: PreferenceSettings['theme'][] = ['light', 'dark', 'system'];
@@ -432,15 +442,15 @@ export const SettingsScreen = () => {
               disabled={isBusy}
             >
               {titleCase(settings.preferences.theme)}
-            </Button>
+            </AppButton>
           }
         />
         <DetailRow
           title="Distance unit"
           subtitle="Choose whether location radius values show in miles or kilometers."
           accessory={
-            <Button
-              mode="outlined"
+            <AppButton
+              variant="outline"
               compact
               onPress={() => {
                 const nextDistanceUnit =
@@ -450,15 +460,15 @@ export const SettingsScreen = () => {
               disabled={isBusy}
             >
               {titleCase(settings.preferences.distanceUnit)}
-            </Button>
+            </AppButton>
           }
         />
         <DetailRow
           title="Maximum distance"
           subtitle="Increase the discovery radius in 5-mile increments up to 100."
           accessory={
-            <Button
-              mode="outlined"
+            <AppButton
+              variant="outline"
               compact
               onPress={() => {
                 const nextDistance = Math.min(100, settings.preferences.maxDistance + 5);
@@ -467,20 +477,20 @@ export const SettingsScreen = () => {
               disabled={isBusy}
             >
               {settings.preferences.maxDistance} {settings.preferences.distanceUnit}
-            </Button>
+            </AppButton>
           }
         />
         <DetailRow
           title="Retake vibe quiz"
           subtitle="Refresh your personalized feed with a quick 60-second vibe check."
           accessory={
-            <Button
-              mode="outlined"
+            <AppButton
+              variant="outline"
               compact
               onPress={() => navigation.navigate('VibeQuizModal')}
             >
               Retake
-            </Button>
+            </AppButton>
           }
         />
       </PanelCard>
@@ -492,17 +502,16 @@ export const SettingsScreen = () => {
           subtitle="Use these actions deliberately. Export is reversible. Delete lives under Account."
         />
         <View style={styles.actionStack}>
-          <Button
-            mode="contained-tonal"
+          <AppButton
             onPress={() => void handleExportData()}
             loading={exportDataMutation.isPending}
             disabled={isBusy}
           >
             Export my data
-          </Button>
-          <Button mode="outlined" textColor={appColors.white} onPress={() => void signOut()} disabled={isBusy}>
+          </AppButton>
+          <AppButton variant="outline" onPress={() => void signOut()} disabled={isBusy}>
             Sign out
-          </Button>
+          </AppButton>
         </View>
       </PanelCard>
     </AppScrollView>

@@ -1,6 +1,7 @@
-import { useEffect, useRef, type ComponentType, type PropsWithChildren, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentType, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -12,6 +13,7 @@ import { Surface, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KeyboardAvoidingView, ScrollView, View } from '@components/RNCompat';
+import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import { appColors, appTypography, fontSize, radii, shadows, spacing } from '@theme/index';
 
 const AnimatedView = Animated.View as unknown as ComponentType<any>;
@@ -72,26 +74,65 @@ type DetailRowProps = {
   onPress?: () => void;
 };
 
-export const AppScrollView = ({ children, contentContainerStyle, refreshControl }: AppScrollViewProps) => (
-  <View style={styles.screenRoot}>
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      showsVerticalScrollIndicator={false}
-      refreshControl={refreshControl as ScrollViewProps['refreshControl']}
-      contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-    >
-      {children}
-    </ScrollView>
-  </View>
-);
+export const AppScrollView = ({ children, contentContainerStyle, refreshControl }: AppScrollViewProps) => {
+  // Only defined inside the tab navigator; stack screens pushed above the tabs have no bar to clear.
+  const tabBottomPadding = useTabScreenBottomPadding();
 
-export const AppScreenContainer = ({ children, style }: AppScreenContainerProps) => (
-  <View style={styles.screenRoot}>
-    <SafeAreaView style={[styles.screenContainer, style]} edges={['top', 'bottom']}>
-      {children}
-    </SafeAreaView>
-  </View>
-);
+  return (
+    <View style={styles.screenRoot}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl as ScrollViewProps['refreshControl']}
+        contentContainerStyle={[
+          styles.scrollContent,
+          tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null,
+          contentContainerStyle,
+        ]}
+      >
+        {children}
+      </ScrollView>
+    </View>
+  );
+};
+
+const useKeyboardVisible = (enabled: boolean) => {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [enabled]);
+
+  return visible;
+};
+
+export const AppScreenContainer = ({ children, style }: AppScreenContainerProps) => {
+  // Fixed (non-scrolling) tab screens, e.g. an open chat thread, must also clear the floating tab bar.
+  const tabBottomPadding = useTabScreenBottomPadding();
+  const keyboardVisible = useKeyboardVisible(tabBottomPadding != null);
+  const clearTabBar = tabBottomPadding != null && !keyboardVisible;
+
+  return (
+    <View style={styles.screenRoot}>
+      <SafeAreaView
+        style={[styles.screenContainer, style, clearTabBar ? { paddingBottom: tabBottomPadding } : null]}
+        edges={clearTabBar ? ['top'] : ['top', 'bottom']}
+      >
+        {children}
+      </SafeAreaView>
+    </View>
+  );
+};
 
 export const PageHeader = ({ eyebrow, title, subtitle, rightContent }: PageHeaderProps) => (
   <View style={styles.headerRow}>

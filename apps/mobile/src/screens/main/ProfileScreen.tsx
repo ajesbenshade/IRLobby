@@ -17,7 +17,7 @@ import {
   SectionIntro,
 } from "@components/AppChrome";
 import { GetPaidRow, ProfileMenuRow } from "@components/GetPaidRow";
-import { Image, Text as NativeText, View } from "@components/RNCompat";
+import { Image, RefreshControl, Text as NativeText, View } from "@components/RNCompat";
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
@@ -31,7 +31,6 @@ import { updateOnboarding } from "@services/authService";
 import { appColors, appTypography, palette, radii } from "@theme/index";
 import { getErrorMessage } from "@utils/error";
 import { imageAssetToUploadDataUrl } from "@utils/profileImages";
-import { parseHttpsUrl } from "@utils/safeUrl";
 
 import type { MainStackParamList } from "@navigation/types";
 
@@ -50,9 +49,9 @@ export const ProfileScreen = () => {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [interestInput, setInterestInput] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
-  const [photoInput, setPhotoInput] = useState("");
   const [photoAlbum, setPhotoAlbum] = useState<string[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setFirstName(user?.firstName ?? "");
@@ -63,7 +62,6 @@ export const ProfileScreen = () => {
     setInterests(user?.interests ?? []);
     setPhotoAlbum(user?.photoAlbum ?? []);
     setInterestInput("");
-    setPhotoInput("");
     setImageError(null);
   }, [user]);
 
@@ -109,18 +107,13 @@ export const ProfileScreen = () => {
     );
   };
 
-  const addPhotoByUrl = () => {
-    const next = photoInput.trim();
-    if (!next || photoAlbum.length >= MAX_PHOTOS) {
-      return;
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshProfile();
+    } finally {
+      setIsRefreshing(false);
     }
-    if (!parseHttpsUrl(next)) {
-      setImageError("Photos from a URL must use https.");
-      return;
-    }
-    setPhotoAlbum((previous) => [...previous, next]);
-    setPhotoInput("");
-    setImageError(null);
   };
 
   const removePhotoAt = (index: number) => {
@@ -205,7 +198,12 @@ export const ProfileScreen = () => {
   };
 
   return (
-    <AppScrollView contentContainerStyle={styles.container}>
+    <AppScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={() => void onRefresh()} />
+      }
+    >
       <FoyerHeader />
       <PageHeader
         eyebrow="Your vibe"
@@ -439,24 +437,6 @@ export const ProfileScreen = () => {
           title={`Photo album (${photoAlbum.length}/${MAX_PHOTOS})`}
           subtitle="Give people a sense of who you are before they open the chat or show up to the plan."
         />
-        <View style={styles.row}>
-          <View style={styles.flexInput}>
-            <Field
-              label="Photo URL"
-              value={photoInput}
-              onChangeText={setPhotoInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <AppButton
-            variant="outline"
-            onPress={addPhotoByUrl}
-            disabled={!photoInput.trim()}
-          >
-            Add
-          </AppButton>
-        </View>
         <Button
           mode="outlined"
           onPress={addPhotoFromLibrary}
@@ -505,43 +485,20 @@ export const ProfileScreen = () => {
       {updateMutation.isSuccess ? (
         <PanelCard tone="accent">
           <AccentPill tone="secondary">Saved</AccentPill>
-          <Text style={styles.savedText}>Profile glow-up saved.</Text>
+          <Text style={styles.savedText}>Profile saved.</Text>
         </PanelCard>
       ) : null}
 
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Actions"
-          title="Keep it current"
-          subtitle="Save edits, pull the latest version, or end your session from here."
-        />
-        <View style={styles.actionRow}>
-          <Button
-            mode="contained"
-            buttonColor={appColors.primary}
-            onPress={() => updateMutation.mutate()}
-            loading={updateMutation.isPending}
-            style={styles.primaryAction}
-          >
-            Save glow-up
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => void refreshProfile()}
-            style={styles.secondaryAction}
-          >
-            Refresh
-          </Button>
-        </View>
-        <Button
-          mode="text"
-          onPress={() => void signOut()}
-          style={styles.signOut}
-          textColor={appColors.danger}
-        >
-          Sign out
-        </Button>
-      </PanelCard>
+      <Button
+        mode="contained"
+        buttonColor={appColors.primary}
+        onPress={() => updateMutation.mutate()}
+        loading={updateMutation.isPending}
+        disabled={updateMutation.isPending}
+        style={styles.saveButton}
+      >
+        Save
+      </Button>
     </AppScrollView>
   );
 };
@@ -732,19 +689,8 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontFamily: appTypography.heading,
   },
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-  primaryAction: {
-    flexGrow: 1,
-  },
-  secondaryAction: {
-    flexGrow: 1,
-  },
-  signOut: {
-    alignSelf: "flex-start",
+  saveButton: {
+    alignSelf: "stretch",
   },
   menuCard: {
     gap: 0,

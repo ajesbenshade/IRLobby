@@ -28,6 +28,7 @@ import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import { appColors } from '@theme/index';
 
+import { TAB_ICON_SIZE, TAB_LABEL_LINE_HEIGHT, useTabBarLayout } from './tabBarLayout';
 import type { MainStackParamList, MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -98,7 +99,10 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
   );
 };
 
-const MainTabs = () => (
+const MainTabs = () => {
+  const tabBar = useTabBarLayout();
+
+  return (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
@@ -109,12 +113,14 @@ const MainTabs = () => (
         position: 'absolute',
         left: 16,
         right: 16,
-        bottom: 12,
-        height: 62,
+        bottom: tabBar.bottomOffset,
+        height: tabBar.height,
         borderTopWidth: 0,
         borderRadius: 20,
-        paddingTop: 8,
-        paddingBottom: 8,
+        // React Navigation adds insets.bottom as padding by default; the bar already
+        // floats above the inset (see tabBarLayout), so the items are centered instead.
+        paddingTop: 0,
+        paddingBottom: 0,
         paddingHorizontal: 6,
         backgroundColor: appColors.card,
         borderWidth: StyleSheet.hairlineWidth,
@@ -124,16 +130,18 @@ const MainTabs = () => (
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.1,
-        marginTop: route.name === 'Create' ? 4 : 2,
+        lineHeight: TAB_LABEL_LINE_HEIGHT,
+        marginTop: 1,
       },
       tabBarItemStyle: {
         marginHorizontal: 2,
         borderRadius: 16,
+        justifyContent: 'center',
       },
-      tabBarIcon: ({ color, size, focused }) => (
+      tabBarIcon: ({ color, focused }) => (
         <TabIcon
           color={color}
-          size={size}
+          size={TAB_ICON_SIZE}
           focused={focused}
           routeName={route.name as keyof MainTabParamList}
         />
@@ -156,7 +164,8 @@ const MainTabs = () => (
     />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
-);
+  );
+};
 
 export const MainNavigator = () => (
   <Stack.Navigator
@@ -245,19 +254,19 @@ export const MainNavigator = () => (
 
 const styles = StyleSheet.create({
   tabIconWrap: {
-    minWidth: 36,
-    minHeight: 36,
+    minWidth: 40,
+    minHeight: TAB_ICON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 10,
   },
   tabIconWrapFocused: {
     backgroundColor: appColors.primaryWash,
   },
   createIconWrap: {
-    minWidth: 36,
-    minHeight: 36,
-    borderRadius: 16,
+    minWidth: 40,
+    minHeight: TAB_ICON_SIZE,
+    borderRadius: 10,
     backgroundColor: appColors.primary,
   },
 });

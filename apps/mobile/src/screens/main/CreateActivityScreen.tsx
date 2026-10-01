@@ -26,6 +26,7 @@ import {
   PROTOTYPE_FOOTER_HOST,
 } from '@constants/tickets';
 import { useAuth } from '@hooks/useAuth';
+import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import type { MainStackParamList } from '@navigation/types';
 import {
   createActivity,
@@ -133,6 +134,8 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
   const { user } = useAuth();
   const isEditing = Boolean(activityId);
 
+  // Defined only when rendered as the Host tab; the pushed Edit event screen has no tab bar.
+  const tabBottomPadding = useTabScreenBottomPadding();
   const [form, setForm] = useState<ActivityFormState>(INITIAL_FORM_STATE);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -437,7 +440,10 @@ export const CreateActivityScreen = ({ activityId }: CreateActivityScreenProps =
 
       <ScrollView
         style={styles.sheet}
-        contentContainerStyle={styles.sheetContent}
+        contentContainerStyle={[
+          styles.sheetContent,
+          tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Field

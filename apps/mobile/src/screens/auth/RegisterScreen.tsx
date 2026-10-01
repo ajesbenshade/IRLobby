@@ -14,6 +14,9 @@ import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import { updateOnboarding } from '@services/authService';
 import { appColors } from '@theme/index';
+import axios from 'axios';
+
+import { registrationFieldError } from '@foyer/logic';
 import { getErrorMessage } from '@utils/error';
 import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
 
@@ -39,6 +42,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
     signInWithGoogleIdToken,
   } = useAuth();
   const [firstName, setFirstName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -90,6 +94,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         email: email.trim().toLowerCase(),
         username: username.trim(),
         password,
+        dateOfBirth: dateOfBirth.trim(),
       });
       await persistLegalAcceptance();
       return user;
@@ -216,6 +221,13 @@ export const RegisterScreen = ({ navigation }: Props) => {
           autoComplete="username"
         />
         <Field
+          label="Birth date"
+          value={dateOfBirth}
+          onChangeText={setDateOfBirth}
+          placeholder="YYYY-MM-DD"
+          autoCapitalize="none"
+        />
+        <Field
           label="Password"
           value={password}
           onChangeText={setPassword}
@@ -236,7 +248,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
         />
         {authError ? (
           <Text style={styles.errorText}>
-            {getErrorMessage(authError, authCopy.register.fallbackError)}
+            {(axios.isAxiosError(authError) ? registrationFieldError(authError.response?.data) : null) ||
+              getErrorMessage(authError, authCopy.register.fallbackError)}
           </Text>
         ) : null}
 

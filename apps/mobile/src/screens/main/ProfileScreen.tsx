@@ -22,7 +22,8 @@ import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { FoyerHeader } from "@components/FoyerHeader";
-import { isTicketingUiEnabled } from "@constants/appMode";
+import { FoyerProfileCard } from "@components/FoyerProfileCard";
+import { isFoyerMode, isTicketingUiEnabled } from "@constants/appMode";
 import { config } from "@constants/config";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
 import { useAuth } from "@hooks/useAuth";
@@ -203,6 +204,38 @@ export const ProfileScreen = () => {
       }
     }
   };
+
+  if (isFoyerMode()) {
+    return (
+      <AppScrollView contentContainerStyle={styles.container}>
+        <FoyerHeader />
+        <FoyerProfileCard />
+        <PanelCard style={styles.menuCard}>
+          <ProfileMenuRow
+            icon="cog-outline"
+            title="Settings"
+            onPress={() => navigation.navigate("Settings")}
+          />
+          <ProfileMenuRow
+            icon="account-circle-outline"
+            title="Account"
+            onPress={() => navigation.navigate("Account")}
+          />
+          <ProfileMenuRow
+            icon="help-circle-outline"
+            title="Help"
+            onPress={() => navigation.navigate("HelpSupport")}
+          />
+          <ProfileMenuRow
+            icon="logout"
+            title="Log out"
+            danger
+            onPress={() => void signOut()}
+          />
+        </PanelCard>
+      </AppScrollView>
+    );
+  }
 
   return (
     <AppScrollView contentContainerStyle={styles.container}>

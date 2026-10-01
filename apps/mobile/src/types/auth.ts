@@ -54,6 +54,12 @@ export interface AuthUser {
   stripeConnectPayoutsEnabled?: boolean;
   stripeConnectDetailsSubmitted?: boolean;
   canSellTickets?: boolean;
+  dateOfBirth?: string | null;
+  sex?: 'male' | 'female' | '';
+  church?: { id: number; name: string; is_verified?: boolean } | null;
+  churchId?: number | null;
+  isChurchAdmin?: boolean;
+  householdChildCount?: number;
 }
 
 export interface LoginPayload {
@@ -65,6 +71,8 @@ export interface RegisterPayload extends LoginPayload {
   firstName: string;
   lastName: string;
   username?: string;
+  dateOfBirth?: string;
+  sex?: 'male' | 'female';
 }
 
 export interface AuthResponse {

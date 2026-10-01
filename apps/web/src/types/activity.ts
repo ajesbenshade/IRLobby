@@ -13,6 +13,12 @@ export interface Activity {
   created_at: string;
   participant_count: number;
   isPrivate?: boolean;
+  calendar_links?: {
+    ics_url?: string | null;
+    webcal_url?: string | null;
+    google_url?: string | null;
+    outlook_url?: string | null;
+  } | null;
 }
 
 export interface Message {

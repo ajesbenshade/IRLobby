@@ -9,6 +9,7 @@ export interface ConversationMessage {
     id: number;
     firstName?: string;
     email?: string;
+    avatarUrl?: string;
   };
   message: string;
   createdAt: string;
@@ -30,6 +31,10 @@ type ChatApiUser = {
   first_name?: string | null;
   email?: string | null;
   username?: string | null;
+  avatarUrl?: string | null;
+  avatar_url?: string | null;
+  profileImageUrl?: string | null;
+  profile_image_url?: string | null;
 };
 
 type ChatApiMessage = {
@@ -82,10 +87,18 @@ const normalizeMessageUser = (message: ChatApiMessage): ConversationMessage['use
   const rawUser = message.user;
   const resolvedId = rawUser?.id ?? message.userId ?? message.user_id ?? message.sender;
 
+  const avatar =
+    rawUser?.avatarUrl ??
+    rawUser?.avatar_url ??
+    rawUser?.profileImageUrl ??
+    rawUser?.profile_image_url ??
+    undefined;
+
   return {
     id: asNumber(resolvedId),
     firstName: rawUser?.firstName ?? rawUser?.first_name ?? undefined,
     email: rawUser?.email ?? rawUser?.username ?? message.sender_username ?? undefined,
+    avatarUrl: avatar || undefined,
   };
 };
 

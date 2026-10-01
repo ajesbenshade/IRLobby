@@ -70,7 +70,7 @@ export default function DashboardPage() {
           {greeting}, {user?.firstName ?? 'there'}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          What&apos;s on tonight — and who you might meet around it.
+          Upcoming gatherings from your church.
         </p>
       </div>
 
@@ -78,15 +78,15 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Compass className="h-4 w-4 text-primary" />
-            Tonight nearby
+            Upcoming gatherings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Open Discover and filter to the next eight hours. The feed is built for plans you can actually make.
+            Open Discover to see gatherings from Franconia Mennonite Church.
           </p>
           <Button asChild size="sm">
-            <Link to="/app/discovery">See tonight</Link>
+            <Link to="/app/discovery">See gatherings</Link>
           </Button>
         </CardContent>
       </Card>

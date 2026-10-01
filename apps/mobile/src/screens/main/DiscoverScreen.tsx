@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Animated, Image, PanResponder, StyleSheet } from 'react-native';
+import { Animated, Image, PanResponder, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Snackbar, Text } from 'react-native-paper';
 
 import {
@@ -14,7 +14,10 @@ import {
   PageHeader,
   PanelCard,
 } from '@components/AppChrome';
+import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { FoyerHeader } from '@components/FoyerHeader';
+import { GoingSheet } from '@components/GoingSheet';
+import { WhosComingSheet } from '@components/WhosComingSheet';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
 import MapView, { Marker } from '@components/MapViewCompat';
@@ -24,7 +27,20 @@ import { RefreshControl, ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { Chip } from '@components/ui/Chip';
 import { Field } from '@components/ui/Field';
-import { isTicketingUiEnabled } from '@constants/appMode';
+import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
+import {
+  audienceChipLabel,
+  buildRsvpPayload,
+  coverPhotoUrl,
+  defaultRsvpSelection,
+  goingCountLabel,
+  hostAvatarUrl,
+  hostDisplayName,
+  shouldSkipWhosComingSheet,
+  type WhosComingResponse,
+} from '@foyer/logic';
+import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
@@ -35,8 +51,10 @@ import {
   swipeActivity,
   type ActivityFetchFilters,
 } from '@services/activityService';
+import { fetchWhosComing, postRsvp } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import type { Activity } from '../../types/activity';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -102,7 +120,13 @@ export const DiscoverScreen = () => {
   const [visibilityFilter, setVisibilityFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
-  const [tonightOnly, setTonightOnly] = useState(true);
+  const foyerMode = isFoyerMode();
+  const [tonightOnly, setTonightOnly] = useState(!foyerMode);
+  const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
+  const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
+  const [calendarActivity, setCalendarActivity] = useState<Activity | null>(null);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [rsvpPending, setRsvpPending] = useState(false);
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -141,10 +165,12 @@ export const DiscoverScreen = () => {
       skill_level: skillFilter.trim() || undefined,
       age_restriction: ageFilter.trim() || undefined,
       visibility: visibilityFilter.trim() || undefined,
-      date_from: tonightOnly
-        ? tonightWindow.date_from
-        : normalizeDateFilter(dateFromFilter, false),
-      date_to: tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
+      date_from:
+        !foyerMode && tonightOnly
+          ? tonightWindow.date_from
+          : normalizeDateFilter(dateFromFilter, false),
+      date_to:
+        !foyerMode && tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
     }),
     [
       ageFilter,
@@ -156,6 +182,7 @@ export const DiscoverScreen = () => {
       normalizeDateFilter,
       skillFilter,
       tagFilter,
+      foyerMode,
       tonightOnly,
       tonightWindow.date_from,
       tonightWindow.date_to,
@@ -283,6 +310,54 @@ export const DiscoverScreen = () => {
     [animateSwipe, currentActivity, isBusy, swipeMutation],
   );
 
+  const advanceAfterRsvp = useCallback((activity: Activity) => {
+    setWhosComing(null);
+    setGoingActivity(activity);
+    setCurrentIndex((index) => index + 1);
+  }, []);
+
+  const confirmRsvp = useCallback(
+    async (activity: Activity, payload: { include_self: boolean; dependent_ids: number[] }) => {
+      setRsvpPending(true);
+      setRsvpError(null);
+      try {
+        await postRsvp(activity.id, payload);
+        advanceAfterRsvp(activity);
+      } catch (error) {
+        setRsvpError(getErrorMessage(error, 'Unable to save your RSVP.'));
+      } finally {
+        setRsvpPending(false);
+      }
+    },
+    [advanceAfterRsvp],
+  );
+
+  const startGoing = useCallback(async () => {
+    if (!currentActivity || isBusy || rsvpPending) {
+      return;
+    }
+    if (!isFoyerMode()) {
+      handleSwipe('right');
+      return;
+    }
+    setRsvpPending(true);
+    setRsvpError(null);
+    try {
+      const sheet = await fetchWhosComing(currentActivity.id);
+      if (shouldSkipWhosComingSheet(sheet)) {
+        const selection = defaultRsvpSelection(sheet);
+        await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
+        advanceAfterRsvp(currentActivity);
+        return;
+      }
+      setWhosComing(sheet);
+    } catch (error) {
+      setRsvpError(getErrorMessage(error, 'Unable to open the RSVP list.'));
+    } finally {
+      setRsvpPending(false);
+    }
+  }, [advanceAfterRsvp, currentActivity, handleSwipe, isBusy, rsvpPending]);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -293,6 +368,14 @@ export const DiscoverScreen = () => {
         },
         onPanResponderRelease: (_, gestureState) => {
           if (gestureState.dx > 80) {
+            if (isFoyerMode()) {
+              void startGoing();
+              Animated.spring(pan, {
+                toValue: { x: 0, y: 0 },
+                useNativeDriver: false,
+              }).start();
+              return;
+            }
             handleSwipe('right');
             return;
           }
@@ -308,7 +391,7 @@ export const DiscoverScreen = () => {
           }).start();
         },
       }),
-    [handleSwipe, isBusy, pan],
+    [handleSwipe, isBusy, pan, startGoing],
   );
 
   const resetDeck = useCallback(() => {
@@ -328,7 +411,7 @@ export const DiscoverScreen = () => {
     setVisibilityFilter('');
     setDateFromFilter('');
     setDateToFilter('');
-    setTonightOnly(true);
+    setTonightOnly(!isFoyerMode());
     setCurrentIndex(0);
   }, []);
 
@@ -384,7 +467,13 @@ export const DiscoverScreen = () => {
   const showTickets = isTicketingUiEnabled(config.ticketingEnabled);
   const ticketed = showTickets && currentActivity ? isActivityTicketed(currentActivity) : false;
   const ticketPrice = currentActivity ? activityTicketPrice(currentActivity) : null;
-  const coverImage = currentActivity?.images?.[0];
+  const coverImage = currentActivity ? coverPhotoUrl(currentActivity) ?? currentActivity.images?.[0] : undefined;
+  const audienceLabel = currentActivity ? audienceChipLabel(currentActivity) : '';
+  const goingLabel = currentActivity
+    ? goingCountLabel(currentActivity.going_count ?? currentActivity.participant_count ?? 0)
+    : '';
+  const foyerHostName = currentActivity ? hostDisplayName(currentActivity) : '';
+  const foyerHostAvatar = currentActivity ? hostAvatarUrl(currentActivity) : null;
 
   return (
     <>
@@ -395,8 +484,12 @@ export const DiscoverScreen = () => {
       <FoyerHeader />
       <PageHeader
         eyebrow="Discover"
-        title="Gatherings near you"
-        subtitle="Swipe to pass, or say you’re going."
+        title={foyerMode ? 'Upcoming gatherings' : 'Gatherings near you'}
+        subtitle={
+          foyerMode
+            ? `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`
+            : 'Swipe to pass, or say you’re going.'
+        }
         rightContent={
           <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
             Pings
@@ -434,14 +527,16 @@ export const DiscoverScreen = () => {
               selected={showMap}
               onPress={() => setShowMap((previous) => !previous)}
             />
-            <Chip
-              label="Tonight"
-              selected={tonightOnly}
-              onPress={() => {
-                setTonightOnly((previous) => !previous);
-                setCurrentIndex(0);
-              }}
-            />
+            {foyerMode ? null : (
+              <Chip
+                label="Tonight"
+                selected={tonightOnly}
+                onPress={() => {
+                  setTonightOnly((previous) => !previous);
+                  setCurrentIndex(0);
+                }}
+              />
+            )}
             <AccentPill tone="neutral">{activities.length} nearby</AccentPill>
           </View>
 
@@ -513,7 +608,7 @@ export const DiscoverScreen = () => {
                 onChangeText={setTagFilter}
                 placeholder="Low-key, rooftop, hike"
               />
-              {!tonightOnly ? (
+              {foyerMode || !tonightOnly ? (
                 <>
                   <Field
                     label="Starts after"
@@ -592,15 +687,17 @@ export const DiscoverScreen = () => {
 
           {!isLoading && !error && activities.length === 0 ? (
             <EmptyStatePanel
-              title={tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
+              title={foyerMode ? 'Nothing coming up' : tonightOnly ? 'Quiet night nearby' : 'Nothing nearby yet'}
               description={
-                tonightOnly
-                  ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
-                  : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
+                foyerMode
+                  ? 'No upcoming gatherings yet. Refresh, or host one for the church.'
+                  : tonightOnly
+                    ? 'No plans in the next 8 hours. Turn off Tonight, widen your radius, or host something yourself.'
+                    : 'Widen the radius, clear a few filters, or be the one who starts tonight’s plan.'
               }
               action={
                 <View style={styles.emptyActions}>
-                  {tonightOnly ? (
+                  {!foyerMode && tonightOnly ? (
                     <AppButton
                       onPress={() => {
                         setTonightOnly(false);
@@ -640,6 +737,53 @@ export const DiscoverScreen = () => {
 
           {currentActivity ? (
             <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
+              {foyerMode ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View details for ${currentActivity.title}`}
+                  onPress={() => setShowDetails(true)}
+                >
+                <View style={styles.foyerCard}>
+                  <View style={styles.foyerPhotoWrap}>
+                    {coverImage ? (
+                      <Image source={{ uri: coverImage }} style={styles.foyerPhoto} />
+                    ) : (
+                      <View style={styles.foyerPhoto} />
+                    )}
+                    <View style={styles.coverBadge}>
+                      <Text style={styles.coverBadgeText}>Cover photo</Text>
+                    </View>
+                  </View>
+                  <View style={styles.foyerBody}>
+                    <View style={styles.foyerChipRow}>
+                      <View style={styles.audienceChip}>
+                        <Text style={styles.audienceChipText}>{audienceLabel}</Text>
+                      </View>
+                      <Text style={styles.goingCount}>{goingLabel}</Text>
+                    </View>
+                    <Text style={styles.foyerTitle}>{currentActivity.title}</Text>
+                    <Text style={styles.foyerMeta}>{currentTimeLabel}</Text>
+                    <Text style={styles.foyerMeta}>{currentActivity.location || 'Location TBD'}</Text>
+                    {currentActivity.description ? (
+                      <Text style={styles.foyerDescription}>{currentActivity.description}</Text>
+                    ) : null}
+                    <View style={styles.hostedRow}>
+                      {foyerHostAvatar ? (
+                        <Image source={{ uri: foyerHostAvatar }} style={styles.hostAvatar} />
+                      ) : (
+                        <View style={styles.hostAvatar}>
+                          <Text style={styles.hostInitial}>{foyerHostName.charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <View>
+                        <Text style={styles.hostedLabel}>Hosted by</Text>
+                        <Text style={styles.hostedName}>{foyerHostName}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+                </Pressable>
+              ) : (
               <View style={[styles.photoCard, ticketed ? styles.photoCardTicketed : null]}>
                 {coverImage ? (
                   <Image source={{ uri: coverImage }} style={styles.photo} />
@@ -680,13 +824,13 @@ export const DiscoverScreen = () => {
                     <View style={styles.metaItem}>
                       <MaterialCommunityIcons name="account-group-outline" size={16} color="rgba(255,255,255,0.86)" />
                       <Text style={styles.photoMetaText}>
-                        {currentActivity.participant_count ?? 0}
-                        {currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}
+                        {`${currentActivity.participant_count ?? 0}${currentActivity.capacity ? ` / ${currentActivity.capacity}` : ''}`}
                       </Text>
                     </View>
                   </View>
                 </LinearGradient>
               </View>
+              )}
             </AnimatedView>
           ) : null}
 
@@ -695,14 +839,17 @@ export const DiscoverScreen = () => {
               <AppButton variant="outline" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
                 Pass
               </AppButton>
-              <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
-                Details
-              </AppButton>
-              <AppButton onPress={() => handleSwipe('right')} disabled={isBusy} style={styles.actionButton}>
+              {foyerMode ? null : (
+                <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
+                  Details
+                </AppButton>
+              )}
+              <AppButton onPress={() => void startGoing()} disabled={isBusy || rsvpPending} style={styles.actionButton}>
                 I'm going
               </AppButton>
             </View>
           ) : null}
+          {rsvpError ? <Text style={styles.metaText}>{rsvpError}</Text> : null}
 
           <Portal>
             <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
@@ -742,6 +889,19 @@ export const DiscoverScreen = () => {
                   {currentActivity.tags?.length ? (
                     <Text style={styles.detailsText}>Tags: {currentActivity.tags.join(', ')}</Text>
                   ) : null}
+                  {foyerMode ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Add to calendar"
+                      onPress={() => {
+                        setShowDetails(false);
+                        setCalendarActivity(currentActivity);
+                      }}
+                      style={styles.addCalendar}
+                    >
+                      <Text style={styles.addCalendarText}>Add to calendar</Text>
+                    </Pressable>
+                  ) : null}
                   {typeof currentActivity.host !== 'string' &&
                   currentActivity.host &&
                   typeof (currentActivity.host as { id?: number | string }).id !== 'undefined' ? (
@@ -764,7 +924,7 @@ export const DiscoverScreen = () => {
                     <AppButton variant="outline" onPress={() => setShowDetails(false)}>
                       Close
                     </AppButton>
-                    {ticketed ? (
+                    {foyerMode ? null : ticketed ? (
                       <AppButton
                         disabled={Boolean(currentActivity.isSoldOut)}
                         onPress={() => {
@@ -784,6 +944,8 @@ export const DiscoverScreen = () => {
                         {currentActivity.isSoldOut ? 'Sold out' : 'Buy ticket'}
                       </AppButton>
                     ) : null}
+                    {foyerMode ? null : (
+                    <>
                     <AppButton
                       variant="outline"
                       disabled={participationMutation.isPending}
@@ -819,16 +981,75 @@ export const DiscoverScreen = () => {
                     <AppButton
                       onPress={() => {
                         setShowDetails(false);
-                        handleSwipe('right');
+                        void startGoing();
                       }}
                     >
                       I'm going
                     </AppButton>
+                    </>
+                    )}
                   </View>
                 </ScrollView>
               ) : null}
             </Modal>
           </Portal>
+          {foyerMode && whosComing && currentActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setWhosComing(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <WhosComingSheet
+                  response={whosComing}
+                  subtitle={`${currentActivity.title} · ${audienceLabel}`}
+                  pending={rsvpPending}
+                  onConfirm={(payload) => void confirmRsvp(currentActivity, payload)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && goingActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setGoingActivity(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <GoingSheet
+                  title={goingActivity.title}
+                  onPhotos={() => {
+                    const activityId = goingActivity.id;
+                    setGoingActivity(null);
+                    navigation.getParent()?.navigate('GatheringDetail', { activityId });
+                  }}
+                  onChat={() => {
+                    setGoingActivity(null);
+                    navigation.navigate('Chat');
+                  }}
+                  onAddToCalendar={() => setCalendarActivity(goingActivity)}
+                  onDismiss={() => setGoingActivity(null)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && calendarActivity ? (
+            <Portal>
+              <Modal
+                visible
+                onDismiss={() => setCalendarActivity(null)}
+                contentContainerStyle={styles.sheetModal}
+              >
+                <AddToCalendarSheet
+                  summary={calendarEventSummary(calendarActivity.title, calendarActivity.time)}
+                  onGoogle={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).google)}
+                  onOutlook={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).outlook)}
+                  onApple={() => openCalendarUrl(gatheringCalendarUrls(calendarActivity).apple)}
+                  onDismiss={() => setCalendarActivity(null)}
+                />
+              </Modal>
+            </Portal>
+          ) : null}
     </AppScrollView>
     <SafetyActionsModal
       visible={safetyUserId != null}
@@ -1022,6 +1243,127 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  foyerCard: {
+    backgroundColor: appColors.white,
+    borderRadius: radii.card,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+  },
+  foyerPhotoWrap: {
+    height: 210,
+    backgroundColor: '#c4b2a8',
+  },
+  foyerPhoto: {
+    width: '100%',
+    height: 210,
+    backgroundColor: '#c4b2a8',
+  },
+  coverBadge: {
+    position: 'absolute',
+    left: 14,
+    bottom: 14,
+    backgroundColor: 'rgba(20,14,16,0.45)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  coverBadgeText: {
+    color: appColors.white,
+    fontSize: 12,
+    fontFamily: appTypography.bodyMedium,
+  },
+  foyerBody: {
+    padding: 16,
+    gap: 8,
+  },
+  foyerChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  audienceChip: {
+    backgroundColor: appColors.primarySoft,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  audienceChipText: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 13,
+  },
+  goingCount: {
+    color: appColors.mutedInk,
+    fontFamily: appTypography.bodyMedium,
+    fontSize: 14,
+  },
+  foyerTitle: {
+    fontFamily: appTypography.heading,
+    fontSize: 25,
+    color: appColors.ink,
+  },
+  foyerMeta: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 15,
+  },
+  foyerDescription: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  hostedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: appColors.line,
+  },
+  hostAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hostInitial: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+  },
+  hostedLabel: {
+    color: appColors.mutedInk,
+    fontFamily: appTypography.bodyRegular,
+    fontSize: 12,
+  },
+  hostedName: {
+    color: appColors.ink,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 15,
+  },
+  addCalendar: {
+    minHeight: 52,
+    borderRadius: radii.list,
+    backgroundColor: appColors.primaryWash,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  addCalendarText: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 16,
+  },
+  sheetModal: {
+    backgroundColor: 'transparent',
+    marginHorizontal: 0,
+    marginBottom: 0,
+    justifyContent: 'flex-end',
   },
   detailsModal: {
     backgroundColor: appColors.card,

@@ -1,12 +1,17 @@
+import { AddToCalendarDialog } from '@/components/foyer/FoyerSheets';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
+import { calendarEventSummary } from '@shared/calendarLinks';
+import { compressImageFile } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTE_BUILDERS, API_ROUTES } from '@shared/schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { format, isValid } from 'date-fns';
 import { ArrowLeft, Clock, MapPin, Star, Users } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -26,6 +31,12 @@ interface ActivityHost {
 interface ActivityDetail {
   id: number | string;
   title?: string;
+  calendar_links?: {
+    ics_url?: string | null;
+    webcal_url?: string | null;
+    google_url?: string | null;
+    outlook_url?: string | null;
+  } | null;
   description?: string;
   location?: string;
   time?: string;
@@ -48,6 +59,7 @@ export default function ActivityDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const route = `${API_ROUTES.ACTIVITIES}${activityId}/`;
 
@@ -175,6 +187,13 @@ export default function ActivityDetailPage() {
           </span>
         </div>
       </div>
+      <button
+        type="button"
+        className="h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+        onClick={() => setShowCalendar(true)}
+      >
+        Add to calendar
+      </button>
 
       {a.description && (
         <Card>
@@ -214,6 +233,34 @@ export default function ActivityDetailPage() {
         </CardContent>
       </Card>
 
+      <label className="block rounded-2xl border border-dashed border-[#e1dbd7] bg-white p-4 text-sm">
+        <span className="font-semibold text-[#a2033f]">Add a photo</span>
+        <span className="mt-1 block text-[#6e6a68]">
+          Up to 8 photos. Hosts and people who are going can add them.
+        </span>
+        <input
+          aria-label="Add a gathering photo"
+          type="file"
+          accept="image/*"
+          className="mt-2 block w-full text-sm"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file || !activityId) return;
+            void (async () => {
+              const blob = await compressImageFile(file);
+              const body = new FormData();
+              body.append('image', blob, 'photo.jpg');
+              await fetch(`/api/activities/${activityId}/photos/`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${localStorage.getItem('authToken') ?? ''}` },
+                body,
+              });
+              await qc.invalidateQueries({ queryKey: [route] });
+            })();
+          }}
+        />
+      </label>
+
       <div className="sticky bottom-0 -mx-4 border-t bg-background/95 p-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <Button
           onClick={() => join.mutate()}
@@ -223,6 +270,15 @@ export default function ActivityDetailPage() {
           {join.isPending ? 'Joining…' : 'Join event'}
         </Button>
       </div>
+      {showCalendar && activityId ? (
+        <AddToCalendarDialog
+          summary={calendarEventSummary(safeTitle, rawTime)}
+          onGoogle={() => openCalendarUrl(gatheringCalendarUrls(a).google)}
+          onOutlook={() => openCalendarUrl(gatheringCalendarUrls(a).outlook)}
+          onApple={() => openCalendarUrl(gatheringCalendarUrls(a).apple)}
+          onDismiss={() => setShowCalendar(false)}
+        />
+      ) : null}
     </div>
   );
 }

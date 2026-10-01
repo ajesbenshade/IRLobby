@@ -213,6 +213,18 @@ const normalizeUser = (
     canSellTickets: Boolean(
       userRecord.canSellTickets ?? userRecord.can_sell_tickets
     ),
+    dateOfBirth: (userRecord.dateOfBirth ?? userRecord.date_of_birth ?? null) as string | null,
+    sex: (userRecord.sex === 'male' || userRecord.sex === 'female' ? userRecord.sex : '') as
+      | 'male'
+      | 'female'
+      | '',
+    church:
+      userRecord.church && typeof userRecord.church === 'object'
+        ? (userRecord.church as AuthUser['church'])
+        : null,
+    churchId: asNumberOrNull(userRecord.churchId ?? userRecord.church_id),
+    isChurchAdmin: Boolean(userRecord.isChurchAdmin ?? userRecord.is_church_admin),
+    householdChildCount: asNumberOrNull(userRecord.householdChildCount ?? userRecord.household_child_count) ?? 0,
   };
 };
 
@@ -292,6 +304,8 @@ export async function register(
     password_confirm: payload.password,
     first_name: payload.firstName,
     last_name: payload.lastName,
+    ...(payload.dateOfBirth ? { date_of_birth: payload.dateOfBirth } : {}),
+    ...(payload.sex ? { sex: payload.sex } : {}),
   };
 
   const response = await api.post<AuthResponse>(

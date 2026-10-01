@@ -38,6 +38,11 @@ interface User {
   totalRatings?: number;
   eventsHosted?: number;
   eventsAttended?: number;
+  isChurchAdmin?: boolean;
+  householdChildCount?: number | null;
+  dateOfBirth?: string | null;
+  sex?: 'male' | 'female' | '';
+  church?: { id?: number; name: string } | null;
   swipesRemainingToday?: number | null;
 }
 
@@ -127,6 +132,23 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
     swipesRemainingToday: toOptionalNumber(
       profile.swipesRemainingToday ?? profile.swipes_remaining_today,
     ),
+    isChurchAdmin: Boolean(profile.isChurchAdmin ?? profile.is_church_admin),
+    householdChildCount: toOptionalNumber(profile.householdChildCount ?? profile.household_child_count),
+    dateOfBirth:
+      (typeof profile.dateOfBirth === 'string' ? profile.dateOfBirth : undefined) ??
+      (typeof profile.date_of_birth === 'string' ? profile.date_of_birth : undefined) ??
+      null,
+    sex: profile.sex === 'male' || profile.sex === 'female' ? profile.sex : '',
+    church: (() => {
+      const church = asRecord(profile.church);
+      if (!church || typeof church.name !== 'string' || !church.name.trim()) {
+        return null;
+      }
+      return {
+        id: typeof church.id === 'number' ? church.id : undefined,
+        name: church.name.trim(),
+      };
+    })(),
   };
 };
 

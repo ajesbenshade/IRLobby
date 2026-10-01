@@ -1,0 +1,341 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Text } from 'react-native-paper';
+import { API_ROUTES } from '@shared/schema';
+
+import { Image, View } from '@components/RNCompat';
+import { AppButton } from '@components/ui/Button';
+import { householdCountLabel } from '@foyer/logic';
+import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
+import { useAuth } from '@hooks/useAuth';
+import type { MainStackParamList } from '@navigation/types';
+import { api } from '@services/apiClient';
+import { createChurch, fetchChurches, type ChurchRecord } from '@services/foyerService';
+import { appColors, appTypography, radii } from '@theme/index';
+import { getErrorMessage } from '@utils/error';
+import { imageAssetToUploadDataUrl } from '@utils/profileImages';
+
+export const FoyerProfileCard = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { user, refreshProfile } = useAuth();
+  const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [sex, setSex] = useState<'male' | 'female' | ''>('');
+  const [churchQuery, setChurchQuery] = useState('');
+  const [churchId, setChurchId] = useState<number | null>(null);
+  const [churchName, setChurchName] = useState('');
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) {
+        clearTimeout(copiedTimer.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const full = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+    setName(full);
+    setBirthDate(user?.dateOfBirth ?? '');
+    setSex(user?.sex ?? '');
+    setChurchId(user?.churchId ?? null);
+    setChurchName(user?.church?.name ?? '');
+    setChurchQuery(user?.church?.name ?? '');
+  }, [user]);
+
+  const churches = useQuery({
+    queryKey: ['foyer-churches', churchQuery],
+    queryFn: () => fetchChurches(churchQuery),
+    enabled: open,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const [firstName, ...rest] = name.trim().split(/\s+/);
+      await api.patch(API_ROUTES.USER_PROFILE, {
+        first_name: firstName ?? '',
+        last_name: rest.join(' '),
+        date_of_birth: birthDate.trim() || null,
+        sex: sex || null,
+        church_id: churchId,
+      });
+      await refreshProfile();
+    },
+    onSuccess: () => setError(null),
+    onError: (saveError) => setError(getErrorMessage(saveError, 'Unable to save your profile.')),
+  });
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+    const dataUrl = await imageAssetToUploadDataUrl(result.assets[0]);
+    await api.patch(API_ROUTES.USER_PROFILE, { avatar_url: dataUrl });
+    await refreshProfile();
+  };
+
+  const chooseChurch = (church: ChurchRecord) => {
+    setChurchId(church.id);
+    setChurchName(church.name);
+    setChurchQuery(church.name);
+    setOpen(false);
+  };
+
+  const addTypedChurch = async () => {
+    const typed = churchQuery.trim();
+    if (!typed) {
+      return;
+    }
+    const created = await createChurch(typed);
+    chooseChurch(created);
+  };
+
+  const results = churches.data ?? [];
+  const typed = churchQuery.trim();
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.headerRow}>
+        <Text style={styles.screenTitle}>Profile</Text>
+        <Pressable accessibilityRole="button" onPress={() => saveMutation.mutate()}>
+          <Text style={styles.save}>Save</Text>
+        </Pressable>
+      </View>
+      <Pressable accessibilityRole="button" onPress={() => void pickPhoto()} style={styles.photoButton}>
+        {user?.avatarUrl ? (
+          <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{(user?.firstName || 'A').slice(0, 1)}</Text>
+          </View>
+        )}
+        <Text style={styles.change}>Change profile photo</Text>
+      </Pressable>
+
+      <Label text="Name" />
+      <TextInput accessibilityLabel="Name" value={name} onChangeText={setName} style={styles.input} />
+      <Label text="Birth date" />
+      <TextInput
+        accessibilityLabel="Birth date"
+        value={birthDate}
+        onChangeText={setBirthDate}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor={appColors.softInk}
+        style={styles.input}
+      />
+      <Label text="Sex" />
+      <View style={styles.segment}>
+        {(['male', 'female'] as const).map((value) => (
+          <Pressable
+            key={value}
+            accessibilityRole="button"
+            accessibilityState={{ selected: sex === value }}
+            onPress={() => setSex(value)}
+            style={[styles.segmentItem, sex === value ? styles.segmentOn : null]}
+          >
+            <Text style={[styles.segmentText, sex === value ? styles.segmentTextOn : null]}>
+              {value === 'male' ? 'Male' : 'Female'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.helper}>Only used for men's or women's events</Text>
+
+      <Label text="Are you a church member, and where?" />
+      <TextInput
+        accessibilityLabel="Search churches"
+        value={churchQuery}
+        onChangeText={(value) => {
+          setChurchQuery(value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search churches"
+        placeholderTextColor={appColors.softInk}
+        style={styles.input}
+      />
+      {open ? (
+        <View style={styles.menu}>
+          {results.map((church) => (
+            <Pressable key={church.id} onPress={() => chooseChurch(church)} style={styles.menuRow}>
+              <Text style={styles.menuText}>{church.name}</Text>
+              {churchId === church.id ? <Text style={styles.check}>✓</Text> : null}
+            </Pressable>
+          ))}
+          {typed ? (
+            <Pressable onPress={() => void addTypedChurch()} style={styles.menuRow}>
+              <Text style={styles.add}>Add "{typed}"</Text>
+            </Pressable>
+          ) : null}
+          <Text style={styles.helper}>Shows what you type if your church isn't listed</Text>
+        </View>
+      ) : null}
+      {churchName ? <Text style={styles.helper}>Selected: {churchName}</Text> : null}
+      <Text style={styles.helper}>Not a member anywhere? Leave this blank.</Text>
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.navigate('Household')}
+        style={styles.household}
+      >
+        <Text style={styles.householdLabel}>Household</Text>
+        <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
+      </Pressable>
+      <Text style={styles.calendarSection}>CALENDAR</Text>
+      <View style={styles.calendarCard}>
+        <View style={styles.calendarHeading}>
+          <View style={styles.calendarIcon}>
+            <MaterialCommunityIcons name="calendar-month-outline" size={22} color={appColors.primary} />
+          </View>
+          <Text style={styles.calendarTitle}>Church calendar</Text>
+        </View>
+        <Text style={styles.calendarBody}>
+          Subscribe to see every Franconia gathering in your own calendar. It updates automatically.
+        </Text>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Subscribe to church calendar"
+          onPress={openChurchCalendarSubscription}
+          style={styles.subscribeButton}
+        >
+          <Text style={styles.subscribeText}>Subscribe to church calendar</Text>
+        </Pressable>
+        <Text style={styles.calendarNote}>Opens in Apple Calendar, or copy the link for Google or Outlook.</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Copy link"
+          onPress={() => {
+            void copyChurchCalendarLink()
+              .then(() => {
+                setLinkCopied(true);
+                if (copiedTimer.current) {
+                  clearTimeout(copiedTimer.current);
+                }
+                copiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+              })
+              .catch(() => setLinkCopied(false));
+          }}
+          style={styles.copyRow}
+        >
+          <MaterialCommunityIcons name="content-copy" size={16} color={appColors.primary} />
+          <Text style={styles.copyText}>Copy link</Text>
+        </Pressable>
+        {linkCopied ? (
+          <Text accessibilityLiveRegion="polite" style={styles.copied}>
+            Link copied
+          </Text>
+        ) : null}
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {saveMutation.isPending ? <AppButton loading>Save</AppButton> : null}
+    </View>
+  );
+};
+
+const Label = ({ text }: { text: string }) => <Text style={styles.label}>{text}</Text>;
+
+const styles = StyleSheet.create({
+  card: { gap: 10, marginBottom: 12 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  screenTitle: { fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },
+  save: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
+  photoButton: { alignItems: 'center', gap: 8 },
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: appColors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: appColors.white, fontSize: 28, fontFamily: appTypography.bodySemibold },
+  change: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
+  input: {
+    minHeight: 48,
+    borderRadius: radii.input,
+    borderWidth: 1,
+    borderColor: appColors.line,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 14,
+    color: appColors.ink,
+  },
+  segment: { flexDirection: 'row', gap: 8 },
+  segmentItem: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: appColors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appColors.white,
+  },
+  segmentOn: { borderColor: appColors.primary, backgroundColor: appColors.primaryWash },
+  segmentText: { color: appColors.mutedInk, fontFamily: appTypography.bodyMedium },
+  segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  helper: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 12.5 },
+  menu: { backgroundColor: appColors.white, borderRadius: radii.list, borderWidth: 1, borderColor: appColors.line },
+  menuRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: appColors.line, flexDirection: 'row', justifyContent: 'space-between' },
+  menuText: { color: appColors.ink, fontFamily: appTypography.bodyRegular },
+  check: { color: appColors.primary },
+  add: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  household: {
+    marginTop: 8,
+    backgroundColor: appColors.white,
+    borderRadius: radii.list,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  householdLabel: { fontFamily: appTypography.bodySemibold, color: appColors.ink },
+  householdCount: { color: appColors.mutedInk },
+  calendarSection: {
+    marginTop: 16,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    color: appColors.mutedInk,
+  },
+  calendarCard: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 12 },
+  calendarHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  calendarIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTitle: { fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 17 },
+  calendarBody: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.mutedInk },
+  subscribeButton: {
+    minHeight: 54,
+    borderRadius: 999,
+    backgroundColor: appColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  subscribeText: { color: appColors.white, fontFamily: appTypography.bodySemibold, fontSize: 16 },
+  calendarNote: { fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18, color: appColors.mutedInk },
+  copyRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  copyText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
+  copied: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
+  error: { color: appColors.danger },
+});

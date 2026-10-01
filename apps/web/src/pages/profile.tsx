@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
+import { Calendar, Copy } from 'lucide-react';
 import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +17,7 @@ export default function Profile() {
   const { user, logout } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -42,30 +46,117 @@ export default function Profile() {
   return (
     <div className="bg-background min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
       {/* Header with Profile Info */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="p-4 text-center">
-          <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
-            <AvatarImage src={user.profileImageUrl || undefined} />
-            <AvatarFallback className="text-xl font-bold bg-primary text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-            {user.firstName && user.lastName
-              ? `${user.firstName} ${user.lastName}`
-              : user.email?.split('@')[0] || 'User'}
-          </h2>
-
-          {user.bio && <p className="text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>}
-
-          <div className="flex items-center justify-center mt-2">
-            <Star className="w-4 h-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">5.0</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">(0 reviews)</span>
-          </div>
+      <div className="bg-[#f6f1ee] px-5 pb-4 pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h1 className="text-[17px] font-semibold">Profile</h1>
+          <button type="button" className="font-semibold text-[#a2033f]">
+            Save
+          </button>
         </div>
-      </header>
+        <div className="mb-4 text-center">
+          <Avatar className="mx-auto h-20 w-20">
+            <AvatarImage src={user.profileImageUrl || undefined} />
+            <AvatarFallback className="bg-[#222222] text-2xl text-white">{initials}</AvatarFallback>
+          </Avatar>
+          <p className="mt-2 font-semibold text-[#a2033f]">Change profile photo</p>
+        </div>
+        <label className="mb-3 block text-sm font-semibold">
+          Name
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            defaultValue={[user.firstName, user.lastName].filter(Boolean).join(' ')}
+            aria-label="Name"
+          />
+        </label>
+        <label className="mb-3 block text-sm font-semibold">
+          Birth date
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            defaultValue={user.dateOfBirth ?? ''}
+            placeholder="YYYY-MM-DD"
+            aria-label="Birth date"
+          />
+        </label>
+        <p className="mb-1 text-sm font-semibold">Sex</p>
+        <div className="mb-1 flex gap-2">
+          <span
+            className={`rounded-lg px-4 py-2 ${
+              user.sex === 'male' ? 'bg-white font-semibold text-[#a2033f]' : 'text-[#6e6a68]'
+            }`}
+          >
+            Male
+          </span>
+          <span
+            className={`rounded-lg bg-white px-4 py-2 ${
+              user.sex === 'female' ? 'font-semibold text-[#a2033f]' : ''
+            }`}
+          >
+            Female
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-[#6e6a68]">Only used for men's or women's events</p>
+        <label className="mb-3 block text-sm font-semibold">
+          Are you a church member, and where?
+          <input
+            className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
+            placeholder="Search churches"
+            aria-label="Search churches"
+          />
+        </label>
+        <p className="mb-3 text-xs text-[#6e6a68]">Not a member anywhere? Leave this blank.</p>
+        <Link
+          to="/app/household"
+          className="flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
+        >
+          <span className="font-semibold">Household</span>
+          <span className="text-sm text-[#6e6a68]">
+            {user.householdChildCount == null
+              ? 'Children'
+              : user.householdChildCount === 1
+              ? '1 child'
+              : `${user.householdChildCount} children`}
+          </span>
+        </Link>
+        <p className="mb-2 mt-4 text-[11.5px] font-bold tracking-wide text-[#6e6a68]">CALENDAR</p>
+        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f9e8ee] text-[#a2033f]">
+              <Calendar className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <p className="font-semibold text-[#222222]">Church calendar</p>
+          </div>
+          <p className="mt-3 text-[15px] leading-snug text-[#6e6a68]">
+            Subscribe to see every Franconia gathering in your own calendar. It updates
+            automatically.
+          </p>
+          <button
+            type="button"
+            className="mt-4 h-[54px] w-full rounded-full bg-[#a2033f] font-semibold text-white"
+            onClick={() => openCalendarUrl(churchSubscribeUrl())}
+          >
+            Subscribe to church calendar
+          </button>
+          <p className="mt-3 text-sm leading-5 text-[#6e6a68]">
+            Opens in Apple Calendar, or copy the link for Google or Outlook.
+          </p>
+          <button
+            type="button"
+            className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 font-semibold text-[#a2033f]"
+            onClick={() => {
+              void copyChurchCalendarLink()
+                .then(() => {
+                  setLinkCopied(true);
+                  window.setTimeout(() => setLinkCopied(false), 2000);
+                })
+                .catch(() => setLinkCopied(false));
+            }}
+          >
+            <Copy className="h-4 w-4" aria-hidden="true" />
+            Copy link
+          </button>
+          {linkCopied ? <p className="text-center text-sm text-[#6e6a68]">Link copied</p> : null}
+        </div>
+      </div>
 
       <div className="p-4 space-y-6">
         {/* Activity Stats */}

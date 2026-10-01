@@ -240,7 +240,11 @@ export default function Chat() {
 
       {error && (
         <div className="px-4 py-2 space-y-2">
-          <p className="text-sm text-red-600 dark:text-red-300">Failed to load messages.</p>
+          <p className="text-sm text-red-600 dark:text-red-300">
+            {error instanceof Error && /403|not authorized/i.test(error.message)
+              ? 'Chat opens for people who are going.'
+              : 'Failed to load messages.'}
+          </p>
           <Button
             size="sm"
             variant="outline"
@@ -267,9 +271,21 @@ export default function Chat() {
               ? 'You'
               : msg.user?.firstName || 'Them';
 
+            const avatarUrl =
+              (msg.user as { avatarUrl?: string; avatar_url?: string } | undefined)?.avatarUrl ||
+              (msg.user as { avatar_url?: string } | undefined)?.avatar_url;
             return (
               <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                 <div className="flex items-end space-x-2 max-w-xs">
+                  {!isOwn ? (
+                    avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f9e8ee] text-xs font-semibold text-[#a2033f]">
+                        {senderName.charAt(0)}
+                      </div>
+                    )
+                  ) : null}
                   <div
                     className={`rounded-2xl px-4 py-2 ${
                       isOwn

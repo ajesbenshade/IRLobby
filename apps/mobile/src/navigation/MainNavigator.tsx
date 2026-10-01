@@ -15,6 +15,8 @@ import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
+import { GatheringDetailScreen } from '@screens/main/GatheringDetailScreen';
+import { HouseholdScreen } from '@screens/main/HouseholdScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
 import { ProfileScreen } from '@screens/main/ProfileScreen';
@@ -239,6 +241,12 @@ export const MainNavigator = () => (
       name="EditActivity"
       component={EditActivityScreen}
       options={{ title: 'Edit event' }}
+    />
+    <Stack.Screen name="Household" component={HouseholdScreen} options={{ headerShown: false, title: 'Household' }} />
+    <Stack.Screen
+      name="GatheringDetail"
+      component={GatheringDetailScreen}
+      options={{ title: 'Gathering' }}
     />
   </Stack.Navigator>
 );

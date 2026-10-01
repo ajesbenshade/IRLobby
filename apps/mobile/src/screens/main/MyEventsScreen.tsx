@@ -8,7 +8,8 @@ import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, Sect
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { FoyerHeader } from '@components/FoyerHeader';
-import { isTicketingUiEnabled } from '@constants/appMode';
+import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
+import { FoyerGatherings } from '@screens/main/FoyerGatherings';
 import { config } from '@constants/config';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
@@ -55,6 +56,13 @@ const formatHostLabel = (host: unknown) => {
 };
 
 export const MyEventsScreen = () => {
+  if (isFoyerMode()) {
+    return <FoyerGatherings />;
+  }
+  return <MyEventsScreenLegacy />;
+};
+
+const MyEventsScreenLegacy = () => {
   const navigation = useNavigation<
     CompositeNavigationProp<
       BottomTabNavigationProp<MainTabParamList, 'Activity'>,

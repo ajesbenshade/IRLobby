@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import axios from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccentPill, AppScreenContainer, AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@components/AppChrome';
@@ -9,6 +10,7 @@ import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { FlatList, KeyboardAvoidingView, RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { config } from '@constants/config';
+import { CHAT_GATE_MESSAGE, isChatGateError } from '@foyer/logic';
 import { useAuth } from '@hooks/useAuth';
 import type { MainTabParamList } from '@navigation/types';
 import { fetchMatches } from '@services/matchService';
@@ -26,6 +28,12 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 const getConversationMessages = (conversation: { messages?: unknown } | null | undefined) => (
   Array.isArray(conversation?.messages) ? conversation.messages : []
 );
+
+const describeChatError = (error: unknown, fallback: string) => {
+  const message = getErrorMessage(error, fallback);
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  return isChatGateError(status, message) ? CHAT_GATE_MESSAGE : message;
+};
 
 const TYPING_IDLE_MS = 1800;
 const TYPING_REFRESH_MS = 1200;
@@ -355,7 +363,7 @@ export const ChatScreen = () => {
         {messagesError && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
-              {getErrorMessage(messagesError, 'Unable to load messages.')}
+              {describeChatError(messagesError, 'Unable to load messages.')}
             </Text>
             <AppButton variant="outline" onPress={() => void refetchMessages()} disabled={messagesRefetching}>
               {messagesRefetching ? 'Retrying...' : 'Retry'}
@@ -375,6 +383,17 @@ export const ChatScreen = () => {
             const isOwnMessage = user?.id != null && String(item.userId) === String(user.id);
             return (
               <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
+                {!isOwnMessage ? (
+                  item.user?.avatarUrl ? (
+                    <Image source={{ uri: item.user.avatarUrl }} style={styles.messageAvatar} />
+                  ) : (
+                    <View style={styles.messageAvatar}>
+                      <Text style={styles.messageAvatarText}>
+                        {(item.user?.firstName || 'T').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )
+                ) : null}
                 <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
                   {!isOwnMessage ? (
                     <Text style={styles.messageAuthor}>
@@ -403,7 +422,7 @@ export const ChatScreen = () => {
 
         {sendMutation.error ? (
           <Text style={styles.errorText}>
-            {getErrorMessage(sendMutation.error, 'Unable to send message.')}
+            {describeChatError(sendMutation.error, 'Unable to send message.')}
           </Text>
         ) : null}
 
@@ -479,7 +498,7 @@ export const ChatScreen = () => {
       {conversationsError && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
-            {getErrorMessage(conversationsError, 'Unable to load conversations.')}
+            {describeChatError(conversationsError, 'Unable to load conversations.')}
           </Text>
           <AppButton
             variant="outline"
@@ -675,7 +694,22 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   messageRow: {
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  messageAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: appColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageAvatarText: {
+    color: appColors.primary,
+    fontFamily: appTypography.bodySemibold,
+    fontSize: 13,
   },
   messageRowOwn: {
     alignItems: 'flex-end',

@@ -36,7 +36,7 @@ from .public_calendar import (
 )
 from .serializers import ActivitySerializer
 
-MAX_EVENT_PHOTOS = 8
+MAX_EVENT_PHOTOS = 50
 
 
 def _display_name(user) -> str:
@@ -347,7 +347,7 @@ def upload_event_photo(request, pk):
         )
     if activity.photos.count() >= MAX_EVENT_PHOTOS:
         return Response(
-            {"detail": "An event can have at most 8 photos."},
+            {"detail": "An event can have at most 50 photos."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     upload = request.FILES.get("image") or request.FILES.get("photo") or request.FILES.get("file")

@@ -587,7 +587,7 @@ class FoyerEndpointEdgeTests(APITestCase):
         )
         self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
 
-        for _ in range(8):
+        for _ in range(50):
             photo = EventPhoto(activity=activity)
             photo.image.save("seed.jpg", _jpeg_upload(), save=True)
         limited = self.client.post(

@@ -2,7 +2,7 @@ import { useEffect, useRef, type ComponentType } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
 
 import { View } from '@components/RNCompat';
 import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
@@ -30,7 +30,12 @@ import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
 import { appColors } from '@theme/index';
 
-import { TAB_ICON_SIZE, TAB_LABEL_LINE_HEIGHT, useTabBarLayout } from './tabBarLayout';
+import {
+  TAB_ICON_SIZE,
+  TAB_LABEL_LINE_HEIGHT,
+  TIGHT_CHROME_MAX_FONT_SCALE,
+  useTabBarLayout,
+} from './tabBarLayout';
 import type { MainStackParamList, MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -110,7 +115,7 @@ const MainTabs = () => {
       headerShown: false,
       sceneStyle: { backgroundColor: appColors.background },
       tabBarActiveTintColor: appColors.primary,
-      tabBarInactiveTintColor: appColors.softInk,
+      tabBarInactiveTintColor: appColors.mutedInk,
       tabBarStyle: {
         position: 'absolute',
         left: 16,
@@ -147,6 +152,15 @@ const MainTabs = () => {
           focused={focused}
           routeName={route.name as keyof MainTabParamList}
         />
+      ),
+      // Tab labels are tight chrome: they scale with Dynamic Type, but stop at 1.4x.
+      tabBarLabel: ({ color, children }) => (
+        <Text
+          maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE}
+          style={[styles.tabLabel, { color }]}
+        >
+          {children}
+        </Text>
       ),
       tabBarIconStyle: undefined,
       tabBarLabelPosition: 'below-icon',
@@ -261,6 +275,14 @@ export const MainNavigator = () => (
 );
 
 const styles = StyleSheet.create({
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    lineHeight: TAB_LABEL_LINE_HEIGHT,
+    marginTop: 1,
+    textAlign: 'center',
+  },
   tabIconWrap: {
     minWidth: 40,
     minHeight: TAB_ICON_SIZE,

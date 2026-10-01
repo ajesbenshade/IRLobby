@@ -251,8 +251,8 @@ const Label = ({ text }: { text: string }) => <Text style={styles.label}>{text}<
 
 const styles = StyleSheet.create({
   card: { gap: 10, marginBottom: 12 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  screenTitle: { fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  screenTitle: { flexShrink: 1, fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink },
   save: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   photoButton: { alignItems: 'center', gap: 8 },
   avatar: {
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: appColors.white, fontSize: 28, fontFamily: appTypography.bodySemibold },
-  change: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  change: { color: appColors.primary, fontFamily: appTypography.bodySemibold, textAlign: 'center', paddingVertical: 4 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
   input: {
     minHeight: 48,
@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
   segmentItem: {
     flex: 1,
     minHeight: 44,
+    paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: appColors.line,
@@ -289,22 +290,24 @@ const styles = StyleSheet.create({
   segmentOn: { borderColor: appColors.primary, backgroundColor: appColors.primaryWash },
   segmentText: { color: appColors.mutedInk, fontFamily: appTypography.bodyMedium },
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
-  helper: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 12.5 },
+  helper: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 12.5, lineHeight: 18 },
   menu: { backgroundColor: appColors.white, borderRadius: radii.list, borderWidth: 1, borderColor: appColors.line },
-  menuRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: appColors.line, flexDirection: 'row', justifyContent: 'space-between' },
-  menuText: { color: appColors.ink, fontFamily: appTypography.bodyRegular },
+  menuRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: appColors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  menuText: { flex: 1, color: appColors.ink, fontFamily: appTypography.bodyRegular, lineHeight: 22 },
   check: { color: appColors.primary },
-  add: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+  add: { flex: 1, color: appColors.primary, fontFamily: appTypography.bodySemibold, lineHeight: 22 },
   household: {
     marginTop: 8,
     backgroundColor: appColors.white,
     borderRadius: radii.list,
     padding: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
-  householdLabel: { fontFamily: appTypography.bodySemibold, color: appColors.ink },
-  householdCount: { color: appColors.mutedInk },
+  householdLabel: { flexShrink: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink },
+  householdCount: { flexShrink: 1, color: appColors.mutedInk, textAlign: 'right' },
   calendarSection: {
     marginTop: 16,
     fontFamily: appTypography.bodySemibold,
@@ -322,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  calendarTitle: { fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 17 },
+  calendarTitle: { flex: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 17 },
   calendarBody: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.mutedInk },
   subscribeButton: {
     minHeight: 54,

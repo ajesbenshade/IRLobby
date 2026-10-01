@@ -200,7 +200,12 @@ export const ProfileScreen = () => {
 
   if (isFoyerMode()) {
     return (
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => void onRefresh()} />
+        }
+      >
         <FoyerHeader />
         <FoyerProfileCard />
         <PanelCard style={styles.menuCard}>

@@ -17,6 +17,7 @@ import {
 } from '@foyer/logic';
 import { compressGatheringPhoto } from '@foyer/photos';
 import { useAuth } from '@hooks/useAuth';
+import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import type { MainStackParamList } from '@navigation/types';
 import { createActivity, updateActivity } from '@services/activityService';
 import { uploadGatheringPhoto } from '@services/foyerService';
@@ -30,6 +31,8 @@ type FoyerHostFormProps = {
 export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { user } = useAuth();
+  // Host is a tab (the floating bar covers the bottom); Edit is a stack screen with no bar.
+  const tabBottomPadding = useTabScreenBottomPadding();
   const isEditing = Boolean(activityId);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -115,15 +118,18 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   return (
     <View style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.topBar}>
-        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()}>
-          <Text style={styles.topAction}>Cancel</Text>
+        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.topButton}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Cancel</Text>
         </Pressable>
         <Text style={styles.navTitle}>Host a gathering</Text>
-        <Pressable accessibilityRole="button" onPress={submit}>
-          <Text style={styles.topAction}>Post</Text>
+        <Pressable accessibilityRole="button" onPress={submit} style={styles.topButton}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Post</Text>
         </Pressable>
       </SafeAreaView>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null]}
+        keyboardShouldPersistTaps="handled"
+      >
         <FoyerHeader />
         <Pressable accessibilityRole="button" accessibilityLabel="Add a cover photo" onPress={() => void pickPhoto()} style={styles.cover}>
           <Text style={styles.coverTitle}>{photoUri ? 'Cover photo selected' : 'Add a cover photo'}</Text>
@@ -165,8 +171,12 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
 
         <Text style={styles.label}>Age range</Text>
         <View style={styles.ageRow}>
-          <Field label="Min" value={ageMin} onChange={setAgeMin} placeholder="18" keyboardType="number-pad" />
-          <Field label="Max" value={ageMax} onChange={setAgeMax} placeholder="Any" keyboardType="number-pad" />
+          <View style={styles.ageCell}>
+            <Field label="Min" value={ageMin} onChange={setAgeMin} placeholder="18" keyboardType="number-pad" />
+          </View>
+          <View style={styles.ageCell}>
+            <Field label="Max" value={ageMax} onChange={setAgeMax} placeholder="Any" keyboardType="number-pad" />
+          </View>
         </View>
         <Text style={styles.helper}>Leave max blank for no upper limit. Children in a household can be added if they fit the range.</Text>
 
@@ -265,7 +275,8 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: appColors.background,
   },
-  navTitle: { fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },
+  navTitle: { flex: 1, textAlign: 'center', fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink },
+  topButton: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
   topAction: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.primary },
   content: { padding: 20, gap: 14, paddingBottom: 48 },
   cover: {
@@ -278,7 +289,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  coverTitle: { fontFamily: appTypography.bodySemibold, color: appColors.primary, fontSize: 16 },
+  coverTitle: { fontFamily: appTypography.bodySemibold, color: appColors.primary, fontSize: 16, textAlign: 'center' },
   field: { gap: 6 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
   input: {
@@ -294,11 +305,12 @@ const styles = StyleSheet.create({
   inputMulti: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
   helper: { fontFamily: appTypography.bodyRegular, fontSize: 12.5, color: appColors.mutedInk, lineHeight: 18 },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 10, padding: 4, gap: 4 },
-  segmentItem: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
   segmentOn: { backgroundColor: appColors.primaryWash },
   segmentText: { fontFamily: appTypography.bodyMedium, color: appColors.mutedInk },
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
   ageRow: { flexDirection: 'row', gap: 12 },
+  ageCell: { flex: 1 },
   checkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   checkLabel: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   warn: { backgroundColor: appColors.warnBg, borderRadius: radii.list, padding: 12 },

@@ -85,10 +85,12 @@ const styles = StyleSheet.create({
   regular: {
     minHeight: 54,
     paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   compact: {
     minHeight: 36,
     paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   contained: {
     backgroundColor: appColors.primary,
@@ -116,8 +118,11 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 15,
+    lineHeight: 20,
     fontWeight: '600',
     letterSpacing: -0.2,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   labelContained: {
     color: appColors.white,

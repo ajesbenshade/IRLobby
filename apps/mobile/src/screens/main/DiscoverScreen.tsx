@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Animated, Image, PanResponder, Pressable, StyleSheet } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Snackbar, Text } from 'react-native-paper';
 
 import {
@@ -17,6 +17,8 @@ import {
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { FoyerHeader } from '@components/FoyerHeader';
 import { GoingSheet } from '@components/GoingSheet';
+import { FoyerGatheringCard } from '@components/FoyerGatheringCard';
+import { SwipeActionButtons } from '@components/SwipeActionButtons';
 import { WhosComingSheet } from '@components/WhosComingSheet';
 import { SafetyActionsModal } from '@components/SafetyActionsModal';
 import { safeImpactHaptic, safeNotificationHaptic } from '@lib/haptics';
@@ -33,7 +35,10 @@ import {
   buildRsvpPayload,
   coverPhotoUrl,
   defaultRsvpSelection,
+  friendlyRsvpMessage,
+  gatheringLocationLabel,
   goingCountLabel,
+  hasNoEligiblePeople,
   hostAvatarUrl,
   hostDisplayName,
   shouldSkipWhosComingSheet,
@@ -43,6 +48,7 @@ import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { calendarEventSummary } from '@shared/calendarLinks';
 import { config } from '@constants/config';
 import { useAuth } from '@hooks/useAuth';
+import { useSwipeCard, type SwipeDirection } from '@hooks/useSwipeCard';
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import {
   fetchActivities,
@@ -102,7 +108,6 @@ export const DiscoverScreen = () => {
   const navigation = useNavigation<DiscoverNavigationProp>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const pan = useRef(new Animated.ValueXY()).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
@@ -278,38 +283,6 @@ export const DiscoverScreen = () => {
     ],
   );
 
-  const animateSwipe = useCallback(
-    (direction: 'left' | 'right', onComplete: () => void) => {
-      Animated.timing(pan, {
-        toValue: { x: direction === 'right' ? 400 : -400, y: 0 },
-        duration: 180,
-        useNativeDriver: false,
-      }).start(() => {
-        pan.setValue({ x: 0, y: 0 });
-        onComplete();
-      });
-    },
-    [pan],
-  );
-
-  const handleSwipe = useCallback(
-    (direction: 'left' | 'right') => {
-      if (!currentActivity || isBusy) {
-        return;
-      }
-
-      void safeImpactHaptic(direction === 'right' ? 'medium' : 'light');
-
-      animateSwipe(direction, () => {
-        swipeMutation.mutate({
-          activityId: currentActivity.id,
-          direction,
-        });
-      });
-    },
-    [animateSwipe, currentActivity, isBusy, swipeMutation],
-  );
-
   const advanceAfterRsvp = useCallback((activity: Activity) => {
     setWhosComing(null);
     setGoingActivity(activity);
@@ -324,7 +297,7 @@ export const DiscoverScreen = () => {
         await postRsvp(activity.id, payload);
         advanceAfterRsvp(activity);
       } catch (error) {
-        setRsvpError(getErrorMessage(error, 'Unable to save your RSVP.'));
+        setRsvpError(friendlyRsvpMessage(getErrorMessage(error, 'Unable to save your RSVP.')));
       } finally {
         setRsvpPending(false);
       }
@@ -332,67 +305,79 @@ export const DiscoverScreen = () => {
     [advanceAfterRsvp],
   );
 
-  const startGoing = useCallback(async () => {
+  /**
+   * Legacy (non-Foyer) swipe: records the swipe on the server and advances.
+   * Resolves true when the deck advanced. A failure rejects so the card springs back.
+   */
+  const recordLegacySwipe = useCallback(
+    async (direction: SwipeDirection) => {
+      if (!currentActivity) {
+        return false;
+      }
+      void safeImpactHaptic(direction === 'right' ? 'medium' : 'light');
+      await swipeMutation.mutateAsync({ activityId: currentActivity.id, direction });
+      return true;
+    },
+    [currentActivity, swipeMutation],
+  );
+
+  /**
+   * Foyer "I'm going". Resolves true only when the RSVP finished without a sheet
+   * (the deck advanced). Opening the "Who's coming?" sheet, a failed request, or
+   * nobody being eligible all resolve false so the card returns to center.
+   */
+  const startGoing = useCallback(async (): Promise<boolean> => {
     if (!currentActivity || isBusy || rsvpPending) {
-      return;
+      return false;
     }
-    if (!isFoyerMode()) {
-      handleSwipe('right');
-      return;
+    if (!foyerMode) {
+      return recordLegacySwipe('right');
     }
+    void safeImpactHaptic('medium');
     setRsvpPending(true);
     setRsvpError(null);
     try {
       const sheet = await fetchWhosComing(currentActivity.id);
       if (shouldSkipWhosComingSheet(sheet)) {
+        if (hasNoEligiblePeople(sheet)) {
+          // Posting would be an empty RSVP (the server answers 400). Explain instead.
+          setRsvpError(sheet.me.reason?.trim() || "You aren't eligible for this gathering.");
+          return false;
+        }
         const selection = defaultRsvpSelection(sheet);
         await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
         advanceAfterRsvp(currentActivity);
-        return;
+        return true;
       }
       setWhosComing(sheet);
+      return false;
     } catch (error) {
-      setRsvpError(getErrorMessage(error, 'Unable to open the RSVP list.'));
+      setRsvpError(friendlyRsvpMessage(getErrorMessage(error, 'Unable to open the RSVP list.')));
+      return false;
     } finally {
       setRsvpPending(false);
     }
-  }, [advanceAfterRsvp, currentActivity, handleSwipe, isBusy, rsvpPending]);
+  }, [advanceAfterRsvp, currentActivity, foyerMode, isBusy, recordLegacySwipe, rsvpPending]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          !isBusy && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-        onPanResponderMove: (_, gestureState) => {
-          pan.setValue({ x: gestureState.dx, y: 0 });
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dx > 80) {
-            if (isFoyerMode()) {
-              void startGoing();
-              Animated.spring(pan, {
-                toValue: { x: 0, y: 0 },
-                useNativeDriver: false,
-              }).start();
-              return;
-            }
-            handleSwipe('right');
-            return;
-          }
+  /** Pass records nothing in Foyer mode; it just shows the next gathering. */
+  const startPass = useCallback(async (): Promise<boolean> => {
+    if (!currentActivity || isBusy) {
+      return false;
+    }
+    setRsvpError(null);
+    if (!foyerMode) {
+      return recordLegacySwipe('left');
+    }
+    void safeImpactHaptic('light');
+    setCurrentIndex((index) => index + 1);
+    return true;
+  }, [currentActivity, foyerMode, isBusy, recordLegacySwipe]);
 
-          if (gestureState.dx < -80) {
-            handleSwipe('left');
-            return;
-          }
-
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
-        },
-      }),
-    [handleSwipe, isBusy, pan, startGoing],
-  );
+  const swipe = useSwipeCard({
+    enabled: Boolean(currentActivity) && !isBusy && !rsvpPending,
+    resetKey: currentActivity ? String(currentActivity.id) : null,
+    onCommit: (direction) => (direction === 'right' ? startGoing() : startPass()),
+  });
 
   const resetDeck = useCallback(() => {
     setCurrentIndex(0);
@@ -441,18 +426,6 @@ export const DiscoverScreen = () => {
     setTagFilter(vibeDiscoverTags.join(', '));
     setVibeToastVisible(true);
   }, [hasVibeProfile, vibeDiscoverTags, tagFilter]);
-
-  const cardStyle = {
-    transform: [
-      { translateX: pan.x },
-      {
-        rotate: pan.x.interpolate({
-          inputRange: [-240, 0, 240],
-          outputRange: ['-10deg', '0deg', '10deg'],
-        }),
-      },
-    ],
-  };
 
   const currentTag = currentActivity?.tags?.[0] || currentActivity?.category || 'Activity';
   const currentHostName =
@@ -736,52 +709,24 @@ export const DiscoverScreen = () => {
           ) : null}
 
           {currentActivity ? (
-            <AnimatedView style={[cardStyle, styles.animatedCard]} {...panResponder.panHandlers}>
+            <AnimatedView style={[swipe.cardStyle, styles.animatedCard]} {...swipe.panHandlers}>
               {foyerMode ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`View details for ${currentActivity.title}`}
                   onPress={() => setShowDetails(true)}
                 >
-                <View style={styles.foyerCard}>
-                  <View style={styles.foyerPhotoWrap}>
-                    {coverImage ? (
-                      <Image source={{ uri: coverImage }} style={styles.foyerPhoto} />
-                    ) : (
-                      <View style={styles.foyerPhoto} />
-                    )}
-                    <View style={styles.coverBadge}>
-                      <Text style={styles.coverBadgeText}>Cover photo</Text>
-                    </View>
-                  </View>
-                  <View style={styles.foyerBody}>
-                    <View style={styles.foyerChipRow}>
-                      <View style={styles.audienceChip}>
-                        <Text style={styles.audienceChipText}>{audienceLabel}</Text>
-                      </View>
-                      <Text style={styles.goingCount}>{goingLabel}</Text>
-                    </View>
-                    <Text style={styles.foyerTitle}>{currentActivity.title}</Text>
-                    <Text style={styles.foyerMeta}>{currentTimeLabel}</Text>
-                    <Text style={styles.foyerMeta}>{currentActivity.location || 'Location TBD'}</Text>
-                    {currentActivity.description ? (
-                      <Text style={styles.foyerDescription}>{currentActivity.description}</Text>
-                    ) : null}
-                    <View style={styles.hostedRow}>
-                      {foyerHostAvatar ? (
-                        <Image source={{ uri: foyerHostAvatar }} style={styles.hostAvatar} />
-                      ) : (
-                        <View style={styles.hostAvatar}>
-                          <Text style={styles.hostInitial}>{foyerHostName.charAt(0).toUpperCase()}</Text>
-                        </View>
-                      )}
-                      <View>
-                        <Text style={styles.hostedLabel}>Hosted by</Text>
-                        <Text style={styles.hostedName}>{foyerHostName}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
+                  <FoyerGatheringCard
+                    title={currentActivity.title}
+                    audienceLabel={audienceLabel}
+                    goingLabel={goingLabel}
+                    timeLabel={currentTimeLabel}
+                    locationLabel={gatheringLocationLabel(currentActivity.location)}
+                    description={currentActivity.description}
+                    hostName={foyerHostName}
+                    hostAvatarUrl={foyerHostAvatar}
+                    coverImageUrl={coverImage}
+                  />
                 </Pressable>
               ) : (
               <View style={[styles.photoCard, ticketed ? styles.photoCardTicketed : null]}>
@@ -834,22 +779,28 @@ export const DiscoverScreen = () => {
             </AnimatedView>
           ) : null}
 
-          {currentActivity ? (
+          {currentActivity && foyerMode ? (
+            <SwipeActionButtons
+              onPass={() => void swipe.commit('left')}
+              onGoing={() => void swipe.commit('right')}
+              disabled={isBusy || rsvpPending}
+              error={rsvpError}
+            />
+          ) : null}
+          {currentActivity && !foyerMode ? (
             <View style={styles.actions}>
-              <AppButton variant="outline" onPress={() => handleSwipe('left')} disabled={isBusy} style={styles.actionButton}>
+              <AppButton variant="outline" onPress={() => void swipe.commit('left')} disabled={isBusy} style={styles.actionButton}>
                 Pass
               </AppButton>
-              {foyerMode ? null : (
-                <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
-                  Details
-                </AppButton>
-              )}
-              <AppButton onPress={() => void startGoing()} disabled={isBusy || rsvpPending} style={styles.actionButton}>
+              <AppButton compact variant="ghost" onPress={() => setShowDetails(true)}>
+                Details
+              </AppButton>
+              <AppButton onPress={() => void swipe.commit('right')} disabled={isBusy || rsvpPending} style={styles.actionButton}>
                 I'm going
               </AppButton>
             </View>
           ) : null}
-          {rsvpError ? <Text style={styles.metaText}>{rsvpError}</Text> : null}
+          {rsvpError && !foyerMode ? <Text style={styles.errorText}>{rsvpError}</Text> : null}
 
           <Portal>
             <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
@@ -864,7 +815,11 @@ export const DiscoverScreen = () => {
                   </Text>
                   <View style={styles.metaItem}>
                     <MaterialCommunityIcons name="map-marker-outline" size={16} color={appColors.mutedInk} />
-                    <Text style={styles.metaText}>{currentActivity.location || 'Location TBD'}</Text>
+                    <Text style={styles.metaText}>
+                      {foyerMode
+                        ? gatheringLocationLabel(currentActivity.location)
+                        : currentActivity.location || 'Location TBD'}
+                    </Text>
                   </View>
                   <View style={styles.metaItem}>
                     <MaterialCommunityIcons name="clock-outline" size={16} color={appColors.mutedInk} />
@@ -981,7 +936,7 @@ export const DiscoverScreen = () => {
                     <AppButton
                       onPress={() => {
                         setShowDetails(false);
-                        void startGoing();
+                        void swipe.commit('right');
                       }}
                     >
                       I'm going
@@ -997,13 +952,19 @@ export const DiscoverScreen = () => {
             <Portal>
               <Modal
                 visible
-                onDismiss={() => setWhosComing(null)}
+                onDismiss={() => {
+                  // Dismissing the sheet cancels the RSVP; the card is already back at center.
+                  setWhosComing(null);
+                  setRsvpError(null);
+                }}
+                style={styles.sheetWrapper}
                 contentContainerStyle={styles.sheetModal}
               >
                 <WhosComingSheet
                   response={whosComing}
                   subtitle={`${currentActivity.title} · ${audienceLabel}`}
                   pending={rsvpPending}
+                  error={rsvpError}
                   onConfirm={(payload) => void confirmRsvp(currentActivity, payload)}
                 />
               </Modal>
@@ -1014,6 +975,7 @@ export const DiscoverScreen = () => {
               <Modal
                 visible
                 onDismiss={() => setGoingActivity(null)}
+                style={styles.sheetWrapper}
                 contentContainerStyle={styles.sheetModal}
               >
                 <GoingSheet
@@ -1038,6 +1000,7 @@ export const DiscoverScreen = () => {
               <Modal
                 visible
                 onDismiss={() => setCalendarActivity(null)}
+                style={styles.sheetWrapper}
                 contentContainerStyle={styles.sheetModal}
               >
                 <AddToCalendarSheet
@@ -1244,108 +1207,6 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
   },
-  foyerCard: {
-    backgroundColor: appColors.white,
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: appColors.line,
-  },
-  foyerPhotoWrap: {
-    height: 210,
-    backgroundColor: '#c4b2a8',
-  },
-  foyerPhoto: {
-    width: '100%',
-    height: 210,
-    backgroundColor: '#c4b2a8',
-  },
-  coverBadge: {
-    position: 'absolute',
-    left: 14,
-    bottom: 14,
-    backgroundColor: 'rgba(20,14,16,0.45)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  coverBadgeText: {
-    color: appColors.white,
-    fontSize: 12,
-    fontFamily: appTypography.bodyMedium,
-  },
-  foyerBody: {
-    padding: 16,
-    gap: 8,
-  },
-  foyerChipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  audienceChip: {
-    backgroundColor: appColors.primarySoft,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  audienceChipText: {
-    color: appColors.primary,
-    fontFamily: appTypography.bodySemibold,
-    fontSize: 13,
-  },
-  goingCount: {
-    color: appColors.mutedInk,
-    fontFamily: appTypography.bodyMedium,
-    fontSize: 14,
-  },
-  foyerTitle: {
-    fontFamily: appTypography.heading,
-    fontSize: 25,
-    color: appColors.ink,
-  },
-  foyerMeta: {
-    color: appColors.ink,
-    fontFamily: appTypography.bodyRegular,
-    fontSize: 15,
-  },
-  foyerDescription: {
-    color: appColors.ink,
-    fontFamily: appTypography.bodyRegular,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  hostedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: appColors.line,
-  },
-  hostAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: appColors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hostInitial: {
-    color: appColors.primary,
-    fontFamily: appTypography.bodySemibold,
-  },
-  hostedLabel: {
-    color: appColors.mutedInk,
-    fontFamily: appTypography.bodyRegular,
-    fontSize: 12,
-  },
-  hostedName: {
-    color: appColors.ink,
-    fontFamily: appTypography.bodySemibold,
-    fontSize: 15,
-  },
   addCalendar: {
     minHeight: 52,
     borderRadius: radii.list,
@@ -1358,6 +1219,10 @@ const styles = StyleSheet.create({
     color: appColors.primary,
     fontFamily: appTypography.bodySemibold,
     fontSize: 16,
+  },
+  // Paper's Modal adds the safe-area inset as a margin; the sheet pads for the inset itself.
+  sheetWrapper: {
+    marginBottom: 0,
   },
   sheetModal: {
     backgroundColor: 'transparent',

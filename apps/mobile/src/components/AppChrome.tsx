@@ -225,6 +225,7 @@ export const AccentPill = ({
     ]}
   >
     <Text
+      maxFontSizeMultiplier={1.4}
       style={[
         styles.pillText,
         tone === 'neutral' ? styles.pillTextNeutral : null,
@@ -346,12 +347,16 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
   headerTextBlock: {
-    flex: 1,
+    // Wraps under the pill at the largest text sizes instead of squeezing the title.
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 200,
     gap: spacing.sm,
   },
   eyebrow: {
@@ -366,7 +371,7 @@ const styles = StyleSheet.create({
     fontFamily: appTypography.heading,
     fontWeight: '600',
     fontSize: fontSize.screenTitle,
-    lineHeight: 34,
+    lineHeight: 36,
     letterSpacing: -0.6,
   },
   pageSubtitle: {
@@ -391,6 +396,8 @@ const styles = StyleSheet.create({
     fontFamily: appTypography.heading,
     fontWeight: '600',
     fontSize: fontSize.cardTitle,
+    // Paper's titleMedium variant ships a 24pt line height, which clips a 25pt serif.
+    lineHeight: 32,
     letterSpacing: -0.4,
   },
   sectionSubtitle: {
@@ -429,6 +436,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   detailAccessory: {
+    flexShrink: 1,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
@@ -466,6 +474,7 @@ const styles = StyleSheet.create({
     color: appColors.ink,
     fontFamily: appTypography.heading,
     fontSize: 32,
+    lineHeight: 40,
     fontWeight: '600',
     letterSpacing: -0.8,
   },
@@ -514,6 +523,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: appColors.ink,
     fontFamily: appTypography.heading,
+    lineHeight: 26,
     fontWeight: '600',
     letterSpacing: -0.3,
   },

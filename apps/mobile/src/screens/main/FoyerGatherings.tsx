@@ -152,7 +152,7 @@ const Section = ({
             <Text style={styles.meta}>{summary(row)}</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={onChat} style={styles.chat}>
-            <Text style={styles.chatText}>Chat</Text>
+            <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
           </Pressable>
         </Pressable>
       );
@@ -161,10 +161,11 @@ const Section = ({
 );
 
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 16, paddingBottom: 120 },
-  title: { fontFamily: appTypography.heading, fontSize: 28, color: appColors.ink },
+  // No paddingBottom here: AppScrollView adds tab bar height + safe area + 16 inside the tabs.
+  container: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
+  title: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 12, padding: 4 },
-  segmentItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
   segmentOn: { backgroundColor: appColors.white, borderWidth: 1, borderColor: appColors.line },
   segmentText: { fontFamily: appTypography.bodyMedium, color: appColors.mutedInk },
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
@@ -180,13 +181,14 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   thumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: appColors.primarySoft },
-  cardCopy: { flex: 1, gap: 2 },
-  cardTitle: { fontFamily: appTypography.heading, fontSize: 16, color: appColors.ink },
+  cardCopy: { flex: 1, flexShrink: 1, gap: 2 },
+  cardTitle: { fontFamily: appTypography.heading, fontSize: 16, lineHeight: 22, color: appColors.ink },
   meta: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk },
   chat: {
     backgroundColor: appColors.primarySoft,
     borderRadius: 999,
     paddingHorizontal: 12,
+    alignSelf: 'center',
     minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',

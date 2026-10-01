@@ -6,6 +6,8 @@ export const UNDER_13_MESSAGE = 'Accounts are not available under age 13.';
 export const CAPACITY_ERROR = 'Capacity must be a whole number from 1 to 500.';
 export const CALENDAR_ADDRESS_WARNING =
   "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
+export const ADDRESS_AFTER_RSVP = 'Address shared after you RSVP';
+export const RSVP_CHOOSE_PEOPLE_MESSAGE = 'Choose yourself or your family.';
 export const WHOS_COMING_NOTE =
   'Only children in your household are listed. Teens with their own account RSVP for themselves.';
 
@@ -191,3 +193,23 @@ export const isUpcomingGathering = (time: string | null | undefined, now = new D
 
 export const childDisplayName = (name: string, age?: number | null) =>
   age == null ? name : `${name} (age ${age})`;
+
+/**
+ * Address line for a gathering. Member-hosted events hide the exact address
+ * until the viewer RSVPs, so a blank location must never render as an empty row.
+ */
+export const gatheringLocationLabel = (location: string | null | undefined): string => {
+  const trimmed = location?.trim();
+  return trimmed ? trimmed : ADDRESS_AFTER_RSVP;
+};
+
+/** Older servers answer an empty RSVP with "Choose yourself or a child."; show the family wording. */
+export const friendlyRsvpMessage = (message: string): string =>
+  /choose yourself or a child/i.test(message) ? RSVP_CHOOSE_PEOPLE_MESSAGE : message;
+
+/**
+ * True when nobody in the RSVP list can be selected, so posting would send an
+ * empty RSVP (the server answers 400). The caller should explain instead.
+ */
+export const hasNoEligiblePeople = (response: WhosComingResponse): boolean =>
+  !response.me.eligible && !response.dependents.some((child) => child.eligible);

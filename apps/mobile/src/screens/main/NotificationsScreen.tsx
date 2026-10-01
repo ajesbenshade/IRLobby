@@ -199,7 +199,7 @@ export const NotificationsScreen = () => {
                     </Text>
                     <AccentPill tone="neutral">Message</AccentPill>
                   </View>
-                  <NativeText style={styles.feedBody} numberOfLines={2}>
+                  <NativeText style={styles.feedBody}>
                     {item.body}
                   </NativeText>
                   <Text style={styles.feedTime}>{formatTimestamp(item.createdAt)}</Text>
@@ -230,7 +230,7 @@ export const NotificationsScreen = () => {
                     </Text>
                     <AccentPill tone="secondary">Match</AccentPill>
                   </View>
-                  <NativeText style={styles.feedBody} numberOfLines={2}>
+                  <NativeText style={styles.feedBody}>
                     {item.body}
                   </NativeText>
                   <Text style={styles.feedTime}>{formatTimestamp(item.createdAt)}</Text>

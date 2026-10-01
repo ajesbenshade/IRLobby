@@ -3,6 +3,9 @@ import {
   buildRsvpPayload,
   confirmGoingLabel,
   defaultRsvpSelection,
+  friendlyRsvpMessage,
+  gatheringLocationLabel,
+  hasNoEligiblePeople,
   parseCapacity,
   peopleCount,
   registrationFieldError,
@@ -77,5 +80,32 @@ describe('going summary and registration', () => {
   it('treats the chat gate 403 as the going-only message', () => {
     expect(isChatGateError(403, 'Not authorized')).toBe(true);
     expect(isChatGateError(400, 'Capacity must be a whole number from 1 to 500.')).toBe(false);
+  });
+});
+
+describe('gathering address label', () => {
+  it('shows the address when present and a placeholder when it is hidden or missing', () => {
+    expect(gatheringLocationLabel('123 Main St')).toBe('123 Main St');
+    expect(gatheringLocationLabel('  ')).toBe('Address shared after you RSVP');
+    expect(gatheringLocationLabel('')).toBe('Address shared after you RSVP');
+    expect(gatheringLocationLabel(null)).toBe('Address shared after you RSVP');
+    expect(gatheringLocationLabel(undefined)).toBe('Address shared after you RSVP');
+  });
+});
+
+describe('RSVP messages', () => {
+  it('rewrites the older server wording to the family wording', () => {
+    expect(friendlyRsvpMessage('Choose yourself or a child.')).toBe('Choose yourself or your family.');
+    expect(friendlyRsvpMessage('Event is full.')).toBe('Event is full.');
+  });
+
+  it('detects when nobody can be selected so an empty RSVP is never posted', () => {
+    const nobody = {
+      me: { name: 'A', eligible: false, reason: "Outside this event's age range" },
+      dependents: [{ id: 1, name: 'Kid', age: 4, eligible: false }],
+    };
+    expect(hasNoEligiblePeople(nobody)).toBe(true);
+    expect(hasNoEligiblePeople({ ...nobody, dependents: [{ id: 1, name: 'Kid', age: 15, eligible: true }] })).toBe(false);
+    expect(hasNoEligiblePeople({ me: { name: 'A', eligible: true }, dependents: [] })).toBe(false);
   });
 });

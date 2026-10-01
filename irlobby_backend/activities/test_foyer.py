@@ -594,3 +594,33 @@ class FoyerChurchAndPhotoTests(APITestCase):
         self.assertEqual(fetched["Content-Type"], "image/jpeg")
         body = b"".join(fetched.streaming_content)
         self.assertTrue(body.startswith(b"\xff\xd8"))
+
+
+    def test_non_public_event_photos_need_login_or_a_signed_link(self):
+        from urllib.parse import urlparse
+
+        from rest_framework.test import APIClient
+
+        activity = _activity(self.member, list_on_church_calendar=False)
+        self.client.force_authenticate(self.member)
+        uploaded = self.client.post(
+            reverse("activity-photo-upload", args=[activity.id]),
+            {"image": _jpeg_upload()},
+            format="multipart",
+        )
+        self.assertEqual(uploaded.status_code, status.HTTP_201_CREATED)
+        self.assertIn("?t=", uploaded.data["url"])
+        parsed = urlparse(uploaded.data["url"])
+
+        anonymous = APIClient()
+        self.assertEqual(anonymous.get(parsed.path).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            anonymous.get(parsed.path + "?t=bogus").status_code, status.HTTP_401_UNAUTHORIZED
+        )
+        signed = anonymous.get(f"{parsed.path}?{parsed.query}")
+        self.assertEqual(signed.status_code, status.HTTP_200_OK)
+        other = anonymous.get(
+            f"/api/activities/{activity.id}/photos/999/?{parsed.query}"
+        )
+        self.assertEqual(other.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.client.get(parsed.path).status_code, status.HTTP_200_OK)

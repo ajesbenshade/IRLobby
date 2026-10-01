@@ -43,8 +43,40 @@ def photo_api_path(photo) -> str:
     return f"/api/activities/{photo.activity_id}/photos/{photo.id}/"
 
 
+PHOTO_TOKEN_SALT = "foyer-event-photo"
+PHOTO_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 3600
+
+
+def _photo_signer():
+    from django.core.signing import TimestampSigner
+
+    return TimestampSigner(salt=PHOTO_TOKEN_SALT)
+
+
+def make_photo_token(photo) -> str:
+    return _photo_signer().sign(f"{photo.activity_id}:{photo.id}")
+
+
+def photo_token_valid(token: str, activity_id: int, photo_id: int) -> bool:
+    from django.core.signing import BadSignature, SignatureExpired
+
+    try:
+        value = _photo_signer().unsign(token, max_age=PHOTO_TOKEN_MAX_AGE_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return False
+    return value == f"{activity_id}:{photo_id}"
+
+
 def absolute_photo_url(photo, request=None) -> str:
     path = photo_api_path(photo)
+    # Photos of events that are not on the public church calendar are only
+    # linked, with a short-lived signed token, to people who are logged in.
+    user = getattr(request, "user", None) if request is not None else None
+    if user is not None and getattr(user, "is_authenticated", False):
+        from activities.public_calendar import is_public_calendar_event
+
+        if not is_public_calendar_event(photo.activity):
+            path = f"{path}?t={make_photo_token(photo)}"
     if request is not None:
         return request.build_absolute_uri(path)
     return path

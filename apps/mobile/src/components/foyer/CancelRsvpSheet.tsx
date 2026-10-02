@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConfirmSheet } from '@components/foyer/ConfirmSheet';
-import { GOING_COPY } from '@constants/foyerCopy';
+import { COMMON_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { CANCEL_QUERY_KEYS } from '@foyer/rsvp';
 import { cancelRsvp, clearPass, withdrawJoinRequest } from '@services/foyerService';
 import { getErrorMessage } from '@utils/error';
@@ -28,7 +28,7 @@ export const cancelErrorMessage = (error: unknown): string => {
       return candidate.trim();
     }
   }
-  return getErrorMessage(error, 'Unable to cancel your RSVP.');
+  return getErrorMessage(error, COMMON_COPY.genericError);
 };
 
 /** Confirm sheet for Cancel RSVP. Refreshes the deck, Gatherings and detail on success. */

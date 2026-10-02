@@ -1,5 +1,6 @@
 import {
   DEFAULT_START_MINUTES,
+  isValidSignUpBirthDate,
   birthDayLimits,
   endTimeSlots,
   familyBirthMonthLimits,
@@ -112,5 +113,21 @@ describe('age and month rules', () => {
     expect(d.isFutureMonth({ year: 2026, month: 11 }, now)).toBe(true);
     expect(d.isFutureMonth({ year: 2026, month: 10 }, now)).toBe(false);
     expect(d.formatDayWithWeekday({ year: 1988, month: 3, day: 4 })).toBe('Friday, March 4, 1988');
+  });
+});
+
+describe('isValidSignUpBirthDate (birth date is required at sign-up)', () => {
+  const now = new Date(2026, 9, 2, 12);
+  it('rejects empty, malformed and impossible dates', () => {
+    for (const value of ['', '  ', null, undefined, 'not-a-date', '2026-13-40', '1899-12-31']) {
+      expect(isValidSignUpBirthDate(value as never, now)).toBe(false);
+    }
+  });
+  it('rejects future dates and anyone under 13, accepts exactly 13 today', () => {
+    expect(isValidSignUpBirthDate('2026-10-03', now)).toBe(false);
+    expect(isValidSignUpBirthDate('2020-01-01', now)).toBe(false);
+    expect(isValidSignUpBirthDate('2013-10-03', now)).toBe(false);
+    expect(isValidSignUpBirthDate('2013-10-02', now)).toBe(true);
+    expect(isValidSignUpBirthDate('1988-03-04', now)).toBe(true);
   });
 });

@@ -621,6 +621,18 @@ export async function updateOnboarding(
   await api.patch(API_ROUTES.USER_ONBOARDING, payload);
 }
 
+/**
+ * Best-effort follow-up after a sign-in/sign-up that sent the Terms / Privacy flags: records them on the
+ * account through the onboarding endpoint too, in case the auth endpoint ignored them. Never throws.
+ */
+export async function persistLegalAcceptance(): Promise<void> {
+  try {
+    await updateOnboarding({ terms_accepted: true, privacy_accepted: true });
+  } catch {
+    // Non-fatal: legal can be re-prompted later.
+  }
+}
+
 export async function createInvite(
   payload: InvitePayload
 ): Promise<InviteResponse> {

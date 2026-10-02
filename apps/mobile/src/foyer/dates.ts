@@ -206,6 +206,15 @@ export const latestBirthDateForAge = (years: number, now = new Date()): DayValue
 export const isUnderAge = (birth: DayValue, minAge = MIN_ACCOUNT_AGE, now = new Date()): boolean =>
   compareDays(birth, latestBirthDateForAge(minAge, now)) > 0;
 
+/**
+ * Sign-up needs a real birth date that is allowed (1900 to today) and old enough (13+), so the under-13 check
+ * cannot be skipped by leaving the field empty.
+ */
+export const isValidSignUpBirthDate = (iso: string | null | undefined, now = new Date()): boolean => {
+  const day = parseIsoDate(iso);
+  return day != null && isDayAllowed(day, birthDayLimits(now)) && !isUnderAge(day, MIN_ACCOUNT_AGE, now);
+};
+
 /** Family birth month: months after the current month are future, so they cannot be confirmed. */
 export const isFutureMonth = (value: MonthValue, now = new Date()): boolean =>
   compareMonths(value, { year: now.getFullYear(), month: now.getMonth() + 1 }) > 0;

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Text } from 'react-native-paper';
@@ -11,13 +11,15 @@ import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { AppScrollView } from '@components/AppChrome';
 import { CancelGatheringSheet } from '@components/foyer/CancelGatheringSheet';
 import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
+import { CancelledChatCard, CancelledPhotosCard } from '@components/foyer/CancelledGuestCards';
 import { HostAttendeesCard } from '@components/foyer/HostAttendeesCard';
 import { PastAttendeesCard } from '@components/foyer/PastAttendeesCard';
 import { PhotoUploadSheet } from '@components/foyer/PhotoUploadSheet';
+import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { GRAYSCALE_IMAGE_STYLE, PillButton, Toast } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { WhosComingSheet } from '@components/WhosComingSheet';
-import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, FULL_COPY, GOING_COPY, PHOTO_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import {
   declineNoteFor,
   gatheringRequiresApproval,
@@ -26,7 +28,7 @@ import {
   joinButtonFor,
   type GuestRequestView,
 } from '@foyer/approval';
-import { canHostEdit, cancelledDateLabel, hostCancelState, isActivityCancelled } from '@foyer/cancel';
+import { canHostEdit, cancelSystemMessage, cancelledDateLabel, hostCancelState, isActivityCancelled } from '@foyer/cancel';
 import { useDetectedCapabilities } from '@foyer/capabilities';
 import { fullBlocksJoin, fullNotice, isFullMessage } from '@foyer/full';
 import { buildPastAttendees, isHostAttendeeView } from '@foyer/attendees';
@@ -49,8 +51,12 @@ import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
 import { fetchAttendees, fetchWhosComing, postRsvp, uploadGatheringPhoto } from '@services/foyerService';
+import { submitReport } from '@services/reportAdapter';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+
+/** Spec: the `Cancelled Oct 2` line in the cancelled banner is #5a5654. */
+export const CANCELLED_DATE_COLOR = '#5a5654';
 
 export const GatheringDetailScreen = () => {
   const route = useRoute<RouteProp<MainStackParamList, 'GatheringDetail'>>();
@@ -67,6 +73,9 @@ export const GatheringDetailScreen = () => {
   const [askPending, setAskPending] = useState(false);
   const [askError, setAskError] = useState<string | null>(null);
   const [askMode, setAskMode] = useState<'request' | 'rsvp'>('request');
+  const [menuSheet, setMenuSheet] = useState<'menu' | 'report' | null>(null);
+  const scrollRef = useRef<{ scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void } | null>(null);
+  const hostCardY = useRef(0);
   const navigation = useNavigation<any>();
   const activityId = route.params.activityId;
 
@@ -125,7 +134,30 @@ export const GatheringDetailScreen = () => {
     retry: false,
   });
   const hostView = isHost && isHostAttendeeView(attendeesQuery.data ?? null);
+  // Host controls row: `Who's coming` jumps to the host-only guest list card (not offered once cancelled).
+  const showHostGuestList = (isHost || churchAdmin) && !cancelled && hostView && Boolean(attendeesQuery.data);
   const pastAttendees = started && !isHost ? buildPastAttendees(attendeesQuery.data ?? null) : [];
+
+  // `...` menu in the header: Report this gathering (never on the host's own gathering).
+  const canReportGathering = Boolean(activity) && !isHost;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canReportGathering
+        ? () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={MEMBER_COPY.gatheringMenuLabel}
+              onPress={() => setMenuSheet('menu')}
+              hitSlop={8}
+              style={styles.menuButton}
+              testID="gathering-menu"
+            >
+              <MaterialCommunityIcons name="dots-horizontal" size={24} color={appColors.primary} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [canReportGathering, navigation]);
 
   const openAskAgain = async (mode: 'request' | 'rsvp' = 'request') => {
     setAskMode(mode);
@@ -192,9 +224,11 @@ export const GatheringDetailScreen = () => {
   }
 
   const cover = coverPhotoUrl(activity);
+  const cancelledGuest = cancelled && !isHost;
 
   return (
     <AppScrollView
+      scrollRef={scrollRef}
       contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl refreshing={activityQuery.isRefetching} onRefresh={() => void activityQuery.refetch()} />
@@ -219,7 +253,9 @@ export const GatheringDetailScreen = () => {
             <Text style={[styles.bannerTitle, styles.bannerTitleCancelled]}>{CANCEL_COPY.bannerTitle}</Text>
             {activity.cancel_reason?.trim() ? <Text style={styles.bannerBody}>{activity.cancel_reason.trim()}</Text> : null}
             {cancelledDateLabel(activity.cancelled_at) ? (
-              <Text style={styles.bannerMeta}>{cancelledDateLabel(activity.cancelled_at)}</Text>
+              <Text style={[styles.bannerMeta, styles.bannerDateCancelled]} testID="cancelled-date-line">
+                {cancelledDateLabel(activity.cancelled_at)}
+              </Text>
             ) : null}
           </View>
         </View>
@@ -309,14 +345,27 @@ export const GatheringDetailScreen = () => {
       {showCancel && requestView !== 'pending' ? (
         <PillButton label={GOING_COPY.cancelRsvp} variant="text" onPress={() => setCancelOpen(true)} style={styles.alignStart} />
       ) : null}
-      {canEdit ? (
-        <PillButton
-          label={CANCEL_COPY.edit}
-          variant="outline"
-          onPress={() => navigation.navigate('EditActivity', { activityId })}
-          style={styles.alignStart}
-          testID="edit-gathering"
-        />
+      {canEdit || showHostGuestList ? (
+        <View style={styles.pillRow}>
+          {canEdit ? (
+            <PillButton
+              label={CANCEL_COPY.edit}
+              variant="outline"
+              onPress={() => navigation.navigate('EditActivity', { activityId })}
+              style={styles.pillEqual}
+              testID="edit-gathering"
+            />
+          ) : null}
+          {showHostGuestList ? (
+            <PillButton
+              label={CANCEL_COPY.whosComing}
+              variant="outline"
+              onPress={() => scrollRef.current?.scrollTo({ y: Math.max(0, hostCardY.current - 12), animated: true })}
+              style={styles.pillEqual}
+              testID="host-whos-coming"
+            />
+          ) : null}
+        </View>
       ) : null}
       {approvalHost ? (
         <Pressable
@@ -344,24 +393,43 @@ export const GatheringDetailScreen = () => {
           <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.mutedInk} />
         </Pressable>
       ) : null}
-      <View style={styles.pillRow}>
-        <PillButton
-          label={GOING_COPY.photos}
-          variant="outline"
-          style={styles.pillEqual}
-          onPress={() => navigation.navigate('PhotoGallery', { activityId })}
-        />
-        {showChat ? (
+      {cancelledGuest ? (
+        <>
+          <CancelledPhotosCard
+            urls={photoUrls}
+            count={photoUrls.length}
+            onSeeAll={() => navigation.navigate('PhotoGallery', { activityId })}
+          />
+          {showChat ? (
+            <CancelledChatCard
+              title={GOING_COPY.chat}
+              message={cancelSystemMessage(activity.title, activity.cancel_reason)}
+              onOpen={() =>
+                openGatheringChat(navigation, { activityId, title: activity.title }, { fromGathering: true })
+              }
+            />
+          ) : null}
+        </>
+      ) : (
+        <View style={styles.pillRow}>
           <PillButton
-            label={GOING_COPY.chat}
+            label={GOING_COPY.photos}
             variant="outline"
             style={styles.pillEqual}
-            onPress={() =>
-              openGatheringChat(navigation, { activityId, title: activity.title }, { fromGathering: true })
-            }
+            onPress={() => navigation.navigate('PhotoGallery', { activityId })}
           />
-        ) : null}
-      </View>
+          {showChat ? (
+            <PillButton
+              label={GOING_COPY.chat}
+              variant="outline"
+              style={styles.pillEqual}
+              onPress={() =>
+                openGatheringChat(navigation, { activityId, title: activity.title }, { fromGathering: true })
+              }
+            />
+          ) : null}
+        </View>
+      )}
       {requestLocked ? (
         <View style={styles.lockedRow}>
           <MaterialCommunityIcons name="lock-outline" size={18} color={appColors.mutedInk} />
@@ -378,7 +446,11 @@ export const GatheringDetailScreen = () => {
           <Text style={styles.meta}>{APPROVAL_COPY.guestListLocked}</Text>
         </View>
       ) : null}
-      {hostView && attendeesQuery.data ? <HostAttendeesCard data={attendeesQuery.data} cancelled={cancelled} /> : null}
+      {hostView && attendeesQuery.data ? (
+        <View onLayout={(event) => { hostCardY.current = event.nativeEvent.layout.y; }}>
+          <HostAttendeesCard data={attendeesQuery.data} cancelled={cancelled} />
+        </View>
+      ) : null}
       {pastAttendees.length > 0 ? (
         <PastAttendeesCard
           attendees={pastAttendees}
@@ -409,12 +481,16 @@ export const GatheringDetailScreen = () => {
         </Portal>
       ) : null}
 
-      <Text style={styles.section}>{PHOTO_COPY.galleryTitle(photoUrls.length)}</Text>
-      <View style={styles.grid}>
-        {photoUrls.slice(0, 12).map((url) => (
-          <Image key={url} source={{ uri: url }} style={styles.thumb} />
-        ))}
-      </View>
+      {cancelledGuest ? null : (
+        <>
+          <Text style={styles.section}>{PHOTO_COPY.galleryTitle(photoUrls.length)}</Text>
+          <View style={styles.grid}>
+            {photoUrls.slice(0, 12).map((url) => (
+              <Image key={url} source={{ uri: url }} style={styles.thumb} />
+            ))}
+          </View>
+        </>
+      )}
       {canAdd ? (
         <PillButton
           label={uploadMutation.isPending ? 'Adding photos…' : `${PHOTO_COPY.uploadTitle} · ${photoUrls.length} of ${MAX_GATHERING_PHOTOS}`}
@@ -503,6 +579,23 @@ export const GatheringDetailScreen = () => {
           </Modal>
         </Portal>
       ) : null}
+      <ActionSheet
+        visible={menuSheet === 'menu'}
+        onClose={() => setMenuSheet(null)}
+        rows={[{ label: MEMBER_COPY.reportGathering, onPress: () => setMenuSheet('report'), testID: 'gathering-report-row' }]}
+      />
+      <ReportSheet
+        visible={menuSheet === 'report'}
+        title={MEMBER_COPY.reportGathering}
+        lead={MEMBER_COPY.reportGatheringLead}
+        name={MEMBER_COPY.thisGathering}
+        onClose={() => setMenuSheet(null)}
+        onSubmit={(payload) => submitReport({ type: 'gathering', hostId, activityId }, payload)}
+        onSent={() => {
+          setMenuSheet(null);
+          setToast({ message: MEMBER_COPY.reportSent });
+        }}
+      />
       {cancelledToast ? <Toast message={GOING_COPY.cancelled} autoDismissMs={4000} onDismiss={() => setCancelledToast(false)} /> : null}
       {toast ? (
         <Toast
@@ -547,8 +640,8 @@ const RequestBanner = ({ view, note }: { view: GuestRequestView; note: string | 
 
 const styles = StyleSheet.create({
   bannerCancelled: { backgroundColor: '#f9e8ee' },
+  bannerDateCancelled: { color: CANCELLED_DATE_COLOR },
   bannerTitleCancelled: { fontFamily: appTypography.bodyBold, color: '#8a0a1f' },
-  fullNotice: { fontFamily: appTypography.bodySemibold, fontSize: 14, color: '#8a0a1f' },
   mutedText: { color: '#7a7572' },
   struck: { textDecorationLine: 'line-through', color: '#7a7572' },
   banner: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: '#f1ecea', borderRadius: radii.list, padding: 14 },
@@ -570,6 +663,7 @@ const styles = StyleSheet.create({
   newBadge: { backgroundColor: appColors.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   newBadgeText: { color: '#ffffff', fontFamily: appTypography.bodySemibold, fontSize: 12 },
   cancelBlock: { gap: 6, marginTop: 14 },
+  menuButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   helperText: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk, textAlign: 'center' },
   container: { padding: 20, gap: 10, paddingBottom: 48 },
   cover: { width: '100%', height: 180, borderRadius: radii.card, backgroundColor: '#c4b2a8' },

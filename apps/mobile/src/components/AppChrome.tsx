@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType, type PropsWithChildren, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentType, type MutableRefObject, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
   Keyboard,
@@ -21,6 +21,8 @@ const AnimatedView = Animated.View as unknown as ComponentType<any>;
 type AppScrollViewProps = PropsWithChildren<{
   contentContainerStyle?: StyleProp<ViewStyle>;
   refreshControl?: ReactNode;
+  /** Lets a screen scroll to a section (e.g. the host's "Who's coming" button). */
+  scrollRef?: MutableRefObject<{ scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void } | null>;
 }>;
 
 type AppScreenContainerProps = PropsWithChildren<{
@@ -74,13 +76,14 @@ type DetailRowProps = {
   onPress?: () => void;
 };
 
-export const AppScrollView = ({ children, contentContainerStyle, refreshControl }: AppScrollViewProps) => {
+export const AppScrollView = ({ children, contentContainerStyle, refreshControl, scrollRef }: AppScrollViewProps) => {
   // Only defined inside the tab navigator; stack screens pushed above the tabs have no bar to clear.
   const tabBottomPadding = useTabScreenBottomPadding();
 
   return (
     <View style={styles.screenRoot}>
       <ScrollView
+        {...({ ref: scrollRef } as object)}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl as ScrollViewProps['refreshControl']}

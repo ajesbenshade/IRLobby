@@ -28,7 +28,7 @@ import {
   type DayValue,
 } from '@foyer/dates';
 import { compressGatheringPhoto } from '@foyer/photos';
-import { APPROVAL_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, HOST_FORM_COPY, PICKER_COPY } from '@constants/foyerCopy';
 import { parseTurnOffFallback } from '@foyer/approval';
 import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
 import {
@@ -177,7 +177,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       navigation.navigate('Tabs', { screen: 'Activity' });
     },
     onError: (saveError) => {
-      const message = getErrorMessage(saveError, 'Unable to post this gathering.');
+      const message = getErrorMessage(saveError, HOST_FORM_COPY.postFailed);
       // Server fallback for "turn off with waiting requests": same alert as the client check.
       const waiting = parseTurnOffFallback(message);
       if (waiting != null) {
@@ -211,7 +211,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       return;
     }
     if (!title.trim() || !place.trim()) {
-      setError('Add a title and place.');
+      setError(HOST_FORM_COPY.missingTitlePlace);
       return;
     }
     setError(null);
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   inputMulti: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
   helper: { fontFamily: appTypography.bodyRegular, fontSize: 12.5, color: appColors.mutedInk, lineHeight: 18 },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 10, padding: 4, gap: 4 },
-  segmentItem: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
+  segmentItem: { flex: 1, minHeight: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
   segmentOn: { backgroundColor: appColors.primaryWash },
   segmentText: { fontFamily: appTypography.bodyMedium, color: appColors.mutedInk },
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },

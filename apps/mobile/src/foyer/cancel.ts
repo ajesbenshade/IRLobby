@@ -75,6 +75,12 @@ export const cancelledDateLabel = (iso: string | null | undefined): string => {
   return CANCEL_COPY.bannerDate(`${MONTH_SHORT[date.getMonth()]} ${date.getDate()}`);
 };
 
+/** `<title> was cancelled by the host.` plus ` Reason: <reason>` when the host gave one. */
+export const cancelSystemMessage = (title: string, reason: string | null | undefined): string => {
+  const trimmed = reason?.trim();
+  return trimmed ? CANCEL_COPY.systemMessageWithReason(title, trimmed) : CANCEL_COPY.systemMessage(title);
+};
+
 const statusOf = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 

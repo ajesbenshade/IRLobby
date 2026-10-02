@@ -226,37 +226,6 @@ export const PhotoGalleryScreen = () => {
         </View>
       ) : null}
 
-      <ActionSheet
-        visible={reportSheet === 'menu'}
-        onClose={() => setReportSheet(null)}
-        rows={[
-          ...(canDownload && reportTarget?.type === 'photo' && reportTarget.photoId != null
-            ? [
-                {
-                  label: PHOTO_COPY.download,
-                  onPress: () => {
-                    setReportSheet(null);
-                    void run({ onlyIds: [reportTarget.photoId as number] });
-                  },
-                  testID: 'photo-download',
-                },
-              ]
-            : []),
-          { label: MEMBER_COPY.reportPhoto, onPress: () => setReportSheet('report'), testID: 'photo-report-row' },
-        ]}
-      />
-      <ReportSheet
-        visible={reportSheet === 'report'}
-        title={MEMBER_COPY.reportPhoto}
-        lead={MEMBER_COPY.reportPhotoLead}
-        name={MEMBER_COPY.thisPerson}
-        onClose={() => setReportSheet(null)}
-        onSubmit={(payload) => (reportTarget ? submitReport(reportTarget, payload) : Promise.resolve())}
-        onSent={() => {
-          setReportSheet(null);
-          setToast({ message: MEMBER_COPY.reportSent, sticky: false });
-        }}
-      />
       <Modal visible={viewerPhoto != null} animationType="fade" onRequestClose={() => setViewerIndex(null)}>
         <View style={styles.viewer}>
           <View style={styles.viewerBar}>
@@ -271,9 +240,8 @@ export const PhotoGalleryScreen = () => {
                 accessibilityRole="button"
                 accessibilityLabel={MEMBER_COPY.reportOrBlock}
                 onPress={() => {
-                  // Close the viewer first: a sheet cannot open over another Modal reliably.
+                  // The viewer stays open; the sheet is a Modal nested inside it.
                   setReportTarget(viewerPhotoTarget);
-                  setViewerIndex(null);
                   setReportSheet('menu');
                 }}
                 style={styles.barButton}
@@ -318,6 +286,40 @@ export const PhotoGalleryScreen = () => {
               <View style={styles.barButton} />
             )}
           </View>
+          {/* The sheets are nested inside the viewer Modal so the photo stays open underneath them. */}
+          <ActionSheet
+            visible={reportSheet === 'menu'}
+            onClose={() => setReportSheet(null)}
+            rows={[
+              ...(canDownload && reportTarget?.type === 'photo' && reportTarget.photoId != null
+                ? [
+                    {
+                      label: PHOTO_COPY.download,
+                      onPress: () => {
+                        setReportSheet(null);
+                        // The progress / permission sheets live outside this Modal, so close the viewer first.
+                        setViewerIndex(null);
+                        void run({ onlyIds: [reportTarget.photoId as number] });
+                      },
+                      testID: 'photo-download',
+                    },
+                  ]
+                : []),
+              { label: MEMBER_COPY.reportPhoto, onPress: () => setReportSheet('report'), testID: 'photo-report-row' },
+            ]}
+          />
+          <ReportSheet
+            visible={reportSheet === 'report'}
+            title={MEMBER_COPY.reportPhoto}
+            lead={MEMBER_COPY.reportPhotoLead}
+            name={MEMBER_COPY.thisPerson}
+            onClose={() => setReportSheet(null)}
+            onSubmit={(payload) => (reportTarget ? submitReport(reportTarget, payload) : Promise.resolve())}
+            onSent={() => {
+              setReportSheet(null);
+              setToast({ message: MEMBER_COPY.reportSent, sticky: false });
+            }}
+          />
           {toast ? (
             <Toast
               message={toast.message}

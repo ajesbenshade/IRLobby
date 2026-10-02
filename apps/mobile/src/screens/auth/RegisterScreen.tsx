@@ -11,32 +11,25 @@ import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { Field } from '@components/ui/Field';
+import { isFoyerMode } from '@constants/appMode';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
-import { updateOnboarding } from '@services/authService';
+import { persistLegalAcceptance } from '@services/authService';
 import { appColors } from '@theme/index';
 import axios from 'axios';
 
-import { birthDayLimits, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
+import { birthDayLimits, formatDayShort, isValidSignUpBirthDate, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { registrationFieldError } from '@foyer/logic';
 import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { LegalConsentText } from '@components/foyer/LegalConsentText';
-import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
+import { LEGAL_CONSENT_COPY, PICKER_COPY } from '@constants/foyerCopy';
 
 import type { AuthStackParamList } from '@navigation/types';
 
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
-
-const persistLegalAcceptance = async () => {
-  try {
-    await updateOnboarding({ terms_accepted: true, privacy_accepted: true });
-  } catch {
-    // Non-fatal: legal can be re-prompted later.
-  }
-};
 
 export const RegisterScreen = ({ navigation }: Props) => {
   const legal = useAppConfig();
@@ -64,15 +57,19 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
   const passwordsMatch = password.length >= 8 && password === confirmPassword;
 
+  // The Foyer requires a birth date so the under-13 check cannot be skipped (legacy irlobby mode keeps it optional).
+  const hasValidBirthDate = !isFoyerMode() || isValidSignUpBirthDate(dateOfBirth);
+
   const isFormValid = useMemo(
     () =>
+      hasValidBirthDate &&
       firstName.trim().length > 0 &&
       lastName.trim().length > 0 &&
       email.trim().length > 0 &&
       username.trim().length >= 3 &&
       passwordsMatch &&
       acceptedLegal,
-    [acceptedLegal, email, firstName, lastName, passwordsMatch, username],
+    [acceptedLegal, email, firstName, hasValidBirthDate, lastName, passwordsMatch, username],
   );
 
   useEffect(() => {
@@ -289,6 +286,11 @@ export const RegisterScreen = ({ navigation }: Props) => {
           />
         </Pressable>
 
+        {!hasValidBirthDate ? (
+          <Text style={styles.hintText} testID="register-birth-required">
+            {PICKER_COPY.birthRequired}
+          </Text>
+        ) : null}
         {!acceptedLegal ? (
           <Text style={styles.hintText}>{LEGAL_CONSENT_COPY.signUpRequired}</Text>
         ) : null}

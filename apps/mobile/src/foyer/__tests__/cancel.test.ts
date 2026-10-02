@@ -1,4 +1,5 @@
 import {
+  cancelSystemMessage,
   cancelEventBody,
   clampReason,
   describeCancelEventError,
@@ -52,5 +53,15 @@ describe('host cancel', () => {
     expect(describeCancelEventError(err(405)).message).toBe(describeCancelEventError(err(404)).message);
     expect(describeCancelEventError(err(403)).message).not.toBe(describeCancelEventError(err(500)).message);
     expect(isCancelledMessage('This gathering was cancelled by the host.')).toBe(true);
+  });
+});
+
+describe('cancelSystemMessage (guest Chat card)', () => {
+  it('matches the backend chat message with and without a reason', () => {
+    expect(cancelSystemMessage('Family Game Night', "The pavilion is booked. We'll reschedule soon.")).toBe(
+      "Family Game Night was cancelled by the host. Reason: The pavilion is booked. We'll reschedule soon.",
+    );
+    expect(cancelSystemMessage('Family Game Night', '  ')).toBe('Family Game Night was cancelled by the host.');
+    expect(cancelSystemMessage('Family Game Night', null)).toBe('Family Game Night was cancelled by the host.');
   });
 });

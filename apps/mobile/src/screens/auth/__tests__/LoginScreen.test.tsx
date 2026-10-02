@@ -5,7 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { auth as authCopy } from '@constants/copy';
 import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { LoginScreen } from '../LoginScreen';
+
+const mockPersistLegalAcceptance = jest.fn(async () => undefined);
+jest.mock('@services/authService', () => ({
+  ...(jest.requireActual('@services/authService') as object),
+  persistLegalAcceptance: () => mockPersistLegalAcceptance(),
+}));
 
 const mockNavigate = jest.fn();
 const mockSignIn = jest.fn();
@@ -178,7 +185,7 @@ describe('LoginScreen dressed layout', () => {
         `${authCopy.login.signInToastTitle} Google identity token is required.`,
       ),
     ).toBeTruthy();
-    expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith(idToken);
+    expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith(idToken, { acceptedLegal: true });
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();
     expect(screen.queryByLabelText(authCopy.login.twitterCta)).toBeNull();
   });
@@ -201,5 +208,63 @@ describe('LoginScreen dressed layout', () => {
     await waitFor(() => {
       expect(mockPromptAsync).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('shows the consent line next to the social buttons (Apple review: terms/privacy on Login)', async () => {
+    renderScreen();
+    expect(await screen.findByTestId('apple-sign-in-button')).toBeTruthy();
+    expect(JSON.stringify(screen.toJSON())).toContain(LEGAL_CONSENT_COPY.loginPrefix);
+    expect(screen.getByText(LEGAL_CONSENT_COPY.terms)).toBeTruthy();
+    expect(screen.getByText(LEGAL_CONSENT_COPY.privacy)).toBeTruthy();
+  });
+
+  it('sends the Terms / Privacy flags with Google sign-in from Login, as Sign up does', async () => {
+    const idToken = googleIdToken();
+    mockPromptAsync.mockResolvedValue({ type: 'success', params: { id_token: idToken } });
+    mockSignInWithGoogleIdToken.mockResolvedValue({ id: 5 });
+    mockPersistLegalAcceptance.mockClear();
+
+    renderScreen();
+    fireEvent.press(screen.getByLabelText(authCopy.login.googleCta));
+
+    await waitFor(() => expect(mockSignInWithGoogleIdToken).toHaveBeenCalledWith(idToken, { acceptedLegal: true }));
+    await waitFor(() => expect(mockPersistLegalAcceptance).toHaveBeenCalledTimes(1));
+  });
+
+  it('sends the Terms / Privacy flags with Apple sign-in from Login, next to authorization_code', async () => {
+    (AppleAuthentication.signInAsync as jest.Mock).mockResolvedValue({
+      identityToken: 'apple-id-token',
+      authorizationCode: 'apple-code',
+      email: 'a@b.co',
+      fullName: { givenName: 'Ada', familyName: 'Lovelace' },
+    });
+    mockSignInWithAppleIdentityToken.mockResolvedValue({ id: 6 });
+    mockPersistLegalAcceptance.mockClear();
+
+    renderScreen();
+    fireEvent.press(await screen.findByTestId('apple-sign-in-button'));
+
+    await waitFor(() =>
+      expect(mockSignInWithAppleIdentityToken).toHaveBeenCalledWith({
+        identityToken: 'apple-id-token',
+        authorizationCode: 'apple-code',
+        email: 'a@b.co',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        acceptedLegal: true,
+      }),
+    );
+    await waitFor(() => expect(mockPersistLegalAcceptance).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not send legal flags with plain email sign-in', async () => {
+    renderScreen();
+    fireEvent.changeText(screen.getByLabelText('Email'), 'alex@irlobby.com');
+    fireEvent.press(screen.getByLabelText(authCopy.login.primaryCta));
+    fireEvent.changeText(await screen.findByLabelText('Password'), 'longenough');
+    fireEvent.press(screen.getByLabelText(authCopy.login.primaryCta));
+    await waitFor(() => expect(mockSignIn).toHaveBeenCalled());
+    expect(JSON.stringify(mockSignIn.mock.calls[0][0])).not.toContain('terms_accepted');
+    expect(mockSignInWithGoogleIdToken).not.toHaveBeenCalled();
   });
 });

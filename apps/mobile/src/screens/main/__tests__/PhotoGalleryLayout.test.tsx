@@ -33,7 +33,7 @@ const renderScreen = () => {
 };
 
 const photos = [31, 32, 33].map((id) => ({ id, url: `https://example.com/${id}.jpg` }));
-const flat = (node: { props: { style: unknown } }) => StyleSheet.flatten(node.props.style as never);
+const flat = (node: { props: Record<string, any> }) => StyleSheet.flatten(node.props.style as never) as Record<string, any>;
 
 describe('Photos page layout and safe areas', () => {
   beforeEach(() => {

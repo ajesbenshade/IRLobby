@@ -19,7 +19,7 @@ const base = {
   onSelectAll: jest.fn(),
 };
 
-const styleOf = (node: { props: { style: unknown } }) => StyleSheet.flatten(node.props.style as never);
+const styleOf = (node: { props: Record<string, any> }) => StyleSheet.flatten(node.props.style as never) as Record<string, any>;
 
 describe('Photos bottom bar', () => {
   beforeEach(() => jest.clearAllMocks());

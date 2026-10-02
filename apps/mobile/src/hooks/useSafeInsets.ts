@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { createContext, useContext } from 'react';
 import { SafeAreaInsetsContext, type EdgeInsets } from 'react-native-safe-area-context';
 
 const NONE: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -9,4 +9,7 @@ const NONE: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
  *
  * Every full-screen custom header must start below `top`; primary actions sit at `bottom + 12`.
  */
-export const useSafeInsets = (): EdgeInsets => useContext(SafeAreaInsetsContext) ?? NONE;
+// A test file that mocks react-native-safe-area-context leaves the context undefined; fall back to a private empty context then.
+const FALLBACK_CONTEXT = createContext<EdgeInsets | null>(null);
+
+export const useSafeInsets = (): EdgeInsets => useContext(SafeAreaInsetsContext ?? FALLBACK_CONTEXT) ?? NONE;

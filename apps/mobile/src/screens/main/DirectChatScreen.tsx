@@ -10,6 +10,7 @@ import { EmptyState, InlineError, Toast } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { CHAT_COPY, COMMON_COPY, MEMBER_COPY } from '@constants/foyerCopy';
 import { canSendMessage, withDividers } from '@foyer/directChat';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchConversationMessages, sendConversationMessage } from '@services/chatService';
@@ -27,6 +28,7 @@ type SheetName = 'menu' | 'mute' | 'unmute' | 'report' | 'block' | null;
 
 /** Private chat with a friend. Messages ride on the existing conversation endpoints. */
 export const DirectChatScreen = () => {
+  const insets = useSafeInsets();
   const route = useRoute<RouteProp<MainStackParamList, 'DirectChat'>>();
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
@@ -81,7 +83,7 @@ export const DirectChatScreen = () => {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.bar}>
+      <View style={[styles.bar, { paddingTop: insets.top + 8 }]} testID="chat-header">
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.barButton}>
           <Text style={styles.barText}>{COMMON_COPY.back}</Text>
         </Pressable>
@@ -120,7 +122,7 @@ export const DirectChatScreen = () => {
       {messagesQuery.isError ? <InlineError message={CHAT_COPY.loadError} /> : null}
       <InlineError message={error ?? (!canSend ? CHAT_COPY.cannotSend : null)} />
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: Math.max(24, insets.bottom + 12) }]}>
         <TextInput
           accessibilityLabel={CHAT_COPY.composerPlaceholder}
           value={text}
@@ -216,7 +218,7 @@ export const DirectChatScreen = () => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: appColors.background },
-  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 12 },
+  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
   barButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   barText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   barTitle: { flex: 1, textAlign: 'center', fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },

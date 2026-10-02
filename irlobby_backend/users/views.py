@@ -10,7 +10,12 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -689,4 +694,29 @@ def request_password_reset(request):
     return Response(
         {"message": "If an account with that email exists, a password reset link has been sent."},
         status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def app_config(request):
+    """Public app settings the clients need before sign-in: legal links and contacts."""
+
+    def clean(value):
+        value = (value or "").strip() if isinstance(value, str) else ""
+        return value or None
+
+    church_admin = {
+        "name": clean(settings.FOYER_CHURCH_ADMIN_CONTACT_NAME),
+        "email": clean(settings.FOYER_CHURCH_ADMIN_CONTACT_EMAIL),
+        "phone": clean(settings.FOYER_CHURCH_ADMIN_PHONE),
+    }
+    return Response(
+        {
+            "terms_url": clean(settings.FOYER_TERMS_URL),
+            "privacy_url": clean(settings.FOYER_PRIVACY_URL),
+            "support_email": clean(settings.FOYER_SUPPORT_EMAIL),
+            "church_admin": church_admin if any(church_admin.values()) else None,
+        }
     )

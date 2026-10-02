@@ -28,11 +28,12 @@ from rest_framework_simplejwt.views import (
 )
 
 from activities import foyer_views
-from irlobby_backend.legal_pages import privacy_policy, support_page
+from irlobby_backend.legal_pages import privacy_policy, support_page, terms_of_use
 from irlobby_backend.stripe_bounce import stripe_app_bounce
 from users.oauth_views import apple_mobile_login, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
+    app_config,
     logout_view,
     password_reset_confirm,
     request_password_reset,
@@ -223,6 +224,8 @@ urlpatterns = [
         {"target": "tickets/cancel"},
         name="stripe-ticket-cancel-no-slash",
     ),
+    path("terms", terms_of_use, name="terms-of-use"),
+    path("terms/", terms_of_use, name="terms-of-use-slash"),
     path("support", support_page, name="support"),
     path("support/", support_page, name="support-slash"),
     path(f"{admin_url_path}/", admin.site.urls),
@@ -237,6 +240,7 @@ urlpatterns = [
     path("api/auth/google/mobile/", google_mobile_login, name="google_mobile_login"),
     path("api/auth/apple/mobile/", apple_mobile_login, name="apple_mobile_login"),
     path("api/auth/twitter/", include("users.oauth_urls")),
+    path("api/config/", app_config, name="app-config"),
     path("api/users/", include("users.urls")),
     path("api/churches/", foyer_views.church_list_create, name="church-list"),
     path(

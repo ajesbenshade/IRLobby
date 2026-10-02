@@ -21,6 +21,7 @@ from .social_auth import (
     build_auth_response,
     is_apple_oauth_configured,
     is_google_oauth_configured,
+    legal_acceptance_from_data,
     normalize_email,
     resolve_or_create_social_user,
     split_display_name,
@@ -451,6 +452,7 @@ def google_mobile_login(request):
             username=email.split("@", 1)[0],
             first_name=payload.get("given_name", "") or "",
             last_name=payload.get("family_name", "") or "",
+            legal=legal_acceptance_from_data(request.data),
         )
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
@@ -488,6 +490,7 @@ def apple_mobile_login(request):
             username=email.split("@", 1)[0] if email else None,
             first_name=first_name,
             last_name=last_name,
+            legal=legal_acceptance_from_data(request.data),
         )
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)

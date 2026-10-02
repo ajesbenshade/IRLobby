@@ -22,6 +22,9 @@ class User(AbstractUser):
     token_created_at = models.DateTimeField(null=True, blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
     privacy_accepted_at = models.DateTimeField(null=True, blank=True)
+    # Which version of the terms/privacy text the client showed when they accepted.
+    terms_version = models.CharField(max_length=32, blank=True, default="")
+    privacy_version = models.CharField(max_length=32, blank=True, default="")
 
     # Stripe Connect (marketplace host payouts)
     stripe_connect_account_id = models.CharField(max_length=255, blank=True, default="")

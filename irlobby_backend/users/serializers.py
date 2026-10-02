@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
@@ -214,6 +215,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     sex = serializers.CharField(required=False, allow_blank=True)
+    terms_accepted = serializers.BooleanField(write_only=True, required=False, default=False)
+    privacy_accepted = serializers.BooleanField(write_only=True, required=False, default=False)
+    terms_version = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=32
+    )
+    privacy_version = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=32
+    )
 
     class Meta:
         model = User
@@ -226,7 +235,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "date_of_birth",
             "sex",
+            "terms_accepted",
+            "privacy_accepted",
+            "terms_version",
+            "privacy_version",
         )
+
+    def to_internal_value(self, data):
+        # Accept camelCase acceptance flags from the mobile client.
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        for camel, snake in (
+            ("termsAccepted", "terms_accepted"),
+            ("privacyAccepted", "privacy_accepted"),
+            ("termsVersion", "terms_version"),
+            ("privacyVersion", "privacy_version"),
+        ):
+            if camel in data and snake not in data:
+                data[snake] = data[camel]
+        return super().to_internal_value(data)
 
     def validate_date_of_birth(self, value):
         error = account_age_error(value)
@@ -253,11 +279,33 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             date_of_birth=dob,
         ):
             raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
+        if getattr(settings, "REQUIRE_TERMS_ON_REGISTER", False):
+            errors = {}
+            if not attrs.get("terms_accepted"):
+                errors["terms_accepted"] = "You must accept the Terms of Use to create an account."
+            if not attrs.get("privacy_accepted"):
+                errors["privacy_accepted"] = (
+                    "You must accept the Privacy Policy to create an account."
+                )
+            if errors:
+                raise serializers.ValidationError(errors)
         return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
+        acceptance = {
+            key: validated_data.pop(key, default)
+            for key, default in (
+                ("terms_accepted", False),
+                ("privacy_accepted", False),
+                ("terms_version", ""),
+                ("privacy_version", ""),
+            )
+        }
         user = User.objects.create_user(**validated_data)
+        from .social_auth import stamp_legal_acceptance
+
+        stamp_legal_acceptance(user, **acceptance)
         return user
 
 

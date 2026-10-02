@@ -12,6 +12,8 @@ Giving and donations are out of scope for this build. There is no gift amount, C
 
 Extra optional fields: `date_of_birth` (`YYYY-MM-DD`), `sex` (`male` | `female`).
 
+Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters).
+
 A birth date that makes the person under 13 is rejected:
 
 ```json
@@ -532,3 +534,45 @@ A gathering with a capacity is **full** when confirmed people (the account holde
 ## Hidden addresses
 
 For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
+
+# Apple App Store compliance pack
+
+## Terms at sign-up
+
+`POST /api/users/register/` also takes these optional fields (camelCase `termsAccepted`, `privacyAccepted`, `termsVersion`, `privacyVersion` work too):
+
+| Field | Type | Effect |
+| --- | --- | --- |
+| `terms_accepted` | bool | `true` sets `terms_accepted_at` to now |
+| `privacy_accepted` | bool | `true` sets `privacy_accepted_at` to now |
+| `terms_version` | string, up to 32 | stored as `terms_version` when terms are accepted |
+| `privacy_version` | string, up to 32 | stored as `privacy_version` when privacy is accepted |
+
+Old clients that send none of them keep working: nothing is stamped and the existing onboarding screen still collects acceptance (`PATCH /api/users/onboarding/`). An existing timestamp is never overwritten.
+
+`POST /api/auth/apple/mobile/` and `POST /api/auth/google/mobile/` accept the same four fields in the request body and stamp them on the signed-in account the same way (new or existing; once only).
+
+Setting `REQUIRE_TERMS_ON_REGISTER` (environment variable, default `false`): when `true`, register answers 400 without both acceptances:
+
+```json
+{ "terms_accepted": "You must accept the Terms of Use to create an account.", "privacy_accepted": "You must accept the Privacy Policy to create an account." }
+```
+
+(Only the missing key is present.) It applies to `register` only, not to social sign-in.
+
+## App config (public)
+
+`GET /api/config/` (no auth; a bad token header is ignored) → 200:
+
+```json
+{
+  "terms_url": "https://irlobby.com/terms",
+  "privacy_url": "https://irlobby.com/privacy",
+  "support_email": "support@irlobby.com",
+  "church_admin": { "name": "Pastor Rob", "email": "rob@example.org", "phone": "+12155550100" }
+}
+```
+
+`terms_url`, `privacy_url` and `support_email` are strings (or `null` if configured blank). `church_admin` is `null` when no contact is configured; otherwise each of `name`, `email`, `phone` is a string or `null`. Environment: `FOYER_TERMS_URL`, `FOYER_PRIVACY_URL`, `FOYER_SUPPORT_EMAIL` (default `support@irlobby.com`), `FOYER_CHURCH_ADMIN_CONTACT_NAME`, `FOYER_CHURCH_ADMIN_CONTACT_EMAIL`, `FOYER_CHURCH_ADMIN_PHONE` (all default empty).
+
+The server also serves `GET /terms` and `/terms/` as HTML, exactly like `/privacy`, from `deploy/oracle/legal/terms.html` (and nginx serves the same file at `https://irlobby.com/terms`). The file in the repo is a marked placeholder until the approved terms replace it.

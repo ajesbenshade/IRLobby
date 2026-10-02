@@ -17,7 +17,6 @@ type Props = {
   member?: FamilyMember | null;
   /** Edit only: `Remove from family` link under Save. */
   onRemove?: (member: FamilyMember) => void;
-  /** Edit only: show the proposed `Show on my profile` switch (birthdays flag + backend field). Default hidden. */
   onCancel: () => void;
   onAdded: () => void;
 };

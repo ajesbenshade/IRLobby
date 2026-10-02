@@ -50,9 +50,8 @@ export const personSubtitle = (member: WhosComingDependent): string => {
   if (!isChild || month == null || year == null) {
     return FAMILY_COPY.adult;
   }
-  // A saved day wins; a bare date that is the last day of its month is how the server stores month/year-only rows.
-  const dayKnown =
-    member.birth_day != null || (member.birth_day === undefined && dob != null && dob.day !== daysInMonth(dob.year, dob.month));
+  // Backend: a real day is `birth_day` / a non-null `date_of_birth`; month-only children have neither (no made-up last day).
+  const dayKnown = member.birth_precision !== 'month' && (member.birth_day != null || dob != null);
   const day = member.birth_day ?? dob?.day ?? null;
   const born = dayKnown && day != null ? formatBirthdayLong({ year, month, day }) : `${MONTH_NAMES[month - 1]} ${year}`;
   const line = FAMILY_COPY.born(born);
@@ -109,9 +108,10 @@ export const birthDayForAgeCheck = (member: WhosComingDependent): DayValue | nul
 };
 
 /**
- * Age on the event day, from the family member's birthdate on this device. The whos-coming list drops the day for exact
- * birthdates, so the server's own event-day `age` is used too whenever it is older: the check never blocks a child the
- * server would let in, but it also does not depend on the server's `eligible` flag.
+ * Age on the event day. The server's `age` in the whos-coming list is the age ON THE EVENT DAY in New York time (Backend
+ * confirmed). The app also works it out locally from the birthdate it has, and takes the LARGER of the two: the check never
+ * blocks a child the server would let in, and it still catches a wrong `eligible` flag. Month-only rows have no day, so
+ * they lean on the server's age.
  */
 export const memberAgeOnEvent = (member: WhosComingDependent, range: AgeRange | null): number | null => {
   const eventDay = eventLocalDay(range?.time);

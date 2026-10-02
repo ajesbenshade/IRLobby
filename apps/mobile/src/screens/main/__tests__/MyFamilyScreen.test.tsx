@@ -8,7 +8,6 @@ jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ goBack: j
 jest.mock('@expo/vector-icons', () => ({ MaterialCommunityIcons: 'MaterialCommunityIcons' }));
 jest.mock('@services/foyerService', () => ({
   fetchFamilyMembers: jest.fn(),
-  householdPatchSupported: jest.fn(),
   removeHouseholdChild: jest.fn(),
   addFamilyMember: jest.fn(),
   updateFamilyMember: jest.fn(),
@@ -35,7 +34,6 @@ describe('My family', () => {
   beforeEach(() => {
     Object.values(service).forEach((fn) => fn.mockReset());
     service.fetchFamilyMembers.mockResolvedValue(members);
-    service.householdPatchSupported.mockResolvedValue(false);
   });
 
   it('lists name + Born date, Adult for legacy spouse rows, and Born month/year for legacy rows', async () => {
@@ -49,29 +47,28 @@ describe('My family', () => {
     expect(view.queryByText('Child')).toBeNull();
   });
 
-  it('hides Add day and Edit details until the PATCH endpoint exists', async () => {
-    const view = renderScreen();
-    await view.findByText('Born March 2016');
-    await waitFor(() => expect(service.householdPatchSupported).toHaveBeenCalled());
-    expect(view.queryByText('Add day')).toBeNull();
-    fireEvent.press(view.getByTestId('family-row-3'));
-    expect(await view.findByText('Remove from family')).toBeTruthy();
-    expect(view.queryByText('Edit details')).toBeNull();
-  });
-
-  it('shows Add day and Edit details once PATCH is allowed (404-tolerant probe says yes)', async () => {
-    service.householdPatchSupported.mockResolvedValue(true);
-    service.updateFamilyMember.mockResolvedValue(undefined);
+  it('always offers Add day on a month-only child and Edit details in the row sheet (no capability probe)', async () => {
     const view = renderScreen();
     expect(await view.findByText('Add day')).toBeTruthy();
-    fireEvent.press(view.getByLabelText('Add day Noah'));
+    expect(view.queryByLabelText('Add day Caleb')).toBeNull();
+    fireEvent.press(view.getByTestId('family-row-3'));
+    expect(await view.findByText('Edit details')).toBeTruthy();
+    expect(service.householdPatchSupported).toBeUndefined();
+  });
+
+  it('Add day PATCHes {birth_day} and the row then reads Born March 4, 2016', async () => {
+    service.updateFamilyMember.mockResolvedValue(undefined);
+    const view = renderScreen();
+    fireEvent.press(await view.findByLabelText('Add day Noah'));
     expect(await view.findByText("Add the day to Noah's birthday")).toBeTruthy();
+    service.fetchFamilyMembers.mockResolvedValue(
+      members.map((member) => (member.id === 3 ? { ...member, birth_day: 4, date_of_birth: '2016-03-04' } : member)),
+    );
     fireEvent.press(view.getByLabelText('March 4, 2016'));
     fireEvent.press(view.getAllByLabelText('Confirm').pop() as never);
-    await waitFor(() => expect(service.updateFamilyMember).toHaveBeenCalledWith(3, { date_of_birth: '2016-03-04' }));
-
-    fireEvent.press(view.getByTestId('family-row-2'));
-    expect(await view.findByText('Edit details')).toBeTruthy();
+    await waitFor(() => expect(service.updateFamilyMember).toHaveBeenCalledWith(3, { birth_day: 4 }));
+    expect(await view.findByText('Born March 4, 2016')).toBeTruthy();
+    expect(view.queryByLabelText('Add day Noah')).toBeNull();
   });
 
   it('row chevron opens the sheet; Remove from family opens Remove <name>? with Remove and Keep', async () => {

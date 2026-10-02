@@ -196,30 +196,15 @@ export const addFamilyMember = async (payload: {
   });
 };
 
-/** Edit a family member, or add the missing day to a legacy month/year row. Needs the backend PATCH endpoint. */
+/**
+ * PATCH /api/users/household/<id>/ (live). `birth_day` adds the day to a month-only child (null clears it back to month-only);
+ * `date_of_birth` replaces the full date. Owner only. Returns the same body as POST, including `members`.
+ */
 export const updateFamilyMember = async (
   id: number,
-  patch: { name?: string; sex?: FamilySex; date_of_birth?: string },
+  patch: { name?: string; sex?: FamilySex; date_of_birth?: string; birth_day?: number | null },
 ): Promise<void> => {
   await api.patch(`/api/users/household/${id}/`, patch);
-};
-
-/**
- * Capability check for PATCH /api/users/household/<id>/ (the backend is adding it). Side-effect free: an OPTIONS request
- * and the `Allow` header. A 404, 405, network error or a missing header all read as "not there yet", never as a crash.
- */
-export const householdPatchSupported = async (sampleId: number): Promise<boolean> => {
-  try {
-    const response = await api.options(`/api/users/household/${sampleId}/`);
-    const allow = String(
-      (response.headers as Record<string, unknown> | undefined)?.allow ??
-        (response.headers as Record<string, unknown> | undefined)?.Allow ??
-        '',
-    ).toUpperCase();
-    return allow.split(/[\s,]+/).includes('PATCH');
-  } catch {
-    return false;
-  }
 };
 
 export const addHouseholdChild = async (payload: {

@@ -83,3 +83,29 @@ describe('Use my location for maps row', () => {
     expect(failed.getByText("Couldn't update your location setting. Try again.")).toBeTruthy();
   });
 });
+
+describe('map picker label', () => {
+  const { isUserDrag } = jest.requireActual('../MapPickerSheet') as { isUserDrag: (r: object, c: object, d?: object) => boolean };
+  const center = { latitude: 40.2866, longitude: -75.3877 };
+
+  it('does not geocode (or move the pin) for the initial region or the animate-to-center callback', () => {
+    expect(isUserDrag(center, center)).toBe(false);
+    expect(isUserDrag({ latitude: 40.28660004, longitude: -75.38770004 }, center)).toBe(false);
+    expect(isUserDrag({ latitude: 40.5, longitude: -75.1 }, center, { isGesture: false })).toBe(false);
+  });
+
+  it('geocodes once the user actually drags', () => {
+    expect(isUserDrag({ latitude: 40.29, longitude: -75.39 }, center)).toBe(true);
+    expect(isUserDrag(center, center, { isGesture: true })).toBe(true);
+  });
+
+  it('keeps the fixed Franconia label when the initial region callback fires', async () => {
+    mapLocation.useMapCenter.mockReturnValue({ center, source: 'default', loading: false });
+    const view = render(<MapPickerSheet visible onCancel={jest.fn()} onChoose={jest.fn()} />);
+    const map = view.UNSAFE_getByType('MapView' as never);
+    await act(async () => {
+      map.props.onRegionChangeComplete({ ...center, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+    });
+    expect(view.getByText('Franconia, PA')).toBeTruthy();
+  });
+});

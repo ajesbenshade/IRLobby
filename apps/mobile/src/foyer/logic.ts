@@ -104,6 +104,8 @@ export type WhosComingDependent = {
   birth_month?: number | null;
   birth_year?: number | null;
   birth_day?: number | null;
+  /** `day` when a real full date is stored, `month` for month-only children. */
+  birth_precision?: 'day' | 'month' | string | null;
   date_of_birth?: string | null;
 };
 

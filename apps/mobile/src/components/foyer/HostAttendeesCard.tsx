@@ -11,7 +11,7 @@ import { appColors, appTypography, radii } from '@theme/index';
 
 export const HOST_PREVIEW_LIMIT = 8;
 
-/** Host-only "Who's coming": households, relationship lines and age-band chips. Never contact data. */
+/** Host-only "Who's coming": households with names and age-band chips only. Never contact data, relationships or birthdates. */
 export const HostAttendeesCard = ({
   data,
   hostName,

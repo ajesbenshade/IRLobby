@@ -1,4 +1,4 @@
-import { applyClientEligibility, buildRsvpPeople, eligibleMemberIds, eventLocalDay, memberAgeOnEvent } from '../rsvp';
+import { applyClientEligibility, buildRsvpPeople, eligibleMemberIds, eventLocalDay, memberAgeOnEvent, personSubtitle } from '../rsvp';
 import type { WhosComingResponse } from '../logic';
 
 // Saturday Nov 14, 2026, 7pm New York.
@@ -74,5 +74,28 @@ describe('client-side age check (does not rely only on the server eligible flag)
     expect(people.find((person) => person.name === 'Mia')).toMatchObject({ eligible: false, reason: 'Not eligible: ages 13–18' });
     expect(people.find((person) => person.name === 'Caleb')?.eligible).toBe(true);
     expect(eligibleMemberIds(response, teens, [1, 2])).toEqual([2]);
+  });
+});
+
+describe('Backend month-only shape (date_of_birth null) in the age check and the party picker', () => {
+  const monthOnly = (overrides: Record<string, unknown> = {}) =>
+    child({ id: 1, name: 'Noah', birth_year: 2013, birth_month: 11, birth_precision: 'month', date_of_birth: null, ...overrides });
+
+  it('never crashes on a null date_of_birth and uses the server age (the larger of local and server)', () => {
+    // Server says 13 on the event day; the last-day-of-month fallback would say 12. The server wins.
+    expect(memberAgeOnEvent(monthOnly({ age: 13 }) as never, { age_min: 13, time: EVENT })).toBe(13);
+    expect(applyClientEligibility(sheet(monthOnly({ age: 13 })), { age_min: 13, time: EVENT }).dependents[0].eligible).toBe(true);
+    // Server age 12 and out of range: blocked even though the flag says eligible.
+    expect(applyClientEligibility(sheet(monthOnly({ age: 12 })), { age_min: 13, time: EVENT }).dependents[0].eligible).toBe(false);
+  });
+
+  it('with no server age either, falls back to the last day of the month', () => {
+    expect(memberAgeOnEvent(monthOnly() as never, { age_min: 13, time: EVENT })).toBe(12);
+  });
+
+  it("party picker reads 'Born November 2013 · age 13' for month-only and the full date for a real day", () => {
+    expect(personSubtitle(monthOnly({ age: 13 }) as never)).toBe('Born November 2013 · age 13');
+    expect(personSubtitle(child({ id: 2, birth_year: 2011, birth_month: 6, birth_day: 9, birth_precision: 'day', date_of_birth: '2011-06-09', age: 15 }) as never)).toBe('Born June 9, 2011 · age 15');
+    expect(personSubtitle(child({ id: 3, birth_year: 2016, birth_month: 3, date_of_birth: null, age: 10 }) as never)).toBe('Born March 2016 · age 10');
   });
 });

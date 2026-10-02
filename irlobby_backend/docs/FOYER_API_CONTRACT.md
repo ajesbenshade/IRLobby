@@ -333,7 +333,7 @@ Every endpoint below requires auth unless stated. Nothing here removes or rename
 - Child: `{ "name", "sex"?, "birth_month": 1-12, "birth_year": 2017 }`, or the old `{ "date_of_birth": "YYYY-MM-DD" }` (also `birth_date`). `relationship` defaults to `"child"`. Must be under 18.
 - Spouse: `{ "name", "relationship": "spouse", "sex"? }`. Any birth data is ignored; a spouse is an adult with age `null`. One spouse per household.
 - 201 returns the legacy child object (plus `relationship`, `birth_month`, `birth_year`) and a `members` list. Other relationships → 400 `relationship`.
-- When only month/year is stored, `date_of_birth` is the last day of that month (never older than the child is).
+- When only month/year is stored, `date_of_birth` is `null` (older builds saw the last day of the month). Ages still use the last day of the month so a child never looks older. See "Birthdays (additive)" below for `birth_day` and `birth_precision`.
 
 `DELETE /api/users/household/<id>/` → 204 (unchanged).
 
@@ -382,7 +382,7 @@ New fields on `GET/PATCH /api/users/profile/` (own profile; also in the login pa
 - The `church` level includes accepted friends: an accepted friend sees a church-level profile even when they are not in the owner's church (or have no church). A non-friend from another church gets 404, and a pending request is not enough.
 - If the viewer is not allowed the full card but could still send a friend request (shared attended event, same church, or a public adult), they get `{ "id", "first_name", "friendship", "visible": false }` so the Add Friend button can work.
 - Otherwise 404. Blocked in either direction → 404. Your own id returns your own `email` and `phone`.
-- Never includes location, family, birth date, username or last name.
+- Never includes location, family, birth year or date, username or last name. The only birth data is `birthday: {month, day}` for an adult who chose to share it (see "Birthdays (additive)").
 
 `POST /api/users/<id>/report/` `{ "reason": "inappropriate|spam|harassment|fake_profile|threat|other", "description"? }` → 201 `{ "id", "status" }` (creates an `AbuseReport`). Blocking uses the existing `POST /api/moderation/block/<id>/` and `DELETE /api/moderation/unblock/<id>/`; blocking now also removes any friendship.
 
@@ -637,4 +637,66 @@ Not touched: payments. Foyer takes none; any leftover Stripe Connect account id 
 `POST /api/auth/apple/mobile/` accepts one more optional field, `authorization_code` (or `authorizationCode`): the one-time code from the native Sign in with Apple result. When the server has Apple signing configured it trades the code at `https://appleid.apple.com/auth/token` and stores Apple's refresh token on the Apple login record, only so it can be revoked on deletion. The response is unchanged and never contains it. Anything that goes wrong (no code, Apple down, bad code, not configured) is ignored and sign-in still succeeds. Env (all must be set for this to run): `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` (the `.p8` contents; `\n` allowed for newlines), and the client id is the first entry of `APPLE_OAUTH_AUDIENCES`. With any of them missing, deletion skips the Apple call.
 
 Database changes: `SocialAuthIdentity.apple_refresh_token` (secret text, default ""); `AbuseReport.reporter` is now nullable with `on_delete=SET_NULL`.
+
+# Birthdays (additive)
+
+Rules (Aaron's decisions): only adults can share their own birthday. A child's birthday is **never** shared with anyone but the parent, and is used only for age checks. There is no per-child "show on profile" field.
+
+## Household members: birth fields (owning parent only)
+
+`GET /api/users/household/` (`children` and `members`), and the 201 body of `POST /api/users/household/`, now carry these on every child:
+
+```json
+{
+  "id": 1, "name": "Kid", "relationship": "child", "sex": "female", "age": 9,
+  "birth_month": 3, "birth_year": 2017, "birth_day": null, "birth_precision": "month"
+}
+```
+
+- `birth_precision`: `"month"` (only month and year stored) or `"day"` (a real full date is stored).
+- `birth_day`: day of month, `null` when the precision is `"month"`.
+- `date_of_birth` (`YYYY-MM-DD`): present with a real value **only when a full date is stored**. It is never a made-up last day of the month. In the legacy `children` list and the POST body the key is always there, `null` when month-only; in `members` the key is left out when month-only.
+- A spouse has `birth_month`, `birth_year`, `birth_day` and `birth_precision` all `null`, and no `date_of_birth`.
+- `age` is computed as before. Month-only children are aged from the last day of their birth month, so a child never looks older than they are.
+- Only the owning parent receives any of this. Hosts (`/activities/<id>/attendees/`, `/activities/<id>/requests/`), other attendees, profile cards, friend lists and `/api/friends/birthdays/` expose a child's **age band only** ("under 13", "13-17", "adult"), never a birth month, day, year or date. A test asserts this.
+
+`POST /api/users/household/` accepts an optional `birth_day` (1-31) with `birth_month` + `birth_year`, or the existing full `date_of_birth` / `birth_date`. Rules: a real calendar date, not in the future (including a month/year later than this month), and the child must be under 18 (`"Only children under 18 can be added to a household."`). `relationship` stays optional and defaults to `"child"`. Errors are keyed `birth_day`, `birth_month` or `date_of_birth`.
+
+## `PATCH /api/users/household/<id>/`
+
+Owner only: anyone else (or an unknown id) gets 404 `{"detail": "Family member not found."}`. Body, all optional:
+
+- `birth_day`: 1-31 sets the day using the stored month and year (so `date_of_birth` becomes a real date and `birth_precision` becomes `"day"`). `null` clears it back to month-only.
+- `date_of_birth` (or `birth_date`): replaces the whole birth date.
+- `name`, `sex`: unchanged unless sent.
+
+The same checks run again: real date, not in the future, under 18, and a 13-17 child that matches an existing teen account still gets the `name` error. A spouse has no birth data: `birth_day` / `date_of_birth` → 400. 200 returns the same body as the POST (the child object plus `members`).
+
+## `show_birthday` (adults only)
+
+`GET/PATCH /api/users/profile/` has a new field `show_birthday` (bool, default `false`), readable and writable on your own profile.
+
+- `show_birthday: true` is rejected with 400 `{"show_birthday": ["Birthdays can only be shared by accounts 18 and older."]}` when the account is under 18, or `["Add your birth date before sharing your birthday."]` when no birth date is on file. If a birth-date change makes the account a minor, `show_birthday` is switched off.
+- Other people can see only your **month and day, never the year**, and only when all of these hold: `show_birthday` is on; you are 18 or older; the viewer is inside your `profile_visibility` level (`only_me` = nobody, `friends` = accepted friends, `church` = same church or friends, `public` = any logged-in user, same rules as email/phone); and nobody blocked the other.
+- `GET /api/users/<id>/profile/` adds `"birthday": {"month": 8, "day": 17}` to the full card when those hold, otherwise the key is absent. Feb 29 birthdays show as 2/29.
+
+## `GET /api/friends/birthdays/` (auth)
+
+Your accepted friends whose birthday is today or in the next 7 days, sorted by `days_until` then name:
+
+```json
+{ "birthdays": [ { "user_id": 12, "name": "Anna", "month": 10, "day": 5, "days_until": 3 } ] }
+```
+
+- Same rules as above for each friend: `show_birthday` on, 18+, your level allowed by their `profile_visibility` (friends with `only_me` are left out), not blocked either way, active account. Your own birthday is not listed. No year, ever.
+- `name` is the first name (`"Guest"` if empty). `month`/`day` are the upcoming celebration date, so a Feb 29 birthday shows `2`/`28` in a non-leap year and `2`/`29` in a leap year. The window wraps the year end (Dec 28 sees Jan 3). "Today" is the New York date.
+- Empty list: `{"birthdays": []}`. Unauthenticated → 401.
+
+## Daily birthday push
+
+**Off by default (not yet approved).** The push is gated by the env var / Django setting `BIRTHDAY_PUSH_ENABLED` (default `False`). While it is off, the beat entry `friend-birthday-notifications` is not registered and `users.tasks.send_birthday_notifications` is a no-op (returns `{"celebrants": 0, "sent": 0, "disabled": true}`, sends nothing). Set `BIRTHDAY_PUSH_ENABLED=true` and restart `celery_beat` and `celery_worker` to turn it on. The endpoint `GET /api/friends/birthdays/` is not affected by this flag.
+
+When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
+
+Database change: `users.User.show_birthday` (bool, default false), migration `users/0016_user_show_birthday`. No change to `HouseholdDependent`.
 

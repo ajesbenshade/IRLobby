@@ -7,7 +7,7 @@ from . import social_views, views
 urlpatterns = [
     path("profile/", views.UserProfileView.as_view(), name="user-profile"),
     path("household/", foyer_views.household_list_create, name="household"),
-    path("household/<int:pk>/", foyer_views.household_delete, name="household-delete"),
+    path("household/<int:pk>/", foyer_views.household_detail, name="household-delete"),
     path("<int:user_id>/profile/", social_views.user_profile_card, name="user-profile-card"),
     path("<int:user_id>/report/", social_views.report_user, name="user-report"),
     path("onboarding/", views.user_onboarding, name="user-onboarding"),

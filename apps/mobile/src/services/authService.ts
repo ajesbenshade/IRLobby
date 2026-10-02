@@ -575,6 +575,16 @@ export async function fetchProfile(): Promise<AuthUser> {
   return normalizeUser(response.data);
 }
 
+/**
+ * Saves the birth date on the signed-in account: PATCH /api/users/profile/ `{ date_of_birth: 'YYYY-MM-DD' }`
+ * (the backend UserSerializer accepts it and rejects under 13 with a `date_of_birth` error).
+ */
+export async function saveBirthDate(dateOfBirth: string): Promise<AuthUser> {
+  const response = await api.patch<AuthUser>(API_ROUTES.USER_PROFILE, { date_of_birth: dateOfBirth });
+  const saved = normalizeUser(response.data);
+  return saved.dateOfBirth ? saved : { ...saved, dateOfBirth };
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   await api.post(API_ROUTES.AUTH_REQUEST_PASSWORD_RESET, { email });
 }
@@ -619,6 +629,18 @@ export async function updateOnboarding(
   payload: OnboardingPayload
 ): Promise<void> {
   await api.patch(API_ROUTES.USER_ONBOARDING, payload);
+}
+
+/**
+ * Best-effort follow-up after a sign-in/sign-up that sent the Terms / Privacy flags: records them on the
+ * account through the onboarding endpoint too, in case the auth endpoint ignored them. Never throws.
+ */
+export async function persistLegalAcceptance(): Promise<void> {
+  try {
+    await updateOnboarding({ terms_accepted: true, privacy_accepted: true });
+  } catch {
+    // Non-fatal: legal can be re-prompted later.
+  }
 }
 
 export async function createInvite(

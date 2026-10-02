@@ -78,4 +78,14 @@ describe('GatheringChatScreen', () => {
     expect(screen.getByLabelText('Send message').props.accessibilityState.disabled).toBe(true);
     expect(screen.getByLabelText('Message').props.editable).toBe(false);
   });
+
+  it('draws the send arrow pure white (not cream) on the burgundy send button once there is text', async () => {
+    fetchGatheringChatMessages.mockResolvedValue([message(1, 2, 'Rachel', 'Hi')]);
+    renderScreen();
+    await screen.findByText('Hi');
+    const arrow = () => screen.UNSAFE_getByProps({ name: 'arrow-up' });
+    expect(arrow().props.color).toBe('#7a7572');
+    fireEvent.changeText(screen.getByLabelText('Message'), 'On my way');
+    expect(arrow().props.color).toBe('#ffffff');
+  });
 });

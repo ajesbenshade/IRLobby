@@ -27,12 +27,16 @@ import { useAuth } from '@hooks/useAuth';
 import { appColors, appTypography, loginGradients, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
+import { persistLegalAcceptance } from '@services/authService';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { LegalConsentText } from '@components/foyer/LegalConsentText';
 
 import type { AuthStackParamList } from '@navigation/types';
 
 const EMAIL_PATTERN = /\S+@\S+\.\S+/;
+
+/** Login shows "By continuing you agree to the Terms of Use and Privacy Policy." on the same screen as the social buttons. */
+const LOGIN_ACCEPTED_LEGAL = true;
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -86,7 +90,13 @@ export const LoginScreen = ({ navigation }: Props) => {
     isPending: isGooglePending,
     error: googleError,
   } = useMutation({
-    mutationFn: (idToken: string) => signInWithGoogleIdToken(idToken),
+    mutationFn: async (idToken: string) => {
+      // The consent line on this screen ("By continuing you agree to ...") covers a new account made here,
+      // so Login sends the same Terms / Privacy flags as Sign up.
+      const result = await signInWithGoogleIdToken(idToken, { acceptedLegal: LOGIN_ACCEPTED_LEGAL });
+      await persistLegalAcceptance();
+      return result;
+    },
   });
 
   const {
@@ -110,13 +120,16 @@ export const LoginScreen = ({ navigation }: Props) => {
         throw new Error('Apple sign-in did not return an identity token.');
       }
 
-      return signInWithAppleIdentityToken({
+      const result = await signInWithAppleIdentityToken({
         identityToken: credential.identityToken,
         authorizationCode: credential.authorizationCode,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
+        acceptedLegal: LOGIN_ACCEPTED_LEGAL,
       });
+      await persistLegalAcceptance();
+      return result;
     },
   });
 

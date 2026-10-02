@@ -208,7 +208,7 @@ export const GatheringChatScreen = () => {
           onPress={() => sendMutation.mutate(text.trim())}
           style={[styles.send, sendEnabled ? styles.sendOn : null]}
         >
-          <MaterialCommunityIcons name="arrow-up" size={22} color={sendEnabled ? '#f6f1ee' : '#7a7572'} />
+          <MaterialCommunityIcons name="arrow-up" size={22} color={sendEnabled ? '#ffffff' : '#7a7572'} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>

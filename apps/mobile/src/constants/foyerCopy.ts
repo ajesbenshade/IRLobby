@@ -127,6 +127,11 @@ export const MEMBER_COPY = {
   reportPhotoLead: "Tell the church admins what's wrong. The person who added it won't be told.",
   minorNoMenu: "Teens' profiles aren't shown. Use Report on a message or photo instead.",
   thisPerson: 'this person',
+  /** Gathering detail `...` menu (not shown to the host of that gathering). */
+  reportGathering: 'Report this gathering',
+  reportGatheringLead: "Tell the church admins what's wrong. The host won't be told.",
+  gatheringMenuLabel: 'More options',
+  thisGathering: 'this gathering',
 } as const;
 
 function contactSentence(contact: 'phone' | 'email' | 'both' | null) {
@@ -359,6 +364,21 @@ export const VISIBILITY_OPTIONS: ReadonlyArray<{
   },
 ];
 
+/** Host form fallbacks (client check and failed post). The server's own message is shown when it sends one. */
+export const HOST_FORM_COPY = {
+  missingTitlePlace: 'Add a title and place.',
+  postFailed: COMMON_COPY.genericError,
+} as const;
+
+/** Blocking birth-date step after Apple / Google sign-in when the account has no birth date. */
+export const BIRTH_GATE_COPY = {
+  title: 'Birth date',
+  body: 'The Foyer is for ages 13 and up.',
+  continue: 'Continue',
+  signOut: 'Sign out',
+  saveFailed: COMMON_COPY.genericError,
+} as const;
+
 export const PICKER_COPY = {
   dayTitle: 'Date',
   birthTitle: 'Birth date',
@@ -385,6 +405,8 @@ export const PICKER_COPY = {
   pickADay: 'Pick a day',
   birthCaption: 'Only used to check age ranges on events. Never shown to other people.',
   under13: 'Accounts are not available under age 13.',
+  /** Sign-up hint while the (required) birth date is empty. */
+  birthRequired: 'Choose your birth date to continue.',
   monthYearHelper: "Month and year only. We don't keep the day.",
   pickPastMonth: 'Pick a month that has already passed.',
 } as const;
@@ -421,6 +443,9 @@ export const CANCEL_COPY = {
   guestNote: 'You were going',
   seeAll: 'See all',
   openChat: 'Open chat',
+  /** Chat system message the backend posts (spec "Copy"); the guest Chat card shows it as the last message. */
+  systemMessage: (title: string) => `${title} was cancelled by the host.`,
+  systemMessageWithReason: (title: string, reason: string) => `${title} was cancelled by the host. Reason: ${reason}`,
   errorGeneric: "Couldn't cancel. Please try again.",
   errorStarted: "This gathering has already started, so it can't be cancelled.",
   /** 404/405 from an older backend that does not have the endpoint yet. */

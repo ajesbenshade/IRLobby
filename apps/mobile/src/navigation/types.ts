@@ -4,6 +4,7 @@ import type { VibeProfile, VibeTag } from '@shared/schema';
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Onboarding: undefined;
+  BirthDateGate: undefined;
   Main: NavigatorScreenParams<MainStackParamList> | undefined;
   AccountDeleted: undefined;
   Modal?: { screen: string; params?: Record<string, unknown> };

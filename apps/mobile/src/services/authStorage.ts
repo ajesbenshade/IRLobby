@@ -78,6 +78,33 @@ export const authStorage = {
   },
 };
 
+const BIRTH_DATE_PENDING_KEY = '@irlobby/auth/birth-date-pending';
+
+/**
+ * Foyer: a social sign-in produced an account with no birth date, so the app stays on the birth-date step
+ * (even after a restart) until it is saved or the person signs out.
+ */
+export const birthDatePendingStorage = {
+  async get(): Promise<boolean> {
+    try {
+      return (await AsyncStorage.getItem(BIRTH_DATE_PENDING_KEY)) === '1';
+    } catch {
+      return false;
+    }
+  },
+  async set(pending: boolean): Promise<void> {
+    try {
+      if (pending) {
+        await AsyncStorage.setItem(BIRTH_DATE_PENDING_KEY, '1');
+      } else {
+        await AsyncStorage.removeItem(BIRTH_DATE_PENDING_KEY);
+      }
+    } catch (error) {
+      console.warn('[authStorage] Failed to persist birth-date step', error);
+    }
+  },
+};
+
 export const getAccessToken = async (): Promise<string | null> => {
   const tokens = await authStorage.getTokens();
   return pickToken(tokens?.accessToken, tokens?.access);

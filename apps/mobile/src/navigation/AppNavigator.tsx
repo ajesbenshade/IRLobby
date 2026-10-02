@@ -14,6 +14,7 @@ import { config } from '@constants/config';
 import { withGatheringBelowChat } from '@foyer/gatheringChat';
 import { useAuth } from '@hooks/useAuth';
 import { AccountDeletedScreen } from '@screens/auth/AccountDeletedScreen';
+import { BirthDateGateScreen } from '@screens/auth/BirthDateGateScreen';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
 import {
   useNavigationContainerRef,
@@ -85,7 +86,7 @@ const navigationTheme = {
 };
 
 export const AppNavigator = () => {
-  const { isAuthenticated, isInitializing, user, accountDeleted } = useAuth();
+  const { isAuthenticated, isInitializing, user, accountDeleted, needsBirthDate } = useAuth();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   usePushNotificationNavigation(navigationRef);
 
@@ -109,7 +110,9 @@ export const AppNavigator = () => {
     <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          user?.onboardingCompleted === false ? (
+          needsBirthDate ? (
+            <RootStack.Screen name="BirthDateGate" component={BirthDateGateScreen} />
+          ) : user?.onboardingCompleted === false ? (
             <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
           ) : (
             <RootStack.Screen name="Main" component={MainNavigator} />

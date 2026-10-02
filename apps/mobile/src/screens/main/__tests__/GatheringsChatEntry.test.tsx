@@ -10,7 +10,7 @@ const mockTabNavigate = jest.fn();
 let mockRoute: { params: { activityId: number } } = { params: { activityId: 12 } };
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockTabNavigate, getParent: () => ({ navigate: mockStackNavigate }) }),
+  useNavigation: () => ({ navigate: mockTabNavigate, setOptions: jest.fn(), getParent: () => ({ navigate: mockStackNavigate }) }),
   useRoute: () => mockRoute,
 }));
 jest.mock('@expo/vector-icons', () => ({ MaterialCommunityIcons: 'MaterialCommunityIcons' }));

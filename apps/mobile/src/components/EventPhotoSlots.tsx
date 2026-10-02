@@ -18,7 +18,8 @@ export const EventPhotoSlots = ({
   onRemove,
   max = MAX_EVENT_PHOTOS,
 }: EventPhotoSlotsProps) => {
-  const emptyCount = Math.max(0, max - images.length);
+  // With a 50-photo limit, drawing 50 empty slots would be noise: show at most five.
+  const emptyCount = Math.min(5, Math.max(0, max - images.length));
 
   return (
     <View style={styles.wrap}>

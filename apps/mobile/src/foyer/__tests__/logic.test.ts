@@ -48,6 +48,7 @@ describe('RSVP payload', () => {
     expect(buildRsvpPayload(selection.includeSelf, selection.dependentIds)).toEqual({
       include_self: true,
       dependent_ids: [1, 2],
+      member_ids: [1, 2],
     });
     expect(peopleCount(true, [1])).toBe(2);
     expect(confirmGoingLabel(2)).toBe('Confirm · 2 going');

@@ -256,7 +256,7 @@ describe('Discover swipe card (Foyer)', () => {
       fireEvent.press(screen.getByRole('button', { name: "I'm going" }));
     });
 
-    await waitFor(() => expect(mockPostRsvp).toHaveBeenCalledWith(7, { include_self: true, dependent_ids: [] }));
+    await waitFor(() => expect(mockPostRsvp).toHaveBeenCalledWith(7, { include_self: true, dependent_ids: [], member_ids: [] }));
     expect(await screen.findByText("You're going")).toBeTruthy();
   });
 

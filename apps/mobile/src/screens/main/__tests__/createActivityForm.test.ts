@@ -31,13 +31,13 @@ describe('create-event ticketed toggle (Frame A)', () => {
 });
 
 describe('create-event photos (Frame A2)', () => {
-  it('sends images and the imageUrls alias, capped at 5', () => {
+  it('sends images and the imageUrls alias, capped at 50', () => {
     const images = ['https://cdn.example/1.jpg', 'data:image/png;base64,abc', '', 'https://cdn.example/3.webp'];
     expect(createEventImagePayload(images)).toEqual({
       images: ['https://cdn.example/1.jpg', 'data:image/png;base64,abc', 'https://cdn.example/3.webp'],
       imageUrls: ['https://cdn.example/1.jpg', 'data:image/png;base64,abc', 'https://cdn.example/3.webp'],
     });
-    expect(normalizeEventImages(Array.from({ length: 8 }, (_, index) => `https://cdn.example/${index}.jpg`))).toHaveLength(5);
+    expect(normalizeEventImages(Array.from({ length: 60 }, (_, index) => `https://cdn.example/${index}.jpg`))).toHaveLength(50);
   });
 
   it('allows an empty photo list', () => {

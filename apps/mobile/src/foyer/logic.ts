@@ -8,8 +8,9 @@ export const CALENDAR_ADDRESS_WARNING =
   "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
 export const ADDRESS_AFTER_RSVP = 'Address shared after you RSVP';
 export const RSVP_CHOOSE_PEOPLE_MESSAGE = 'Choose yourself or your family.';
+/** @deprecated Final copy lives in constants/foyerCopy (GOING_COPY.underThirteenNote). */
 export const WHOS_COMING_NOTE =
-  'Only children in your household are listed. Teens with their own account RSVP for themselves.';
+  "Family members under 13 are RSVP names only — they don't have accounts.";
 
 export type GatheringLike = {
   audience?: string | null;
@@ -96,20 +97,31 @@ export type WhosComingDependent = {
   age?: number | null;
   eligible: boolean;
   reason?: string | null;
+  relationship?: string | null;
+  sex?: string | null;
+  birth_month?: number | null;
+  birth_year?: number | null;
 };
 
 export type WhosComingResponse = {
-  me: { name: string; eligible: boolean; reason?: string | null };
+  me: { name: string; eligible: boolean; reason?: string | null; age?: number | null; sex?: string | null };
   dependents: WhosComingDependent[];
+  /** Newer servers return the same people (spouse included) under `members`. */
+  members?: WhosComingDependent[];
   note?: string | null;
 };
 
-export const shouldSkipWhosComingSheet = (response: Pick<WhosComingResponse, 'dependents'>) =>
-  response.dependents.length === 0;
+/** The family list for the RSVP screens: `members` when the server sends it, else `dependents`. */
+export const whosComingPeople = (response: Pick<WhosComingResponse, 'dependents' | 'members'>): WhosComingDependent[] =>
+  response.members && response.members.length >= response.dependents.length ? response.members : response.dependents;
+
+export const shouldSkipWhosComingSheet = (response: Pick<WhosComingResponse, 'dependents' | 'members'>) =>
+  whosComingPeople(response).length === 0;
 
 export const buildRsvpPayload = (includeSelf: boolean, dependentIds: number[]) => ({
   include_self: includeSelf,
   dependent_ids: dependentIds,
+  member_ids: dependentIds,
 });
 
 export const peopleCount = (includeSelf: boolean, dependentIds: number[]) =>
@@ -119,7 +131,9 @@ export const confirmGoingLabel = (count: number) => `Confirm · ${count} going`;
 
 export const defaultRsvpSelection = (response: WhosComingResponse) => ({
   includeSelf: response.me.eligible,
-  dependentIds: response.dependents.filter((child) => child.eligible).map((child) => child.id),
+  dependentIds: whosComingPeople(response)
+    .filter((child) => child.eligible)
+    .map((child) => child.id),
 });
 
 export type CapacityParse =
@@ -212,4 +226,4 @@ export const friendlyRsvpMessage = (message: string): string =>
  * empty RSVP (the server answers 400). The caller should explain instead.
  */
 export const hasNoEligiblePeople = (response: WhosComingResponse): boolean =>
-  !response.me.eligible && !response.dependents.some((child) => child.eligible);
+  !response.me.eligible && !whosComingPeople(response).some((child) => child.eligible);

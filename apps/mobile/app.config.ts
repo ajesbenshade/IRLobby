@@ -9,6 +9,9 @@ export const reverseGoogleIosClientIdScheme = (iosClientId?: string) => {
     : undefined;
 };
 
+/** Add-only Photos permission for saving event photos (requested only when someone taps Download). */
+export const IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION = 'Save event photos to your library.';
+
 /** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
 export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
   'The Foyer uses your location to show gatherings near you on Discover — for example, a church event a few miles away tonight.';
@@ -76,6 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       NSLocationWhenInUseUsageDescription: IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION,
       NSPhotoLibraryUsageDescription:
         'The Foyer needs access to your photo library to upload gathering and profile photos.',
+      NSPhotoLibraryAddUsageDescription: IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION,
       CFBundleDisplayName: 'The Foyer',
     },
   },
@@ -113,6 +117,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
     ],
     'expo-font',
+    [
+      // Needs a full EAS build (new native module). The app only asks for add-only access.
+      'expo-media-library',
+      {
+        photosPermission:
+          'The Foyer needs access to your photo library to upload gathering and profile photos.',
+        savePhotosPermission: IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION,
+        isAccessMediaLocationEnabled: false,
+        granularPermissions: ['photo'],
+      },
+    ],
     [
       'expo-location',
       {

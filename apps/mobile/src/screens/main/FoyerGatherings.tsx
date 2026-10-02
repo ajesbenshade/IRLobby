@@ -18,6 +18,7 @@ import {
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchGoingActivities } from '@services/foyerService';
+import { canSeeChat, isGoingRsvp } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -102,6 +103,7 @@ export const FoyerGatherings = () => {
         label="HOSTING"
         rows={hosting}
         summary={(row) => goingCountLabel(row.going_count ?? row.participant_count ?? 0)}
+        showChat={() => true}
         onChat={() => navigation.navigate('Chat')}
         onOpen={(row) => navigation.getParent()?.navigate('GatheringDetail', { activityId: row.id })}
       />
@@ -109,6 +111,7 @@ export const FoyerGatherings = () => {
         label="GOING"
         rows={going}
         summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
+        showChat={(row) => canSeeChat({ isHost: false, isGoing: isGoingRsvp(row.my_rsvp) })}
         onChat={() => navigation.navigate('Chat')}
         onOpen={(row) => navigation.getParent()?.navigate('GatheringDetail', { activityId: row.id })}
       />
@@ -120,12 +123,15 @@ const Section = ({
   label,
   rows,
   summary,
+  showChat,
   onChat,
   onOpen,
 }: {
   label: string;
   rows: Row[];
   summary: (row: Row) => string;
+  /** Chat is only for the host and people who are going. */
+  showChat: (row: Row) => boolean;
   onChat: () => void;
   onOpen: (row: Row) => void;
 }) => (
@@ -151,9 +157,11 @@ const Section = ({
             <Text style={styles.meta}>{formatWhen(row.time)}</Text>
             <Text style={styles.meta}>{summary(row)}</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={onChat} style={styles.chat}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
-          </Pressable>
+          {showChat(row) ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={onChat} style={styles.chat}>
+              <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
+            </Pressable>
+          ) : null}
         </Pressable>
       );
     })}

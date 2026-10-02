@@ -554,7 +554,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionList: {
-    gap: spacing.sm,
+    flexDirection: 'column',
+    alignSelf: 'stretch',
+    gap: 12,
   },
   questionFooter: {
     flexDirection: 'row',

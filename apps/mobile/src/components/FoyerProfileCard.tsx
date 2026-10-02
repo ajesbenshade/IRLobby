@@ -1,36 +1,76 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Pressable, StyleSheet, Switch, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
+import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { InlineError, PillButton, SectionLabel } from '@components/foyer/ui';
 import { Image, View } from '@components/RNCompat';
-import { AppButton } from '@components/ui/Button';
-import { householdCountLabel } from '@foyer/logic';
+import {
+  ACCOUNT_SAFETY_COPY,
+  COMMON_COPY,
+  FAMILY_COPY,
+  FRIEND_COPY,
+  MESSAGING_COPY,
+  PROFILE_COPY,
+  VISIBILITY_OPTIONS,
+  type VisibilityLevel,
+} from '@constants/foyerCopy';
+import { birthDayLimits, defaultBirthMonth, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
+import {
+  ageFromIso,
+  buildProfilePatch,
+  formatPhoneForField,
+  isDraftDirty,
+  phoneError,
+  phoneToggleEnabled,
+  type ProfileDraft,
+} from '@foyer/profileForm';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
-import { createChurch, fetchChurches, type ChurchRecord } from '@services/foyerService';
+import { createChurch, fetchChurches, fetchFamilyMembers, fetchFriends, type ChurchRecord } from '@services/foyerService';
+import { loadSettings, toPayload } from '@screens/main/SettingsScreen';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
+/** Church admin contact (App Store requirement). TODO(Aaron): confirm the real address; used until then. */
+export const CHURCH_ADMIN_CONTACT_URL = 'mailto:support@irlobby.com?subject=The%20Foyer%20help';
+
+const emptyDraft: ProfileDraft = {
+  name: '',
+  city: '',
+  dateOfBirth: null,
+  sex: '',
+  churchId: null,
+  visibility: 'only_me',
+  phone: '',
+  showEmail: false,
+  showPhone: false,
+  dmFromSharedEvents: false,
+};
+
 export const FoyerProfileCard = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const queryClient = useQueryClient();
   const { user, refreshProfile } = useAuth();
-  const [name, setName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [sex, setSex] = useState<'male' | 'female' | ''>('');
+  const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
+  const [baseline, setBaseline] = useState<ProfileDraft>(emptyDraft);
+  const [locationOn, setLocationOn] = useState(false);
+  const [locationBaseline, setLocationBaseline] = useState(false);
   const [churchQuery, setChurchQuery] = useState('');
-  const [churchId, setChurchId] = useState<number | null>(null);
   const [churchName, setChurchName] = useState('');
   const [open, setOpen] = useState(false);
+  const [birthOpen, setBirthOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -43,15 +83,34 @@ export const FoyerProfileCard = () => {
     [],
   );
 
+  const settingsQuery = useQuery({ queryKey: ['mobile-settings'], queryFn: loadSettings });
+  const friendsQuery = useQuery({ queryKey: ['foyer-friends'], queryFn: fetchFriends, retry: false });
+  const familyQuery = useQuery({ queryKey: ['foyer-household'], queryFn: fetchFamilyMembers, retry: false });
+
   useEffect(() => {
-    const full = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
-    setName(full);
-    setBirthDate(user?.dateOfBirth ?? '');
-    setSex(user?.sex ?? '');
-    setChurchId(user?.churchId ?? null);
+    const next: ProfileDraft = {
+      name: [user?.firstName, user?.lastName].filter(Boolean).join(' '),
+      city: user?.city ?? '',
+      dateOfBirth: user?.dateOfBirth ?? null,
+      sex: user?.sex ?? '',
+      churchId: user?.churchId ?? null,
+      visibility: user?.profileVisibility ?? 'only_me',
+      phone: formatPhoneForField(user?.phone),
+      showEmail: Boolean(user?.showEmail),
+      showPhone: Boolean(user?.showPhone),
+      dmFromSharedEvents: Boolean(user?.dmFromSharedEvents),
+    };
+    setDraft(next);
+    setBaseline(next);
     setChurchName(user?.church?.name ?? '');
     setChurchQuery(user?.church?.name ?? '');
   }, [user]);
+
+  useEffect(() => {
+    const value = settingsQuery.data?.privacy.locationSharing ?? false;
+    setLocationOn(value);
+    setLocationBaseline(value);
+  }, [settingsQuery.data]);
 
   const churches = useQuery({
     queryKey: ['foyer-churches', churchQuery],
@@ -59,19 +118,35 @@ export const FoyerProfileCard = () => {
     enabled: open,
   });
 
+  const isMinor = (() => {
+    const age = ageFromIso(draft.dateOfBirth);
+    return age != null && age < 18;
+  })();
+  const phoneProblem = phoneError(draft.phone);
+  const dirty = isDraftDirty(draft, baseline) || locationOn !== locationBaseline;
+  const canSave = dirty && !phoneProblem;
+
+  const update = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
+    setSaved(false);
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const [firstName, ...rest] = name.trim().split(/\s+/);
-      await api.patch(API_ROUTES.USER_PROFILE, {
-        first_name: firstName ?? '',
-        last_name: rest.join(' '),
-        date_of_birth: birthDate.trim() || null,
-        sex: sex || null,
-        church_id: churchId,
-      });
+      await api.patch(API_ROUTES.USER_PROFILE, buildProfilePatch(draft, { isMinor }));
+      if (locationOn !== locationBaseline && settingsQuery.data) {
+        await api.patch(
+          API_ROUTES.USER_PROFILE,
+          toPayload({ ...settingsQuery.data, privacy: { ...settingsQuery.data.privacy, locationSharing: locationOn } }),
+        );
+        await queryClient.invalidateQueries({ queryKey: ['mobile-settings'] });
+      }
       await refreshProfile();
     },
-    onSuccess: () => setError(null),
+    onSuccess: () => {
+      setError(null);
+      setSaved(true);
+    },
     onError: (saveError) => setError(getErrorMessage(saveError, 'Unable to save your profile.')),
   });
 
@@ -90,7 +165,7 @@ export const FoyerProfileCard = () => {
   };
 
   const chooseChurch = (church: ChurchRecord) => {
-    setChurchId(church.id);
+    update('churchId', church.id);
     setChurchName(church.name);
     setChurchQuery(church.name);
     setOpen(false);
@@ -107,16 +182,16 @@ export const FoyerProfileCard = () => {
 
   const results = churches.data ?? [];
   const typed = churchQuery.trim();
+  const birthValue: DayValue | null = useMemo(() => parseIsoDate(draft.dateOfBirth), [draft.dateOfBirth]);
+  const familyCount = familyQuery.data?.length ?? user?.householdChildCount ?? 0;
+  const friendCount = friendsQuery.data?.length ?? 0;
 
   return (
     <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>Profile</Text>
-        <Pressable accessibilityRole="button" onPress={() => saveMutation.mutate()}>
-          <Text style={styles.save}>Save</Text>
-        </Pressable>
-      </View>
-      <Pressable accessibilityRole="button" onPress={() => void pickPhoto()} style={styles.photoButton}>
+      <Text accessibilityRole="header" style={styles.screenTitle}>
+        {PROFILE_COPY.title}
+      </Text>
+      <View style={styles.photoButton}>
         {user?.avatarUrl ? (
           <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
         ) : (
@@ -124,57 +199,79 @@ export const FoyerProfileCard = () => {
             <Text style={styles.avatarText}>{(user?.firstName || 'A').slice(0, 1)}</Text>
           </View>
         )}
-        <Text style={styles.change}>Change profile photo</Text>
-      </Pressable>
+        <PillButton label={PROFILE_COPY.changePhoto} variant="outline" onPress={() => void pickPhoto()} style={styles.changePill} />
+      </View>
 
-      <Label text="Name" />
-      <TextInput accessibilityLabel="Name" value={name} onChangeText={setName} style={styles.input} />
-      <Label text="Birth date" />
-      <TextInput
-        accessibilityLabel="Birth date"
-        value={birthDate}
-        onChangeText={setBirthDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={appColors.softInk}
-        style={styles.input}
+      <SectionLabel>{PROFILE_COPY.account}</SectionLabel>
+      <Label text={PROFILE_COPY.name} />
+      <TextInput accessibilityLabel={PROFILE_COPY.name} value={draft.name} onChangeText={(value) => update('name', value)} style={styles.input} />
+      <Label text={PROFILE_COPY.city} />
+      <TextInput accessibilityLabel={PROFILE_COPY.city} value={draft.city} onChangeText={(value) => update('city', value)} style={styles.input} />
+      <PickerField
+        label={PROFILE_COPY.birthDate}
+        value={birthValue ? formatDayShort(birthValue) : ''}
+        placeholder="Choose a date"
+        onPress={() => setBirthOpen(true)}
+        testID="profile-birth-date"
       />
-      <Label text="Sex" />
+      <Label text={PROFILE_COPY.sex} />
       <View style={styles.segment}>
         {(['male', 'female'] as const).map((value) => (
           <Pressable
             key={value}
             accessibilityRole="button"
-            accessibilityState={{ selected: sex === value }}
-            onPress={() => setSex(value)}
-            style={[styles.segmentItem, sex === value ? styles.segmentOn : null]}
+            accessibilityState={{ selected: draft.sex === value }}
+            onPress={() => update('sex', value)}
+            style={[styles.segmentItem, draft.sex === value ? styles.segmentOn : null]}
           >
-            <Text style={[styles.segmentText, sex === value ? styles.segmentTextOn : null]}>
-              {value === 'male' ? 'Male' : 'Female'}
+            <Text style={[styles.segmentText, draft.sex === value ? styles.segmentTextOn : null]}>
+              {value === 'male' ? PROFILE_COPY.male : PROFILE_COPY.female}
             </Text>
           </Pressable>
         ))}
       </View>
-      <Text style={styles.helper}>Only used for men's or women's events</Text>
+      <Text style={styles.helper}>{PROFILE_COPY.sexHelper}</Text>
 
-      <Label text="Are you a church member, and where?" />
-      <TextInput
-        accessibilityLabel="Search churches"
-        value={churchQuery}
-        onChangeText={(value) => {
-          setChurchQuery(value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder="Search churches"
-        placeholderTextColor={appColors.softInk}
-        style={styles.input}
-      />
+      <View style={styles.rowsCard}>
+        <NavRow
+          icon="account-multiple-outline"
+          label={PROFILE_COPY.myFamilyRow}
+          count={FAMILY_COPY.membersCount(familyCount)}
+          onPress={() => navigation.navigate('Household')}
+        />
+        <NavRow
+          icon="account-group-outline"
+          label={PROFILE_COPY.friendsRow}
+          count={FRIEND_COPY.profileRowCount(friendCount)}
+          onPress={() => navigation.navigate('Friends')}
+          last
+        />
+      </View>
+
+      <SectionLabel>{PROFILE_COPY.church}</SectionLabel>
+      <Label text={PROFILE_COPY.yourChurch} />
+      <View style={styles.searchRow}>
+        <MaterialCommunityIcons name="magnify" size={20} color={appColors.mutedInk} />
+        <TextInput
+          accessibilityLabel={PROFILE_COPY.searchChurches}
+          value={churchQuery}
+          onChangeText={(value) => {
+            setChurchQuery(value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={PROFILE_COPY.searchChurches}
+          placeholderTextColor={appColors.softInk}
+          style={styles.searchInput}
+        />
+        <MaterialCommunityIcons name="chevron-down" size={20} color={appColors.mutedInk} />
+      </View>
       {open ? (
         <View style={styles.menu}>
           {results.map((church) => (
             <Pressable key={church.id} onPress={() => chooseChurch(church)} style={styles.menuRow}>
               <Text style={styles.menuText}>{church.name}</Text>
-              {churchId === church.id ? <Text style={styles.check}>✓</Text> : null}
+              {draft.churchId === church.id ? <Text style={styles.check}>✓</Text> : null}
             </Pressable>
           ))}
           {typed ? (
@@ -182,20 +279,152 @@ export const FoyerProfileCard = () => {
               <Text style={styles.add}>Add "{typed}"</Text>
             </Pressable>
           ) : null}
-          <Text style={styles.helper}>Shows what you type if your church isn't listed</Text>
+          <Text style={styles.helper}>{PROFILE_COPY.churchAddHelper}</Text>
         </View>
       ) : null}
       {churchName ? <Text style={styles.helper}>Selected: {churchName}</Text> : null}
-      <Text style={styles.helper}>Not a member anywhere? Leave this blank.</Text>
+      <Text style={styles.helper}>{PROFILE_COPY.churchHelper}</Text>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('Household')}
-        style={styles.household}
-      >
-        <Text style={styles.householdLabel}>Household</Text>
-        <Text style={styles.householdCount}>{householdCountLabel(user?.householdChildCount ?? 0)}</Text>
-      </Pressable>
+      <SectionLabel>{PROFILE_COPY.visibility}</SectionLabel>
+      <Text accessibilityRole="header" style={styles.serifHeading}>
+        {PROFILE_COPY.visibilityHeading}
+      </Text>
+      <View style={styles.rowsCard} accessibilityRole="radiogroup">
+        {VISIBILITY_OPTIONS.map((option, index) => {
+          const selected = draft.visibility === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={option.label}
+              onPress={() => update('visibility', option.value as VisibilityLevel)}
+              style={[styles.radioRow, index < VISIBILITY_OPTIONS.length - 1 ? styles.rowDivider : null]}
+            >
+              <View style={[styles.radio, selected ? styles.radioOn : null]}>
+                {selected ? <View style={styles.radioDot} /> : null}
+              </View>
+              <View style={styles.radioCopy}>
+                <View style={styles.radioTitleRow}>
+                  <Text style={styles.radioLabel}>{option.label}</Text>
+                  {option.value === 'only_me' ? (
+                    <View style={styles.defaultTag}>
+                      <Text style={styles.defaultTagText}>{PROFILE_COPY.defaultTag}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.helper}>{option.helper}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.helper}>{PROFILE_COPY.visibilityFooter}</Text>
+
+      <SectionLabel>{PROFILE_COPY.contactInfo}</SectionLabel>
+      <View style={styles.rowsCard}>
+        <View style={styles.contactBlock}>
+          <Label text={PROFILE_COPY.email} />
+          <View style={styles.readOnly}>
+            <Text style={styles.readOnlyText}>{user?.email ?? ''}</Text>
+            <MaterialCommunityIcons name="lock-outline" size={18} color={appColors.mutedInk} />
+          </View>
+        </View>
+        <ToggleRow
+          label={PROFILE_COPY.showOnProfile}
+          accessibilityLabel={`${PROFILE_COPY.email}: ${PROFILE_COPY.showOnProfile}`}
+          value={draft.showEmail}
+          onChange={(value) => update('showEmail', value)}
+        />
+      </View>
+      <View style={styles.rowsCard}>
+        <View style={styles.contactBlock}>
+          <Label text={PROFILE_COPY.phone} />
+          <TextInput
+            accessibilityLabel={PROFILE_COPY.phone}
+            value={draft.phone}
+            onChangeText={(value) => {
+              update('phone', value);
+              if (!phoneToggleEnabled(value)) {
+                update('showPhone', false);
+              }
+            }}
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+            placeholder={PROFILE_COPY.phonePlaceholder}
+            placeholderTextColor={appColors.softInk}
+            style={[styles.input, phoneProblem ? styles.inputError : null]}
+          />
+          <Text style={[styles.helper, phoneProblem ? styles.errorText : null]}>{PROFILE_COPY.phoneHint}</Text>
+        </View>
+        <ToggleRow
+          label={PROFILE_COPY.showOnProfile}
+          accessibilityLabel={`${PROFILE_COPY.phone}: ${PROFILE_COPY.showOnProfile}`}
+          value={draft.showPhone && phoneToggleEnabled(draft.phone)}
+          disabled={!phoneToggleEnabled(draft.phone)}
+          onChange={(value) => update('showPhone', value)}
+        />
+      </View>
+      <Text style={styles.helper}>{PROFILE_COPY.contactHelper}</Text>
+
+      <SectionLabel>{MESSAGING_COPY.section}</SectionLabel>
+      <View style={styles.rowsCard}>
+        {isMinor ? (
+          <View style={styles.contactBlock}>
+            <Text style={styles.radioLabel}>{MESSAGING_COPY.minorTitle}</Text>
+            <Text style={styles.helper}>{MESSAGING_COPY.minorHelper}</Text>
+          </View>
+        ) : (
+          <ToggleRow
+            label={MESSAGING_COPY.eventsToggle}
+            helper={MESSAGING_COPY.eventsHelper}
+            accessibilityLabel={MESSAGING_COPY.eventsToggle}
+            value={draft.dmFromSharedEvents}
+            onChange={(value) => update('dmFromSharedEvents', value)}
+          />
+        )}
+        <NavRow
+          icon="account-cancel-outline"
+          label={MESSAGING_COPY.blockedPeople}
+          onPress={() => navigation.navigate('Messaging')}
+          last
+        />
+      </View>
+
+      <SectionLabel>{PROFILE_COPY.location}</SectionLabel>
+      <View style={styles.rowsCard}>
+        <ToggleRow
+          label="Use my location to find nearby gatherings"
+          helper="Never shown to other people."
+          accessibilityLabel="Use my location to find nearby gatherings"
+          value={locationOn}
+          onChange={(value) => {
+            setSaved(false);
+            setLocationOn(value);
+          }}
+        />
+      </View>
+
+      <InlineError message={phoneProblem && dirty ? PROFILE_COPY.phoneHint : error} />
+      <PillButton label={COMMON_COPY.save} disabled={!canSave} loading={saveMutation.isPending} onPress={() => saveMutation.mutate()} />
+      {saved ? (
+        <Text accessibilityLiveRegion="polite" style={styles.savedText}>
+          {PROFILE_COPY.saved}
+        </Text>
+      ) : null}
+      <Text style={styles.pull}>{PROFILE_COPY.pullToRefresh}</Text>
+
+      <View style={styles.rowsCard}>
+        <NavRow
+          icon="lifebuoy"
+          label={PROFILE_COPY.contactAdmins}
+          count={undefined}
+          onPress={() => void Linking.openURL(CHURCH_ADMIN_CONTACT_URL)}
+          last
+        />
+      </View>
+      <Text style={styles.helper}>{ACCOUNT_SAFETY_COPY.adminContactBody}</Text>
+
       <Text style={styles.calendarSection}>CALENDAR</Text>
       <View style={styles.calendarCard}>
         <View style={styles.calendarHeading}>
@@ -241,20 +470,86 @@ export const FoyerProfileCard = () => {
           </Text>
         ) : null}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {saveMutation.isPending ? <AppButton loading>Save</AppButton> : null}
+      <DatePickerSheet
+        visible={birthOpen}
+        mode="birthdate"
+        title={PROFILE_COPY.birthDate}
+        value={birthValue}
+        limits={birthDayLimits()}
+        onCancel={() => setBirthOpen(false)}
+        onDone={(value) => {
+          update('dateOfBirth', toIsoDate(value));
+          setBirthOpen(false);
+        }}
+      />
     </View>
   );
 };
 
 const Label = ({ text }: { text: string }) => <Text style={styles.label}>{text}</Text>;
 
+const NavRow = ({
+  icon,
+  label,
+  count,
+  onPress,
+  last,
+}: {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  label: string;
+  count?: string;
+  onPress: () => void;
+  last?: boolean;
+}) => (
+  <Pressable
+    accessibilityRole="button"
+    accessibilityLabel={count ? `${label}, ${count}` : label}
+    onPress={onPress}
+    style={[styles.navRow, last ? null : styles.rowDivider]}
+  >
+    <MaterialCommunityIcons name={icon} size={22} color={appColors.primary} />
+    <Text style={styles.navLabel}>{label}</Text>
+    {count ? <Text style={styles.navCount}>{count}</Text> : null}
+    <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.mutedInk} />
+  </Pressable>
+);
+
+const ToggleRow = ({
+  label,
+  helper,
+  value,
+  disabled,
+  onChange,
+  accessibilityLabel,
+}: {
+  label: string;
+  helper?: string;
+  value: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+  accessibilityLabel: string;
+}) => (
+  <View style={styles.toggleRow}>
+    <View style={styles.toggleCopy}>
+      <Text style={styles.radioLabel}>{label}</Text>
+      {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+    </View>
+    <Switch
+      accessibilityLabel={accessibilityLabel}
+      value={value}
+      disabled={disabled}
+      onValueChange={onChange}
+      trackColor={{ false: '#e1dbd7', true: appColors.primary }}
+      thumbColor={disabled ? '#f6f1ee' : '#ffffff'}
+    />
+  </View>
+);
+
 const styles = StyleSheet.create({
   card: { gap: 10, marginBottom: 12 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  screenTitle: { flexShrink: 1, fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink },
-  save: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
-  photoButton: { alignItems: 'center', gap: 8 },
+  screenTitle: { fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink, textAlign: 'center' },
+  photoButton: { alignItems: 'center', gap: 10 },
+  changePill: { minWidth: 160 },
   avatar: {
     width: 88,
     height: 88,
@@ -264,10 +559,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: appColors.white, fontSize: 28, fontFamily: appTypography.bodySemibold },
-  change: { color: appColors.primary, fontFamily: appTypography.bodySemibold, textAlign: 'center', paddingVertical: 4 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
   input: {
-    minHeight: 48,
+    minHeight: 54,
     borderRadius: radii.input,
     borderWidth: 1,
     borderColor: appColors.line,
@@ -275,10 +569,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     color: appColors.ink,
   },
+  inputError: { borderColor: appColors.primary, borderWidth: 1.8 },
+  errorText: { color: appColors.primary },
+  searchRow: {
+    minHeight: 54,
+    borderRadius: radii.input,
+    borderWidth: 1,
+    borderColor: appColors.line,
+    backgroundColor: appColors.white,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, minHeight: 48, color: appColors.ink },
   segment: { flexDirection: 'row', gap: 8 },
   segmentItem: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
@@ -292,22 +600,41 @@ const styles = StyleSheet.create({
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
   helper: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 12.5, lineHeight: 18 },
   menu: { backgroundColor: appColors.white, borderRadius: radii.list, borderWidth: 1, borderColor: appColors.line },
-  menuRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: appColors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  menuRow: { minHeight: 48, padding: 12, borderBottomWidth: 1, borderBottomColor: appColors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   menuText: { flex: 1, color: appColors.ink, fontFamily: appTypography.bodyRegular, lineHeight: 22 },
   check: { color: appColors.primary },
   add: { flex: 1, color: appColors.primary, fontFamily: appTypography.bodySemibold, lineHeight: 22 },
-  household: {
-    marginTop: 8,
-    backgroundColor: appColors.white,
-    borderRadius: radii.list,
-    padding: 16,
+  rowsCard: { backgroundColor: appColors.white, borderRadius: radii.list, overflow: 'hidden' },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: appColors.line },
+  navRow: { minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  navLabel: { flex: 1, flexShrink: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 16 },
+  navCount: { flexShrink: 1, color: appColors.mutedInk, textAlign: 'right', fontFamily: appTypography.bodyRegular },
+  serifHeading: { fontFamily: appTypography.heading, fontSize: 20, lineHeight: 28, color: appColors.ink },
+  radioRow: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cec8c4', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  radioOn: { borderColor: appColors.primary },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: appColors.primary },
+  radioCopy: { flex: 1, flexShrink: 1, gap: 2 },
+  radioTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  radioLabel: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink, flexShrink: 1 },
+  defaultTag: { backgroundColor: appColors.primarySoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  defaultTagText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 11.5 },
+  contactBlock: { padding: 16, gap: 6 },
+  readOnly: {
+    minHeight: 54,
+    borderRadius: radii.input,
+    backgroundColor: '#efe9e5',
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
   },
-  householdLabel: { flexShrink: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink },
-  householdCount: { flexShrink: 1, color: appColors.mutedInk, textAlign: 'right' },
+  readOnlyText: { flex: 1, color: appColors.mutedInk, fontFamily: appTypography.bodyRegular },
+  toggleRow: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: appColors.line },
+  toggleCopy: { flex: 1, flexShrink: 1, gap: 2 },
+  savedText: { textAlign: 'center', color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 14 },
+  pull: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
   calendarSection: {
     marginTop: 16,
     fontFamily: appTypography.bodySemibold,

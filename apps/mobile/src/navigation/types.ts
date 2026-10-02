@@ -77,4 +77,8 @@ export type MainStackParamList = {
   GatheringDetail: {
     activityId: number | string;
   };
+  PhotoGallery: { activityId: number | string };
+  MemberProfile: { userId: number | string };
+  DirectChat: { conversationId: number | string; name?: string };
+  Messaging: undefined;
 };

@@ -60,6 +60,11 @@ export interface AuthUser {
   churchId?: number | null;
   isChurchAdmin?: boolean;
   householdChildCount?: number;
+  profileVisibility?: 'only_me' | 'church' | 'friends' | 'public';
+  phone?: string | null;
+  showEmail?: boolean;
+  showPhone?: boolean;
+  dmFromSharedEvents?: boolean;
 }
 
 export interface LoginPayload {

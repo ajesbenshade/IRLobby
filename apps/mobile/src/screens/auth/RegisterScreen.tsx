@@ -9,6 +9,7 @@ import { AppleSignInButton } from '@components/AppleSignInButton';
 import { GoogleSignInButton } from '@components/GoogleSignInButton';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
+import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { Field } from '@components/ui/Field';
 import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
@@ -16,6 +17,7 @@ import { updateOnboarding } from '@services/authService';
 import { appColors } from '@theme/index';
 import axios from 'axios';
 
+import { birthDayLimits, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { registrationFieldError } from '@foyer/logic';
 import { getErrorMessage } from '@utils/error';
 import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
@@ -43,6 +45,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
   } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [birthPickerOpen, setBirthPickerOpen] = useState(false);
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -220,12 +223,24 @@ export const RegisterScreen = ({ navigation }: Props) => {
           autoCapitalize="none"
           autoComplete="username"
         />
-        <Field
+        <PickerField
           label="Birth date"
-          value={dateOfBirth}
-          onChangeText={setDateOfBirth}
-          placeholder="YYYY-MM-DD"
-          autoCapitalize="none"
+          value={dateOfBirth && parseIsoDate(dateOfBirth) ? formatDayShort(parseIsoDate(dateOfBirth) as DayValue) : ''}
+          placeholder="Choose a date"
+          onPress={() => setBirthPickerOpen(true)}
+          testID="register-birth-date"
+        />
+        <DatePickerSheet
+          visible={birthPickerOpen}
+          mode="birthdate"
+          title="Birth date"
+          value={parseIsoDate(dateOfBirth)}
+          limits={birthDayLimits()}
+          onCancel={() => setBirthPickerOpen(false)}
+          onDone={(value) => {
+            setDateOfBirth(toIsoDate(value));
+            setBirthPickerOpen(false);
+          }}
         />
         <Field
           label="Password"

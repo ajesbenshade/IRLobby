@@ -108,3 +108,15 @@ describe('production app icon', () => {
     }
   });
 });
+
+describe('photo saving permissions', () => {
+  it('adds the add-only Photos string and the expo-media-library plugin', () => {
+    const config = appConfig({ config: {} } as ConfigContext);
+    expect(config.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Save event photos to your library.');
+    const plugin = (config.plugins ?? []).find((entry) => Array.isArray(entry) && entry[0] === 'expo-media-library') as
+      | [string, { savePhotosPermission?: string }]
+      | undefined;
+    expect(plugin?.[1]?.savePhotosPermission).toBe('Save event photos to your library.');
+    expect(config.ios?.bundleIdentifier).toBe('com.irlobby.app');
+  });
+});

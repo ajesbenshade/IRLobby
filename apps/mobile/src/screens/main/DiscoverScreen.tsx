@@ -16,7 +16,10 @@ import {
 } from '@components/AppChrome';
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { FoyerHeader } from '@components/FoyerHeader';
-import { GoingSheet } from '@components/GoingSheet';
+import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
+import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { PillButton, Toast } from '@components/foyer/ui';
+import { YouAreGoing } from '@components/foyer/YouAreGoing';
 import { FoyerGatheringCard } from '@components/FoyerGatheringCard';
 import { SwipeActionButtons } from '@components/SwipeActionButtons';
 import { WhosComingSheet } from '@components/WhosComingSheet';
@@ -58,6 +61,9 @@ import {
   type ActivityFetchFilters,
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
+import { GOING_COPY } from '@constants/foyerCopy';
+import { formatDayShort, formatGatheringWhen, hostDayLimits, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
+import { selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import type { Activity } from '../../types/activity';
@@ -125,10 +131,17 @@ export const DiscoverScreen = () => {
   const [visibilityFilter, setVisibilityFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
+  const [dateFilterPicker, setDateFilterPicker] = useState<'from' | 'to' | null>(null);
   const foyerMode = isFoyerMode();
   const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
   const [goingActivity, setGoingActivity] = useState<Activity | null>(null);
+  const [goingSaved, setGoingSaved] = useState<RsvpSelection>({ includeSelf: true, memberIds: [] });
+  const [goingResponse, setGoingResponse] = useState<WhosComingResponse | null>(null);
+  const [goingSaving, setGoingSaving] = useState(false);
+  const [goingError, setGoingError] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelledToast, setCancelledToast] = useState(false);
   const [calendarActivity, setCalendarActivity] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
@@ -283,26 +296,32 @@ export const DiscoverScreen = () => {
     ],
   );
 
-  const advanceAfterRsvp = useCallback((activity: Activity) => {
-    setWhosComing(null);
-    setGoingActivity(activity);
-    setCurrentIndex((index) => index + 1);
-  }, []);
+  const advanceAfterRsvp = useCallback(
+    (activity: Activity, result?: { include_self?: boolean; dependent_ids?: number[]; member_ids?: number[] } | null, people?: WhosComingResponse | null) => {
+      setGoingSaved(selectionFromMyRsvp(result ?? { include_self: true, dependent_ids: [] }));
+      setGoingResponse(people ?? null);
+      setGoingError(null);
+      setWhosComing(null);
+      setGoingActivity(activity);
+      setCurrentIndex((index) => index + 1);
+    },
+    [],
+  );
 
   const confirmRsvp = useCallback(
     async (activity: Activity, payload: { include_self: boolean; dependent_ids: number[] }) => {
       setRsvpPending(true);
       setRsvpError(null);
       try {
-        await postRsvp(activity.id, payload);
-        advanceAfterRsvp(activity);
+        const result = await postRsvp(activity.id, payload);
+        advanceAfterRsvp(activity, result ?? payload, whosComing);
       } catch (error) {
         setRsvpError(friendlyRsvpMessage(getErrorMessage(error, 'Unable to save your RSVP.')));
       } finally {
         setRsvpPending(false);
       }
     },
-    [advanceAfterRsvp],
+    [advanceAfterRsvp, whosComing],
   );
 
   /**
@@ -345,8 +364,9 @@ export const DiscoverScreen = () => {
           return false;
         }
         const selection = defaultRsvpSelection(sheet);
-        await postRsvp(currentActivity.id, buildRsvpPayload(selection.includeSelf, selection.dependentIds));
-        advanceAfterRsvp(currentActivity);
+        const payload = buildRsvpPayload(selection.includeSelf, selection.dependentIds);
+        const result = await postRsvp(currentActivity.id, payload);
+        advanceAfterRsvp(currentActivity, result ?? payload, sheet);
         return true;
       }
       setWhosComing(sheet);
@@ -583,17 +603,45 @@ export const DiscoverScreen = () => {
               />
               {foyerMode || !tonightOnly ? (
                 <>
-                  <Field
+                  <PickerField
                     label="Starts after"
-                    value={dateFromFilter}
-                    onChangeText={setDateFromFilter}
-                    placeholder="e.g. 2026-08-14"
+                    value={parseIsoDate(dateFromFilter) ? formatDayShort(parseIsoDate(dateFromFilter) as DayValue) : ''}
+                    placeholder="Choose a date"
+                    onPress={() => setDateFilterPicker('from')}
+                    testID="discover-date-from"
                   />
-                  <Field
+                  <PickerField
                     label="Ends before"
-                    value={dateToFilter}
-                    onChangeText={setDateToFilter}
-                    placeholder="e.g. 2026-08-16"
+                    value={parseIsoDate(dateToFilter) ? formatDayShort(parseIsoDate(dateToFilter) as DayValue) : ''}
+                    placeholder="Choose a date"
+                    onPress={() => setDateFilterPicker('to')}
+                    testID="discover-date-to"
+                  />
+                  {dateFromFilter || dateToFilter ? (
+                    <PillButton
+                      label="Clear dates"
+                      variant="text"
+                      onPress={() => {
+                        setDateFromFilter('');
+                        setDateToFilter('');
+                      }}
+                    />
+                  ) : null}
+                  <DatePickerSheet
+                    visible={dateFilterPicker != null}
+                    mode="day"
+                    title={dateFilterPicker === 'to' ? 'Ends before' : 'Starts after'}
+                    value={parseIsoDate(dateFilterPicker === 'to' ? dateToFilter : dateFromFilter)}
+                    limits={hostDayLimits()}
+                    onCancel={() => setDateFilterPicker(null)}
+                    onDone={(value) => {
+                      if (dateFilterPicker === 'to') {
+                        setDateToFilter(toIsoDate(value));
+                      } else {
+                        setDateFromFilter(toIsoDate(value));
+                      }
+                      setDateFilterPicker(null);
+                    }}
                   />
                 </>
               ) : null}
@@ -962,6 +1010,10 @@ export const DiscoverScreen = () => {
               >
                 <WhosComingSheet
                   response={whosComing}
+                  ageRange={currentActivity}
+                  onFamilyAdded={() => {
+                    void fetchWhosComing(currentActivity.id).then(setWhosComing).catch(() => undefined);
+                  }}
                   subtitle={`${currentActivity.title} · ${audienceLabel}`}
                   pending={rsvpPending}
                   error={rsvpError}
@@ -978,21 +1030,58 @@ export const DiscoverScreen = () => {
                 style={styles.sheetWrapper}
                 contentContainerStyle={styles.sheetModal}
               >
-                <GoingSheet
+                <YouAreGoing
                   title={goingActivity.title}
-                  onPhotos={() => {
-                    const activityId = goingActivity.id;
-                    setGoingActivity(null);
-                    navigation.getParent()?.navigate('GatheringDetail', { activityId });
+                  whenLabel={goingActivity.time ? formatGatheringWhen(goingActivity.time) : null}
+                  placeLabel={goingActivity.location ?? null}
+                  response={goingResponse ?? { me: { name: 'Me', eligible: true }, dependents: [] }}
+                  saved={goingSaved}
+                  ageRange={goingActivity}
+                  saving={goingSaving}
+                  error={goingError}
+                  onSave={(selection) => {
+                    setGoingSaving(true);
+                    setGoingError(null);
+                    postRsvp(
+                      goingActivity.id,
+                      buildRsvpPayload(selection.includeSelf, selection.memberIds),
+                    )
+                      .then((result) => {
+                        setGoingSaved(selectionFromMyRsvp(result ?? { include_self: selection.includeSelf, dependent_ids: selection.memberIds }));
+                        void queryClient.invalidateQueries({ queryKey: ['foyer-going'] });
+                        void queryClient.invalidateQueries({ queryKey: ['foyer-gathering'] });
+                      })
+                      .catch((saveError) => setGoingError(friendlyRsvpMessage(getErrorMessage(saveError, 'Unable to save your RSVP.'))))
+                      .finally(() => setGoingSaving(false));
                   }}
-                  onChat={() => {
-                    setGoingActivity(null);
-                    navigation.navigate('Chat');
+                  onFamilyAdded={() => {
+                    const id = goingActivity.id;
+                    void fetchWhosComing(id).then(setGoingResponse).catch(() => undefined);
                   }}
                   onAddToCalendar={() => setCalendarActivity(goingActivity)}
-                  onDismiss={() => setGoingActivity(null)}
+                  onCancelRsvp={() => setCancelOpen(true)}
+                  onClose={() => setGoingActivity(null)}
                 />
               </Modal>
+            </Portal>
+          ) : null}
+          {foyerMode && goingActivity ? (
+            <CancelRsvpSheet
+              visible={cancelOpen}
+              activityId={goingActivity.id}
+              title={goingActivity.title}
+              onClose={() => setCancelOpen(false)}
+              onCancelled={() => {
+                setCancelOpen(false);
+                setGoingActivity(null);
+                setCurrentIndex(0);
+                setCancelledToast(true);
+              }}
+            />
+          ) : null}
+          {foyerMode && cancelledToast ? (
+            <Portal>
+              <Toast message={GOING_COPY.cancelled} onDismiss={() => setCancelledToast(false)} />
             </Portal>
           ) : null}
           {foyerMode && calendarActivity ? (

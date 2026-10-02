@@ -186,7 +186,7 @@ Age is the age on the gathering's start date in `America/New_York`. Birth dates 
 
 ## Photos
 
-`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 8.
+`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 50.
 
 ```json
 { "id": 4, "url": "https://<host>/api/activities/12/photos/4/" }
@@ -299,3 +299,121 @@ If `end_time` is null, or not after the start, the `.ics` omits `DTEND`. Google 
 ## Stripe
 
 The Foyer flow does not use Stripe. Connect onboarding, ticket checkout, and QR validation remain in the codebase from IRLobby and are unused by gatherings. `platform_fee_percent` on an activity is still forced to `0`. Giving can return later; this build does not request `card_payments` or create direct charges.
+
+---
+
+# Social features (additive; builds 88/89 keep working)
+
+Every endpoint below requires auth unless stated. Nothing here removes or renames an existing field.
+
+## Family members (spouse and children)
+
+`GET /api/users/household/` now returns `children` (unchanged) and `members`:
+
+```json
+{
+  "children": [ { "id": 1, "name": "Kid", "date_of_birth": "2017-03-31", "sex": "female", "age": 9,
+                  "relationship": "child", "birth_month": 3, "birth_year": 2017 } ],
+  "members": [
+    { "id": 1, "name": "Kid", "relationship": "child", "sex": "female", "birth_month": 3, "birth_year": 2017, "age": 9 },
+    { "id": 2, "name": "Pat", "relationship": "spouse", "sex": "male", "birth_month": null, "birth_year": null, "age": null }
+  ]
+}
+```
+
+`POST /api/users/household/`
+- Child: `{ "name", "sex"?, "birth_month": 1-12, "birth_year": 2017 }`, or the old `{ "date_of_birth": "YYYY-MM-DD" }` (also `birth_date`). `relationship` defaults to `"child"`. Must be under 18.
+- Spouse: `{ "name", "relationship": "spouse", "sex"? }`. Any birth data is ignored; a spouse is an adult with age `null`. One spouse per household.
+- 201 returns the legacy child object (plus `relationship`, `birth_month`, `birth_year`) and a `members` list. Other relationships → 400 `relationship`.
+- When only month/year is stored, `date_of_birth` is the last day of that month (never older than the child is).
+
+`DELETE /api/users/household/<id>/` → 204 (unchanged).
+
+`POST /api/activities/<id>/rsvp/` accepts `member_ids` (same list as `dependent_ids`; both are merged). The response and `my_rsvp` return both `dependent_ids` and `member_ids`. A spouse counts as an adult for sex rules and any age range, except events with `age_max` under 18.
+
+`GET /api/activities/<id>/whos-coming/` returns the same people under `dependents` and `members` (each has `relationship`, `birth_month`, `birth_year`; spouse `age` is `null`).
+
+## Host-only attendees, and past-event attendees
+
+`GET /api/activities/<id>/attendees/`
+
+Host (or church admin on a church event) or staff, any time:
+
+```json
+{ "going_count": 4,
+  "households": [ { "name": "Guest Smith",
+    "people": [ { "name": "Guest Smith", "relationship": "self",   "age_band": "adult" },
+                { "name": "Pat",         "relationship": "spouse", "age_band": "adult" },
+                { "name": "Kid",         "relationship": "child",  "age_band": "under 13" } ] } ] }
+```
+
+`age_band` is `"under 13"`, `"13-17"` or `"adult"`. No emails, phones, locations, birth dates, usernames or ids.
+
+A non-host with a confirmed going RSVP, once the event has started (ongoing or past): names only.
+
+```json
+{ "going_count": 4, "attendees": [ { "user_id": 12, "name": "Adult S." }, { "user_id": null, "name": "Teen S." } ] }
+```
+
+One row per other going account (household members are never listed). You are not listed. Blocked users (either direction) are omitted. `user_id` is `null` for under-18 accounts unless you are accepted friends, so a stranger cannot open a minor's profile. Anyone else, or before the event starts → 403.
+
+## Profile visibility, contact toggles, reports
+
+New fields on `GET/PATCH /api/users/profile/` (own profile; also in the login payloads):
+`profile_visibility` (`only_me` default | `friends` | `church` | `public`), `phone` (E.164, for example `+12155550123`; 10-digit US numbers are normalized; invalid → 400; empty clears), `show_email` (false), `show_phone` (false), `dm_from_shared_events` (false).
+
+`GET /api/users/<id>/profile/` (the "profile card"; the path is final unless the mobile team prefers another):
+
+```json
+{ "id": 7, "first_name": "Owner", "avatar_url": "https://…", "bio": "first 160 chars", "friendship": "none", "visible": true, "email": "…", "phone": "+1…" }
+```
+
+- `friendship`: `none` | `friends` | `pending_outgoing` | `pending_incoming` | `self`.
+- `email` / `phone` appear only if the owner turned `show_email` / `show_phone` on AND the viewer is inside the owner's level. Levels nest: `public` = any logged-in user; `church` = same church (or accepted friend); `friends` = accepted friends; `only_me` = nobody else.
+- Under-18 accounts are visible only to accepted friends regardless of the setting.
+- If the viewer is not allowed the full card but could still send a friend request (shared attended event, same church, or a public adult), they get `{ "id", "first_name", "friendship", "visible": false }` so the Add Friend button can work.
+- Otherwise 404. Blocked in either direction → 404. Your own id returns your own `email` and `phone`.
+- Never includes location, family, birth date, username or last name.
+
+`POST /api/users/<id>/report/` `{ "reason": "inappropriate|spam|harassment|fake_profile|threat|other", "description"? }` → 201 `{ "id", "status" }` (creates an `AbuseReport`). Blocking uses the existing `POST /api/moderation/block/<id>/` and `DELETE /api/moderation/unblock/<id>/`; blocking now also removes any friendship.
+
+Phone numbers are never present in any other response (chat, attendees, who's-coming, calendar, .ics, lists).
+
+## Friends
+
+- `POST /api/friends/requests/` `{ "user_id": 7 }` → 201 `{ "id", "direction": "outgoing", "status": "pending", "user": {"id","first_name","avatar_url"}, "created_at" }`. Re-sending is 200 (idempotent). If they already asked you, it accepts (`status: "accepted"`). 400 self/bad id; 403 if the target is not reachable; 404 unknown or blocked; 409 already friends; 429 rate limit (30/hour, `FRIEND_REQUEST_THROTTLE_RATE`).
+- Reachable = you both attended a started event, same church, or the target's visibility is `public` (adults only; a minor needs a shared event or church).
+- `GET /api/friends/requests/` → `{ "incoming": [ … ], "outgoing": [ … ] }` (pending only; same item shape). A declined request still shows as pending to the sender.
+- `POST /api/friends/requests/<id>/accept/` and `/decline/` (recipient only) → `{ "id", "status" }`; otherwise 404.
+- `GET /api/friends/` → `{ "friends": [ { "user_id", "first_name", "avatar_url", "since" } ] }`.
+- `DELETE /api/friends/<user_id>/` → 204 unfriends (or withdraws your own pending request); 404 if nothing to remove.
+
+## 1:1 chat
+
+Same `Conversation`/`Message` tables as gathering chat (a conversation whose match has no activity). Messages use the existing endpoints: `GET/POST /api/messages/conversations/<id>/messages/` and websocket `ws/chat/<id>/`.
+
+Who may message: accepted friends. If the recipient has `dm_from_shared_events` on, adults who attended a shared (started) event with them may too. A person who opted in may also reply to someone who already wrote to them. Any under-18 on either side → friends only. Blocks cut both ways. Rules are re-checked on every send (REST and websocket); unfriending or blocking stops sending immediately.
+
+- `GET /api/messages/direct/` → `{ "conversations": [ { "id", "other_user": {"id","first_name","avatar_url"}, "last_message": {"id","message","userId","createdAt"} | null, "muted", "can_send", "created_at" } ] }`.
+- `POST /api/messages/direct/` `{ "user_id" }` → 201 new / 200 existing conversation summary (same shape); 403 not allowed; 404 unknown or blocked.
+- `POST /api/messages/direct/<id>/mute/` `{ "muted": true|false }` → `{ "id", "muted" }` (muted = no push).
+- `POST /api/messages/direct/<id>/leave/` → `{ "id", "left": true }`; hides it for you; starting the chat again restores it.
+- `POST /api/messages/direct/<id>/report/` `{ "reason", "description"?, "message_id"? }` → 201 `{ "id", "status" }`.
+- `POST /api/messages/direct/<id>/block/` → 201; blocks the other person and removes the friendship.
+- Sending (POST messages in a 1:1 chat, starting a chat) is rate-limited to 120/hour (`DIRECT_MESSAGE_THROTTLE_RATE`). Non-members, blocked, or left → empty list on GET / 400 on POST (existing behavior); direct-endpoint actions → 404.
+- `/api/messages/conversations/` still lists gathering chats only.
+- Message `user` objects (REST and websocket) are `{ "id", "firstName" }`; email is no longer returned.
+
+## Cancel RSVP and clearing a pass
+
+`DELETE /api/activities/<id>/rsvp/cancel/` now also deletes your swipe for that activity, so the card returns to the deck. 400 if the event has started, you are the host, or you have no RSVP.
+
+`DELETE /api/swipes/<activity_id>/swipe/` → 200 `{ "deleted": true|false }` (idempotent). 404 only if the activity does not exist.
+
+## Photo downloads
+
+`GET /api/activities/<id>/photos/download/` → `{ "photos": [ { "id", "filename", "url", "expires_at" } ] }`. Allowed: any logged-in user for public-calendar events; otherwise host, staff, or a confirmed going attendee once the event has started; else 403. Each `url` is a signed original (about 1 hour, separate salt) that needs no auth header and responds with `Content-Disposition: attachment` and `Cache-Control: private`. Invalid or expired → 403. Every photo of the event is included (no per-photo opt-out).
+
+## Hidden addresses
+
+For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.

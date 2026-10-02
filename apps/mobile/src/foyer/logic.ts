@@ -101,6 +101,8 @@ export type WhosComingDependent = {
   sex?: string | null;
   birth_month?: number | null;
   birth_year?: number | null;
+  birth_day?: number | null;
+  date_of_birth?: string | null;
 };
 
 export type WhosComingResponse = {

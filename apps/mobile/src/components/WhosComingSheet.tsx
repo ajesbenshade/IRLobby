@@ -19,7 +19,6 @@ type WhosComingSheetProps = {
   error?: string | null;
   /** The event's age range, used to word `Not eligible: ages 13–17`. */
   ageRange?: { age_min?: number | null; age_max?: number | null } | null;
-  hasSpouse?: boolean;
   /**
    * `request` = Require approval: title `Request to join`, the guest line about what the host sees,
    * `Send request` and a Cancel link. Nothing here takes a spot until the host approves.
@@ -37,7 +36,6 @@ export const WhosComingSheet = ({
   pending,
   error,
   ageRange = null,
-  hasSpouse,
   mode = 'rsvp',
   onCancelRequest,
   onFamilyAdded,
@@ -127,7 +125,6 @@ export const WhosComingSheet = ({
 
       <AddFamilyMemberSheet
         visible={adding}
-        hasSpouse={hasSpouse ?? people.some((person) => person.subtitle === 'Spouse')}
         onCancel={() => setAdding(false)}
         onAdded={() => {
           setAdding(false);

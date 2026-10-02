@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             onPress={this.handleReset}
             accessibilityRole="button"
             accessibilityLabel="Try again"
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            style={styles.button}
           >
             <Text style={styles.buttonLabel}>Try again</Text>
           </Pressable>
@@ -102,15 +102,12 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: spacing.sm,
-    backgroundColor: appColors.primary,
+    backgroundColor: '#a2033f',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.pill,
     minWidth: 180,
     alignItems: 'center',
-  },
-  buttonPressed: {
-    opacity: 0.85,
   },
   buttonLabel: {
     color: appColors.white,

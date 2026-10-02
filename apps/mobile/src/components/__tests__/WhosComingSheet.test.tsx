@@ -14,12 +14,12 @@ jest.mock('@services/foyerService', () => ({
 const response = {
   me: { name: 'Anna B.', eligible: true, reason: null },
   dependents: [
-    { id: 1, name: 'Caleb', age: 15, eligible: true, reason: null, relationship: 'child' },
+    { id: 1, name: 'Caleb', age: 15, eligible: true, reason: null, relationship: 'child', birth_month: 6, birth_year: 2011, birth_day: 9 },
     { id: 3, name: 'Noah', age: 11, eligible: false, reason: "Outside this event's age range", relationship: 'child' },
   ],
   members: [
     { id: 2, name: 'Rachel', age: null, eligible: true, reason: null, relationship: 'spouse' },
-    { id: 1, name: 'Caleb', age: 15, eligible: true, reason: null, relationship: 'child' },
+    { id: 1, name: 'Caleb', age: 15, eligible: true, reason: null, relationship: 'child', birth_month: 6, birth_year: 2011, birth_day: 9 },
     { id: 3, name: 'Noah', age: 11, eligible: false, reason: "Outside this event's age range", relationship: 'child' },
   ],
 };
@@ -37,8 +37,8 @@ describe('WhosComingSheet eligibility', () => {
 
     expect(screen.getByText("Who's coming?")).toBeTruthy();
     expect(screen.getByText('Rachel')).toBeTruthy();
-    expect(screen.getByText('Spouse')).toBeTruthy();
-    expect(screen.getByText('Child · age 15')).toBeTruthy();
+    expect(screen.getByText('Adult')).toBeTruthy();
+    expect(screen.getByText('Born June 9, 2011 · age 15')).toBeTruthy();
     const ineligible = screen.getByLabelText('Noah');
     expect(ineligible.props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText('Not eligible: ages 13–17')).toBeTruthy();

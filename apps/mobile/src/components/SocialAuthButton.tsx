@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -57,6 +58,8 @@ const XMark = ({ color }: { color: string }) => (
   </Svg>
 );
 
+const SOCIAL_BURGUNDY = '#a2033f';
+
 export const SocialAuthButton = ({
   provider,
   label,
@@ -69,6 +72,7 @@ export const SocialAuthButton = ({
   style,
 }: SocialAuthButtonProps) => {
   const isDisabled = disabled || loading;
+  const [pressed, setPressed] = useState(false);
   const tone =
     appearance === 'onLight' || provider === 'google'
       ? 'light'
@@ -86,11 +90,15 @@ export const SocialAuthButton = ({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.base,
         tone === 'dark' ? styles.dark : null,
         tone === 'light' ? styles.light : null,
         tone === 'burgundy' ? styles.burgundy : null,
+        // Literal fill, not a style callback or theme read (a TestFlight build lost filled fills that way).
+        tone === 'burgundy' ? { backgroundColor: SOCIAL_BURGUNDY } : null,
         isDisabled && !loading ? styles.disabled : null,
         pressed && !isDisabled ? styles.pressed : null,
         style,
@@ -104,6 +112,7 @@ export const SocialAuthButton = ({
             style={[
               styles.label,
               tone === 'light' ? styles.labelDark : styles.labelLight,
+              tone === 'burgundy' ? { color: '#ffffff' } : null,
             ]}
           >
             {label}

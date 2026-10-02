@@ -26,7 +26,7 @@ describe('final copy (Oct 1 late)', () => {
     expect(GOING_COPY.cancelBody).toBe("You'll be removed from the guest list and the host will be told.");
     expect(GOING_COPY.cancelRsvpConfirm).toBe('Cancel my RSVP');
     expect(GOING_COPY.notEligible('ages 13–17')).toBe('Not eligible: ages 13–17');
-    expect(FAMILY_COPY.intro).toBe('Add a spouse or child under 18 so you can RSVP for them. Only you can see this list.');
+    expect(FAMILY_COPY.intro).toBe('Add your children under 18 so you can RSVP for them. Only you can see this list.');
     expect(FAMILY_COPY.title).toBe('My family');
   });
   it('friends, profile, chat', () => {

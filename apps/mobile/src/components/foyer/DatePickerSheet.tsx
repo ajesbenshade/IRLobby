@@ -57,6 +57,16 @@ type DayProps = CommonProps & {
   onDone: (value: DayValue) => void;
   /** Birth date only. Default 13. */
   minAge?: number;
+  /** Birth date wheel step helper line. Defaults to the account birth date text. */
+  wheelHelper?: string;
+  /** Line under the day grid. Defaults to the account birth date caption. Pass '' to hide. */
+  caption?: string;
+  /** Add the missing day to a saved month and year: opens on the grid, month and year are plain text, Cancel / Confirm. */
+  fixedMonth?: boolean;
+  /** Disables Confirm and shows a spinner label while the day is being saved. */
+  saving?: boolean;
+  /** Inline error under the grid (e.g. a failed save). */
+  error?: string | null;
 };
 
 type MonthProps = CommonProps & {
@@ -86,7 +96,8 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode, props.limits],
   );
-  const firstStep: Step = mode === 'day' ? 'grid' : 'wheel';
+  const fixedMonth = props.mode !== 'monthYear' && Boolean(props.fixedMonth);
+  const firstStep: Step = mode === 'day' || fixedMonth ? 'grid' : 'wheel';
 
   const seedMonth = (): MonthValue => {
     const base: MonthValue =
@@ -145,10 +156,12 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
       rightLabel = PICKER_COPY.next;
       rightAction = () => setStep('grid');
     } else {
-      leftLabel = PICKER_COPY.back;
-      leftAction = () => setStep('wheel');
+      if (!fixedMonth) {
+        leftLabel = PICKER_COPY.back;
+        leftAction = () => setStep('wheel');
+      }
       rightLabel = PICKER_COPY.confirm;
-      rightDisabled = gridDisabled;
+      rightDisabled = gridDisabled || Boolean(props.saving);
     }
   } else if (mode === 'monthYear') {
     rightLabel = PICKER_COPY.confirm;
@@ -172,7 +185,9 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
             {step === 'wheel' ? (
               <>
                 {mode !== 'day' ? (
-                  <Text style={styles.helper}>{mode === 'birthdate' ? PICKER_COPY.birthWheelHelper : PICKER_COPY.monthYearHelper}</Text>
+                  <Text style={styles.helper}>
+                    {mode === 'birthdate' ? (props.mode === 'birthdate' && props.wheelHelper) || PICKER_COPY.birthWheelHelper : PICKER_COPY.monthYearHelper}
+                  </Text>
                 ) : null}
                 <MonthYearWheel
                   value={month}
@@ -203,10 +218,18 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
                   weekdays={mode === 'birthdate' ? PICKER_COPY.weekdaysLong : PICKER_COPY.weekdays}
                   onMonthChange={setMonth}
                   onHeaderPress={() => setStep('wheel')}
+                  fixedMonth={fixedMonth}
                   onSelect={setSelectedDay}
                   now={now}
                 />
-                {mode === 'birthdate' ? <Text style={styles.caption}>{PICKER_COPY.birthCaption}</Text> : null}
+                {mode === 'birthdate' && (props.mode === 'birthdate' ? (props.caption ?? PICKER_COPY.birthCaption) : '') ? (
+                  <Text style={styles.caption}>{props.mode === 'birthdate' ? (props.caption ?? PICKER_COPY.birthCaption) : ''}</Text>
+                ) : null}
+                {props.mode !== 'monthYear' && props.error ? (
+                  <Text accessibilityRole="alert" style={styles.futureNote}>
+                    {props.error}
+                  </Text>
+                ) : null}
               </>
             )}
           </ScrollView>
@@ -233,9 +256,11 @@ type DayGridProps = {
   onSelect: (day: DayValue) => void;
   weekdays?: readonly string[];
   now?: Date;
+  /** Month and year are plain text (no chevrons, no chip). */
+  fixedMonth?: boolean;
 };
 
-export const DayGrid = ({ month, limits, selected, onMonthChange, onHeaderPress, onSelect, weekdays = PICKER_COPY.weekdays, now }: DayGridProps) => {
+export const DayGrid = ({ month, limits, selected, onMonthChange, onHeaderPress, onSelect, weekdays = PICKER_COPY.weekdays, now, fixedMonth = false }: DayGridProps) => {
   const cells = monthGrid(month.year, month.month);
   const limitMonths = limits ? monthLimitsForDays(limits) : null;
   const canPrev = !limitMonths || compareMonths(addMonths(month, -1), limitMonths.min) >= 0;
@@ -247,37 +272,45 @@ export const DayGrid = ({ month, limits, selected, onMonthChange, onHeaderPress,
 
   return (
     <View style={styles.grid}>
-      <View style={styles.monthRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={PICKER_COPY.previousMonth}
-          accessibilityState={{ disabled: !canPrev }}
-          disabled={!canPrev}
-          onPress={() => onMonthChange(addMonths(month, -1))}
-          style={styles.chevron}
-        >
-          <MaterialCommunityIcons name="chevron-left" size={26} color={canPrev ? appColors.primary : '#cec8c4'} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${formatMonthHeader(month)}. ${PICKER_COPY.chooseMonthYear}`}
-          onPress={onHeaderPress}
-          style={styles.monthHeader}
-        >
-          <Text style={styles.monthHeaderText}>{formatMonthHeader(month)}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={22} color={appColors.primary} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={PICKER_COPY.nextMonth}
-          accessibilityState={{ disabled: !canNext }}
-          disabled={!canNext}
-          onPress={() => onMonthChange(addMonths(month, 1))}
-          style={styles.chevron}
-        >
-          <MaterialCommunityIcons name="chevron-right" size={26} color={canNext ? appColors.primary : '#cec8c4'} />
-        </Pressable>
-      </View>
+      {fixedMonth ? (
+        <View style={styles.monthRow}>
+          <Text accessibilityRole="header" style={[styles.monthHeaderText, styles.fixedMonthText]}>
+            {formatMonthHeader(month)}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.monthRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={PICKER_COPY.previousMonth}
+            accessibilityState={{ disabled: !canPrev }}
+            disabled={!canPrev}
+            onPress={() => onMonthChange(addMonths(month, -1))}
+            style={styles.chevron}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={26} color={canPrev ? appColors.primary : '#cec8c4'} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${formatMonthHeader(month)}. ${PICKER_COPY.chooseMonthYear}`}
+            onPress={onHeaderPress}
+            style={styles.monthHeader}
+          >
+            <Text style={styles.monthHeaderText}>{formatMonthHeader(month)}</Text>
+            <MaterialCommunityIcons name="chevron-down" size={22} color={appColors.primary} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={PICKER_COPY.nextMonth}
+            accessibilityState={{ disabled: !canNext }}
+            disabled={!canNext}
+            onPress={() => onMonthChange(addMonths(month, 1))}
+            style={styles.chevron}
+          >
+            <MaterialCommunityIcons name="chevron-right" size={26} color={canNext ? appColors.primary : '#cec8c4'} />
+          </Pressable>
+        </View>
+      )}
       <View style={styles.weekRow}>
         {weekdays.map((label, index) => (
           <Text key={`${label}-${index}`} style={styles.weekday}>
@@ -518,6 +551,7 @@ const styles = StyleSheet.create({
   readout: { fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink, textAlign: 'center', marginBottom: 4 },
   readoutEmpty: { color: appColors.softInk },
   caption: { fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18, color: appColors.mutedInk, marginTop: 10 },
+  fixedMonthText: { flex: 1, textAlign: 'center' },
   futureNote: { fontFamily: appTypography.bodyMedium, fontSize: 13, lineHeight: 18, color: appColors.mutedInk, marginTop: 10, textAlign: 'center' },
   underAge: {
     flexDirection: 'row',

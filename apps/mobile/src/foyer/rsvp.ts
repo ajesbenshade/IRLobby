@@ -1,5 +1,6 @@
-import { GOING_COPY } from '@constants/foyerCopy';
+import { FAMILY_COPY, GOING_COPY } from '@constants/foyerCopy';
 
+import { MONTH_NAMES, daysInMonth, formatBirthdayLong, parseIsoDate } from './dates';
 import { whosComingPeople, type WhosComingDependent, type WhosComingResponse } from './logic';
 
 export type RsvpPerson = {
@@ -15,11 +16,6 @@ export type RsvpPerson = {
 };
 
 const initialsOf = (name: string) => name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
-
-const RELATIONSHIP_LABEL: Record<string, string> = {
-  spouse: 'Spouse',
-  child: 'Child',
-};
 
 /** `Not eligible: ages 13–17` when the server gave the generic age reason and we know the range. */
 export const notEligibleReason = (
@@ -42,10 +38,25 @@ export const notEligibleReason = (
   return trimmed || GOING_COPY.outsideRange;
 };
 
+/**
+ * Under each person on the RSVP screens: `Adult` for a legacy spouse row, else `Born March 4, 2016 · age 10`
+ * (or `Born March 2016 · age 10` for a legacy month/year row). Only the account owner sees this; hosts never do.
+ */
 export const personSubtitle = (member: WhosComingDependent): string => {
-  const label = RELATIONSHIP_LABEL[member.relationship ?? 'child'] ?? 'Child';
   const isChild = (member.relationship ?? 'child') === 'child';
-  return isChild && member.age != null ? `${label} · age ${member.age}` : label;
+  const dob = parseIsoDate(member.date_of_birth ?? null);
+  const month = member.birth_month ?? dob?.month ?? null;
+  const year = member.birth_year ?? dob?.year ?? null;
+  if (!isChild || month == null || year == null) {
+    return FAMILY_COPY.adult;
+  }
+  // A saved day wins; a bare date that is the last day of its month is how the server stores month/year-only rows.
+  const dayKnown =
+    member.birth_day != null || (member.birth_day === undefined && dob != null && dob.day !== daysInMonth(dob.year, dob.month));
+  const day = member.birth_day ?? dob?.day ?? null;
+  const born = dayKnown && day != null ? formatBirthdayLong({ year, month, day }) : `${MONTH_NAMES[month - 1]} ${year}`;
+  const line = FAMILY_COPY.born(born);
+  return member.age != null ? `${line} · age ${member.age}` : line;
 };
 
 /** Me plus every family member, in the order the screens draw them. Ineligible people are kept, never hidden. */

@@ -21,10 +21,13 @@ export type HouseholdChild = {
   age: number;
 };
 
-/** The backend stores only spouse and child. */
+/** Legacy rows only: older builds could add a spouse. The app no longer chooses or sends a relationship. */
 export type FamilyRelationship = 'spouse' | 'child';
 
-/** One person in "My family". Adults carry no birth data; children carry month and year only. */
+/**
+ * One person in "My family". Children carry a birth date (or, for rows saved before full birth dates, only a month and
+ * year). Legacy spouse rows carry none and read `Adult`.
+ */
 export type FamilyMember = {
   id: number;
   name: string;
@@ -32,12 +35,20 @@ export type FamilyMember = {
   sex?: 'male' | 'female' | string | null;
   birth_month?: number | null;
   birth_year?: number | null;
+  /** Day of the month when the server stored one. `null` for legacy month/year rows. */
+  birth_day?: number | null;
+  /** Full ISO date, only when the day is known. */
+  date_of_birth?: string | null;
   age?: number | null;
 };
 
 export type HouseholdResponse = {
-  children?: Array<HouseholdChild & { relationship?: string; birth_month?: number | null; birth_year?: number | null }>;
-  members?: FamilyMember[];
+  children?: Array<
+    HouseholdChild & { relationship?: string; birth_month?: number | null; birth_year?: number | null; birth_day?: number | null; birth_precision?: string | null }
+  >;
+  members?: Array<
+    FamilyMember & { day?: number | null; birth_precision?: string | null }
+  >;
 };
 
 export type RsvpResult = {
@@ -167,22 +178,46 @@ export const fetchFamilyMembers = async (): Promise<FamilyMember[]> => {
   return normalizeFamilyMembers(response.data);
 };
 
+export type FamilySex = 'male' | 'female';
+
+/** Add family member: name, sex and a full birth date. No relationship is sent; the server defaults to child. */
 export const addFamilyMember = async (payload: {
   name: string;
-  relationship: FamilyRelationship;
-  sex?: 'male' | 'female' | null;
-  birth_month?: number;
-  birth_year?: number;
+  sex: FamilySex;
+  /** `YYYY-MM-DD` */
+  date_of_birth: string;
 }): Promise<void> => {
-  const body: Record<string, unknown> = { name: payload.name, relationship: payload.relationship };
-  if (payload.sex) {
-    body.sex = payload.sex;
+  await api.post('/api/users/household/', {
+    name: payload.name,
+    sex: payload.sex,
+    date_of_birth: payload.date_of_birth,
+  });
+};
+
+/** Edit a family member, or add the missing day to a legacy month/year row. Needs the backend PATCH endpoint. */
+export const updateFamilyMember = async (
+  id: number,
+  patch: { name?: string; sex?: FamilySex; date_of_birth?: string },
+): Promise<void> => {
+  await api.patch(`/api/users/household/${id}/`, patch);
+};
+
+/**
+ * Capability check for PATCH /api/users/household/<id>/ (the backend is adding it). Side-effect free: an OPTIONS request
+ * and the `Allow` header. A 404, 405, network error or a missing header all read as "not there yet", never as a crash.
+ */
+export const householdPatchSupported = async (sampleId: number): Promise<boolean> => {
+  try {
+    const response = await api.options(`/api/users/household/${sampleId}/`);
+    const allow = String(
+      (response.headers as Record<string, unknown> | undefined)?.allow ??
+        (response.headers as Record<string, unknown> | undefined)?.Allow ??
+        '',
+    ).toUpperCase();
+    return allow.split(/[\s,]+/).includes('PATCH');
+  } catch {
+    return false;
   }
-  if (payload.relationship === 'child') {
-    body.birth_month = payload.birth_month;
-    body.birth_year = payload.birth_year;
-  }
-  await api.post('/api/users/household/', body);
 };
 
 export const addHouseholdChild = async (payload: {

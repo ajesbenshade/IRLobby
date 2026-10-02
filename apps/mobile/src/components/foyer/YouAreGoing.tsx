@@ -129,7 +129,6 @@ export const YouAreGoing = ({
       <PillButton label={GOING_COPY.addFamilyMember} variant="outline" icon="plus" onPress={() => setAdding(true)} />
       <AddFamilyMemberSheet
         visible={adding}
-        hasSpouse={people.some((person) => person.subtitle === 'Spouse')}
         onCancel={() => setAdding(false)}
         onAdded={() => {
           setAdding(false);

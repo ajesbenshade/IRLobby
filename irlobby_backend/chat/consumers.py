@@ -202,7 +202,6 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
                         "user": {
                             "id": saved_message.sender.id,
                             "firstName": saved_message.sender.first_name,
-                            "email": saved_message.sender.email,
                         },
                         "createdAt": saved_message.created_at.isoformat(),
                     },
@@ -436,7 +435,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "user": {
                         "id": saved_message.sender.id,
                         "firstName": saved_message.sender.first_name,
-                        "email": saved_message.sender.email,
                     },
                     "createdAt": saved_message.created_at.isoformat(),
                 },

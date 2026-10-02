@@ -24,6 +24,20 @@ type Props = {
   homeChurch?: HomeChurchGeo | null;
 };
 
+/** Within about a metre: the map settling on the region we asked for, not the user moving it. */
+const SAME_SPOT = 0.00001;
+
+/** A drag is a gesture-flagged region change, or (when the platform does not say) one that moved away from `center`. */
+export const isUserDrag = (region: MapCenter, center: MapCenter, details?: { isGesture?: boolean }): boolean => {
+  if (details?.isGesture === true) {
+    return true;
+  }
+  if (details?.isGesture === false) {
+    return false;
+  }
+  return Math.abs(region.latitude - center.latitude) > SAME_SPOT || Math.abs(region.longitude - center.longitude) > SAME_SPOT;
+};
+
 const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel: string = MAP_COPY.franconiaLabel): Promise<string> => {
   try {
     // Reverse geocoding needs no location permission and never prompts.
@@ -78,7 +92,12 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
     };
   }, [visible, center.latitude, center.longitude, isDefault]);
 
-  const onRegionChange = (region: MapCenter) => {
+  // Only a real drag moves the pin and re-labels it. The initial region and the animateToRegion on open also fire
+  // onRegionChangeComplete; those must not geocode and overwrite the fixed "Franconia, PA" / church label.
+  const onRegionChange = (region: MapCenter, details?: { isGesture?: boolean }) => {
+    if (!isUserDrag(region, center, details)) {
+      return;
+    }
     const next = { latitude: region.latitude, longitude: region.longitude };
     setSelected(next);
     void labelFor(next, false).then(setLabel);

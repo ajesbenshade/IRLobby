@@ -50,4 +50,16 @@ describe('PR #41 design QA fixes', () => {
     expect(gatherings).toMatch(/declined: \{ backgroundColor: '#e1dbd7' \}/);
     expect(gatherings).toMatch(/declined: \{ color: '#5b5551' \}/);
   });
+
+  it('Discover has no hardcoded Unable-to fallbacks (they live in COMMON_COPY)', () => {
+    expect(src('screens/main/DiscoverScreen.tsx')).not.toMatch(/'Unable to /);
+    const { COMMON_COPY } = require('@constants/foyerCopy') as typeof import('@constants/foyerCopy');
+    expect(COMMON_COPY.rsvpSaveFailed).toMatch(/RSVP/);
+    expect(COMMON_COPY.rsvpOpenFailed).toBeTruthy();
+  });
+
+  it('removed share-switch and stale host-card comments are gone', () => {
+    expect(src('components/foyer/AddFamilyMemberSheet.tsx')).not.toMatch(/Show on my profile/);
+    expect(src('components/foyer/HostAttendeesCard.tsx')).not.toMatch(/relationship lines/);
+  });
 });

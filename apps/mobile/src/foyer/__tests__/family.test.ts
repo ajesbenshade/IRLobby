@@ -18,7 +18,7 @@ describe('family members', () => {
     const members = normalizeFamilyMembers({
       children: [
         { id: 2, name: 'Caleb', date_of_birth: '2011-06-09', age: 15 },
-        { id: 3, name: 'Noah', date_of_birth: '2016-03-31', age: 10 },
+        { id: 3, name: 'Noah', date_of_birth: null, birth_month: 3, birth_year: 2016, birth_precision: 'month', age: 10 },
       ],
       members: [
         { id: 1, name: 'Rachel', relationship: 'spouse', sex: 'female', birth_month: null, birth_year: null, age: null },
@@ -36,7 +36,7 @@ describe('family members', () => {
     const [full, legacy] = normalizeFamilyMembers({
       members: [
         { id: 1, name: 'A', relationship: 'child', birth_month: 3, birth_year: 2016, birth_day: 31, date_of_birth: '2016-03-31' },
-        { id: 2, name: 'B', relationship: 'child', birth_month: 3, birth_year: 2016, birth_day: null, date_of_birth: '2016-03-31' },
+        { id: 2, name: 'B', relationship: 'child', birth_month: 3, birth_year: 2016, birth_day: null, birth_precision: 'month', date_of_birth: null },
       ],
     } as never);
     expect(memberBirthLine(full)).toBe('Born March 31, 2016');
@@ -85,5 +85,35 @@ describe('family members', () => {
     expect(FAMILY_COPY.removeBody('male')).toBe("He'll be taken off your family list and off any gatherings you've RSVP'd to for him.");
     expect(FAMILY_COPY.removeBody('female')).toContain("She'll");
     expect(FAMILY_COPY.removeBody(null)).toBe("They'll be taken off your family list and off any gatherings you've RSVP'd to for them.");
+  });
+
+  it('Backend shape: month-only rows have null date_of_birth + precision month, full rows precision day', () => {
+    const [month, day, spouse] = normalizeFamilyMembers({
+      members: [
+        { id: 1, name: 'Noah', relationship: 'child', sex: 'male', birth_month: 3, birth_year: 2016, birth_day: null, birth_precision: 'month', age: 10 },
+        { id: 2, name: 'Caleb', relationship: 'child', sex: 'male', birth_month: 6, birth_year: 2011, birth_day: 9, birth_precision: 'day', date_of_birth: '2011-06-09', age: 15 },
+        { id: 3, name: 'Rachel', relationship: 'spouse', sex: 'female', birth_month: null, birth_year: null, birth_day: null, birth_precision: null, age: null },
+      ],
+    } as never);
+    expect(month).toMatchObject({ date_of_birth: null, birth_day: null, birth_month: 3, birth_year: 2016 });
+    expect(isMonthYearOnly(month)).toBe(true);
+    expect(memberBirthLine(month)).toBe('Born March 2016');
+    expect(memberBirthLine(day)).toBe('Born June 9, 2011');
+    expect(memberBirthLine(spouse)).toBe('Adult');
+  });
+
+  it('a last-day-of-month date_of_birth with precision day is a real day (no last-day heuristic)', () => {
+    const [row] = normalizeFamilyMembers({
+      members: [{ id: 1, name: 'A', relationship: 'child', birth_month: 3, birth_year: 2016, birth_day: 31, birth_precision: 'day', date_of_birth: '2016-03-31' }],
+    } as never);
+    expect(memberBirthLine(row)).toBe('Born March 31, 2016');
+    expect(isMonthYearOnly(row)).toBe(false);
+  });
+
+  it('never throws on null or missing date_of_birth, birth fields, or an empty response', () => {
+    expect(() => normalizeFamilyMembers({ members: [{ id: 1, name: 'X', relationship: 'child', date_of_birth: null }] } as never)).not.toThrow();
+    expect(normalizeFamilyMembers({ members: [{ id: 1, name: 'X', relationship: 'child', date_of_birth: null }] } as never)[0]).toMatchObject({ birth_month: null, date_of_birth: null });
+    expect(memberBirthLine(normalizeFamilyMembers({ members: [{ id: 1, name: 'X', relationship: 'child', date_of_birth: null }] } as never)[0])).toBe('Adult');
+    expect(normalizeFamilyMembers(null)).toEqual([]);
   });
 });

@@ -5,21 +5,19 @@ import { DatePickerSheet } from '@components/foyer/DatePickerSheet';
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
 import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { COMMON_COPY, FAMILY_COPY } from '@constants/foyerCopy';
-import { dayLimitsWithinMonth, toIsoDate, type DayValue } from '@foyer/dates';
+import { dayLimitsWithinMonth, type DayValue } from '@foyer/dates';
 import { memberBirthLine } from '@foyer/family';
 import { removeHouseholdChild, updateFamilyMember, type FamilyMember } from '@services/foyerService';
 import { appColors, appTypography } from '@theme/index';
 
-/** Row chevron sheet: name, `Born …`, `Edit details` (only when the edit endpoint exists), `Remove from family`, Cancel. */
+/** Row chevron sheet: name, `Born …`, `Edit details`, `Remove from family`, Cancel. */
 export const FamilyMemberActionSheet = ({
   member,
-  canEdit,
   onEdit,
   onRemove,
   onCancel,
 }: {
   member: FamilyMember | null;
-  canEdit: boolean;
   onEdit: (member: FamilyMember) => void;
   onRemove: (member: FamilyMember) => void;
   onCancel: () => void;
@@ -30,7 +28,7 @@ export const FamilyMemberActionSheet = ({
     footer={
       member ? (
         <SheetButtons>
-          {canEdit ? <PillButton label={FAMILY_COPY.editDetails} variant="outline" onPress={() => onEdit(member)} /> : null}
+          <PillButton label={FAMILY_COPY.editDetails} variant="outline" onPress={() => onEdit(member)} />
           <PillButton label={FAMILY_COPY.removeFromFamily} variant="outline" onPress={() => onRemove(member)} />
           <PillButton label={COMMON_COPY.cancel} variant="text" onPress={onCancel} />
         </SheetButtons>
@@ -114,7 +112,7 @@ export const RemoveFamilyMemberSheet = ({
   );
 };
 
-/** `Add day` on a legacy month/year row: the day grid with the month and year fixed. Needs the edit endpoint. */
+/** `Add day` on a legacy month/year row: the day grid with the month and year fixed. PATCH `{birth_day}`. */
 export const AddDaySheet = ({
   member,
   onSaved,
@@ -136,7 +134,7 @@ export const AddDaySheet = ({
     setPending(true);
     setError(null);
     try {
-      await updateFamilyMember(member.id, { date_of_birth: toIsoDate(day) });
+      await updateFamilyMember(member.id, { birth_day: day.day });
       onSaved();
     } catch {
       setError(FAMILY_COPY.addDayFailed);

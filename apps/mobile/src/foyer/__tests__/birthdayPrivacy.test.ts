@@ -58,3 +58,32 @@ describe('birthday privacy (Aaron, Oct 2)', () => {
     expect(GOING_COPY.ageRangeRejected).toMatch(/age range/);
   });
 });
+
+describe('birthday payloads (flag off)', () => {
+  it('no Wish pill without a birthday object, and none at all while the flag is off', () => {
+    const { wishPillVisible, profileBirthdayOf } = require('../birthdays') as typeof import('../birthdays');
+    expect(wishPillVisible({ id: 1 })).toBe(false);
+    expect(wishPillVisible({ birthday: { month: 3, day: 4 } })).toBe(false); // flag default off
+    expect(profileBirthdayOf({ birthday: { month: 3, day: 4 } })).toEqual({ month: 3, day: 4 });
+    expect(profileBirthdayOf({ birthday: { month: 13, day: 4 } })).toBeNull();
+    expect(profileBirthdayOf({ birthday: null })).toBeNull();
+    expect(profileBirthdayOf(null)).toBeNull();
+  });
+
+  it('the Wish pill needs the flag on AND the birthday object', () => {
+    jest.isolateModules(() => {
+      jest.doMock('@constants/features', () => ({ FEATURES: { birthdays: 'on' } }));
+      const { wishPillVisible } = require('../birthdays') as typeof import('../birthdays');
+      expect(wishPillVisible({ birthday: { month: 3, day: 4 } })).toBe(true);
+      expect(wishPillVisible({ birthday: null })).toBe(false);
+      expect(wishPillVisible({})).toBe(false);
+    });
+    jest.dontMock('@constants/features');
+  });
+
+  it('no capability probe or EXPO_PUBLIC_FOYER_HOUSEHOLD_EDIT gating is left', () => {
+    for (const file of ['services/foyerService.ts', 'constants/features.ts', 'screens/main/MyFamilyScreen.tsx', 'components/foyer/FamilyMemberSheets.tsx']) {
+      expect(src(file)).not.toMatch(/householdPatchSupported|HOUSEHOLD_EDIT|householdEdit|useHouseholdEditSupported/);
+    }
+  });
+});

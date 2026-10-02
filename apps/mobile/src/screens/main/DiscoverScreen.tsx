@@ -61,7 +61,7 @@ import {
   type ActivityFetchFilters,
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
-import { APPROVAL_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, COMMON_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { useMapCenter } from '@foyer/mapLocation';
 import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
@@ -342,7 +342,7 @@ export const DiscoverScreen = () => {
           advanceAfterRsvp(activity, result ?? payload, whosComing);
         }
       } catch (error) {
-        const message = friendlyRsvpMessage(getErrorMessage(error, 'Unable to save your RSVP.'));
+        const message = friendlyRsvpMessage(getErrorMessage(error, COMMON_COPY.rsvpSaveFailed));
         if (isFullMessage(message)) {
           // The last spot went while the sheet was open: toast, close the sheet, refresh the deck.
           setWhosComing(null);
@@ -431,7 +431,7 @@ export const DiscoverScreen = () => {
       setWhosComing(sheet);
       return false;
     } catch (error) {
-      const message = friendlyRsvpMessage(getErrorMessage(error, 'Unable to open the RSVP list.'));
+      const message = friendlyRsvpMessage(getErrorMessage(error, COMMON_COPY.rsvpOpenFailed));
       if (isFullMessage(message)) {
         setErrorToast(FULL_COPY.notice);
         void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
@@ -761,7 +761,7 @@ export const DiscoverScreen = () => {
           {error || swipeMutation.error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                {getErrorMessage(error ?? swipeMutation.error, 'Unable to load activities.')}
+                {getErrorMessage(error ?? swipeMutation.error, COMMON_COPY.activitiesLoadFailed)}
               </Text>
               <AppButton variant="outline" onPress={() => void refetch()} disabled={isRefetching}>
                 {isRefetching ? 'Retrying...' : 'Retry'}
@@ -771,7 +771,7 @@ export const DiscoverScreen = () => {
 
           {participationMutation.error ? (
             <Text style={styles.errorText}>
-              {getErrorMessage(participationMutation.error, 'Unable to update participation.')}
+              {getErrorMessage(participationMutation.error, COMMON_COPY.participationFailed)}
             </Text>
           ) : null}
 
@@ -1131,7 +1131,7 @@ export const DiscoverScreen = () => {
                         void queryClient.invalidateQueries({ queryKey: ['foyer-going'] });
                         void queryClient.invalidateQueries({ queryKey: ['foyer-gathering'] });
                       })
-                      .catch((saveError) => setGoingError(friendlyRsvpMessage(getErrorMessage(saveError, 'Unable to save your RSVP.'))))
+                      .catch((saveError) => setGoingError(friendlyRsvpMessage(getErrorMessage(saveError, COMMON_COPY.rsvpSaveFailed))))
                       .finally(() => setGoingSaving(false));
                   }}
                   onFamilyAdded={() => {

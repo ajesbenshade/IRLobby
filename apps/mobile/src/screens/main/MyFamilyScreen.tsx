@@ -11,7 +11,6 @@ import { Avatar, EmptyState, PillButton, SectionLabel } from '@components/foyer/
 import { View } from '@components/RNCompat';
 import { FAMILY_COPY } from '@constants/foyerCopy';
 import { isMonthYearOnly, memberBirthLine, memberInitials } from '@foyer/family';
-import { useHouseholdEditSupported } from '@foyer/householdCapability';
 import { fetchFamilyMembers, type FamilyMember } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -28,7 +27,6 @@ export const MyFamilyScreen = () => {
   const [addingDay, setAddingDay] = useState<FamilyMember | null>(null);
   const membersQuery = useQuery({ queryKey: FAMILY_QUERY_KEY, queryFn: fetchFamilyMembers });
   const members = membersQuery.data ?? [];
-  const canEdit = useHouseholdEditSupported(members);
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: FAMILY_QUERY_KEY });
 
@@ -64,7 +62,7 @@ export const MyFamilyScreen = () => {
                     <Text style={styles.name}>{member.name}</Text>
                     <Text style={styles.meta}>{memberBirthLine(member)}</Text>
                   </View>
-                  {monthOnly && canEdit ? (
+                  {monthOnly ? (
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`${FAMILY_COPY.addDay} ${member.name}`}
@@ -101,7 +99,6 @@ export const MyFamilyScreen = () => {
       />
       <FamilyMemberActionSheet
         member={selected}
-        canEdit={canEdit}
         onCancel={() => setSelected(null)}
         onEdit={(member) => {
           setSelected(null);

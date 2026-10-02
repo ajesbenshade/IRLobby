@@ -43,3 +43,24 @@ export const birthdayMonthDay = (dateOfBirthIso: string | null | undefined): str
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return `${months[Number(match[2]) - 1]} ${Number(match[3])}`;
 };
+
+/** What the profile card carries when (and only when) the person allows it: `{ month, day }`, never the year. */
+export type ProfileBirthday = { month: number; day: number };
+
+/** GET /api/friends/birthdays/ row. The birth year is never returned. */
+export type FriendBirthday = { user_id: number; name: string; month: number; day: number; days_until: number };
+
+/** The `birthday` object of a profile payload, or null unless it is a real month/day. */
+export const profileBirthdayOf = (profile: Rec): ProfileBirthday | null => {
+  const value = (profile as { birthday?: unknown } | null | undefined)?.birthday as Partial<ProfileBirthday> | null | undefined;
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const { month, day } = value;
+  return Number.isInteger(month) && Number.isInteger(day) && (month as number) >= 1 && (month as number) <= 12 && (day as number) >= 1 && (day as number) <= 31
+    ? { month: month as number, day: day as number }
+    : null;
+};
+
+/** A Wish pill needs the flag on AND a birthday object on the profile. No object (not allowed, off, under 18): no pill. */
+export const wishPillVisible = (profile: Rec): boolean => birthdaysEnabled() && profileBirthdayOf(profile) != null;

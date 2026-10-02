@@ -4,7 +4,6 @@ import type { FamilyMember, FamilyRelationship, FamilySex, HouseholdResponse } f
 import {
   MONTH_NAMES,
   compareDays,
-  daysInMonth,
   familyBirthDayLimits,
   formatBirthdayLong,
   isDayAllowed,
@@ -19,12 +18,10 @@ const asRelationship = (value: unknown): FamilyRelationship =>
 
 type ChildRow = NonNullable<HouseholdResponse['children']>[number];
 
-const isLastDayOfMonth = (day: DayValue) => day.day === daysInMonth(day.year, day.month);
-
 /**
- * Does this row carry the day of the month? The server may say so (`birth_day` / `day` / `birth_precision`). When it does not,
- * a date that is the last day of its month is read as "month and year only" (the server stores legacy rows as the last day),
- * which at worst offers `Add day` to a child really born on the last day.
+ * Does this row carry the day of the month? Backend (PR #42) sends `birth_month`, `birth_year`, `birth_day` and
+ * `birth_precision` (`day` or `month`); `date_of_birth` is null for month-only children and is never a made-up last day of
+ * the month. A null `date_of_birth` must never throw, so every date read goes through `parseIsoDate(null) -> null`.
  */
 const resolveBirth = (
   member: { birth_month?: number | null; birth_year?: number | null; birth_day?: number | null; day?: number | null; date_of_birth?: string | null; birth_precision?: string | null },
@@ -34,17 +31,14 @@ const resolveBirth = (
   const month = member.birth_month ?? child?.birth_month ?? dob?.month ?? null;
   const year = member.birth_year ?? child?.birth_year ?? dob?.year ?? null;
   const precision = member.birth_precision ?? child?.birth_precision ?? null;
-  const explicit = member.birth_day ?? member.day ?? child?.birth_day;
-  if (precision === 'month' || explicit === null) {
+  if (precision === 'month') {
     return { month, year, day: null };
   }
+  const explicit = member.birth_day ?? member.day ?? child?.birth_day;
   if (typeof explicit === 'number') {
     return { month, year, day: explicit };
   }
-  if (precision === 'day' && dob) {
-    return { month: dob.month, year: dob.year, day: dob.day };
-  }
-  if (dob && !isLastDayOfMonth(dob)) {
+  if (dob) {
     return { month: dob.month, year: dob.year, day: dob.day };
   }
   return { month, year, day: null };

@@ -12,6 +12,14 @@ class Match(models.Model):
 
     class Meta:
         unique_together = ("user_a", "user_b", "activity")
+        constraints = [
+            # 1:1 chats use a Match with no activity; there is one per pair of users.
+            models.UniqueConstraint(
+                fields=["user_a", "user_b"],
+                condition=models.Q(activity__isnull=True),
+                name="unique_direct_match_per_pair",
+            ),
+        ]
 
     def __str__(self):
         return f"Match between {self.user_a} and {self.user_b}"

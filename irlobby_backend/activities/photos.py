@@ -67,6 +67,36 @@ def photo_token_valid(token: str, activity_id: int, photo_id: int) -> bool:
     return value == f"{activity_id}:{photo_id}"
 
 
+# Download links serve the original as an attachment and expire sooner than view links.
+PHOTO_DOWNLOAD_SALT = "foyer-event-photo-download"
+PHOTO_DOWNLOAD_MAX_AGE_SECONDS = 3600
+
+
+def _download_signer():
+    from django.core.signing import TimestampSigner
+
+    return TimestampSigner(salt=PHOTO_DOWNLOAD_SALT)
+
+
+def make_photo_download_token(photo) -> str:
+    return _download_signer().sign(f"{photo.activity_id}:{photo.id}")
+
+
+def photo_download_token_valid(token: str, activity_id: int, photo_id: int) -> bool:
+    from django.core.signing import BadSignature, SignatureExpired
+
+    try:
+        value = _download_signer().unsign(token, max_age=PHOTO_DOWNLOAD_MAX_AGE_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return False
+    return value == f"{activity_id}:{photo_id}"
+
+
+def absolute_photo_download_url(photo, request=None) -> str:
+    path = f"{photo_api_path(photo)}download/?t={make_photo_download_token(photo)}"
+    return request.build_absolute_uri(path) if request is not None else path
+
+
 def absolute_photo_url(photo, request=None) -> str:
     path = photo_api_path(photo)
     # Photos of events that are not on the public church calendar are only

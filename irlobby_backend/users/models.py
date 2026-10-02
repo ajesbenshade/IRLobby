@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Greatest, Least
 
 
 class User(AbstractUser):
@@ -38,12 +39,71 @@ class User(AbstractUser):
         related_name="members",
     )
 
+    # Social profile (The Foyer). Everything defaults to private.
+    PROFILE_VISIBILITY_CHOICES = [
+        ("only_me", "Only me"),
+        ("friends", "Friends"),
+        ("church", "My church"),
+        ("public", "Public"),
+    ]
+    profile_visibility = models.CharField(
+        max_length=10, choices=PROFILE_VISIBILITY_CHOICES, default="only_me"
+    )
+    # Normalized E.164 (for example +12155550123). Empty when unset. Never serialized
+    # outside the owner's own profile and the visibility-gated profile endpoint.
+    phone = models.CharField(max_length=16, blank=True, default="")
+    show_email = models.BooleanField(default=False)
+    show_phone = models.BooleanField(default=False)
+    # Adults only: let people who attended a shared event with you start a 1:1 chat.
+    dm_from_shared_events = models.BooleanField(default=False)
+
     class Meta:
         # Add unique constraint on email to prevent duplicates
         constraints = [models.UniqueConstraint(fields=["email"], name="unique_user_email")]
 
     def __str__(self):
         return self.username
+
+
+class Friendship(models.Model):
+    """One row per pair of users, whichever direction the request went."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("declined", "Declined"),
+    ]
+
+    requester = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="friend_requests_sent"
+    )
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="friend_requests_received"
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["requester", "recipient"], name="unique_friendship_direction"
+            ),
+            # Blocks A->B and B->A both existing: the unordered pair is unique.
+            models.UniqueConstraint(
+                Least("requester", "recipient"),
+                Greatest("requester", "recipient"),
+                name="unique_friendship_pair",
+            ),
+            models.CheckConstraint(
+                check=~models.Q(requester=models.F("recipient")),
+                name="friendship_not_self",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Friendship({self.requester_id}->{self.recipient_id}, {self.status})"
 
 
 class SocialAuthIdentity(models.Model):

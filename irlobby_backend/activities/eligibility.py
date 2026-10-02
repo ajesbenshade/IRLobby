@@ -76,8 +76,28 @@ def host_display_name(activity) -> str:
     return full or user.username or "Host"
 
 
-def eligibility_for_person(*, activity, sex: str, dob: date | None, on_date: date):
-    """Return (eligible, reason). Reason is None when the person may attend."""
+def age_band(age: int | None) -> str:
+    """Coarse band shown to hosts: "under 13", "13-17", "adult".
+
+    No age on file (a spouse, or an account without a birth date) reads as "adult".
+    """
+    if age is None:
+        return "adult"
+    if age < 13:
+        return "under 13"
+    if age < 18:
+        return "13-17"
+    return "adult"
+
+
+def eligibility_for_person(
+    *, activity, sex: str, dob: date | None, on_date: date, assume_adult: bool = False
+):
+    """Return (eligible, reason). Reason is None when the person may attend.
+
+    ``assume_adult`` is for a spouse, who has no birth data: they pass any age range
+    unless the event is for under-18s only (age_max below 18).
+    """
     audience = activity.audience_gender or AUDIENCE_EVERYONE
     normalized_sex = (sex or "").strip().lower()
     if audience == AUDIENCE_MEN and normalized_sex != SEX_MALE:
@@ -90,6 +110,11 @@ def eligibility_for_person(*, activity, sex: str, dob: date | None, on_date: dat
         return False, "This gathering is for women."
 
     if activity.age_min is None and activity.age_max is None:
+        return True, None
+
+    if assume_adult:
+        if activity.age_max is not None and activity.age_max < 18:
+            return False, AGE_RANGE_REASON
         return True, None
 
     age = age_on(dob, on_date)

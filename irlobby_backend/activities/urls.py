@@ -10,6 +10,7 @@ urlpatterns = [
     path("<int:pk>/join/", views.join_activity, name="join-activity"),
     path("<int:pk>/rsvp/", foyer_views.rsvp_activity, name="activity-rsvp"),
     path("<int:pk>/rsvp/cancel/", foyer_views.cancel_rsvp, name="activity-rsvp-cancel"),
+    path("<int:pk>/attendees/", foyer_views.activity_attendees, name="activity-attendees"),
     path("<int:pk>/whos-coming/", foyer_views.whos_coming, name="activity-whos-coming"),
     path(
         "<int:pk>/calendar/approve/",
@@ -17,6 +18,12 @@ urlpatterns = [
         name="activity-calendar-approve",
     ),
     path("<int:pk>/photos/", foyer_views.upload_event_photo, name="activity-photo-upload"),
+    path("<int:pk>/photos/download/", foyer_views.photo_downloads, name="activity-photo-downloads"),
+    path(
+        "<int:pk>/photos/<int:photo_id>/download/",
+        foyer_views.event_photo_download_file,
+        name="activity-photo-download-file",
+    ),
     path(
         "<int:pk>/photos/<int:photo_id>/",
         foyer_views.event_photo_file,

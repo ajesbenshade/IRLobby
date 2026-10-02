@@ -187,11 +187,21 @@ class ActivityParticipant(models.Model):
 
 
 class HouseholdDependent(models.Model):
-    """A child a parent can RSVP for. Not an account."""
+    """A family member a parent can RSVP for (a child or a spouse). Not an account."""
+
+    RELATIONSHIP_CHOICES = [
+        ("spouse", "Spouse"),
+        ("child", "Child"),
+    ]
 
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name="household_dependents")
     name = models.CharField(max_length=120)
-    date_of_birth = models.DateField()
+    relationship = models.CharField(max_length=10, choices=RELATIONSHIP_CHOICES, default="child")
+    # Children carry birth data; a spouse (always an adult) carries none. date_of_birth is
+    # exact when an older client sent it, otherwise the last day of birth_month/birth_year.
+    date_of_birth = models.DateField(null=True, blank=True)
+    birth_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    birth_year = models.PositiveSmallIntegerField(null=True, blank=True)
     sex = models.CharField(max_length=16, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 

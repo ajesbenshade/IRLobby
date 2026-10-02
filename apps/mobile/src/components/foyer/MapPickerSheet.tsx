@@ -1,13 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import MapViewBase from '@components/MapViewCompat';
 import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, MAP_COPY } from '@constants/foyerCopy';
 import { DEFAULT_DELTA, FRANCONIA_CENTER, useMapCenter, type MapCenter } from '@foyer/mapLocation';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import { appColors, appTypography, radii } from '@theme/index';
 
 // react-native-maps on device; the web stub accepts the same props and ignores them.
@@ -43,7 +43,7 @@ const labelFor = async (center: MapCenter, isDefault: boolean): Promise<string> 
  * allowed it; otherwise on Franconia, PA with a caption chip and no OS prompt. The header sits below the status bar.
  */
 const MapPickerBody = ({ visible, onCancel, onChoose }: Props) => {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeInsets();
   const { center, source, loading } = useMapCenter(visible);
   const [selected, setSelected] = useState<MapCenter>(FRANCONIA_CENTER);
   const [label, setLabel] = useState<string>(MAP_COPY.franconiaLabel);

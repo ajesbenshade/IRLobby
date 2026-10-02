@@ -6,14 +6,16 @@ import { useRef, useState } from 'react';
 import { FlatList, Image, Linking, Modal, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
+import { PhotoBottomBar, photoScrollPadding, photoToastBottom } from '@components/foyer/PhotoBottomBar';
 import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
-import { PillButton, SheetButtons, Toast } from '@components/foyer/ui';
+import { InlineError, PillButton, SheetButtons, Toast } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import { photosForSelection, toastForOutcome, type DownloadOutcome, type DownloadToast } from '@foyer/downloads';
 import { ensureAddOnlyPermission, savePhotosToLibrary } from '@foyer/photoDownload';
 import { hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
 import { useAuth } from '@hooks/useAuth';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
 import { PhotoDownloadUnavailableError, type DownloadablePhoto } from '@services/foyerService';
@@ -53,6 +55,7 @@ export const PhotoGalleryScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeInsets();
   const activityId = route.params.activityId;
   const activityQuery = useQuery({ queryKey: ['foyer-gathering', activityId], queryFn: () => fetchActivity(activityId) });
   const activity = activityQuery.data;
@@ -63,6 +66,7 @@ export const PhotoGalleryScreen = () => {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [toast, setToast] = useState<{ message: string; retry?: () => void; sticky: boolean } | null>(null);
   const [denied, setDenied] = useState(false);
+  const [failedBanner, setFailedBanner] = useState(false);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportSheet, setReportSheet] = useState<'menu' | 'report' | 'block' | null>(null);
   const cancelled = useRef(false);
@@ -81,7 +85,8 @@ export const PhotoGalleryScreen = () => {
   const isGoing = isGoingRsvp(activity?.my_rsvp);
   const churchAdmin = Boolean(activity?.host_kind === 'church' && user?.isChurchAdmin);
   // Attendees (host included) get download controls; everyone else sees none.
-  const canDownload = Boolean((isHost || isGoing || churchAdmin) && photos.some((photo) => photo.id != null));
+  const entitled = Boolean(isHost || isGoing || churchAdmin);
+  const canDownload = Boolean(entitled && photos.some((photo) => photo.id != null));
   const size = Math.floor((width - GUTTER * (COLUMNS - 1)) / COLUMNS);
 
   const run = async (options: { onlyIds?: number[]; resume?: DownloadOutcome | null }) => {
@@ -92,6 +97,7 @@ export const PhotoGalleryScreen = () => {
     }
     cancelled.current = false;
     setToast(null);
+    setFailedBanner(false);
     setProgress({ done: options.resume?.saved ?? 0, total: options.resume?.total ?? options.onlyIds?.length ?? photos.length });
     try {
       const outcome = await savePhotosToLibrary({
@@ -105,22 +111,27 @@ export const PhotoGalleryScreen = () => {
       });
       lastOutcome.current = outcome;
       const result = toastForOutcome(outcome);
-      setToast({
-        message: toastMessage(result),
-        retry: result.kind === 'saved' ? undefined : () => void run({ resume: outcome }),
-        sticky: result.kind !== 'saved',
-      });
+      if (result.kind === 'failed') {
+        // Nothing saved: an error banner above the bar, with Download all still enabled for a retry.
+        setFailedBanner(true);
+      } else {
+        setToast({
+          message: toastMessage(result),
+          retry: result.kind === 'saved' ? undefined : () => void run({ resume: outcome }),
+          sticky: result.kind !== 'saved',
+        });
+      }
       if (result.kind === 'saved') {
         setTimeout(() => setToast((current) => (current && !current.sticky ? null : current)), 4000);
       }
       setSelecting(false);
       setSelected(new Set());
     } catch (error) {
-      setToast({
-        message: error instanceof PhotoDownloadUnavailableError ? COMMON_COPY.unavailable : PHOTO_COPY.failedAll,
-        sticky: true,
-        retry: () => void run(options),
-      });
+      if (error instanceof PhotoDownloadUnavailableError) {
+        setToast({ message: COMMON_COPY.unavailable, sticky: true, retry: () => void run(options) });
+      } else {
+        setFailedBanner(true);
+      }
     } finally {
       setProgress(null);
     }
@@ -153,30 +164,11 @@ export const PhotoGalleryScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bar}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => (selecting ? (setSelecting(false), setSelected(new Set())) : navigation.goBack())}
-          style={styles.barButton}
-        >
-          <Text style={styles.barText}>{selecting ? COMMON_COPY.cancel : COMMON_COPY.back}</Text>
-        </Pressable>
+      {/* Title only, below the status bar. Nothing tappable lives up here: Back, Download all and Select are in the bottom bar. */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]} testID="photos-header">
         <Text accessibilityRole="header" style={styles.barTitle}>
           {PHOTO_COPY.galleryTitle(photos.length)}
         </Text>
-        {canDownload && !selecting ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={PHOTO_COPY.downloadAll}
-            disabled={progress != null}
-            onPress={() => void run({})}
-            style={styles.barButton}
-          >
-            <Text style={styles.barText}>{PHOTO_COPY.downloadAll}</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.barButton} />
-        )}
       </View>
 
       <FlatList
@@ -185,7 +177,18 @@ export const PhotoGalleryScreen = () => {
         keyExtractor={(photo, index) => `${photo.id ?? 'x'}-${index}`}
         columnWrapperStyle={{ gap: GUTTER }}
         ItemSeparatorComponent={() => <View style={{ height: GUTTER }} />}
-        contentContainerStyle={styles.gridContent}
+        contentContainerStyle={{ paddingBottom: photoScrollPadding(insets.bottom) }}
+        testID="photo-grid"
+        ListEmptyComponent={
+          activityQuery.isLoading ? null : (
+            <View style={styles.empty}>
+              <Text accessibilityRole="header" style={styles.emptyTitle}>
+                {PHOTO_COPY.emptyTitle}
+              </Text>
+              <Text style={styles.emptyBody}>{PHOTO_COPY.emptyBody}</Text>
+            </View>
+          )
+        }
         renderItem={({ item, index }) => {
           const isSelected = item.id != null && selected.has(item.id);
           return (
@@ -212,23 +215,33 @@ export const PhotoGalleryScreen = () => {
         }}
       />
 
-      {selecting ? (
-        <View style={styles.selectionBar}>
-          <PillButton
-            label={PHOTO_COPY.downloadSelected(selectedIds.length)}
-            disabled={selectedIds.length === 0 || progress != null}
-            onPress={() => void run({ onlyIds: selectedIds })}
-          />
-        </View>
-      ) : canDownload ? (
-        <View style={styles.selectionBar}>
-          <PillButton label={PHOTO_COPY.select} variant="outline" onPress={() => setSelecting(true)} />
+      {failedBanner ? (
+        <View style={[styles.banner, { bottom: photoToastBottom(insets.bottom) }]} testID="photo-failed-banner">
+          <InlineError message={PHOTO_COPY.failedBanner} />
         </View>
       ) : null}
 
+      <PhotoBottomBar
+        selecting={selecting}
+        entitled={entitled}
+        photoCount={photos.length}
+        selectedCount={selectedIds.length}
+        downloading={progress != null}
+        bottomInset={insets.bottom}
+        onBack={() => navigation.goBack()}
+        onDownloadAll={() => void run({})}
+        onSelect={() => setSelecting(true)}
+        onCancel={() => {
+          setSelecting(false);
+          setSelected(new Set());
+        }}
+        onDownloadSelected={() => void run({ onlyIds: selectedIds })}
+        onSelectAll={() => setSelected(new Set(photos.filter((photo) => photo.id != null).map((photo) => photo.id as number)))}
+      />
+
       <Modal visible={viewerPhoto != null} animationType="fade" onRequestClose={() => setViewerIndex(null)}>
         <View style={styles.viewer}>
-          <View style={styles.viewerBar}>
+          <View style={[styles.viewerBar, { paddingTop: insets.top + 4 }]} testID="viewer-header">
             <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setViewerIndex(null)} style={styles.barButton}>
               <MaterialCommunityIcons name="close" size={24} color="#f6f1ee" />
             </Pressable>
@@ -254,7 +267,7 @@ export const PhotoGalleryScreen = () => {
             )}
           </View>
           {viewerPhoto ? <Image source={{ uri: viewerPhoto.url }} resizeMode="contain" style={styles.viewerImage} /> : null}
-          <View style={styles.viewerFooter}>
+          <View style={[styles.viewerFooter, { paddingBottom: insets.bottom + 16 }]}>
             {viewerIndex != null && viewerIndex > 0 ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Previous photo" onPress={() => setViewerIndex(viewerIndex - 1)} style={styles.barButton}>
                 <MaterialCommunityIcons name="chevron-left" size={28} color="#f6f1ee" />
@@ -390,7 +403,7 @@ export const PhotoGalleryScreen = () => {
           icon={toast.sticky ? 'information' : 'check-circle'}
           action={toast.retry ? { label: COMMON_COPY.retry, onPress: toast.retry } : undefined}
           onDismiss={toast.sticky ? () => setToast(null) : undefined}
-          bottom={selecting || canDownload ? 96 : 24}
+          bottom={photoToastBottom(insets.bottom)}
         />
       ) : null}
     </View>
@@ -399,11 +412,13 @@ export const PhotoGalleryScreen = () => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: appColors.background },
-  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 12 },
+  header: { alignItems: 'center', justifyContent: 'center', paddingBottom: 10, backgroundColor: '#ffffff', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e1dbd7' },
+  empty: { alignItems: 'center', paddingHorizontal: 32, paddingTop: 80, gap: 8 },
+  emptyTitle: { fontFamily: appTypography.heading, fontSize: 22, color: appColors.ink, textAlign: 'center' },
+  emptyBody: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 22, color: appColors.mutedInk, textAlign: 'center' },
+  banner: { position: 'absolute', left: 16, right: 16, backgroundColor: '#f9e8ee', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   barButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  barText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
-  barTitle: { flex: 1, textAlign: 'center', fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },
-  gridContent: { paddingBottom: 120 },
+  barTitle: { textAlign: 'center', fontFamily: appTypography.heading, fontSize: 18, lineHeight: 26, color: appColors.ink },
   thumbSelected: { borderWidth: 3, borderColor: appColors.primary },
   circle: {
     position: 'absolute',
@@ -419,12 +434,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   circleOn: { backgroundColor: appColors.primary, borderColor: appColors.primary },
-  selectionBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: 28, backgroundColor: appColors.background },
   viewer: { flex: 1, backgroundColor: '#0f0c0d' },
-  viewerBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 48 },
+  viewerBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
   viewerTitle: { flex: 1, textAlign: 'center', color: '#f6f1ee', fontFamily: appTypography.bodySemibold, fontSize: 16 },
   viewerImage: { flex: 1, width: '100%' },
-  viewerFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 36 },
+  viewerFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
   saveButton: { alignItems: 'center', gap: 6, minHeight: 72, minWidth: 96 },
   saveCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: appColors.primary, alignItems: 'center', justifyContent: 'center' },
   saveLabel: { color: '#f6f1ee', fontFamily: appTypography.bodySemibold, fontSize: 13 },

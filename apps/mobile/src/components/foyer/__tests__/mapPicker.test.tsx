@@ -6,9 +6,7 @@ import { MapLocationSettingRow } from '../MapLocationSettingRow';
 import { MapPickerSheet } from '../MapPickerSheet';
 
 jest.mock('@expo/vector-icons', () => ({ MaterialCommunityIcons: 'MaterialCommunityIcons' }));
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }),
-}));
+jest.mock('@hooks/useSafeInsets', () => ({ useSafeInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }) }));
 jest.mock('@components/MapViewCompat', () => ({ __esModule: true, default: 'MapView', Marker: 'Marker' }));
 jest.mock('@foyer/mapLocation', () => {
   const actual = jest.requireActual('@foyer/mapLocation');

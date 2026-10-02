@@ -49,7 +49,7 @@ describe('Use my location for maps', () => {
   it('with the setting on it asks the OS once and centers on the user', async () => {
     await setUseMyLocation(true);
     const module = location();
-    const result = await resolveMapCenter({ loadLocation: async () => module });
+    const result = await resolveMapCenter({ loadLocation: async () => module as never });
     expect(module.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ center: { latitude: 40.31, longitude: -75.33 }, source: 'user' });
   });
@@ -59,13 +59,13 @@ describe('Use my location for maps', () => {
     ['unavailable', location({ position: async () => { throw new Error('Location unavailable'); } })],
     ['bad fix', location({ position: async () => ({ coords: { latitude: NaN, longitude: 1 } }) })],
   ])('falls back to Franconia silently when %s', async (_name, module) => {
-    const result = await resolveMapCenter({ enabled: true, loadLocation: async () => module });
+    const result = await resolveMapCenter({ enabled: true, loadLocation: async () => module as never });
     expect(result).toEqual({ center: FRANCONIA_CENTER, source: 'default' });
   });
 
   it('falls back to Franconia when the fix times out', async () => {
     const module = location({ position: () => new Promise(() => undefined) });
-    const result = await resolveMapCenter({ enabled: true, loadLocation: async () => module, timeoutMs: 20 });
+    const result = await resolveMapCenter({ enabled: true, loadLocation: async () => module as never, timeoutMs: 20 });
     expect(result.source).toBe('default');
   });
 

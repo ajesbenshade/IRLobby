@@ -15,9 +15,16 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from users.social import full_name, short_name
+from users.social import full_name, is_blocked_either_way, short_name
 
 from .access import is_activity_host, is_church_admin, user_has_going_rsvp
+from .approval import (
+    DECLINED_ERROR,
+    REQUEST_STATUS_LABELS,
+    declined_reason,
+    is_open_listing,
+    notify_host_of_request,
+)
 from .eligibility import (
     age_band,
     age_on,
@@ -364,7 +371,46 @@ def _rsvp_body(participant, activity):
         "member_ids": dependent_ids,
         "people_count": people,
         "going_count": confirmed_people_count(activity),
+        "my_request_status": REQUEST_STATUS_LABELS.get(participant.status, "pending"),
+        "my_request_reason": declined_reason(participant),
     }
+
+
+def _request_to_join(request, activity, existing, include_self, dependents):
+    """RSVP to a Require-approval gathering: store or update a pending request.
+
+    No capacity check here (the host checks when approving) and pending people are never
+    counted as going. Called inside the RSVP transaction with the activity row locked.
+    """
+    user = request.user
+    if is_blocked_either_way(user.id, activity.host_id):
+        # Same answer as a hidden gathering.
+        return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+    new_request = existing is None
+    if existing is not None and existing.status == "declined":
+        if not activity.allow_rerequest:
+            return Response(DECLINED_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        new_request = True
+    if existing is None:
+        participant = ActivityParticipant.objects.create(
+            activity=activity, user=user, status="pending", include_self=include_self
+        )
+    else:
+        participant = existing
+        participant.status = "pending"
+        participant.include_self = include_self
+        participant.decided_at = None
+        participant.decline_reason = ""
+        fields = ["status", "include_self", "decided_at", "decline_reason"]
+        if new_request:
+            participant.joined_at = timezone.now()
+            fields.append("joined_at")
+        participant.save(update_fields=fields)
+    participant.dependents.set(dependents)
+    if new_request:
+        transaction.on_commit(lambda: notify_host_of_request(activity.id, user.id))
+    participant = ActivityParticipant.objects.prefetch_related("dependents").get(pk=participant.pk)
+    return Response(_rsvp_body(participant, activity), status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -443,6 +489,15 @@ def rsvp_activity(request, pk):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        existing = ActivityParticipant.objects.filter(activity=activity, user=request.user).first()
+        if (
+            activity.requires_approval
+            and not is_open_listing(activity)
+            and not is_activity_host(request.user, activity)
+            and (existing is None or existing.status != "confirmed")
+        ):
+            return _request_to_join(request, activity, existing, include_self, dependents)
+
         people = (1 if include_self else 0) + len(dependents)
         already = confirmed_people_count(activity, exclude_user_id=request.user.id)
         if activity.capacity is not None and already + people > activity.capacity:
@@ -467,9 +522,10 @@ def rsvp_activity(request, pk):
     return Response(_rsvp_body(participant, participant.activity), status=status.HTTP_200_OK)
 
 
-@api_view(["DELETE"])
+@api_view(["DELETE", "POST"])
 @permission_classes([IsAuthenticated])
 def cancel_rsvp(request, pk):
+    """Cancel an RSVP, or withdraw a pending request to join."""
     from swipes.models import Swipe
 
     activity = get_object_or_404(Activity, pk=pk)
@@ -483,6 +539,12 @@ def cancel_rsvp(request, pk):
             {"detail": "This gathering has already started."}, status=status.HTTP_400_BAD_REQUEST
         )
     with transaction.atomic():
+        declined = ActivityParticipant.objects.filter(
+            activity=activity, user=request.user, status="declined"
+        ).exists()
+        if declined and activity.requires_approval and not activity.allow_rerequest:
+            # Deleting the row would let the guest ask again, which the host ruled out.
+            return Response(DECLINED_ERROR, status=status.HTTP_400_BAD_REQUEST)
         deleted, _ = ActivityParticipant.objects.filter(
             activity=activity, user=request.user
         ).delete()
@@ -496,7 +558,8 @@ def cancel_rsvp(request, pk):
 
 
 def _notify_cancelled_attendees(activity_id, actor_id, reason):
-    """Push one notification to each confirmed attendee (not the host or whoever cancelled).
+    """Push one notification to each confirmed attendee and pending requester (not the host,
+    whoever cancelled, or anyone the host declined).
 
     Runs after the cancel transaction commits. Delivery failures never propagate: the
     push helper logs them and a bad token for one person must not stop the rest.
@@ -506,7 +569,7 @@ def _notify_cancelled_attendees(activity_id, actor_id, reason):
 
     activity = Activity.objects.get(pk=activity_id)
     recipient_ids = (
-        ActivityParticipant.objects.filter(activity=activity, status="confirmed")
+        ActivityParticipant.objects.filter(activity=activity, status__in=["confirmed", "pending"])
         .exclude(user_id__in=[activity.host_id, actor_id])
         .values_list("user_id", flat=True)
         .distinct()
@@ -603,6 +666,11 @@ def approve_church_calendar(request, pk):
             {"detail": "This gathering is not listed on the church calendar."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    if activity.requires_approval:
+        return Response(
+            {"detail": "Turn off Require approval before listing this gathering publicly."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     activity.calendar_approved = True
     activity.save(update_fields=["calendar_approved"])
     return Response(
@@ -619,10 +687,14 @@ class GoingActivitiesView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Pending requests to join are only listed on request (?include_pending=true).
+        statuses = ["confirmed"]
+        if self.request.query_params.get("include_pending", "").lower() in {"1", "true", "yes"}:
+            statuses.append("pending")
         return (
             Activity.objects.filter(
                 participants__user=self.request.user,
-                participants__status="confirmed",
+                participants__status__in=statuses,
             )
             .select_related("host", "host_church")
             .prefetch_related("participants__dependents", "photos")

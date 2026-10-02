@@ -163,7 +163,7 @@ def send_activity_join_notification(activity, joiner):
 
 
 def send_activity_cancelled_notification(activity, recipient, reason=""):
-    """Tell one confirmed attendee that the host cancelled the gathering."""
+    """Tell one confirmed attendee or pending requester that the host cancelled the gathering."""
     body = f"{activity.title} was cancelled."
     if reason:
         body = f"{body} Reason: {reason}"
@@ -173,3 +173,39 @@ def send_activity_cancelled_notification(activity, recipient, reason=""):
         "screen": "Activity",
     }
     send_push_to_user(recipient, f"{activity.title} was cancelled", body[:240], payload)
+
+
+def send_join_request_notification(activity, requester):
+    """Tell the host that someone asked to join a Require-approval gathering."""
+    requester_label = (requester.first_name or "").strip() or "Someone"
+    payload = {
+        "type": "join_request",
+        "activityId": activity.id,
+        "userId": requester.id,
+        "screen": "Requests",
+    }
+    send_push_to_user(
+        activity.host,
+        f"New request to join {activity.title}",
+        f"{requester_label} asked to join {activity.title}.",
+        payload,
+    )
+
+
+def send_join_request_decision_notification(activity, recipient, *, approved, reason=""):
+    """Tell a requester the host approved or declined their request."""
+    verdict = "approved" if approved else "declined"
+    body = f"Your request to join {activity.title} was {verdict}."
+    if reason and not approved:
+        body = f"{body} Reason: {reason}"
+    payload = {
+        "type": f"join_request_{verdict}",
+        "activityId": activity.id,
+        "screen": "Activity",
+    }
+    send_push_to_user(
+        recipient,
+        f"Your request to join {activity.title} was {verdict}",
+        body[:240],
+        payload,
+    )

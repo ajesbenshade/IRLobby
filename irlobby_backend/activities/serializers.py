@@ -4,7 +4,13 @@ from utils.client_urls import is_allowed_client_return_url
 from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
-from .access import can_see_exact_location, is_church_admin
+from .access import can_see_exact_location, is_activity_host, is_church_admin
+from .approval import (
+    is_open_listing,
+    my_request_reason,
+    my_request_status,
+    pending_request_count,
+)
 from .eligibility import audience_label, confirmed_people_count, host_display_name
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
@@ -47,6 +53,9 @@ class ActivitySerializer(serializers.ModelSerializer):
     cover_photo_url = serializers.SerializerMethodField()
     going_count = serializers.SerializerMethodField()
     my_rsvp = serializers.SerializerMethodField()
+    my_request_status = serializers.SerializerMethodField()
+    my_request_reason = serializers.SerializerMethodField()
+    pending_count = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
     calendar_links = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
@@ -74,6 +83,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "isPrivate",
             "requires_approval",
             "requiresApproval",
+            "allow_rerequest",
             "price",
             "currency",
             "age_restriction",
@@ -114,6 +124,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             "cover_photo_url",
             "going_count",
             "my_rsvp",
+            "my_request_status",
+            "my_request_reason",
+            "pending_count",
             "photos",
             "calendar_links",
             "is_cancelled",
@@ -139,6 +152,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "endDateTime": "end_time",
             "maxParticipants": "capacity",
             "requiresApproval": "requires_approval",
+            "allowRerequest": "allow_rerequest",
             "isPrivate": "is_private",
             "ageRestriction": "age_restriction",
             "skillLevel": "skill_level",
@@ -181,6 +195,20 @@ class ActivitySerializer(serializers.ModelSerializer):
         if host_kind == "church" and not is_church_admin(user):
             raise serializers.ValidationError(
                 {"host_kind": "Only church admins can host as the church."}
+            )
+
+        turning_off_approval = (
+            self.instance is not None
+            and self.instance.requires_approval
+            and attrs.get("requires_approval") is False
+        )
+        if turning_off_approval and pending_request_count(self.instance):
+            raise serializers.ValidationError(
+                {
+                    "requires_approval": (
+                        "Review your pending requests before turning off Require approval."
+                    )
+                }
             )
 
         age_min = attrs.get("age_min", getattr(self.instance, "age_min", None))
@@ -258,6 +286,27 @@ class ActivitySerializer(serializers.ModelSerializer):
             list_on and instance is not None and not instance.list_on_church_calendar
         ):
             validated_data["calendar_approved"] = False
+
+        requires_approval = validated_data.get(
+            "requires_approval", instance.requires_approval if instance else False
+        )
+        if requires_approval and is_open_listing(
+            Activity(
+                host_kind=host_kind,
+                list_on_church_calendar=list_on,
+                calendar_approved=validated_data.get(
+                    "calendar_approved", instance.calendar_approved if instance else False
+                ),
+            )
+        ):
+            raise serializers.ValidationError(
+                {
+                    "requires_approval": (
+                        "Require approval isn't available for church-hosted gatherings "
+                        "or gatherings on the public church calendar."
+                    )
+                }
+            )
         return validated_data
 
     def create(self, validated_data):
@@ -288,6 +337,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             data["location"] = None
             data["latitude"] = None
             data["longitude"] = None
+        if data.get("pending_count") is None:
+            # Only the host and staff see how many requests are waiting.
+            data.pop("pending_count", None)
         return data
 
     def get_status(self, obj):
@@ -332,6 +384,23 @@ class ActivitySerializer(serializers.ModelSerializer):
             "member_ids": dependent_ids,
             "people_count": people,
         }
+
+    def get_my_request_status(self, obj):
+        request = self.context.get("request")
+        return my_request_status(getattr(request, "user", None) if request else None, obj)
+
+    def get_my_request_reason(self, obj):
+        request = self.context.get("request")
+        return my_request_reason(getattr(request, "user", None) if request else None, obj)
+
+    def get_pending_count(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if not user or not getattr(user, "is_authenticated", False):
+            return None
+        if not (user.is_staff or is_activity_host(user, obj)):
+            return None
+        return pending_request_count(obj)
 
     def get_photos(self, obj):
         request = self.context.get("request")

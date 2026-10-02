@@ -437,11 +437,82 @@ Who: the host, staff, or a church admin on a church-hosted event (the same rule 
 
 What happens:
 - RSVPs are kept (nothing is deleted); `my_rsvp` and the going list still show them.
-- Every confirmed attendee except the host and whoever cancelled gets one push notification (`title` "<title> was cancelled", body "<title> was cancelled. Reason: <reason>", data `{ "type": "activity_cancelled", "activityId", "screen": "Activity" }`), including accounts that are going only for a spouse or child. Pending and declined RSVPs are not notified. Sent after the database commit, through the Expo push helper (respects the user's `pushNotifications` preference). There is no separate in-app notification inbox.
+- Every confirmed attendee and every pending requester (see "Require approval") except the host and whoever cancelled gets one push notification (`title` "<title> was cancelled", body "<title> was cancelled. Reason: <reason>", data `{ "type": "activity_cancelled", "activityId", "screen": "Activity" }`), including accounts that are going only for a spouse or child. Declined requests are not notified. Sent after the database commit, through the Expo push helper (respects the user's `pushNotifications` preference). There is no separate in-app notification inbox.
 - If a gathering chat already exists, a message "<title> was cancelled by the host. Reason: …" is added to it (sender = the person who cancelled). The chat stays fully open after cancelling: reads and sends (REST and websocket) keep working, so the host can announce a new date.
 - Cancelled gatherings are left out of `GET /api/activities/` (the swipe deck and browse list), `GET /api/public/calendar`, `GET /api/public/calendar.ics` and `GET /api/public/events/<id>.ics` (404). They are still returned by `GET /api/activities/<id>/`, `/hosted/` and `/going/` with `is_cancelled: true`; photos and the signed-token `event.ics` keep working (that file now carries `STATUS:CANCELLED`).
 - New RSVPs (`POST /rsvp/`), legacy `POST /join/`, swipes (`POST /api/swipes/<id>/swipe/`, `POST /api/swipes/`) and ticket purchases on a cancelled gathering → 400.
 - Clients cannot set `is_cancelled`, `cancelled_at` or `cancel_reason` through `PATCH`.
+
+## Require approval
+
+A host can ask to approve each guest before they are going. Off by default.
+
+**Host setting** (`POST /api/activities/` and `PATCH /api/activities/<id>/`, host only like every other field; guests get 403 on PATCH):
+- `requires_approval` (bool, also `requiresApproval`) and `allow_rerequest` (bool, also `allowRerequest`): after a decline, the guest may ask again.
+- 400 `{ "requires_approval": … }` on a church-hosted event (`host_kind: "church"`) or one on the public church calendar (`list_on_church_calendar` and `calendar_approved`). A member event that is listed but not yet approved by the church may keep it, but `POST /calendar/approve/` then answers 400 until the host turns it off.
+- 400 `{ "requires_approval": "Review your pending requests before turning off Require approval." }` when switching it off while requests are pending. Switching it on affects only new RSVPs; people already going stay going.
+
+**Activity payload** (every activity payload, for anyone who can see the event) adds `requires_approval`, `allow_rerequest` and `my_request_status`: `"none"` | `"pending"` | `"approved"` (a confirmed RSVP) | `"declined"`. Host and staff also get `pending_count` (number of requests waiting, blocked accounts left out); other users do not get that key. `my_rsvp.status` is `"pending"` for a request. The RSVP response also carries `my_request_status` and `my_request_reason`.
+
+`my_request_reason` is the host's decline note, shown only to the requester: it is the stored note (string, up to 280 characters) when `my_request_status` is `"declined"` and the host wrote one, and `null` in every other case (no note, pending, approved, none, or any other viewer, including the host and staff). It is never `""`. The note is stored on the request as `decline_reason` and cleared when the request goes back to pending (re-request) or is approved.
+
+**Guest: ask to join.** `POST /api/activities/<id>/rsvp/` (same body as today: `include_self`, `dependent_ids`, `member_ids`). On a Require-approval event, for anyone but the host:
+
+```json
+{ "status": "pending", "my_request_status": "pending", "include_self": true, "dependent_ids": [4], "member_ids": [4], "people_count": 2, "going_count": 3 }
+```
+
+- 200, a `pending` `ActivityParticipant` is created or updated. Eligibility (audience, age) is still checked; capacity is not (the host checks when approving). Pending people never count in `going_count`, `participant_count`, `spots_left`, attendees, reminders, or `/going/`, and get no exact address, no gathering chat and no attendee list.
+- Asking again while pending is idempotent (200; the party is updated; the host is not notified again).
+- Declined: 400 `{ "detail": "The host declined your request." }`, unless `allow_rerequest` is true, in which case it becomes pending again (and the host is notified). A declined guest cannot clear the decline by cancelling or leaving while `allow_rerequest` is false (same 400).
+- Already confirmed: unchanged behaviour (party edits, capacity check). The host RSVPing to their own event is unchanged (instantly confirmed).
+- Blocked either way with the host: 404 `{ "detail": "Not found." }`, as if the event were hidden.
+- Withdraw: `DELETE` (or `POST`) `/api/activities/<id>/rsvp/cancel/` deletes the pending request and your swipe, like cancelling an RSVP.
+- `GET /api/activities/going/` stays confirmed-only; add `?include_pending=true` to also list events where your request is pending (`my_rsvp.status` tells them apart).
+
+**Host: list requests.** `GET /api/activities/<id>/requests/?status=pending` (default; also `approved` = confirmed, `declined`). Host, staff, or church admin on a church event; 401 anonymous; 403 anyone else; 404 if the event is missing or hidden; 400 for an unknown status. Works on cancelled and started events.
+
+```json
+{
+  "pending_count": 2,
+  "spots_left": 5,
+  "requests": [
+    {
+      "id": 31,
+      "user_id": 8,
+      "requested_at": "2026-10-02T14:00:00Z",
+      "decided_at": null,
+      "status": "pending",
+      "decline_reason": null,
+      "party": { "size": 3, "include_self": true, "members": [ { "name": "Lily", "relationship": "child", "age_band": "under 13" } ] },
+      "card": { "first_name": "Ana", "age_band": "adult", "avatar_url": "https://…", "bio": "…", "church_name": "Plains Mennonite Church" }
+    }
+  ]
+}
+```
+
+- `decline_reason` is the host's own note on a declined request (`null` if none or not declined); it is the same text the requester sees as `my_request_reason`.
+- `id` is the participant id used in the approve/decline URLs. `spots_left` is `capacity` minus people going (never below 0), `null` without a capacity. `pending_count` is always the number of pending requests whatever the `status` filter. Oldest request first. The host themselves and accounts blocked either way with the host are left out.
+- `card` shows first name, avatar and bio regardless of the requester's `profile_visibility`; `church_name` is `null` with no church. Never email, phone, last name or birth date. For an under-18 requester the card is only `first_name` and `age_band` (`avatar_url` and `bio` are `null`, no `church_name`). Family members are `name`, `relationship`, `age_band` only. `age_band` is `"under 13"`, `"13-17"` or `"adult"` on the event date.
+
+**Host: decide.** `POST /api/activities/<id>/requests/<participant_id>/approve/` and `POST …/decline/` (body optional `{ "reason": string }`, up to 280 characters, trimmed; decline only; stored as the request's `decline_reason`, blank if none). Same permissions as the list; 404 for an unknown request, one on another event, or a blocked requester.
+
+```json
+{ "request": { /* same item as in the list, with status "approved" or "declined" */ }, "going_count": 4, "spots_left": 2 }
+```
+
+| Status | When |
+| --- | --- |
+| 200 | Decided now, or already in that state (idempotent, nothing sent again). A host may approve a declined request they reconsider. |
+| 400 | The event is cancelled, or has started or ended; `reason` too long or not text; decline of a request that is already approved |
+| 409 | Approve only: the whole party does not fit in the remaining spots (`{ "detail": "Not enough spots for this party." }`; self, spouse and children all count; no capacity = always fits) |
+
+Approving locks the gathering row (`select_for_update`, the same lock RSVP takes) so two approvals cannot overbook the last spots.
+
+**Push notifications** (after the database commit, through the Expo helper, never repeated for idempotent calls):
+- Host: title "New request to join <title>", body "<First name> asked to join <title>.", data `{ "type": "join_request", "activityId", "userId", "screen": "Requests" }`. Sent for a new request, or a re-request after a decline; not when a pending request is repeated.
+- Requester: title "Your request to join <title> was approved" / "…was declined"; body "Your request to join <title> was approved." / "…declined. Reason: <reason>" (reason only when the host gave one); data `{ "type": "join_request_approved" | "join_request_declined", "activityId", "screen": "Activity" }`.
+- Cancelling the gathering also notifies pending requesters (same text as attendees); declined requesters are not notified.
 
 ## Photo downloads
 

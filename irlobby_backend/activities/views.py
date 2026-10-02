@@ -632,6 +632,15 @@ def leave_activity(request, pk):
 
     try:
         participant = ActivityParticipant.objects.get(activity=activity, user=user)
+        if (
+            participant.status == "declined"
+            and activity.requires_approval
+            and not activity.allow_rerequest
+        ):
+            # Deleting the row would let the guest ask again, which the host ruled out.
+            return Response(
+                {"detail": "The host declined your request."}, status=status.HTTP_400_BAD_REQUEST
+            )
         participant.delete()
         return Response({"message": "Left activity successfully"})
     except ActivityParticipant.DoesNotExist:

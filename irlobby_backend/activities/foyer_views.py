@@ -20,17 +20,23 @@ from .eligibility import (
 )
 from .household_rules import dependent_create_errors
 from .models import Activity, ActivityParticipant, Church, EventPhoto, HouseholdDependent
-from .photos import PhotoProcessingError, absolute_photo_url, compress_uploaded_image
+from .photos import (
+    PhotoProcessingError,
+    absolute_photo_url,
+    compress_uploaded_image,
+    photo_token_valid,
+)
 from .public_calendar import (
     activity_id_from_ics_token,
     event_ics,
+    is_public_calendar_event,
     public_calendar_ics,
     public_calendar_queryset,
     public_event_payload,
 )
 from .serializers import ActivitySerializer
 
-MAX_EVENT_PHOTOS = 8
+MAX_EVENT_PHOTOS = 50
 
 
 def _display_name(user) -> str:
@@ -341,7 +347,7 @@ def upload_event_photo(request, pk):
         )
     if activity.photos.count() >= MAX_EVENT_PHOTOS:
         return Response(
-            {"detail": "An event can have at most 8 photos."},
+            {"detail": "An event can have at most 50 photos."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     upload = request.FILES.get("image") or request.FILES.get("photo") or request.FILES.get("file")
@@ -390,10 +396,26 @@ def event_photo_file(request, pk, photo_id):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return _delete_event_photo(request, pk, photo_id)
-    photo = get_object_or_404(EventPhoto, pk=photo_id, activity_id=pk)
+    photo = get_object_or_404(EventPhoto.objects.select_related("activity"), pk=photo_id, activity_id=pk)
     if not photo.image:
         return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
-    return FileResponse(photo.image.open("rb"), content_type="image/jpeg")
+    activity = photo.activity
+    if not is_public_calendar_event(activity):
+        user = request.user
+        allowed = False
+        if user and user.is_authenticated:
+            allowed = bool(activity.is_approved or activity.host_id == user.id or user.is_staff)
+        if not allowed:
+            token = request.query_params.get("t", "")
+            allowed = bool(token) and photo_token_valid(token, activity.id, photo.id)
+        if not allowed:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+    response = FileResponse(photo.image.open("rb"), content_type="image/jpeg")
+    response["Cache-Control"] = "public, max-age=300" if is_public_calendar_event(activity) else "private, max-age=300"
+    return response
 
 
 @api_view(["GET"])

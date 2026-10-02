@@ -236,7 +236,7 @@ export default function ActivityDetailPage() {
       <label className="block rounded-2xl border border-dashed border-[#e1dbd7] bg-white p-4 text-sm">
         <span className="font-semibold text-[#a2033f]">Add a photo</span>
         <span className="mt-1 block text-[#6e6a68]">
-          Up to 8 photos. Hosts and people who are going can add them.
+          Up to 50 photos. Hosts and people who are going can add them.
         </span>
         <input
           aria-label="Add a gathering photo"

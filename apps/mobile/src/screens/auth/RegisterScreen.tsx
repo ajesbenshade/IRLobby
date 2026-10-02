@@ -2,7 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { AccentPill, AuthShell } from '@components/AppChrome';
 import { AppleSignInButton } from '@components/AppleSignInButton';
@@ -20,12 +20,12 @@ import axios from 'axios';
 import { birthDayLimits, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { registrationFieldError } from '@foyer/logic';
 import { getErrorMessage } from '@utils/error';
-import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
+import { refreshAppConfig, useAppConfig } from '@services/appConfig';
+import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
+import { LEGAL_VIEW_COPY } from '@constants/foyerCopy';
 
 import type { AuthStackParamList } from '@navigation/types';
 
-const TERMS_URL = 'https://irlobby.com/terms-of-service';
-const PRIVACY_URL = 'https://irlobby.com/privacy-policy';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -38,6 +38,12 @@ const persistLegalAcceptance = async () => {
 };
 
 export const RegisterScreen = ({ navigation }: Props) => {
+  const legal = useAppConfig();
+  const legalSheet = useLegalSheet();
+  // Fetch the latest Terms / Privacy links before the person accepts them.
+  useEffect(() => {
+    void refreshAppConfig({ force: true });
+  }, []);
   const {
     signUp,
     signInWithAppleIdentityToken,
@@ -98,6 +104,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         username: username.trim(),
         password,
         dateOfBirth: dateOfBirth.trim(),
+        termsAccepted: acceptedLegal,
       });
       await persistLegalAcceptance();
       return user;
@@ -139,6 +146,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
       const result = await signInWithAppleIdentityToken({
         identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
@@ -150,13 +158,6 @@ export const RegisterScreen = ({ navigation }: Props) => {
 
   const isBusy = isPending || isGooglePending || isApplePending;
   const authError = socialError ?? error ?? googleError ?? appleError;
-
-  const openLegalUrl = (url: string) => {
-    if (!isAllowedIrlobbyUrl(url)) {
-      return;
-    }
-    void Linking.openURL(url).catch(() => undefined);
-  };
 
   const handleSubmit = useCallback(async () => {
     if (!isFormValid || isBusy) {
@@ -278,15 +279,15 @@ export const RegisterScreen = ({ navigation }: Props) => {
             {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
           </View>
           <Text style={styles.legalText}>
-            I agree to the{' '}
-            <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
-              Terms of Service
-            </Text>{' '}
-            and{' '}
-            <Text style={styles.legalLink} onPress={() => openLegalUrl(PRIVACY_URL)}>
-              Privacy Policy
+            {authCopy.register.legalPrefix}{' '}
+            <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.termsUrl, LEGAL_VIEW_COPY.termsTitle)}>
+              {authCopy.register.legalTerms}
             </Text>
-            .
+            {authCopy.register.legalAnd}
+            <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)}>
+              {authCopy.register.legalPrivacy}
+            </Text>
+            {authCopy.register.legalSuffix}
           </Text>
         </Pressable>
 
@@ -321,6 +322,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
           />
         </View>
       </View>
+      {legalSheet.element}
     </AuthShell>
   );
 };

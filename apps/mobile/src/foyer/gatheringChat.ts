@@ -79,3 +79,34 @@ export const withGatheringBelowChat = <T extends NavState | undefined>(state: T)
   const index = typeof state.index === 'number' ? state.index + (routes.length - state.routes.length) : state.index;
   return { ...state, routes, index } as T;
 };
+
+/** A run of messages from people the viewer blocked, collapsed into one grey line. */
+export type BlockedRunItem = { kind: 'blocked'; key: string; userId: number | string; name: string };
+
+/**
+ * Hides messages from blocked people (client side: the server does not filter gathering chat yet).
+ * Consecutive messages from the same blocked person become one `You blocked <name>.` line; dividers that would
+ * end up directly above that line are kept so the timeline still reads.
+ */
+export const collapseBlockedMessages = <T extends { kind: string; key: string; message?: { userId?: number | string; user?: { id?: number | string; firstName?: string } } }>(
+  items: readonly T[],
+  blockedIds: ReadonlySet<string>,
+): Array<T | BlockedRunItem> => {
+  if (blockedIds.size === 0) {
+    return [...items];
+  }
+  const out: Array<T | BlockedRunItem> = [];
+  for (const item of items) {
+    const senderId = item.kind === 'message' ? String(item.message?.userId || (item.message?.user?.id ?? '')) : '';
+    if (item.kind === 'message' && senderId && blockedIds.has(senderId)) {
+      const previous = out[out.length - 1] as BlockedRunItem | undefined;
+      if (previous?.kind === 'blocked' && String(previous.userId) === senderId) {
+        continue;
+      }
+      out.push({ kind: 'blocked', key: `b-${item.key}`, userId: senderId, name: item.message?.user?.firstName ?? '' });
+      continue;
+    }
+    out.push(item);
+  }
+  return out;
+};

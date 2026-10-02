@@ -12,6 +12,7 @@ import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@providers/ErrorBoundary';
+import { refreshAppConfig } from '@services/appConfig';
 import { initAnalytics, trackAppOpen, wrapWithAnalytics } from '@services/analytics';
 import { lightTheme, palette } from '@theme/index';
 import { DesignFramesStudio } from './src/screenshots/DesignFramesStudio';
@@ -39,6 +40,10 @@ function App() {
 
   useEffect(() => {
     void trackAppOpen();
+    // Admin contact and Terms/Privacy links come from the server (silent fallback to bundled values).
+    if (process.env.EXPO_PUBLIC_SCREENSHOT_MODE !== '1') {
+      void refreshAppConfig();
+    }
   }, []);
 
   const AppNavigator = screenshotMode

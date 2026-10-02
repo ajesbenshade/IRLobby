@@ -39,6 +39,7 @@ interface AuthContextValue {
   signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
   signInWithAppleIdentityToken: (payload: {
     identityToken: string;
+    authorizationCode?: string | null;
     email?: string | null;
     firstName?: string | null;
     lastName?: string | null;
@@ -141,6 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithAppleIdentityToken = useCallback(
     async (payload: {
       identityToken: string;
+      authorizationCode?: string | null;
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;

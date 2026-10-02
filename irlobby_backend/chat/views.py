@@ -8,8 +8,8 @@ from users.push_notifications import send_new_message_notification
 
 from .access import can_read_conversation, can_send_in_conversation
 from .models import Conversation, Message
-from .throttles import DirectMessageThrottle
 from .serializers import ConversationSerializer, MessageSerializer
+from .throttles import DirectMessageThrottle
 
 
 def _user_can_use_conversation(user, conversation) -> bool:

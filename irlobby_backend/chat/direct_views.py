@@ -99,8 +99,10 @@ def direct_conversations(request):
     replying = bool(existing and existing.messages.filter(sender=target).exists())
     if not can_direct_message(user, target, recipient_has_messaged_sender=replying):
         return Response(
-            {"detail": "You can only message friends, or people who allow messages from "
-                       "gatherings you both attended."},
+            {
+                "detail": "You can only message friends, or people who allow messages from "
+                "gatherings you both attended."
+            },
             status=status.HTTP_403_FORBIDDEN,
         )
     with transaction.atomic():
@@ -163,8 +165,12 @@ def direct_report(request, conversation_id):
             pk=message_id, conversation=conversation, sender=other
         ).first()
         if message is None:
-            return Response({"message_id": "Message not found."}, status=status.HTTP_400_BAD_REQUEST)
-        description = f"{description}\n[Reported message #{message.id}: {message.text[:200]}]".strip()
+            return Response(
+                {"message_id": "Message not found."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        description = (
+            f"{description}\n[Reported message #{message.id}: {message.text[:200]}]".strip()
+        )
     report = AbuseReport.objects.create(
         reporter=request.user,
         reported_user=other,

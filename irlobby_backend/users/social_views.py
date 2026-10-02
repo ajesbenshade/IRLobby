@@ -175,7 +175,9 @@ def _send_friend_request(request):
     existing = friendship_between(viewer, target)
     if existing is None and not can_send_friend_request(viewer, target):
         return Response(
-            {"detail": "You can only add people you have met at a gathering, your church, or public profiles."},
+            {
+                "detail": "You can only add people you have met at a gathering, your church, or public profiles."
+            },
             status=status.HTTP_403_FORBIDDEN,
         )
 
@@ -264,7 +266,8 @@ def friend_remove(request, user_id):
     """Unfriend, or withdraw your own pending request. 404 when there is nothing to remove."""
     row = friendship_between(request.user, get_object_or_404(User, pk=user_id))
     removable = row is not None and (
-        row.status == "accepted" or (row.status == "pending" and row.requester_id == request.user.id)
+        row.status == "accepted"
+        or (row.status == "pending" and row.requester_id == request.user.id)
     )
     if not removable:
         return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)

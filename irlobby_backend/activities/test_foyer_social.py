@@ -9,11 +9,10 @@ from django.core.signing import TimestampSigner
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
-from rest_framework import status
 from rest_framework.test import APITestCase
 
 from activities.eligibility import ny_today
-from activities.models import Activity, ActivityParticipant, EventPhoto, HouseholdDependent
+from activities.models import ActivityParticipant, EventPhoto, HouseholdDependent
 from activities.photos import PHOTO_DOWNLOAD_SALT
 from activities.public_calendar import event_ics, event_ics_token
 from moderation.models import BlockedUser
@@ -47,8 +46,15 @@ class FamilyMemberTests(APITestCase):
 
     def test_add_spouse_has_no_age_or_birth_data(self):
         resp = self.client.post(
-            reverse("household"), {"name": "Pat", "relationship": "spouse", "sex": "male",
-                                   "birth_year": 1980, "birth_month": 3}, format="json"
+            reverse("household"),
+            {
+                "name": "Pat",
+                "relationship": "spouse",
+                "sex": "male",
+                "birth_year": 1980,
+                "birth_month": 3,
+            },
+            format="json",
         )
         self.assertEqual(resp.status_code, 201)
         spouse = [m for m in resp.data["members"] if m["relationship"] == "spouse"][0]
@@ -60,7 +66,9 @@ class FamilyMemberTests(APITestCase):
         self.assertIsNone(HouseholdDependent.objects.get(pk=spouse["id"]).birth_year)
 
     def test_only_one_spouse(self):
-        self.client.post(reverse("household"), {"name": "A", "relationship": "spouse"}, format="json")
+        self.client.post(
+            reverse("household"), {"name": "A", "relationship": "spouse"}, format="json"
+        )
         resp = self.client.post(
             reverse("household"), {"name": "B", "relationship": "spouse"}, format="json"
         )
@@ -98,7 +106,9 @@ class FamilyMemberTests(APITestCase):
         )
         self.assertEqual(resp.status_code, 400)
         resp = self.client.post(
-            reverse("household"), {"name": "Bad", "birth_month": 13, "birth_year": 2020}, format="json"
+            reverse("household"),
+            {"name": "Bad", "birth_month": 13, "birth_year": 2020},
+            format="json",
         )
         self.assertEqual(resp.status_code, 400)
 
@@ -114,13 +124,21 @@ class FamilyMemberTests(APITestCase):
         self.assertEqual(len(listing.data["members"]), 1)
 
     def test_delete_member(self):
-        resp = self.client.post(reverse("household"), {"name": "A", "relationship": "spouse"}, format="json")
+        resp = self.client.post(
+            reverse("household"), {"name": "A", "relationship": "spouse"}, format="json"
+        )
         mid = resp.data["id"]
-        self.assertEqual(self.client.delete(reverse("household-delete", args=[mid])).status_code, 204)
-        self.assertEqual(self.client.delete(reverse("household-delete", args=[mid])).status_code, 404)
+        self.assertEqual(
+            self.client.delete(reverse("household-delete", args=[mid])).status_code, 204
+        )
+        self.assertEqual(
+            self.client.delete(reverse("household-delete", args=[mid])).status_code, 404
+        )
 
     def test_rsvp_with_member_ids_and_spouse_eligible_for_adult_range(self):
-        spouse = HouseholdDependent.objects.create(parent=self.parent, name="Pat", relationship="spouse")
+        spouse = HouseholdDependent.objects.create(
+            parent=self.parent, name="Pat", relationship="spouse"
+        )
         activity = _activity(_user("host"), age_min=25, age_max=60, capacity=5)
         resp = self.client.post(
             reverse("activity-rsvp", args=[activity.id]),
@@ -154,7 +172,9 @@ class FamilyMemberTests(APITestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_cannot_rsvp_for_someone_elses_member(self):
-        other = HouseholdDependent.objects.create(parent=_user("other"), name="X", relationship="spouse")
+        other = HouseholdDependent.objects.create(
+            parent=_user("other"), name="X", relationship="spouse"
+        )
         activity = _activity(_user("host"))
         resp = self.client.post(
             reverse("activity-rsvp", args=[activity.id]), {"member_ids": [other.id]}, format="json"
@@ -187,7 +207,9 @@ class HostAttendeesTests(APITestCase):
         self.host = _user("host")
         self.guest = _user("guest")
         self.activity = _activity(self.host, capacity=20)
-        spouse = HouseholdDependent.objects.create(parent=self.guest, name="Pat", relationship="spouse")
+        spouse = HouseholdDependent.objects.create(
+            parent=self.guest, name="Pat", relationship="spouse"
+        )
         kid = HouseholdDependent.objects.create(
             parent=self.guest, name="Kid", birth_month=1, birth_year=ny_today().year - 5
         )
@@ -207,13 +229,24 @@ class HostAttendeesTests(APITestCase):
         household = resp.data["households"][0]
         self.assertEqual(household["name"], "Guest Smith")
         people = {p["name"]: p for p in household["people"]}
-        self.assertEqual(people["Guest Smith"], {"name": "Guest Smith", "relationship": "self", "age_band": "adult"})
+        self.assertEqual(
+            people["Guest Smith"],
+            {"name": "Guest Smith", "relationship": "self", "age_band": "adult"},
+        )
         self.assertEqual(people["Pat"]["relationship"], "spouse")
         self.assertEqual(people["Pat"]["age_band"], "adult")
         self.assertEqual(people["Kid"]["age_band"], "under 13")
         self.assertEqual(people["Teen"]["age_band"], "13-17")
         body = str(resp.data).lower()
-        for leak in ("guest@example.com", "birth", "username", "latitude", "location", "'id'", "phone"):
+        for leak in (
+            "guest@example.com",
+            "birth",
+            "username",
+            "latitude",
+            "location",
+            "'id'",
+            "phone",
+        ):
             self.assertNotIn(leak, body)
 
     def test_staff_can_see(self):
@@ -231,9 +264,13 @@ class HostAttendeesTests(APITestCase):
 
     def test_requires_auth_and_404(self):
         self.client.force_authenticate(None)
-        self.assertEqual(self.client.get(reverse("activity-attendees", args=[self.activity.id])).status_code, 401)
+        self.assertEqual(
+            self.client.get(reverse("activity-attendees", args=[self.activity.id])).status_code, 401
+        )
         self.client.force_authenticate(self.host)
-        self.assertEqual(self.client.get(reverse("activity-attendees", args=[99999])).status_code, 404)
+        self.assertEqual(
+            self.client.get(reverse("activity-attendees", args=[99999])).status_code, 404
+        )
 
 
 class PastAttendeesTests(APITestCase):
@@ -280,7 +317,9 @@ class PastAttendeesTests(APITestCase):
     def test_outsider_and_pending_rsvp_forbidden(self):
         self.client.force_authenticate(self.outsider)
         self.assertEqual(self.client.get(self.url).status_code, 403)
-        ActivityParticipant.objects.create(activity=self.activity, user=self.outsider, status="pending")
+        ActivityParticipant.objects.create(
+            activity=self.activity, user=self.outsider, status="pending"
+        )
         self.assertEqual(self.client.get(self.url).status_code, 403)
 
     def test_before_event_start_attendee_forbidden(self):
@@ -300,7 +339,9 @@ class CancelRsvpTests(APITestCase):
 
     def _rsvp(self, user, **extra):
         self.client.force_authenticate(user)
-        return self.client.post(reverse("activity-rsvp", args=[self.activity.id]), extra or {}, format="json")
+        return self.client.post(
+            reverse("activity-rsvp", args=[self.activity.id]), extra or {}, format="json"
+        )
 
     def test_cancel_frees_capacity_deletes_swipe_and_drops_from_lists(self):
         Swipe.objects.create(user=self.user, activity=self.activity, direction="right")
@@ -319,7 +360,9 @@ class CancelRsvpTests(APITestCase):
         self.client.force_authenticate(self.host)
         names = [
             p["name"]
-            for h in self.client.get(reverse("activity-attendees", args=[self.activity.id])).data["households"]
+            for h in self.client.get(reverse("activity-attendees", args=[self.activity.id])).data[
+                "households"
+            ]
             for p in h["people"]
         ]
         self.assertNotIn("User Smith", names)
@@ -331,7 +374,9 @@ class CancelRsvpTests(APITestCase):
 
     def test_host_cannot_cancel(self):
         self.client.force_authenticate(self.host)
-        ActivityParticipant.objects.create(activity=self.activity, user=self.host, status="confirmed")
+        ActivityParticipant.objects.create(
+            activity=self.activity, user=self.host, status="confirmed"
+        )
         resp = self.client.delete(reverse("activity-rsvp-cancel", args=[self.activity.id]))
         self.assertEqual(resp.status_code, 400)
         self.assertTrue(ActivityParticipant.objects.filter(user=self.host).exists())
@@ -341,7 +386,9 @@ class CancelRsvpTests(APITestCase):
         ActivityParticipant.objects.create(activity=started, user=self.user, status="confirmed")
         resp = self.client.delete(reverse("activity-rsvp-cancel", args=[started.id]))
         self.assertEqual(resp.status_code, 400)
-        self.assertTrue(ActivityParticipant.objects.filter(activity=started, user=self.user).exists())
+        self.assertTrue(
+            ActivityParticipant.objects.filter(activity=started, user=self.user).exists()
+        )
 
 
 class SwipeClearTests(APITestCase):
@@ -356,14 +403,18 @@ class SwipeClearTests(APITestCase):
     def test_clear_pass_is_idempotent_and_card_returns(self):
         self.client.force_authenticate(self.user)
         self.client.post(self.url, {"direction": "left"}, format="json")
-        self.assertEqual(self.client.post(self.url, {"direction": "left"}, format="json").status_code, 400)
+        self.assertEqual(
+            self.client.post(self.url, {"direction": "left"}, format="json").status_code, 400
+        )
         first = self.client.delete(self.url)
         self.assertEqual(first.status_code, 200)
         self.assertTrue(first.data["deleted"])
         second = self.client.delete(self.url)
         self.assertEqual(second.status_code, 200)
         self.assertFalse(second.data["deleted"])
-        self.assertEqual(self.client.post(self.url, {"direction": "right"}, format="json").status_code, 201)
+        self.assertEqual(
+            self.client.post(self.url, {"direction": "right"}, format="json").status_code, 201
+        )
 
     def test_only_clears_own_swipe_and_404_for_missing_activity(self):
         other = _user("other")
@@ -371,7 +422,9 @@ class SwipeClearTests(APITestCase):
         self.client.force_authenticate(self.user)
         self.client.delete(self.url)
         self.assertTrue(Swipe.objects.filter(user=other).exists())
-        self.assertEqual(self.client.delete(reverse("swipe-activity", args=[99999])).status_code, 404)
+        self.assertEqual(
+            self.client.delete(reverse("swipe-activity", args=[99999])).status_code, 404
+        )
 
 
 def _jpeg():
@@ -394,7 +447,10 @@ class PhotoDownloadTests(APITestCase):
 
     def test_requires_auth(self):
         activity, _ = self._event(**_past())
-        self.assertEqual(self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code, 401)
+        self.assertEqual(
+            self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code,
+            401,
+        )
 
     def test_attendee_after_start_gets_signed_attachment(self):
         activity, photo = self._event(**_past())
@@ -414,11 +470,17 @@ class PhotoDownloadTests(APITestCase):
     def test_forbidden_cases(self):
         activity, _ = self._event(**_past())
         self.client.force_authenticate(self.stranger)
-        self.assertEqual(self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code,
+            403,
+        )
         pending = _user("pending")
         ActivityParticipant.objects.create(activity=activity, user=pending, status="pending")
         self.client.force_authenticate(pending)
-        self.assertEqual(self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("activity-photo-downloads", args=[activity.id])).status_code,
+            403,
+        )
 
     def test_attendee_before_start_forbidden_but_host_and_staff_allowed(self):
         activity, _ = self._event()
@@ -449,7 +511,9 @@ class PhotoDownloadTests(APITestCase):
         self.assertEqual(self.client.get(base + f"?t={good}").status_code, 200)
         with patch("django.core.signing.time.time", return_value=timezone.now().timestamp() + 3700):
             self.assertEqual(self.client.get(base + f"?t={good}").status_code, 403)
-        wrong_photo = TimestampSigner(salt=PHOTO_DOWNLOAD_SALT).sign(f"{activity.id}:{photo.id + 1}")
+        wrong_photo = TimestampSigner(salt=PHOTO_DOWNLOAD_SALT).sign(
+            f"{activity.id}:{photo.id + 1}"
+        )
         self.assertEqual(self.client.get(base + f"?t={wrong_photo}").status_code, 403)
 
 
@@ -459,11 +523,15 @@ class HiddenAddressTests(APITestCase):
         self.guest = _user("guest")
         self.stranger = _user("stranger")
         self.member_event = _activity(self.host, location="12 Secret Ln")
-        ActivityParticipant.objects.create(activity=self.member_event, user=self.guest, status="confirmed")
+        ActivityParticipant.objects.create(
+            activity=self.member_event, user=self.guest, status="confirmed"
+        )
 
     def _detail(self, user, activity=None):
         self.client.force_authenticate(user)
-        return self.client.get(reverse("activity-detail", args=[(activity or self.member_event).id]))
+        return self.client.get(
+            reverse("activity-detail", args=[(activity or self.member_event).id])
+        )
 
     def test_hidden_from_non_going_viewers(self):
         data = self._detail(self.stranger).data
@@ -479,7 +547,9 @@ class HiddenAddressTests(APITestCase):
 
     def test_pending_rsvp_does_not_reveal(self):
         pending = _user("pending")
-        ActivityParticipant.objects.create(activity=self.member_event, user=pending, status="pending")
+        ActivityParticipant.objects.create(
+            activity=self.member_event, user=pending, status="pending"
+        )
         self.assertIsNone(self._detail(pending).data["location"])
 
     def test_list_endpoint_hides_too(self):
@@ -491,7 +561,9 @@ class HiddenAddressTests(APITestCase):
 
     def test_church_hosted_and_public_calendar_unaffected(self):
         church = _activity(self.host, host_kind="church", location="Church Hall")
-        public = _activity(self.host, list_on_church_calendar=True, calendar_approved=True, location="Public Hall")
+        public = _activity(
+            self.host, list_on_church_calendar=True, calendar_approved=True, location="Public Hall"
+        )
         self.assertEqual(self._detail(self.stranger, church).data["location"], "Church Hall")
         self.assertEqual(self._detail(self.stranger, public).data["location"], "Public Hall")
 
@@ -515,7 +587,9 @@ class HiddenAddressTests(APITestCase):
 
     def test_hidden_token_for_church_event_still_shows_location(self):
         church = _activity(self.host, host_kind="church", location="Church Hall")
-        resp = self.client.get("/api/public/event.ics", {"token": event_ics_token(church.id, hide_location=True)})
+        resp = self.client.get(
+            "/api/public/event.ics", {"token": event_ics_token(church.id, hide_location=True)}
+        )
         self.assertIn("Church Hall", resp.content.decode())
 
     def test_event_ics_helper_default_unchanged(self):

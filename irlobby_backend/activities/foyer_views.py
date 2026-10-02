@@ -43,8 +43,8 @@ from .photos import (
 )
 from .public_calendar import (
     activity_id_from_ics_token,
-    ics_token_hides_location,
     event_ics,
+    ics_token_hides_location,
     is_public_calendar_event,
     public_calendar_ics,
     public_calendar_queryset,

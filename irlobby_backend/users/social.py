@@ -41,7 +41,8 @@ def blocked_user_ids(user) -> set[int]:
 
 def is_blocked_either_way(user_a_id: int, user_b_id: int) -> bool:
     return BlockedUser.objects.filter(
-        Q(blocker_id=user_a_id, blocked_id=user_b_id) | Q(blocker_id=user_b_id, blocked_id=user_a_id)
+        Q(blocker_id=user_a_id, blocked_id=user_b_id)
+        | Q(blocker_id=user_b_id, blocked_id=user_a_id)
     ).exists()
 
 
@@ -91,9 +92,7 @@ def attended_activity_ids(user) -> set[int]:
 
     now = timezone.now()
     going = (
-        ActivityParticipant.objects.filter(
-            user=user, status="confirmed", activity__time__lte=now
-        )
+        ActivityParticipant.objects.filter(user=user, status="confirmed", activity__time__lte=now)
         .filter(Q(include_self=True) | Q(dependents__isnull=False))
         .values_list("activity_id", flat=True)
     )
@@ -210,5 +209,3 @@ def short_name(user) -> str:
 def full_name(user) -> str:
     full = f"{user.first_name} {user.last_name}".strip()
     return full or "Guest"
-
-

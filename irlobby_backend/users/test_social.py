@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from activities.models import Activity, ActivityParticipant, Church
+from activities.models import ActivityParticipant, Church
 from activities.test_foyer import _activity, _safe_birthdate
 from moderation.models import AbuseReport, BlockedUser
 from users.models import Friendship, User
@@ -55,8 +55,12 @@ class PhoneNormalizationTests(APITestCase):
         self.client.force_authenticate(me)
         resp = self.client.patch(
             reverse("user-profile"),
-            {"phone": "215-555-0123", "show_phone": True, "profile_visibility": "public",
-             "dm_from_shared_events": True},
+            {
+                "phone": "215-555-0123",
+                "show_phone": True,
+                "profile_visibility": "public",
+                "dm_from_shared_events": True,
+            },
             format="json",
         )
         self.assertEqual(resp.status_code, 200, resp.data)
@@ -66,13 +70,21 @@ class PhoneNormalizationTests(APITestCase):
         self.assertFalse(resp.data["show_email"])
         bad = self.client.patch(reverse("user-profile"), {"phone": "nope"}, format="json")
         self.assertEqual(bad.status_code, 400)
-        worse = self.client.patch(reverse("user-profile"), {"profile_visibility": "everyone"}, format="json")
+        worse = self.client.patch(
+            reverse("user-profile"), {"profile_visibility": "everyone"}, format="json"
+        )
         self.assertEqual(worse.status_code, 400)
 
     def test_defaults_are_private(self):
         me = make("me")
         self.assertEqual(
-            (me.profile_visibility, me.show_email, me.show_phone, me.dm_from_shared_events, me.phone),
+            (
+                me.profile_visibility,
+                me.show_email,
+                me.show_phone,
+                me.dm_from_shared_events,
+                me.phone,
+            ),
             ("only_me", False, False, False, ""),
         )
 
@@ -80,8 +92,15 @@ class PhoneNormalizationTests(APITestCase):
 class ProfileCardTests(APITestCase):
     def setUp(self):
         self.church = Church.objects.create(name="Test Church")
-        self.owner = make("owner", phone=PHONE, bio="Hello there", church=self.church,
-                          show_email=True, show_phone=True, avatar_url="https://x/y.png")
+        self.owner = make(
+            "owner",
+            phone=PHONE,
+            bio="Hello there",
+            church=self.church,
+            show_email=True,
+            show_phone=True,
+            avatar_url="https://x/y.png",
+        )
         self.viewer = make("viewer")
         self.client.force_authenticate(self.viewer)
 
@@ -102,7 +121,8 @@ class ProfileCardTests(APITestCase):
         self.set_level("public")
         data = self.get().data
         self.assertEqual(
-            set(data), {"id", "first_name", "avatar_url", "bio", "friendship", "visible", "email", "phone"}
+            set(data),
+            {"id", "first_name", "avatar_url", "bio", "friendship", "visible", "email", "phone"},
         )
         self.assertEqual((data["email"], data["phone"]), ("owner@example.com", PHONE))
         self.set_level("public", show_email=False)
@@ -116,7 +136,9 @@ class ProfileCardTests(APITestCase):
 
     def test_never_returns_location_family_username_birth(self):
         self.set_level("public")
-        User.objects.filter(pk=self.owner.pk).update(location="Secret City", latitude=1.0, longitude=2.0)
+        User.objects.filter(pk=self.owner.pk).update(
+            location="Secret City", latitude=1.0, longitude=2.0
+        )
         from activities.models import HouseholdDependent
 
         HouseholdDependent.objects.create(parent=self.owner, name="KidName", relationship="spouse")
@@ -162,7 +184,9 @@ class ProfileCardTests(APITestCase):
         self.assertEqual(self.get().status_code, 404)
 
     def test_unknown_user_404(self):
-        self.assertEqual(self.client.get(reverse("user-profile-card", args=[99999])).status_code, 404)
+        self.assertEqual(
+            self.client.get(reverse("user-profile-card", args=[99999])).status_code, 404
+        )
 
     def test_minor_only_visible_to_friends_even_when_public(self):
         teen = make("teen", age=15, phone=PHONE, show_phone=True, profile_visibility="public")
@@ -175,7 +199,9 @@ class ProfileCardTests(APITestCase):
     def test_own_card_returns_own_contact(self):
         self.client.force_authenticate(self.owner)
         data = self.client.get(card_url(self.owner)).data
-        self.assertEqual((data["phone"], data["email"], data["friendship"]), (PHONE, "owner@example.com", "self"))
+        self.assertEqual(
+            (data["phone"], data["email"], data["friendship"]), (PHONE, "owner@example.com", "self")
+        )
 
     def test_phone_not_in_other_responses(self):
         self.set_level("public")
@@ -207,13 +233,24 @@ class ReportTests(APITestCase):
         )
         self.assertEqual(resp.status_code, 201)
         report = AbuseReport.objects.get()
-        self.assertEqual((report.reporter, report.reported_user, report.description), (self.me, self.target, "bad"))
+        self.assertEqual(
+            (report.reporter, report.reported_user, report.description),
+            (self.me, self.target, "bad"),
+        )
 
     def test_report_validation_and_auth(self):
         url = reverse("user-report", args=[self.target.id])
         self.assertEqual(self.client.post(url, {"reason": "zzz"}, format="json").status_code, 400)
-        self.assertEqual(self.client.post(reverse("user-report", args=[self.me.id]), {}, format="json").status_code, 400)
-        self.assertEqual(self.client.post(reverse("user-report", args=[9999]), {}, format="json").status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                reverse("user-report", args=[self.me.id]), {}, format="json"
+            ).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.post(reverse("user-report", args=[9999]), {}, format="json").status_code,
+            404,
+        )
         self.client.force_authenticate(None)
         self.assertEqual(self.client.post(url, {}, format="json").status_code, 401)
 
@@ -248,7 +285,12 @@ class FriendFlowTests(APITestCase):
         self.assertEqual(self.send(self.a).status_code, 400)
         resp = self.client.post(reverse("friend-requests"), {"user_id": "x"}, format="json")
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(self.client.post(reverse("friend-requests"), {"user_id": 99999}, format="json").status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                reverse("friend-requests"), {"user_id": 99999}, format="json"
+            ).status_code,
+            404,
+        )
 
     def test_reachable_via_public_church_or_shared_event(self):
         User.objects.filter(pk=self.b.pk).update(profile_visibility="public")
@@ -301,24 +343,38 @@ class FriendFlowTests(APITestCase):
         rid = inbox["incoming"][0]["id"]
         # only the recipient can accept
         self.client.force_authenticate(self.a)
-        self.assertEqual(self.client.post(reverse("friend-request-accept", args=[rid])).status_code, 404)
+        self.assertEqual(
+            self.client.post(reverse("friend-request-accept", args=[rid])).status_code, 404
+        )
         self.client.force_authenticate(self.b)
-        self.assertEqual(self.client.post(reverse("friend-request-accept", args=[rid])).data["status"], "accepted")
-        self.assertEqual(self.client.post(reverse("friend-request-accept", args=[rid])).status_code, 404)
+        self.assertEqual(
+            self.client.post(reverse("friend-request-accept", args=[rid])).data["status"],
+            "accepted",
+        )
+        self.assertEqual(
+            self.client.post(reverse("friend-request-accept", args=[rid])).status_code, 404
+        )
         friends = self.client.get(reverse("friend-list")).data["friends"]
         self.assertEqual([f["user_id"] for f in friends], [self.a.id])
         self.assertEqual(set(friends[0]), {"user_id", "first_name", "avatar_url", "since"})
         self.assertEqual(self.send(self.a).status_code, 409)
 
-        self.assertEqual(self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 204)
-        self.assertEqual(self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 404)
+        self.assertEqual(
+            self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 204
+        )
+        self.assertEqual(
+            self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 404
+        )
         self.assertEqual(self.client.get(reverse("friend-list")).data["friends"], [])
 
     def test_decline_hides_from_requester_and_allows_reverse_request(self):
         User.objects.filter(pk__in=[self.a.pk, self.b.pk]).update(profile_visibility="public")
         rid = self.send(self.b).data["id"]
         self.client.force_authenticate(self.b)
-        self.assertEqual(self.client.post(reverse("friend-request-decline", args=[rid])).data["status"], "declined")
+        self.assertEqual(
+            self.client.post(reverse("friend-request-decline", args=[rid])).data["status"],
+            "declined",
+        )
         self.assertEqual(self.client.get(reverse("friend-requests")).data["incoming"], [])
         self.client.force_authenticate(self.a)
         self.assertEqual(self.send(self.b).status_code, 200)  # still looks pending to a
@@ -341,7 +397,10 @@ class FriendFlowTests(APITestCase):
         from django.db import IntegrityError, transaction
 
         Friendship.objects.create(requester=self.a, recipient=self.b)
-        for kwargs in ({"requester": self.b, "recipient": self.a}, {"requester": self.a, "recipient": self.a}):
+        for kwargs in (
+            {"requester": self.b, "recipient": self.a},
+            {"requester": self.a, "recipient": self.a},
+        ):
             with self.assertRaises(IntegrityError), transaction.atomic():
                 Friendship.objects.create(**kwargs)
 
@@ -349,9 +408,13 @@ class FriendFlowTests(APITestCase):
         User.objects.filter(pk=self.b.pk).update(profile_visibility="public")
         self.send(self.b)
         self.client.force_authenticate(self.b)
-        self.assertEqual(self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 404)
+        self.assertEqual(
+            self.client.delete(reverse("friend-remove", args=[self.a.id])).status_code, 404
+        )
         self.client.force_authenticate(self.a)
-        self.assertEqual(self.client.delete(reverse("friend-remove", args=[self.b.id])).status_code, 204)
+        self.assertEqual(
+            self.client.delete(reverse("friend-remove", args=[self.b.id])).status_code, 204
+        )
 
     def test_blocked_requests_hidden_from_inbox(self):
         User.objects.filter(pk=self.b.pk).update(profile_visibility="public")

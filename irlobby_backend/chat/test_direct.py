@@ -76,7 +76,9 @@ class DirectChatRestTests(APITestCase):
         befriend(self.a, self.b)
         first = self.start()
         self.assertEqual(first.status_code, 201)
-        self.assertEqual(set(first.data), {"id", "other_user", "last_message", "muted", "can_send", "created_at"})
+        self.assertEqual(
+            set(first.data), {"id", "other_user", "last_message", "muted", "can_send", "created_at"}
+        )
         self.assertEqual(set(first.data["other_user"]), {"id", "first_name", "avatar_url"})
         self.assertTrue(first.data["can_send"])
         again = self.start(user=self.b, target=self.a)
@@ -91,8 +93,18 @@ class DirectChatRestTests(APITestCase):
 
     def test_cannot_message_self_or_unknown(self, _push):
         self.assertEqual(self.start(self.a).status_code, 400)
-        self.assertEqual(self.client.post(reverse("direct-conversations"), {"user_id": 9999}, format="json").status_code, 404)
-        self.assertEqual(self.client.post(reverse("direct-conversations"), {"user_id": "x"}, format="json").status_code, 400)
+        self.assertEqual(
+            self.client.post(
+                reverse("direct-conversations"), {"user_id": 9999}, format="json"
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("direct-conversations"), {"user_id": "x"}, format="json"
+            ).status_code,
+            400,
+        )
 
     def test_shared_event_dm_requires_recipient_opt_in(self, _push):
         shared_event(self.a, self.b)
@@ -187,26 +199,40 @@ class DirectChatRestTests(APITestCase):
         Friendship.objects.all().delete()
         self.assertEqual(self.say(convo, "two").status_code, 400)
         self.assertEqual(self.client.get(reverse("message-list", args=[convo])).data["count"], 1)
-        self.assertFalse(self.client.get(reverse("direct-conversations")).data["conversations"][0]["can_send"])
+        self.assertFalse(
+            self.client.get(reverse("direct-conversations")).data["conversations"][0]["can_send"]
+        )
 
     def test_mute_and_leave(self, _push):
         befriend(self.a, self.b)
         convo = self.start().data["id"]
-        resp = self.client.post(reverse("direct-mute", args=[convo]), {"muted": True}, format="json")
+        resp = self.client.post(
+            reverse("direct-mute", args=[convo]), {"muted": True}, format="json"
+        )
         self.assertTrue(resp.data["muted"])
-        self.assertTrue(self.client.get(reverse("direct-conversations")).data["conversations"][0]["muted"])
-        self.assertFalse(self.client.post(reverse("direct-mute", args=[convo]), {"muted": "false"}, format="json").data["muted"])
+        self.assertTrue(
+            self.client.get(reverse("direct-conversations")).data["conversations"][0]["muted"]
+        )
+        self.assertFalse(
+            self.client.post(
+                reverse("direct-mute", args=[convo]), {"muted": "false"}, format="json"
+            ).data["muted"]
+        )
         self.assertEqual(self.client.post(reverse("direct-leave", args=[convo])).status_code, 200)
         self.assertEqual(self.client.get(reverse("direct-conversations")).data["conversations"], [])
         self.assertEqual(self.client.get(reverse("message-list", args=[convo])).data["results"], [])
         self.assertEqual(self.say(convo).status_code, 400)
         # the other person is unaffected, and starting again brings it back for me
-        self.assertEqual(len(self.client.get(reverse("direct-conversations")).data["conversations"]), 0)
+        self.assertEqual(
+            len(self.client.get(reverse("direct-conversations")).data["conversations"]), 0
+        )
         again = self.start()
         self.assertEqual(again.status_code, 200)
         self.assertFalse(ConversationUserState.objects.get(user=self.a).left)
         self.client.force_authenticate(self.b)
-        self.assertEqual(len(self.client.get(reverse("direct-conversations")).data["conversations"]), 1)
+        self.assertEqual(
+            len(self.client.get(reverse("direct-conversations")).data["conversations"]), 1
+        )
 
     def test_muted_or_left_recipient_gets_no_push(self, _push):
         from users.push_notifications import send_new_message_notification
@@ -234,12 +260,18 @@ class DirectChatRestTests(APITestCase):
         )
         self.assertEqual(resp.status_code, 201)
         report = AbuseReport.objects.get()
-        self.assertEqual((report.reporter, report.reported_user, report.reason), (self.a, self.b, "harassment"))
+        self.assertEqual(
+            (report.reporter, report.reported_user, report.reason), (self.a, self.b, "harassment")
+        )
         self.assertIn("rude words", report.description)
         self.assertNotIn("<i>", report.description)
-        bad = self.client.post(reverse("direct-report", args=[convo]), {"reason": "nope"}, format="json")
+        bad = self.client.post(
+            reverse("direct-report", args=[convo]), {"reason": "nope"}, format="json"
+        )
         self.assertEqual(bad.status_code, 400)
-        bad = self.client.post(reverse("direct-report", args=[convo]), {"message_id": 99999}, format="json")
+        bad = self.client.post(
+            reverse("direct-report", args=[convo]), {"message_id": 99999}, format="json"
+        )
         self.assertEqual(bad.status_code, 400)
 
     def test_block_from_thread_removes_friendship(self, _push):
@@ -263,7 +295,9 @@ class DirectChatRestTests(APITestCase):
         self.assertEqual(self.say(convo).status_code, 201)
         self.assertEqual(self.say(convo).status_code, 429)
         for _ in range(3):
-            self.assertEqual(self.client.get(reverse("message-list", args=[convo])).status_code, 200)
+            self.assertEqual(
+                self.client.get(reverse("message-list", args=[convo])).status_code, 200
+            )
         cache.clear()
 
     def test_gathering_chat_unaffected_by_direct_rules(self, _push):
@@ -271,7 +305,9 @@ class DirectChatRestTests(APITestCase):
 
         event = _activity(self.b)
         ActivityParticipant.objects.create(activity=event, user=self.a, status="confirmed")
-        convo = Conversation.objects.create(match=Match.objects.create(user_a=self.a, user_b=self.b, activity=event))
+        convo = Conversation.objects.create(
+            match=Match.objects.create(user_a=self.a, user_b=self.b, activity=event)
+        )
         self.assertEqual(self.say(convo.id).status_code, 201)  # strangers, but same gathering
         rows = self.client.get(reverse("conversation-list")).data
         rows = rows["results"] if isinstance(rows, dict) else rows

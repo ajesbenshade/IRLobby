@@ -92,3 +92,25 @@ describe('time slots', () => {
     expect(formatGatheringWhen(iso)).toBe('Sat, Nov 7 · 5:30 PM');
   });
 });
+
+describe('age and month rules', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const d = require('../dates') as typeof import('../dates');
+  const now = new Date(2026, 9, 2, 9, 0, 0);
+
+  it('turning 13 today is allowed; a day younger is under', () => {
+    expect(d.isUnderAge({ year: 2013, month: 10, day: 2 }, 13, now)).toBe(false);
+    expect(d.isUnderAge({ year: 2013, month: 10, day: 3 }, 13, now)).toBe(true);
+    expect(d.isUnderAge({ year: 2000, month: 1, day: 1 }, 13, now)).toBe(false);
+  });
+
+  it('clamps Feb 29 to Feb 28 in non-leap years', () => {
+    expect(d.latestBirthDateForAge(13, new Date(2028, 1, 29))).toEqual({ year: 2015, month: 2, day: 28 });
+  });
+
+  it('flags later months as future and formats weekdays', () => {
+    expect(d.isFutureMonth({ year: 2026, month: 11 }, now)).toBe(true);
+    expect(d.isFutureMonth({ year: 2026, month: 10 }, now)).toBe(false);
+    expect(d.formatDayWithWeekday({ year: 1988, month: 3, day: 4 })).toBe('Friday, March 4, 1988');
+  });
+});

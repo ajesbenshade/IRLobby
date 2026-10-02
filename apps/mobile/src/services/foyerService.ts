@@ -1,5 +1,9 @@
 import { api } from './apiClient';
 
+import { isRequireApprovalEnabled, noteActivityPayload } from '../foyer/capabilities';
+import { cancelEventBody } from '../foyer/cancel';
+import type { DecisionResponse, RequestsResponse } from '../foyer/approval';
+import { declineBody } from '../foyer/approval';
 import { normalizeFamilyMembers } from '../foyer/family';
 import type { WhosComingResponse } from '../foyer/logic';
 
@@ -43,6 +47,10 @@ export type RsvpResult = {
   member_ids?: number[];
   people_count: number;
   going_count?: number;
+  /** Require approval: `pending` means a request was sent and no spot is taken yet. */
+  my_request_status?: 'pending' | 'approved' | 'declined' | 'none' | string;
+  /** The host's decline note, only for the declined requester. */
+  my_request_reason?: string | null;
 };
 
 export const fetchWhosComing = async (activityId: number | string): Promise<WhosComingResponse> => {
@@ -65,6 +73,57 @@ export const cancelRsvp = async (activityId: number | string): Promise<void> => 
   await api.delete(`/api/activities/${activityId}/rsvp/cancel/`);
 };
 
+/**
+ * Withdraws a pending request to join: POST /api/activities/<id>/rsvp/cancel/ (DELETE also works).
+ * A declined guest gets 400 "The host declined your request." unless allow_rerequest is on.
+ */
+export const withdrawJoinRequest = async (activityId: number | string): Promise<void> => {
+  await api.post(`/api/activities/${activityId}/rsvp/cancel/`);
+};
+
+/**
+ * Host cancels the whole gathering: POST /api/activities/<id>/cancel-event/ `{reason?}` (max 280).
+ * Only call when `isHostCancelEnabled()`; 404/405 means the backend does not have it yet.
+ */
+export const cancelEvent = async (activityId: number | string, reason: string): Promise<void> => {
+  await api.post(`/api/activities/${activityId}/cancel-event/`, cancelEventBody(reason));
+};
+
+export type RequestStatusFilter = 'pending' | 'approved' | 'declined';
+
+/** GET /api/activities/<id>/requests/?status=... (host and staff only). */
+export const fetchJoinRequests = async (
+  activityId: number | string,
+  status: RequestStatusFilter = 'pending',
+): Promise<RequestsResponse> => {
+  const response = await api.get<Partial<RequestsResponse>>(`/api/activities/${activityId}/requests/`, { params: { status } });
+  const data = response.data ?? {};
+  return {
+    pending_count: Number(data.pending_count ?? 0),
+    spots_left: data.spots_left == null ? null : Number(data.spots_left),
+    requests: Array.isArray(data.requests) ? data.requests : [],
+  };
+};
+
+/** POST .../requests/<participant id>/approve/. 409 "Not enough spots for this party."; 400 once started/cancelled/ended. */
+export const approveJoinRequest = async (activityId: number | string, requestId: number): Promise<DecisionResponse> => {
+  const response = await api.post<DecisionResponse>(`/api/activities/${activityId}/requests/${requestId}/approve/`);
+  return response.data;
+};
+
+/** POST .../requests/<participant id>/decline/ `{reason?}`. The note goes in the push and, for the declined requester only, comes back as `my_request_reason`. */
+export const declineJoinRequest = async (
+  activityId: number | string,
+  requestId: number,
+  note = '',
+): Promise<DecisionResponse> => {
+  const response = await api.post<DecisionResponse>(
+    `/api/activities/${activityId}/requests/${requestId}/decline/`,
+    declineBody(note),
+  );
+  return response.data;
+};
+
 /** DELETE /api/swipes/<activity_id>/swipe/ (idempotent). A 404 just means there was nothing to clear. */
 export const clearPass = async (activityId: number | string): Promise<boolean> => {
   try {
@@ -79,9 +138,13 @@ export const clearPass = async (activityId: number | string): Promise<boolean> =
 };
 
 export const fetchGoingActivities = async <T>(): Promise<T[]> => {
-  const response = await api.get<T[] | { results?: T[] }>('/api/activities/going/');
+  // With Require approval the list also carries the viewer's pending/declined requests.
+  const params = isRequireApprovalEnabled() ? { include_pending: 'true' } : undefined;
+  const response = await api.get<T[] | { results?: T[] }>('/api/activities/going/', params ? { params } : undefined);
   const data = response.data;
-  return Array.isArray(data) ? data : data.results ?? [];
+  const rows = Array.isArray(data) ? data : data.results ?? [];
+  noteActivityPayload(rows);
+  return rows;
 };
 
 export const fetchChurches = async (query: string): Promise<ChurchRecord[]> => {

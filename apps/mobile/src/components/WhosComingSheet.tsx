@@ -6,7 +6,7 @@ import { AddFamilyMemberSheet } from '@components/foyer/AddFamilyMemberSheet';
 import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { SheetScaffold } from '@components/SheetScaffold';
-import { GOING_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, COMMON_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { buildRsvpPeople } from '@foyer/rsvp';
 import { buildRsvpPayload, defaultRsvpSelection, peopleCount, type WhosComingResponse } from '@foyer/logic';
 import { appColors, appTypography, fontSize, radii } from '@theme/index';
@@ -20,6 +20,12 @@ type WhosComingSheetProps = {
   /** The event's age range, used to word `Not eligible: ages 13–17`. */
   ageRange?: { age_min?: number | null; age_max?: number | null } | null;
   hasSpouse?: boolean;
+  /**
+   * `request` = Require approval: title `Request to join`, the guest line about what the host sees,
+   * `Send request` and a Cancel link. Nothing here takes a spot until the host approves.
+   */
+  mode?: 'rsvp' | 'request';
+  onCancelRequest?: () => void;
   /** Called after a family member is added so the parent can refetch the list. */
   onFamilyAdded?: () => void;
   onConfirm: (payload: { include_self: boolean; dependent_ids: number[]; member_ids?: number[] }) => void;
@@ -32,9 +38,12 @@ export const WhosComingSheet = ({
   error,
   ageRange = null,
   hasSpouse,
+  mode = 'rsvp',
+  onCancelRequest,
   onFamilyAdded,
   onConfirm,
 }: WhosComingSheetProps) => {
+  const isRequest = mode === 'request';
   const initial = useMemo(() => defaultRsvpSelection(response), [response]);
   const people = useMemo(() => buildRsvpPeople(response, ageRange), [response, ageRange]);
   const [includeSelf, setIncludeSelf] = useState(initial.includeSelf);
@@ -60,16 +69,24 @@ export const WhosComingSheet = ({
             </Text>
           ) : null}
           <PillButton
-            label={GOING_COPY.confirmRsvp}
+            label={isRequest ? APPROVAL_COPY.sendRequest : GOING_COPY.confirmRsvp}
             disabled={pending || count < 1}
             loading={pending}
             onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
+            testID="whos-coming-confirm"
           />
+          {isRequest ? (
+            <>
+              <PillButton label={COMMON_COPY.cancel} variant="outline" disabled={pending} onPress={() => onCancelRequest?.()} />
+              <Text style={styles.note}>{APPROVAL_COPY.sheetFooter}</Text>
+            </>
+          ) : null}
         </>
       }
     >
-      <Text style={styles.title}>{GOING_COPY.whosComing}</Text>
+      <Text style={styles.title}>{isRequest ? APPROVAL_COPY.sheetTitle : GOING_COPY.whosComing}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {isRequest ? <Text style={styles.subtitle}>{GOING_COPY.whosComing}</Text> : null}
 
       {people.map((person) => {
         const selected = person.id == null ? includeSelf : dependentIds.includes(person.id);
@@ -105,6 +122,7 @@ export const WhosComingSheet = ({
         onPress={() => setAdding(true)}
       />
 
+      {isRequest ? <Text style={styles.note}>{APPROVAL_COPY.sheetGuestLine}</Text> : null}
       <Text style={styles.note}>{GOING_COPY.underThirteenNote}</Text>
 
       <AddFamilyMemberSheet

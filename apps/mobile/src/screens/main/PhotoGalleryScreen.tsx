@@ -6,9 +6,10 @@ import { useRef, useState } from 'react';
 import { FlatList, Image, Linking, Modal, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
+import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { PillButton, SheetButtons, Toast } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { COMMON_COPY, PHOTO_COPY } from '@constants/foyerCopy';
+import { COMMON_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import { photosForSelection, toastForOutcome, type DownloadOutcome, type DownloadToast } from '@foyer/downloads';
 import { ensureAddOnlyPermission, savePhotosToLibrary } from '@foyer/photoDownload';
 import { hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
@@ -16,9 +17,19 @@ import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
 import { PhotoDownloadUnavailableError, type DownloadablePhoto } from '@services/foyerService';
+import { canReport, submitReport, type ReportTarget } from '@services/reportAdapter';
 import { appColors, appTypography } from '@theme/index';
 
-type GalleryPhoto = { id: number | null; url: string };
+/** `ownerId` is only present once the backend exposes who uploaded a photo; without it Report is not offered (gap). */
+type GalleryPhoto = { id: number | null; url: string; ownerId: number | string | null };
+
+type PhotoPayload = {
+  id?: number;
+  url: string;
+  uploaded_by_id?: number | string | null;
+  user_id?: number | string | null;
+  owner_id?: number | string | null;
+};
 
 const GUTTER = 2;
 const COLUMNS = 3;
@@ -52,12 +63,18 @@ export const PhotoGalleryScreen = () => {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [toast, setToast] = useState<{ message: string; retry?: () => void; sticky: boolean } | null>(null);
   const [denied, setDenied] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const [reportSheet, setReportSheet] = useState<'menu' | 'report' | 'block' | null>(null);
   const cancelled = useRef(false);
   const lastOutcome = useRef<DownloadOutcome | null>(null);
 
   const photos: GalleryPhoto[] = (activity?.photos ?? [])
-    .filter((photo): photo is { id?: number; url: string } => Boolean(photo.url))
-    .map((photo) => ({ id: photo.id ?? null, url: photo.url }));
+    .filter((photo): photo is PhotoPayload => Boolean(photo.url))
+    .map((photo) => ({
+      id: photo.id ?? null,
+      url: photo.url,
+      ownerId: photo.uploaded_by_id ?? photo.user_id ?? photo.owner_id ?? null,
+    }));
 
   const hostId = activity && typeof activity.host === 'object' ? activity.host.id : null;
   const isHost = hostId != null && user?.id != null && String(hostId) === String(user.id);
@@ -125,11 +142,14 @@ export const PhotoGalleryScreen = () => {
   };
 
   const selectedIds = photosForSelection(
-    photos.filter((photo): photo is { id: number; url: string } => photo.id != null) as unknown as DownloadablePhoto[],
+    photos.filter((photo) => photo.id != null) as unknown as DownloadablePhoto[],
     selected,
   ).map((photo) => photo.id);
 
   const viewerPhoto = viewerIndex != null ? photos[viewerIndex] : null;
+  const viewerPhotoTarget: ReportTarget | null = viewerPhoto
+    ? { type: 'photo', ownerId: viewerPhoto.ownerId, photoId: viewerPhoto.id, activityId }
+    : null;
 
   return (
     <View style={styles.screen}>
@@ -206,6 +226,37 @@ export const PhotoGalleryScreen = () => {
         </View>
       ) : null}
 
+      <ActionSheet
+        visible={reportSheet === 'menu'}
+        onClose={() => setReportSheet(null)}
+        rows={[
+          ...(canDownload && reportTarget?.type === 'photo' && reportTarget.photoId != null
+            ? [
+                {
+                  label: PHOTO_COPY.download,
+                  onPress: () => {
+                    setReportSheet(null);
+                    void run({ onlyIds: [reportTarget.photoId as number] });
+                  },
+                  testID: 'photo-download',
+                },
+              ]
+            : []),
+          { label: MEMBER_COPY.reportPhoto, onPress: () => setReportSheet('report'), testID: 'photo-report-row' },
+        ]}
+      />
+      <ReportSheet
+        visible={reportSheet === 'report'}
+        title={MEMBER_COPY.reportPhoto}
+        lead={MEMBER_COPY.reportPhotoLead}
+        name={MEMBER_COPY.thisPerson}
+        onClose={() => setReportSheet(null)}
+        onSubmit={(payload) => (reportTarget ? submitReport(reportTarget, payload) : Promise.resolve())}
+        onSent={() => {
+          setReportSheet(null);
+          setToast({ message: MEMBER_COPY.reportSent, sticky: false });
+        }}
+      />
       <Modal visible={viewerPhoto != null} animationType="fade" onRequestClose={() => setViewerIndex(null)}>
         <View style={styles.viewer}>
           <View style={styles.viewerBar}>
@@ -215,7 +266,24 @@ export const PhotoGalleryScreen = () => {
             <Text style={styles.viewerTitle}>
               {viewerIndex != null ? PHOTO_COPY.viewerPosition(viewerIndex + 1, photos.length) : ''}
             </Text>
-            <View style={styles.barButton} />
+            {viewerPhoto && viewerPhotoTarget && canReport(viewerPhotoTarget) ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={MEMBER_COPY.reportOrBlock}
+                onPress={() => {
+                  // Close the viewer first: a sheet cannot open over another Modal reliably.
+                  setReportTarget(viewerPhotoTarget);
+                  setViewerIndex(null);
+                  setReportSheet('menu');
+                }}
+                style={styles.barButton}
+                testID="photo-report"
+              >
+                <MaterialCommunityIcons name="dots-horizontal" size={24} color="#f6f1ee" />
+              </Pressable>
+            ) : (
+              <View style={styles.barButton} />
+            )}
           </View>
           {viewerPhoto ? <Image source={{ uri: viewerPhoto.url }} resizeMode="contain" style={styles.viewerImage} /> : null}
           <View style={styles.viewerFooter}>

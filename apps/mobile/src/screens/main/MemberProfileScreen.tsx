@@ -19,9 +19,9 @@ import {
   fetchMemberProfile,
   openDirectConversation,
   removeFriend,
-  reportMember,
   sendFriendRequest,
 } from '@services/foyerService';
+import { submitReport } from '@services/reportAdapter';
 import { blockUser } from '@services/moderationService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -277,7 +277,7 @@ export const MemberProfileScreen = () => {
         visible={sheet === 'report'}
         name={name}
         onClose={() => setSheet(null)}
-        onSubmit={(payload) => reportMember(userId, payload)}
+        onSubmit={(payload) => submitReport({ type: 'member', userId }, payload)}
         onSent={() => {
           setSheet(null);
           setToast(MEMBER_COPY.reportSent);

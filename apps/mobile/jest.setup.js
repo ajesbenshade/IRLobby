@@ -22,3 +22,8 @@ jest.mock('expo-secure-store', () => {
     __reset: () => store.clear(),
   };
 });
+
+// The native web view module is not available under Jest (Terms / Privacy sheet, WebContent screen).
+jest.mock('react-native-webview', () => ({
+  WebView: 'WebView',
+}));

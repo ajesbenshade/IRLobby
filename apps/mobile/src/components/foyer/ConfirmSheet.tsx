@@ -1,8 +1,8 @@
-import { Text } from 'react-native';
-import { StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
+import { StyleSheet, Text } from 'react-native';
 
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
-import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
+import { InlineError, PillButton, SheetButtons, type PillVariant } from '@components/foyer/ui';
 import { appColors, appTypography } from '@theme/index';
 
 type ConfirmSheetProps = {
@@ -13,6 +13,10 @@ type ConfirmSheetProps = {
   cancelLabel: string;
   pending?: boolean;
   error?: string | null;
+  /** `destructive` = filled #8a0a1f (cancel gathering). Default is the brand burgundy. */
+  confirmVariant?: Extract<PillVariant, 'primary' | 'destructive'>;
+  /** Extra content under the body (e.g. the reason field). */
+  children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -26,6 +30,8 @@ export const ConfirmSheet = ({
   cancelLabel,
   pending,
   error,
+  confirmVariant = 'primary',
+  children,
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) => (
@@ -35,8 +41,8 @@ export const ConfirmSheet = ({
     footer={
       <SheetButtons>
         <InlineError message={error} />
-        <PillButton label={confirmLabel} loading={pending} onPress={onConfirm} />
-        <PillButton label={cancelLabel} variant="outline" disabled={pending} onPress={onCancel} />
+        <PillButton label={confirmLabel} variant={confirmVariant} loading={pending} onPress={onConfirm} testID="confirm-sheet-confirm" />
+        <PillButton label={cancelLabel} variant="outline" disabled={pending} onPress={onCancel} testID="confirm-sheet-cancel" />
       </SheetButtons>
     }
   >
@@ -44,6 +50,7 @@ export const ConfirmSheet = ({
       {title}
     </Text>
     <Text style={styles.body}>{body}</Text>
+    {children}
   </FoyerSheet>
 );
 

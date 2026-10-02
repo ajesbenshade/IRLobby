@@ -2,9 +2,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { AttendeeSafetyMenu } from '@components/foyer/AttendeeSafetyMenu';
 import { Avatar, PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { ATTENDEE_COPY } from '@constants/foyerCopy';
+import { ATTENDEE_COPY, MEMBER_COPY } from '@constants/foyerCopy';
 import type { PastAttendee } from '@foyer/attendees';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -36,15 +37,17 @@ export const PastAttendeesCard = ({
           </>
         );
         return attendee.openable && attendee.userId != null ? (
-          <Pressable
-            key={`${attendee.userId}-${index}`}
-            accessibilityRole="button"
-            accessibilityLabel={attendee.name}
-            onPress={() => onOpen(attendee.userId as number)}
-            style={styles.row}
-          >
-            {content}
-          </Pressable>
+          <View key={`${attendee.userId}-${index}`} style={styles.openRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={attendee.name}
+              onPress={() => onOpen(attendee.userId as number)}
+              style={[styles.row, styles.openMain]}
+            >
+              {content}
+            </Pressable>
+            <AttendeeSafetyMenu userId={attendee.userId} name={attendee.name} />
+          </View>
         ) : (
           <View key={`minor-${index}`} style={styles.row}>
             {content}
@@ -52,12 +55,15 @@ export const PastAttendeesCard = ({
         );
       })}
       {hidden > 0 ? <PillButton label={ATTENDEE_COPY.showMorePast(hidden)} variant="text" onPress={() => setExpanded(true)} /> : null}
+      {attendees.some((attendee) => attendee.isMinor) ? <Text style={styles.note}>{MEMBER_COPY.minorNoMenu}</Text> : null}
       <Text style={styles.note}>{ATTENDEE_COPY.pastNote}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  openRow: { flexDirection: 'row', alignItems: 'center' },
+  openMain: { flex: 1 },
   card: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 8 },
   title: { fontFamily: appTypography.heading, fontSize: 20, color: appColors.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 },

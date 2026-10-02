@@ -61,7 +61,11 @@ import {
   type ActivityFetchFilters,
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
-import { GOING_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
+import { gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
+import { useDetectedCapabilities } from '@foyer/capabilities';
+import { isActivityCancelled, isCancelledMessage } from '@foyer/cancel';
+import { fullBlocksJoin, fullNotice, isFullMessage } from '@foyer/full';
 import { formatDayShort, formatGatheringWhen, hostDayLimits, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
@@ -78,6 +82,10 @@ type DiscoverNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Discover'>,
   NativeStackNavigationProp<MainStackParamList>
 >;
+
+/** Require approval: a 200 `{status: 'pending'}` means a request was sent, not an RSVP. */
+const isPendingResult = (result: { status?: string; my_request_status?: string } | null | undefined) =>
+  result?.status === 'pending' || result?.my_request_status === 'pending';
 
 const isActivityTicketed = (activity: {
   isTicketed?: boolean;
@@ -145,6 +153,11 @@ export const DiscoverScreen = () => {
   const [calendarActivity, setCalendarActivity] = useState<Activity | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [rsvpPending, setRsvpPending] = useState(false);
+  // Require approval: the Who's coming sheet in request mode, and the toasts after a request / a stale cancelled event.
+  const [requestMode, setRequestMode] = useState(false);
+  const [requestToast, setRequestToast] = useState<string | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  useDetectedCapabilities();
 
   const normalizeDateFilter = useCallback((value: string, endOfDay: boolean) => {
     const trimmed = value.trim();
@@ -218,10 +231,12 @@ export const DiscoverScreen = () => {
     queryKey: ['mobile-discover-activities', discoverFilters],
     queryFn: () => fetchActivities(discoverFilters),
     // Paid events can't be joined for free, so hide them while ticket sales are off.
+    // Cancelled gatherings never belong in the deck (the server already omits them; this guards a stale cache).
     select: (items) =>
-      isTicketingUiEnabled(config.ticketingEnabled)
+      (isTicketingUiEnabled(config.ticketingEnabled)
         ? items
-        : items.filter((item) => !isActivityTicketed(item)),
+        : items.filter((item) => !isActivityTicketed(item))
+      ).filter((item) => !isActivityCancelled(item)),
   });
 
   const swipeMutation = useMutation({
@@ -314,14 +329,39 @@ export const DiscoverScreen = () => {
       setRsvpError(null);
       try {
         const result = await postRsvp(activity.id, payload);
-        advanceAfterRsvp(activity, result ?? payload, whosComing);
+        if (isPendingResult(result)) {
+          // Request sent: no spot taken, so no "You're going" sheet. Move to the next gathering.
+          setWhosComing(null);
+          setRequestMode(false);
+          setCurrentIndex((index) => index + 1);
+          setRequestToast(APPROVAL_COPY.requestSent);
+          void queryClient.invalidateQueries({ queryKey: ['foyer-going'] });
+        } else {
+          advanceAfterRsvp(activity, result ?? payload, whosComing);
+        }
       } catch (error) {
-        setRsvpError(friendlyRsvpMessage(getErrorMessage(error, 'Unable to save your RSVP.')));
+        const message = friendlyRsvpMessage(getErrorMessage(error, 'Unable to save your RSVP.'));
+        if (isFullMessage(message)) {
+          // The last spot went while the sheet was open: toast, close the sheet, refresh the deck.
+          setWhosComing(null);
+          setRequestMode(false);
+          setErrorToast(FULL_COPY.notice);
+          void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
+        } else if (isCancelledMessage(message)) {
+          // Stale card: the host cancelled it. Toast, drop the sheet and the card.
+          setWhosComing(null);
+          setRequestMode(false);
+          setErrorToast(message);
+          setCurrentIndex((index) => index + 1);
+          void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
+        } else {
+          setRsvpError(message);
+        }
       } finally {
         setRsvpPending(false);
       }
     },
-    [advanceAfterRsvp, whosComing],
+    [advanceAfterRsvp, queryClient, whosComing],
   );
 
   /**
@@ -350,14 +390,31 @@ export const DiscoverScreen = () => {
       return false;
     }
     if (!foyerMode) {
-      return recordLegacySwipe('right');
+      try {
+        return await recordLegacySwipe('right');
+      } catch (swipeError) {
+        // A full gathering answers swipe-right with 400 "This gathering is full.": toast, never a stuck card.
+        const message = getErrorMessage(swipeError, '');
+        if (isFullMessage(message)) {
+          setErrorToast(FULL_COPY.notice);
+          return false;
+        }
+        throw swipeError;
+      }
     }
+    const joinButton = joinButtonFor(currentActivity, "I'm going");
+    if (joinButton.disabled || fullBlocksJoin({ activity: currentActivity })) {
+      return false;
+    }
+    const asRequest = joinButton.kind === 'request' || joinButton.kind === 'askAgain';
     void safeImpactHaptic('medium');
     setRsvpPending(true);
     setRsvpError(null);
     try {
       const sheet = await fetchWhosComing(currentActivity.id);
-      if (shouldSkipWhosComingSheet(sheet)) {
+      setRequestMode(asRequest);
+      // A request always shows the sheet: the guest sees what the host will see before sending.
+      if (!asRequest && shouldSkipWhosComingSheet(sheet)) {
         if (hasNoEligiblePeople(sheet)) {
           // Posting would be an empty RSVP (the server answers 400). Explain instead.
           setRsvpError(sheet.me.reason?.trim() || "You aren't eligible for this gathering.");
@@ -372,7 +429,13 @@ export const DiscoverScreen = () => {
       setWhosComing(sheet);
       return false;
     } catch (error) {
-      setRsvpError(friendlyRsvpMessage(getErrorMessage(error, 'Unable to open the RSVP list.')));
+      const message = friendlyRsvpMessage(getErrorMessage(error, 'Unable to open the RSVP list.'));
+      if (isFullMessage(message)) {
+        setErrorToast(FULL_COPY.notice);
+        void queryClient.invalidateQueries({ queryKey: ['mobile-discover-activities'] });
+      } else {
+        setRsvpError(message);
+      }
       return false;
     } finally {
       setRsvpPending(false);
@@ -465,6 +528,8 @@ export const DiscoverScreen = () => {
   const goingLabel = currentActivity
     ? goingCountLabel(currentActivity.going_count ?? currentActivity.participant_count ?? 0)
     : '';
+  const currentJoinButton = joinButtonFor(currentActivity, "I'm going");
+  const currentFull = fullBlocksJoin({ activity: currentActivity });
   const foyerHostName = currentActivity ? hostDisplayName(currentActivity) : '';
   const foyerHostAvatar = currentActivity ? hostAvatarUrl(currentActivity) : null;
 
@@ -774,6 +839,7 @@ export const DiscoverScreen = () => {
                     hostName={foyerHostName}
                     hostAvatarUrl={foyerHostAvatar}
                     coverImageUrl={coverImage}
+                    approvalTag={gatheringRequiresApproval(currentActivity) ? APPROVAL_COPY.approvalRequiredTag : null}
                   />
                 </Pressable>
               ) : (
@@ -832,7 +898,9 @@ export const DiscoverScreen = () => {
               onPass={() => void swipe.commit('left')}
               onGoing={() => void swipe.commit('right')}
               disabled={isBusy || rsvpPending}
-              error={rsvpError}
+              error={rsvpError ?? fullNotice(currentFull)}
+              goingLabel={currentFull ? FULL_COPY.buttonLabel : currentJoinButton.kind === 'join' ? undefined : currentJoinButton.label}
+              goingDisabled={currentJoinButton.disabled || currentFull}
             />
           ) : null}
           {currentActivity && !foyerMode ? (
@@ -1003,6 +1071,7 @@ export const DiscoverScreen = () => {
                 onDismiss={() => {
                   // Dismissing the sheet cancels the RSVP; the card is already back at center.
                   setWhosComing(null);
+                  setRequestMode(false);
                   setRsvpError(null);
                 }}
                 style={styles.sheetWrapper}
@@ -1010,6 +1079,12 @@ export const DiscoverScreen = () => {
               >
                 <WhosComingSheet
                   response={whosComing}
+                  mode={requestMode ? 'request' : 'rsvp'}
+                  onCancelRequest={() => {
+                    setWhosComing(null);
+                    setRequestMode(false);
+                    setRsvpError(null);
+                  }}
                   ageRange={currentActivity}
                   onFamilyAdded={() => {
                     void fetchWhosComing(currentActivity.id).then(setWhosComing).catch(() => undefined);
@@ -1078,6 +1153,16 @@ export const DiscoverScreen = () => {
                 setCancelledToast(true);
               }}
             />
+          ) : null}
+          {foyerMode && requestToast ? (
+            <Portal>
+              <Toast message={requestToast} autoDismissMs={4000} onDismiss={() => setRequestToast(null)} />
+            </Portal>
+          ) : null}
+          {errorToast ? (
+            <Portal>
+              <Toast message={errorToast} icon="alert-circle-outline" autoDismissMs={5000} onDismiss={() => setErrorToast(null)} />
+            </Portal>
           ) : null}
           {foyerMode && cancelledToast ? (
             <Portal>

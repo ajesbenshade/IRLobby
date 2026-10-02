@@ -52,7 +52,24 @@ export interface Activity {
     outlook_url?: string | null;
   } | null;
   my_rsvp?: { status?: string; people_count?: number; include_self?: boolean; dependent_ids?: number[] } | null;
-  photos?: Array<{ id?: number; url?: string }>;
+  /** Host cancel (backend PR #36). Absent on the live API until it is deployed. */
+  is_cancelled?: boolean;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
+  status?: 'cancelled' | 'active' | string | null;
+  end_time?: string | null;
+  /** Require approval (backend, not deployed). `requires_approval` already exists on the live API (legacy), so gate on `my_request_status`. */
+  requires_approval?: boolean;
+  allow_rerequest?: boolean;
+  /** Host's optional decline note, for the requester only (backend adds it; absent until then). */
+  my_request_reason?: string | null;
+  my_request_status?: 'none' | 'pending' | 'approved' | 'declined' | string | null;
+  /** Host/staff only. */
+  pending_count?: number;
+  list_on_church_calendar?: boolean;
+  /** Cap reached by confirmed people (pending requests never count). Absent on older backends. */
+  is_full?: boolean;
+  photos?: Array<{ id?: number; url?: string; uploaded_by_id?: number | string | null; user_id?: number | string | null; owner_id?: number | string | null }>;
 }
 
 export interface Participant {

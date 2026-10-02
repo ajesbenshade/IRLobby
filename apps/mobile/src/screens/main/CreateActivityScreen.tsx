@@ -343,12 +343,7 @@ const CreateActivityScreenLegacy = ({ activityId }: CreateActivityScreenProps = 
       return;
     }
 
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      setPhotoError('Photo library permission is required to add event photos.');
-      return;
-    }
-
+    // The system photo picker needs no library permission (add-only access is used for saving).
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,

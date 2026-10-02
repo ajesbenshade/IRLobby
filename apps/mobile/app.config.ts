@@ -10,7 +10,8 @@ export const reverseGoogleIosClientIdScheme = (iosClientId?: string) => {
 };
 
 /** Add-only Photos permission for saving event photos (requested only when someone taps Download). */
-export const IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION = 'Save event photos to your library.';
+export const IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION =
+  "Saved photos from gatherings are added to your photo library. The Foyer can't see your other photos.";
 
 /** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
 export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
@@ -77,8 +78,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       NSCameraUsageDescription:
         'The Foyer uses the camera to capture photos for gatherings and profile updates.',
       NSLocationWhenInUseUsageDescription: IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION,
-      NSPhotoLibraryUsageDescription:
-        'The Foyer needs access to your photo library to upload gathering and profile photos.',
       NSPhotoLibraryAddUsageDescription: IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION,
       CFBundleDisplayName: 'The Foyer',
     },
@@ -121,8 +120,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Needs a full EAS build (new native module). The app only asks for add-only access.
       'expo-media-library',
       {
-        photosPermission:
-          'The Foyer needs access to your photo library to upload gathering and profile photos.',
+        // `false` omits NSPhotoLibraryUsageDescription: the app never asks for read access to the library.
+        // Picking a photo uses the system picker (no permission); saving uses add-only access.
+        photosPermission: false,
         savePhotosPermission: IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION,
         isAccessMediaLocationEnabled: false,
         granularPermissions: ['photo'],

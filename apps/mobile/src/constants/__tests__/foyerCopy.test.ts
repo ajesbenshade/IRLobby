@@ -23,9 +23,8 @@ describe('final copy (Oct 1 late)', () => {
     expect(PHOTO_COPY.partialToast(22, 24)).toBe("Saved 22 of 24 photos. 2 couldn't be saved.");
   });
   it('going and family', () => {
-    expect(GOING_COPY.cancelBody('Family Game Night')).toBe(
-      'You and your family members will be removed from Family Game Night. This event will return to your Discover deck.',
-    );
+    expect(GOING_COPY.cancelBody).toBe("You'll be removed from the guest list and the host will be told.");
+    expect(GOING_COPY.cancelRsvpConfirm).toBe('Cancel my RSVP');
     expect(GOING_COPY.notEligible('ages 13–17')).toBe('Not eligible: ages 13–17');
     expect(FAMILY_COPY.intro).toBe('Add a spouse or child under 18 so you can RSVP for them. Only you can see this list.');
     expect(FAMILY_COPY.title).toBe('My family');
@@ -42,5 +41,33 @@ describe('final copy (Oct 1 late)', () => {
     expect(CHAT_COPY.mutedHeader('Maria K.')).toBe('Maria K. · Muted');
     expect(ATTENDEE_COPY.pastTitle(12)).toBe('Who was there · 12');
     expect(ATTENDEE_COPY.showMore(4)).toBe('Show 4 more going');
+  });
+});
+
+describe('account deletion and safety copy', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const copy = require('../foyerCopy') as typeof import('../foyerCopy');
+
+  it('states the approved retention periods in one place', () => {
+    const text = JSON.stringify(copy.DELETE_ACCOUNT_COPY);
+    expect(text).toContain('up to 30 days');
+    expect(text).toContain('12 months');
+    expect(text).toMatch(/who reported, a reference to the content, the reason and the date/);
+  });
+
+  it('has the full and approval strings', () => {
+    expect(copy.FULL_COPY.notice).toBe('This gathering is full.');
+    expect(copy.APPROVAL_COPY.requestToJoin).toBe('Request to join');
+    expect(copy.APPROVAL_COPY.closedTitle).toBe('Request closed');
+    expect(copy.ACCOUNT_SAFETY_COPY.reportHelp).toMatch(/church admins/);
+  });
+
+  it('lists visibility Only me, Friends, People in my church, Public', () => {
+    expect(copy.VISIBILITY_OPTIONS.map((option: { label: string }) => option.label)).toEqual([
+      'Only me',
+      'Friends',
+      'People in my church',
+      'Public',
+    ]);
   });
 });

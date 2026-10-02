@@ -1,3 +1,4 @@
+import { DELETE_ACCOUNT_COPY } from './foyerCopy';
 /**
  * Centralized user-facing strings for the mobile app.
  *
@@ -31,9 +32,11 @@ export const auth = {
     forgotPassword: 'Forgot password?',
     footerPrompt: 'New here?',
     footerCta: 'Create account',
-    legalPrefix: 'By continuing you agree to',
+    legalPrefix: 'By continuing you agree to the',
     legalTerms: 'Terms',
-    legalPrivacy: 'Privacy',
+    legalAnd: ' and ',
+    legalPrivacy: 'Privacy Policy',
+    legalSuffix: '.',
     twitterProgressTitle: 'X/Twitter auth in progress',
     twitterProgressBody: 'Hang tight while we connect you through X...',
     twitterProgressNote: 'Redirects via api.irlobby.com then back to the app',
@@ -55,7 +58,12 @@ export const auth = {
     googleNotConfigured:
       'Google sign-in is not configured on this build yet.',
     legalLabel:
-      'I agree to the Terms of Service and Privacy Policy.',
+      'By continuing you agree to the Terms and Privacy Policy.',
+    legalPrefix: 'By continuing you agree to the',
+    legalTerms: 'Terms',
+    legalAnd: ' and ',
+    legalPrivacy: 'Privacy Policy',
+    legalSuffix: '.',
     legalRequired: 'Please accept the terms to continue.',
     footerPrompt: 'Already have an account?',
     footerCta: 'Sign in',
@@ -159,13 +167,15 @@ export const store = {
 
 export const account = {
   settingsRowTitle: 'Account',
-  settingsRowSubtitle: 'Manage sign-in and permanently delete your account.',
+  settingsRowSubtitle: DELETE_ACCOUNT_COPY.rowSubtitle,
   screenEyebrow: 'Account',
   screenTitle: 'Account',
   screenSubtitle: 'Permanent delete only. This cannot be undone.',
   deleteCta: 'Delete account',
   confirmTitle: 'Delete your account?',
-  confirmBody: 'This permanently deletes your profile, matches, and chat. You can’t undo this.',
+  confirmBody: DELETE_ACCOUNT_COPY.confirmBody,
+  retention: DELETE_ACCOUNT_COPY.retention,
+  cardSubtitle: DELETE_ACCOUNT_COPY.cardSubtitle,
   confirmPrimary: 'Delete account',
   confirmCancel: 'Cancel',
   deletedTitle: 'Account deleted',

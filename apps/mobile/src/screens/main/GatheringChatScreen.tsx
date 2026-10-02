@@ -2,18 +2,23 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
+import { ActionSheet, BlockSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { EmptyState, InlineError } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { COMMON_COPY, GATHERING_CHAT_COPY } from '@constants/foyerCopy';
+import { COMMON_COPY, GATHERING_CHAT_COPY, MEMBER_COPY } from '@constants/foyerCopy';
 import { canSendMessage, withDividers } from '@foyer/directChat';
-import { gatheringChatErrorMessage } from '@foyer/gatheringChat';
+import { collapseBlockedMessages, gatheringChatErrorMessage } from '@foyer/gatheringChat';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
+import { fetchBlockedPeople } from '@services/foyerService';
 import { fetchGatheringChatMessages, sendGatheringChatMessage } from '@services/chatService';
+import { blockUser } from '@services/moderationService';
+import { canReport, submitReport, type ReportTarget } from '@services/reportAdapter';
 import { appColors, appTypography, radii } from '@theme/index';
 
 /**
@@ -28,6 +33,8 @@ export const GatheringChatScreen = () => {
   const { activityId, title: titleParam } = route.params;
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [target, setTarget] = useState<{ report: ReportTarget; name: string } | null>(null);
+  const [sheet, setSheet] = useState<'menu' | 'report' | 'block' | null>(null);
   const messagesKey = ['foyer-gathering-chat', String(activityId)];
 
   // Same key as the gathering screen, so this is usually already cached.
@@ -62,7 +69,9 @@ export const GatheringChatScreen = () => {
     : null;
   // A 403 means the caller is not going/hosting: there is nothing to send to.
   const blocked = messagesQuery.isError;
-  const items = withDividers(messages);
+  const blockedQuery = useQuery({ queryKey: ['foyer-blocked'], queryFn: fetchBlockedPeople, retry: false });
+  const blockedIds = new Set((blockedQuery.data ?? []).map((person) => String(person.blocked)));
+  const items = collapseBlockedMessages(withDividers(messages), blockedIds);
   const sendEnabled = canSendMessage(text, !blocked) && !sendMutation.isPending;
 
   return (
@@ -88,18 +97,95 @@ export const GatheringChatScreen = () => {
             if (item.kind === 'divider') {
               return <Text style={styles.divider}>{item.label}</Text>;
             }
+            if (item.kind === 'blocked') {
+              return (
+                <Text style={styles.divider} testID="blocked-line">
+                  {GATHERING_CHAT_COPY.blockedLine(item.name)}
+                </Text>
+              );
+            }
             const mine = String(item.message.userId || item.message.user.id) === String(user?.id);
             const sender = item.message.user.firstName;
+            const reportTarget: ReportTarget = {
+              type: 'chat_message',
+              senderId: item.message.userId || item.message.user.id,
+              messageId: item.message.id,
+              activityId,
+              excerpt: item.message.message,
+            };
+            const openMenu = () => {
+              setTarget({ report: reportTarget, name: sender || MEMBER_COPY.thisPerson });
+              setSheet('menu');
+            };
             return (
-              <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+              <Pressable
+                accessibilityLabel={`${sender ?? ''} ${item.message.message}`.trim()}
+                onLongPress={openMenu}
+                delayLongPress={350}
+                style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}
+                testID="chat-bubble"
+              >
                 {!mine && sender ? <Text style={styles.sender}>{sender}</Text> : null}
                 <Text style={[styles.bubbleText, mine ? styles.bubbleTextMine : null]}>{item.message.message}</Text>
-              </View>
+                {!mine && canReport(reportTarget) ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={MEMBER_COPY.reportOrBlock}
+                    onPress={openMenu}
+                    onLongPress={openMenu}
+                    hitSlop={8}
+                    style={styles.more}
+                    testID="chat-message-more"
+                  >
+                    <MaterialCommunityIcons name="dots-horizontal" size={20} color={appColors.mutedInk} />
+                  </Pressable>
+                ) : null}
+              </Pressable>
             );
           }}
         />
       )}
       <InlineError message={error ?? loadError} />
+      <ActionSheet
+        visible={sheet === 'menu'}
+        onClose={() => setSheet(null)}
+        rows={[
+          {
+            label: GATHERING_CHAT_COPY.copy,
+            onPress: () => {
+              setSheet(null);
+              if (target?.report.type === 'chat_message' && target.report.excerpt) {
+                void Clipboard.setStringAsync(target.report.excerpt);
+              }
+            },
+            testID: 'chat-copy',
+          },
+          { label: GATHERING_CHAT_COPY.reportMessage, onPress: () => setSheet('report'), testID: 'chat-report' },
+          { label: GATHERING_CHAT_COPY.blockPerson(target?.name ?? ''), onPress: () => setSheet('block'), testID: 'chat-block' },
+        ]}
+      />
+      <ReportSheet
+        visible={sheet === 'report'}
+        name={target?.name ?? ''}
+        onClose={() => setSheet(null)}
+        onSubmit={(payload) => (target ? submitReport(target.report, payload) : Promise.resolve())}
+        onSent={() => {
+          setSheet(null);
+        }}
+      />
+      <BlockSheet
+        visible={sheet === 'block'}
+        name={target?.name ?? ''}
+        onClose={() => setSheet(null)}
+        onConfirm={() =>
+          target && target.report.type === 'chat_message' ? blockUser(target.report.senderId) : Promise.resolve()
+        }
+        onDone={() => {
+          setSheet(null);
+          void queryClient.invalidateQueries({ queryKey: ['foyer-blocked'] });
+          void queryClient.invalidateQueries({ queryKey: messagesKey });
+        }}
+      />
 
       <View style={styles.composer}>
         <TextInput
@@ -137,6 +223,7 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleMine: { alignSelf: 'flex-end', backgroundColor: appColors.primary },
   bubbleTheirs: { alignSelf: 'flex-start', backgroundColor: appColors.white },
+  more: { alignSelf: 'flex-end', minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   sender: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.mutedInk, marginBottom: 2 },
   bubbleText: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.ink },
   bubbleTextMine: { color: '#f6f1ee' },

@@ -190,3 +190,30 @@ export const formatGatheringWhen = (iso: string | null | undefined): string => {
   const day = `${WEEKDAY_SHORT[parsed.getDay()]}, ${MONTH_SHORT[parsed.getMonth()]} ${parsed.getDate()}`;
   return `${day} · ${formatTimeOfDay(parsed.getHours() * 60 + parsed.getMinutes())}`;
 };
+
+// ---- Minimum age (accounts are not available under 13) ----
+
+export const MIN_ACCOUNT_AGE = 13;
+
+/** The latest birth date that is already `years` old on `now` (device-local today). Feb 29 clamps to Feb 28. */
+export const latestBirthDateForAge = (years: number, now = new Date()): DayValue => {
+  const today = todayValue(now);
+  const year = today.year - years;
+  return { year, month: today.month, day: Math.min(today.day, daysInMonth(year, today.month)) };
+};
+
+/** True when someone born on `birth` has not yet turned `minAge` on `now` (turning 13 today is NOT under). */
+export const isUnderAge = (birth: DayValue, minAge = MIN_ACCOUNT_AGE, now = new Date()): boolean =>
+  compareDays(birth, latestBirthDateForAge(minAge, now)) > 0;
+
+/** Family birth month: months after the current month are future, so they cannot be confirmed. */
+export const isFutureMonth = (value: MonthValue, now = new Date()): boolean =>
+  compareMonths(value, { year: now.getFullYear(), month: now.getMonth() + 1 }) > 0;
+
+/** `Friday, March 4, 1988` (weekday computed from the calendar date). */
+export const formatDayWithWeekday = (value: DayValue): string => {
+  const weekday = new Date(value.year, value.month - 1, value.day).getDay();
+  return `${WEEKDAYS_LONG[weekday]}, ${MONTH_NAMES[value.month - 1]} ${value.day}, ${value.year}`;
+};
+
+const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;

@@ -17,7 +17,8 @@ export type HouseholdChild = {
   age: number;
 };
 
-export type FamilyRelationship = 'spouse' | 'child' | 'parent' | 'other';
+/** The backend stores only spouse and child. */
+export type FamilyRelationship = 'spouse' | 'child';
 
 /** One person in "My family". Adults carry no birth data; children carry month and year only. */
 export type FamilyMember = {

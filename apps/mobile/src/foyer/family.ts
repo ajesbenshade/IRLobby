@@ -2,7 +2,7 @@ import { FAMILY_COPY } from '@constants/foyerCopy';
 
 import type { FamilyMember, FamilyRelationship, HouseholdResponse } from '../services/foyerService';
 
-const RELATIONSHIPS: FamilyRelationship[] = ['spouse', 'child', 'parent', 'other'];
+const RELATIONSHIPS: FamilyRelationship[] = ['spouse', 'child'];
 
 const asRelationship = (value: unknown): FamilyRelationship =>
   RELATIONSHIPS.includes(value as FamilyRelationship) ? (value as FamilyRelationship) : 'child';
@@ -71,7 +71,7 @@ export const canAddFamilyMember = (input: {
   return true;
 };
 
-/** Relationships offered in the sheet. The server stores spouse and child; parent/other are tolerated if present. */
-export const FAMILY_RELATIONSHIP_CHOICES: FamilyRelationship[] = ['spouse', 'child', 'parent', 'other'];
+/** Relationships offered in the Add family member sheet. The server accepts only spouse and child. */
+export const FAMILY_RELATIONSHIP_CHOICES: FamilyRelationship[] = ['spouse', 'child'];
 
 export const hasSpouse = (members: FamilyMember[]) => members.some((member) => member.relationship === 'spouse');

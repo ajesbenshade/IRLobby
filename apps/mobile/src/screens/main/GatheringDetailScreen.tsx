@@ -17,6 +17,7 @@ import { RefreshControl, View } from '@components/RNCompat';
 import { ATTENDEE_COPY, GOING_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import { buildPastAttendees, isHostAttendeeView } from '@foyer/attendees';
 import { formatGatheringWhen } from '@foyer/dates';
+import { openGatheringChat } from '@foyer/gatheringChat';
 import { canCancelRsvp, canSeeChat, hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
 import {
@@ -160,7 +161,9 @@ export const GatheringDetailScreen = () => {
             label={GOING_COPY.chat}
             variant="outline"
             style={styles.pillEqual}
-            onPress={() => navigation.navigate('Tabs', { screen: 'Chat' })}
+            onPress={() =>
+              openGatheringChat(navigation, { activityId, title: activity.title }, { fromGathering: true })
+            }
           />
         ) : null}
       </View>

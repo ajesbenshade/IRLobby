@@ -11,6 +11,7 @@ import { API_ROUTES } from '@shared/schema';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { InlineError, PillButton, SectionLabel } from '@components/foyer/ui';
 import { Image, View } from '@components/RNCompat';
+import { CHURCH_ADMIN_CONTACT_URL } from '@constants/churchAdmin';
 import {
   ACCOUNT_SAFETY_COPY,
   COMMON_COPY,
@@ -40,9 +41,6 @@ import { loadSettings, toPayload } from '@screens/main/SettingsScreen';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
-
-/** Church admin contact (App Store requirement). TODO(Aaron): confirm the real address; used until then. */
-export const CHURCH_ADMIN_CONTACT_URL = 'mailto:support@irlobby.com?subject=The%20Foyer%20help';
 
 const emptyDraft: ProfileDraft = {
   name: '',
@@ -419,7 +417,7 @@ export const FoyerProfileCard = () => {
           icon="lifebuoy"
           label={PROFILE_COPY.contactAdmins}
           count={undefined}
-          onPress={() => void Linking.openURL(CHURCH_ADMIN_CONTACT_URL)}
+          onPress={() => void Linking.openURL(CHURCH_ADMIN_CONTACT_URL).catch(() => undefined)}
           last
         />
       </View>

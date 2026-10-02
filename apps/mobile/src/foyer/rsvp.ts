@@ -19,8 +19,6 @@ const initialsOf = (name: string) => name.replace(/\s+/g, '').slice(0, 2).toUppe
 const RELATIONSHIP_LABEL: Record<string, string> = {
   spouse: 'Spouse',
   child: 'Child',
-  parent: 'Parent',
-  other: 'Other',
 };
 
 /** `Not eligible: ages 13–17` when the server gave the generic age reason and we know the range. */
@@ -129,4 +127,6 @@ export const CANCEL_QUERY_KEYS: ReadonlyArray<ReadonlyArray<string>> = [
   ['foyer-gathering'],
   ['mobile-hosted-activities'],
   ['mobile-conversations'],
+  // Gathering chats: someone who cancelled must not keep seeing cached messages.
+  ['foyer-gathering-chat'],
 ];

@@ -157,6 +157,18 @@ export const CHAT_COPY = {
   loadError: "Messages couldn't be loaded.",
 } as const;
 
+export const GATHERING_CHAT_COPY = {
+  title: 'Chat',
+  banner: 'Only the host and people who are going can see this chat.',
+  emptyTitle: 'No messages yet',
+  emptyBody: 'Say hello. Chat starts once at least two people are going.',
+  notEnough: 'Chat starts once at least two people are going.',
+  composerPlaceholder: 'Message',
+  sendLabel: 'Send message',
+  loadError: "Messages couldn't be loaded.",
+  unavailable: 'This gathering is unavailable.',
+} as const;
+
 export const MESSAGING_COPY = {
   title: 'Messaging',
   section: 'MESSAGING',
@@ -182,7 +194,7 @@ export const ATTENDEE_COPY = {
   goingCount: (count: number) => `${count} going`,
   youHost: 'You, host',
   ageBand: { adult: 'Adult', teen: '13–17', under13: 'Under 13' },
-  relationship: { self: '', spouse: 'Spouse', child: 'Child', parent: 'Parent', other: 'Other' },
+  relationship: { self: '', spouse: 'Spouse', child: 'Child' },
   pastTitle: (count: number) => `Who was there · ${count}`,
   pastLabel: 'Past event',
   familyMember: 'Family member',
@@ -230,7 +242,7 @@ export const FAMILY_COPY = {
   birthHelper: 'Shown only for children. We keep just the month and year.',
   addCta: 'Add',
   remove: 'Remove',
-  relationships: { spouse: 'Spouse', child: 'Child', parent: 'Parent', other: 'Other' },
+  relationships: { spouse: 'Spouse', child: 'Child' },
   sexes: { male: 'Male', female: 'Female' },
   membersCount: (count: number) => (count === 1 ? '1 member' : `${count} members`),
 } as const;

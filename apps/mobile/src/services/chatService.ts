@@ -53,6 +53,9 @@ type ChatApiMessage = {
 
 type ChatApiConversation = {
   id?: number | string | null;
+  matchId?: number | string | null;
+  activityId?: number | string | null;
+  otherUserId?: number | string | null;
   match?: string | null;
   activity?: string | null;
   title?: string | null;
@@ -130,8 +133,16 @@ const resolveConversationMessages = (conversation: ChatApiConversation): Convers
   return fallbackMessage ? [normalizeMessage(fallbackMessage)] : [];
 };
 
+const asOptionalNumber = (value: unknown): number | null => {
+  const parsed = asNumber(value, Number.NaN);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 const normalizeConversation = (conversation: ChatApiConversation): ConversationItem => ({
   id: asNumber(conversation.id),
+  matchId: asOptionalNumber(conversation.matchId) ?? undefined,
+  activityId: asOptionalNumber(conversation.activityId),
+  otherUserId: asOptionalNumber(conversation.otherUserId),
   match: asString(
     conversation.match ?? conversation.activity ?? conversation.title ?? conversation.name,
     'Conversation',
@@ -210,4 +221,31 @@ export const sendConversationMessage = async (
     { message },
   );
   return response.data;
+};
+
+/**
+ * Messages in a gathering's chat, by activity id. Only the host and people going can read it
+ * (anyone else gets 403). The server creates the gathering's conversation on first use and
+ * returns an empty list until at least two people are going.
+ */
+export const fetchGatheringChatMessages = async (
+  activityId: number | string,
+): Promise<ConversationMessage[]> => {
+  const response = await api.get<ConversationMessage[]>(API_ROUTE_BUILDERS.activityChat(activityId));
+
+  if (!Array.isArray(response.data) && response.data != null) {
+    reportUnexpectedPayload('messages', response.data);
+  }
+
+  return normalizeMessages(response.data);
+};
+
+export const sendGatheringChatMessage = async (
+  activityId: number | string,
+  message: string,
+): Promise<ConversationMessage> => {
+  const response = await api.post<ConversationMessage>(API_ROUTE_BUILDERS.activityChat(activityId), {
+    message,
+  });
+  return normalizeMessage(response.data as ChatApiMessage);
 };

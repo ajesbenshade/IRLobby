@@ -15,7 +15,9 @@ import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { isFoyerMode } from '@constants/appMode';
+import { GATHERING_CHAT_COPY } from '@constants/foyerCopy';
 import { DirectChatScreen } from '@screens/main/DirectChatScreen';
+import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
 import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
@@ -284,6 +286,11 @@ export const MainNavigator = () => (
       name="GatheringDetail"
       component={GatheringDetailScreen}
       options={{ title: 'Gathering' }}
+    />
+    <Stack.Screen
+      name="GatheringChat"
+      component={GatheringChatScreen}
+      options={{ title: GATHERING_CHAT_COPY.title }}
     />
   </Stack.Navigator>
 );

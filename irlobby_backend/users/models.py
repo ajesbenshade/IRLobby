@@ -120,6 +120,9 @@ class SocialAuthIdentity(models.Model):
     provider = models.CharField(max_length=32, choices=PROVIDER_CHOICES)
     provider_user_id = models.CharField(max_length=255)
     email = models.EmailField(blank=True)
+    # Sign in with Apple only: kept so the token can be revoked when the account is deleted.
+    # Secret. Never serialized, logged or shown in the admin.
+    apple_refresh_token = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -606,3 +606,35 @@ People blocked either way (you blocked them, or they blocked you) are hidden fro
 - `GET /api/activities/<id>/attendees/` (host view) leaves out the households of users blocked either way with the host. `going_count` is still the true total. The attendee-facing list of other people going already left out blocked users.
 - Chat message reports on a blocked sender's message return 404 (see Report content).
 
+## Account deletion
+
+`DELETE /api/users/profile/delete/` (auth required; 401 otherwise) deletes the signed-in account. No body. Returns **204** (empty on the wire) on success. A `500` `{ "error": "Failed to delete profile", ... }` means nothing more could be done; the call is safe to retry. It is a hard delete: there is no grace period and the tokens stop working at once.
+
+Order of work: (1) upcoming gatherings the user hosts are cancelled and attendees told, (2) the user's uploaded photos, invites and gathering chats are handled, (3) the account row is deleted (database cascades), (4) the Sign in with Apple token is revoked at Apple.
+
+**Removed**
+- The account and everything on it: name, username, email, phone, bio, birth date, sex, avatar, church, location, preferences (including notification and privacy settings), terms/privacy acceptance record, password and login identities (email, Apple, Google), device push tokens, and refresh tokens.
+- Friends, friend requests (sent and received) and blocks (both ways).
+- Family members (household dependents).
+- Every RSVP, join request, swipe and ticket.
+- 1:1 chats, including the other person's messages in them.
+- The user's own messages in gathering chats.
+- Reviews written by or about the user.
+- Every photo the user uploaded to any gathering, as database rows and as files on disk (the host's delete-photo call and any deletion of a photo now remove the file too).
+- Every gathering the user hosted, with its RSVPs, chats and photos. Upcoming ones (not cancelled, not started) are cancelled first: each confirmed attendee and pending requester gets the "<title> was cancelled" push with reason "The host deleted their account." and a chat note is posted in the gathering chat. The gathering is then deleted, so it no longer appears anywhere (it does not remain as a cancelled entry). Past and already-cancelled gatherings are deleted without notifications. A failed push never blocks deletion.
+- Contact details in invites that other people sent to the user's email address (case-insensitive) or phone number, and in invites the user accepted: `contact_name` and `contact_value` are blanked, `invitee` is cleared. The row itself stays for the inviter. Invites the user sent are deleted.
+- Sign in with Apple: the stored refresh token is revoked at `https://appleid.apple.com/auth/revoke` (best effort).
+
+**Kept**
+- Gathering chats other people are still in, without the user's messages. A gathering chat is tied to two "anchor" attendees; if the user was one, the chat is moved to the first and last remaining confirmed attendees (or merged into the chat that pair already has). If fewer than two confirmed attendees remain, nobody could open it, so it is deleted.
+- Abuse reports the user filed, and reports about the user (for 12 months of moderation; the retention sweep is operational, not an API). `reporter` / `reported_user` are cleared; kept: report id, reason, description, status, created date, admin notes, `target_type`, `target_id`, and the short `target_snapshot` text. No name or email is stored on a report.
+- Server logs and backups age out on their normal schedule.
+
+Not touched: payments. Foyer takes none; any leftover Stripe Connect account id on the user row is deleted with the row but no Stripe account is closed.
+
+### Sign in with Apple token (optional)
+
+`POST /api/auth/apple/mobile/` accepts one more optional field, `authorization_code` (or `authorizationCode`): the one-time code from the native Sign in with Apple result. When the server has Apple signing configured it trades the code at `https://appleid.apple.com/auth/token` and stores Apple's refresh token on the Apple login record, only so it can be revoked on deletion. The response is unchanged and never contains it. Anything that goes wrong (no code, Apple down, bad code, not configured) is ignored and sign-in still succeeds. Env (all must be set for this to run): `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` (the `.p8` contents; `\n` allowed for newlines), and the client id is the first entry of `APPLE_OAUTH_AUDIENCES`. With any of them missing, deletion skips the Apple call.
+
+Database changes: `SocialAuthIdentity.apple_refresh_token` (secret text, default ""); `AbuseReport.reporter` is now nullable with `on_delete=SET_NULL`.
+

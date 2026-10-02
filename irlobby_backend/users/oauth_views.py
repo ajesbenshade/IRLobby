@@ -15,6 +15,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from .apple_signin import exchange_authorization_code
+from .models import SocialAuthIdentity
 from .social_auth import (
     SocialAuthConflict,
     build_auth_error,
@@ -494,7 +496,26 @@ def apple_mobile_login(request):
         )
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
+    _store_apple_refresh_token(
+        user,
+        payload["sub"],
+        request.data.get("authorization_code") or request.data.get("authorizationCode"),
+    )
     return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
+
+
+def _store_apple_refresh_token(user, apple_user_id, authorization_code):
+    """Optional: keep Apple's refresh token so account deletion can revoke it. Never fails login."""
+    if not isinstance(authorization_code, str) or not authorization_code.strip():
+        return
+    try:
+        refresh_token = exchange_authorization_code(authorization_code.strip())
+        if refresh_token:
+            SocialAuthIdentity.objects.filter(
+                user=user, provider="apple", provider_user_id=apple_user_id
+            ).update(apple_refresh_token=refresh_token)
+    except Exception as error:  # pragma: no cover - defensive
+        logger.warning("Could not store Apple refresh token: %s", type(error).__name__)
 
 
 @api_view(["GET"])

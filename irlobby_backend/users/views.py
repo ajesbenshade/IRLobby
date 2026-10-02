@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
-from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import generics, status
@@ -22,6 +21,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from .account_deletion import delete_account
 from .models import Invite, PushDeviceToken, User
 from .password_reset import (
     generate_password_reset_token,
@@ -440,12 +440,17 @@ def export_user_data(request):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_profile(request):
-    """Delete user profile and all associated data"""
+    """Delete the signed-in account. 204 on success.
+
+    Removes the account and its data; hosted upcoming gatherings are cancelled (attendees
+    notified) first. Keeps only other people's gathering chats (without this user's messages)
+    and anonymised abuse reports. The exact list is in users/account_deletion.py and
+    docs/FOYER_API_CONTRACT.md.
+    """
     user = request.user
 
     try:
-        with transaction.atomic():
-            user.delete()
+        delete_account(user)
 
         return Response(
             {"message": "Profile deleted successfully"}, status=status.HTTP_204_NO_CONTENT

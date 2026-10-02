@@ -42,7 +42,14 @@ class AbuseReport(models.Model):
         ("join_request", "Request to join"),
     ]
 
-    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="filed_reports")
+    # Null after the reporter deletes their account: the report is kept, without who filed it.
+    reporter = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="filed_reports",
+    )
     # The person responsible for the content (the host for a photo or a gathering).
     reported_user = models.ForeignKey(
         User,

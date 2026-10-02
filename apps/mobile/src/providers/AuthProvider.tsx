@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 
+import { isFoyerMode } from '@constants/appMode';
 import { setAnalyticsUser, track } from '@services/analytics';
 import { setSessionExpiredHandler } from '@services/apiClient';
 import { deactivatePushTokens } from '@services/pushNotificationService';
@@ -20,8 +21,9 @@ import {
   register,
   requestPasswordReset as requestPasswordResetService,
   resetPassword as resetPasswordService,
+  saveBirthDate as saveBirthDateService,
 } from '@services/authService';
-import { authStorage } from '@services/authStorage';
+import { authStorage, birthDatePendingStorage } from '@services/authStorage';
 
 import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
 import {
@@ -34,6 +36,9 @@ interface AuthContextValue {
   isInitializing: boolean;
   isAuthenticated: boolean;
   accountDeleted: boolean;
+  /** Foyer: signed in with Apple / Google and the account has no birth date yet (blocking step). */
+  needsBirthDate: boolean;
+  saveBirthDate: (dateOfBirth: string) => Promise<AuthUser>;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
   signInWithGoogleIdToken: (idToken: string, options?: { acceptedLegal?: boolean }) => Promise<AuthUser>;
@@ -60,6 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [accountDeleted, setAccountDeleted] = useState(false);
+  const [birthDatePending, setBirthDatePending] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,9 +77,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        const profile = await fetchProfile();
+        const [profile, pending] = await Promise.all([fetchProfile(), birthDatePendingStorage.get()]);
         if (isMounted) {
           setUser(profile);
+          setBirthDatePending(pending);
         }
       } catch (error) {
         console.warn('[AuthProvider] Failed to restore session', error);
@@ -98,6 +105,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     setSessionExpiredHandler(() => {
       setUser(null);
+      setBirthDatePending(false);
+      void birthDatePendingStorage.set(false);
       setAnalyticsUser(null);
     });
     return () => setSessionExpiredHandler(null);
@@ -112,6 +121,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       clearMonitoringUser();
     }
   }, [user]);
+
+  // Foyer: after Apple / Google, an account with no birth date must add one before entering the app.
+  const markBirthDateStep = useCallback(async (nextUser: AuthUser) => {
+    const pending = isFoyerMode() && !nextUser.dateOfBirth;
+    setBirthDatePending(pending);
+    await birthDatePendingStorage.set(pending);
+  }, []);
+
+  const saveBirthDate = useCallback(async (dateOfBirth: string) => {
+    const saved = await saveBirthDateService(dateOfBirth);
+    setUser((current) => (current ? { ...current, ...saved, dateOfBirth: saved.dateOfBirth ?? dateOfBirth } : saved));
+    setBirthDatePending(false);
+    await birthDatePendingStorage.set(false);
+    return saved;
+  }, []);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     const { user: nextUser } = await login(payload);
@@ -134,11 +158,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (nextUser == null || nextUser.id === undefined || nextUser.id === null) {
       throw new Error('Google sign-in did not return a user.');
     }
+    await markBirthDateStep(nextUser);
     setUser(nextUser);
     setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
     track('login', { method: 'google' });
     return nextUser;
-  }, []);
+  }, [markBirthDateStep]);
 
   const signInWithAppleIdentityToken = useCallback(
     async (payload: {
@@ -150,12 +175,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       acceptedLegal?: boolean;
     }) => {
       const { user: nextUser } = await loginWithAppleIdentityToken(payload);
+      await markBirthDateStep(nextUser);
       setUser(nextUser);
       setAnalyticsUser({ id: nextUser.id, email: nextUser.email });
       track('login', { method: 'apple' });
       return nextUser;
     },
-    []
+    [markBirthDateStep]
   );
 
   const signUp = useCallback(async (payload: RegisterPayload) => {
@@ -169,6 +195,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = useCallback(async () => {
     await deactivatePushTokens();
     await logoutService();
+    setBirthDatePending(false);
+    await birthDatePendingStorage.set(false);
     setUser(null);
     setAnalyticsUser(null);
   }, []);
@@ -209,6 +237,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isInitializing,
       isAuthenticated: !!user,
       accountDeleted,
+      needsBirthDate: isFoyerMode() && user != null && birthDatePending && !user.dateOfBirth,
+      saveBirthDate,
       signIn,
       signInWithTwitter,
       signInWithGoogleIdToken,
@@ -224,11 +254,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [
       accountDeleted,
       acknowledgeAccountDeleted,
+      birthDatePending,
       isInitializing,
       markAccountDeleted,
       refreshProfile,
       requestPasswordReset,
       resetPassword,
+      saveBirthDate,
       signIn,
       signInWithTwitter,
       signInWithGoogleIdToken,

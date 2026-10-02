@@ -88,3 +88,21 @@ describe('social sign-in request bodies carry the legal flags (Login and Sign up
     expect(api.patch).toHaveBeenCalledWith(expect.any(String), { terms_accepted: true, privacy_accepted: true });
   });
 });
+
+describe('saveBirthDate (birth date step after social sign-in)', () => {
+  it('PATCHes /api/users/profile/ with date_of_birth and returns the user with the date', async () => {
+    const { api } = jest.requireMock('../apiClient') as { api: { patch?: jest.Mock } };
+    api.patch = jest.fn().mockResolvedValue({ data: { id: 3, email: 'a@b.co', date_of_birth: '1988-03-04' } });
+    const { saveBirthDate } = jest.requireActual('../authService') as typeof import('../authService');
+    const saved = await saveBirthDate('1988-03-04');
+    expect(api.patch).toHaveBeenCalledWith('/api/users/profile/', { date_of_birth: '1988-03-04' });
+    expect(saved.dateOfBirth).toBe('1988-03-04');
+  });
+
+  it('falls back to the sent date if the response omits it', async () => {
+    const { api } = jest.requireMock('../apiClient') as { api: { patch?: jest.Mock } };
+    api.patch = jest.fn().mockResolvedValue({ data: { id: 3, email: 'a@b.co' } });
+    const { saveBirthDate } = jest.requireActual('../authService') as typeof import('../authService');
+    expect((await saveBirthDate('1990-02-02')).dateOfBirth).toBe('1990-02-02');
+  });
+});

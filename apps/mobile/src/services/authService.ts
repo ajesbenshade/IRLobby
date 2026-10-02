@@ -575,6 +575,16 @@ export async function fetchProfile(): Promise<AuthUser> {
   return normalizeUser(response.data);
 }
 
+/**
+ * Saves the birth date on the signed-in account: PATCH /api/users/profile/ `{ date_of_birth: 'YYYY-MM-DD' }`
+ * (the backend UserSerializer accepts it and rejects under 13 with a `date_of_birth` error).
+ */
+export async function saveBirthDate(dateOfBirth: string): Promise<AuthUser> {
+  const response = await api.patch<AuthUser>(API_ROUTES.USER_PROFILE, { date_of_birth: dateOfBirth });
+  const saved = normalizeUser(response.data);
+  return saved.dateOfBirth ? saved : { ...saved, dateOfBirth };
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   await api.post(API_ROUTES.AUTH_REQUEST_PASSWORD_RESET, { email });
 }

@@ -370,6 +370,15 @@ export const HOST_FORM_COPY = {
   postFailed: COMMON_COPY.genericError,
 } as const;
 
+/** Blocking birth-date step after Apple / Google sign-in when the account has no birth date. */
+export const BIRTH_GATE_COPY = {
+  title: 'Birth date',
+  body: 'The Foyer is for ages 13 and up.',
+  continue: 'Continue',
+  signOut: 'Sign out',
+  saveFailed: COMMON_COPY.genericError,
+} as const;
+
 export const PICKER_COPY = {
   dayTitle: 'Date',
   birthTitle: 'Birth date',

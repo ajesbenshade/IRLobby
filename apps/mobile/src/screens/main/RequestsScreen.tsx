@@ -392,7 +392,11 @@ const RequestCard = ({
         {(request.party.members ?? []).map((member, index) => (
           <View key={`${member.name}-${index}`} style={styles.memberRow}>
             <Text style={styles.memberName}>{member.name}</Text>
-            <Text style={styles.meta}>{memberRowLabel(member)}</Text>
+            {memberRowLabel(member) ? (
+              <View style={styles.bandChip} testID="member-band-chip">
+                <Text style={styles.bandChipText}>{memberRowLabel(member)}</Text>
+              </View>
+            ) : null}
           </View>
         ))}
         {misfit ? (
@@ -549,7 +553,9 @@ const styles = StyleSheet.create({
   cardBody: { padding: 16, gap: 6 },
   partyPill: { alignSelf: 'flex-start', backgroundColor: '#a2033f', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   partyPillText: { fontFamily: appTypography.bodySemibold, fontSize: 14, lineHeight: 20, color: '#ffffff' },
-  memberRow: { gap: 2, paddingVertical: 4 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingVertical: 4 },
+  bandChip: { borderRadius: 999, backgroundColor: '#efe9e5', paddingHorizontal: 10, paddingVertical: 4 },
+  bandChipText: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.ink },
   memberName: { fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   noFit: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fde8e8', borderRadius: 12, padding: 10, marginTop: 8 },
   noFitText: { flex: 1, color: '#8a0a1f', fontFamily: appTypography.bodySemibold, fontSize: 14 },

@@ -131,7 +131,7 @@ export const yearsBetween = (min: MonthValue, max: MonthValue): number[] =>
   Array.from({ length: max.year - min.year + 1 }, (_, index) => max.year - index);
 
 /** Birthdate picker opens on the wheel about 30 years back when empty. */
-export const defaultBirthMonth = (now = new Date()): MonthValue => ({ year: now.getFullYear() - 30, month: now.getMonth() + 1 });
+export const defaultBirthMonth = (now = new Date(), yearsBack = 30): MonthValue => ({ year: now.getFullYear() - yearsBack, month: now.getMonth() + 1 });
 
 // ---- Times ---------------------------------------------------------------
 

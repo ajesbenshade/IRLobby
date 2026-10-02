@@ -33,8 +33,8 @@ export const FEATURES: {
    */
   householdEdit: readSwitch(process.env.EXPO_PUBLIC_FOYER_HOUSEHOLD_EDIT, 'auto'),
   /**
-   * Birthday sharing (own `Show my birthday`, `Birthdays this week`, wishes/cards/push, child `Show on my profile`).
-   * OFF until Aaron answers the privacy questions. Never `auto`: the UI stays hidden even if the backend has the endpoints.
+   * Birthday sharing: only the account holder's own `Show my birthday` (adult opt-in, month and day, default off), `Birthdays this week`
+   * and wishes. Family members' birthdays are never shareable and have no switch. OFF until the remaining questions are answered. Never `auto`: the UI stays hidden even if the backend has the endpoints.
    * `on` additionally needs the endpoint or field to exist (see `@foyer/birthdays`).
    */
   birthdays: readSwitch(process.env.EXPO_PUBLIC_FOYER_BIRTHDAYS, 'off') === 'on' ? 'on' : 'off',

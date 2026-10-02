@@ -12,7 +12,7 @@ export const MIN_TARGET = 54;
  * background, so the fill is applied inline as a plain colour string and unit-tested.
  */
 export const PILL_BURGUNDY = '#a2033f';
-export const PILL_BURGUNDY_PRESSED = '#800232';
+export const PILL_BURGUNDY_PRESSED = '#870234';
 export const PILL_DESTRUCTIVE = '#8a0a1f';
 export const PILL_DESTRUCTIVE_PRESSED = '#680617';
 export const PILL_WHITE = '#ffffff';

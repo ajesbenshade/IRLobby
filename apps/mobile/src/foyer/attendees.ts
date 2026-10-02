@@ -13,12 +13,6 @@ export const ageBandLabel = (band: string | null | undefined): string => {
   return ATTENDEE_COPY.ageBand.adult;
 };
 
-/**
- * Hosts see a name and an age-band chip only (Design frames 103+): no relationship label, no date, no exact age.
- * Kept as a function so the card has one place that decides what the line under a name says.
- */
-export const personRelationshipLine = (_person: HostAttendeePerson): string => '';
-
 /** Names and age bands only. Strips anything else a server might add (emails, ids, locations, birth dates). */
 export const sanitizeHostPerson = (person: HostAttendeePerson): HostAttendeePerson => ({
   name: String(person.name ?? ''),

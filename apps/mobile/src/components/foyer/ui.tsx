@@ -58,7 +58,8 @@ export const pillColors = (
         return { backgroundColor: DISABLED_FILL, borderColor: DISABLED_FILL, borderWidth: 0, textColor: DISABLED_TEXT };
       }
       return {
-        backgroundColor: pressed || busy ? PILL_BURGUNDY_PRESSED : PILL_BURGUNDY,
+        // Loading keeps the resting burgundy (Add stays burgundy while it saves); only a press darkens it.
+        backgroundColor: pressed && !busy ? PILL_BURGUNDY_PRESSED : PILL_BURGUNDY,
         borderColor: PILL_BURGUNDY,
         borderWidth: 0,
         textColor: PILL_WHITE,

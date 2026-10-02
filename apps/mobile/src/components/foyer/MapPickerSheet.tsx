@@ -6,7 +6,7 @@ import MapViewBase from '@components/MapViewCompat';
 import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, MAP_COPY } from '@constants/foyerCopy';
-import { DEFAULT_DELTA, FRANCONIA_CENTER, useMapCenter, type MapCenter } from '@foyer/mapLocation';
+import { DEFAULT_DELTA, FRANCONIA_CENTER, useMapCenter, type HomeChurchGeo, type MapCenter } from '@foyer/mapLocation';
 import { useSafeInsets } from '@hooks/useSafeInsets';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -19,9 +19,11 @@ type Props = {
   visible: boolean;
   onCancel: () => void;
   onChoose: (place: ChosenPlace) => void;
+  /** `user.church` from the account payload; used to center the map when device location is off. */
+  homeChurch?: HomeChurchGeo | null;
 };
 
-const labelFor = async (center: MapCenter, isDefault: boolean): Promise<string> => {
+const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel: string = MAP_COPY.franconiaLabel): Promise<string> => {
   try {
     // Reverse geocoding needs no location permission and never prompts.
     const Location = await import('expo-location');
@@ -35,20 +37,22 @@ const labelFor = async (center: MapCenter, isDefault: boolean): Promise<string> 
   } catch {
     // fall through to the default label
   }
-  return isDefault ? MAP_COPY.franconiaLabel : MAP_COPY.selectedLocation;
+  return isDefault ? defaultLabel : MAP_COPY.selectedLocation;
 };
 
 /**
  * Full-screen place picker (Design frames 142-143). Opens on the user only if `Use my location for maps` is on and the OS
  * allowed it; otherwise on Franconia, PA with a caption chip and no OS prompt. The header sits below the status bar.
  */
-const MapPickerBody = ({ visible, onCancel, onChoose }: Props) => {
+const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
   const insets = useSafeInsets();
-  const { center, source, loading } = useMapCenter(visible);
+  const { center, source, loading } = useMapCenter(visible, homeChurch);
+  const defaultLabel = source === 'church' && homeChurch?.name ? homeChurch.name : MAP_COPY.franconiaLabel;
   const [selected, setSelected] = useState<MapCenter>(FRANCONIA_CENTER);
-  const [label, setLabel] = useState<string>(MAP_COPY.franconiaLabel);
+  const [label, setLabel] = useState<string>(defaultLabel);
   const mapRef = useRef<{ animateToRegion?: (region: object, duration?: number) => void } | null>(null);
-  const isDefault = source === 'default';
+  const isDefault = source !== 'user';
+  const isChurch = source === 'church';
 
   // Move the pin when the center resolves (user fix, or Franconia).
   useEffect(() => {
@@ -56,10 +60,13 @@ const MapPickerBody = ({ visible, onCancel, onChoose }: Props) => {
       return;
     }
     setSelected(center);
-    setLabel(isDefault ? MAP_COPY.franconiaLabel : MAP_COPY.selectedLocation);
+    setLabel(isDefault ? defaultLabel : MAP_COPY.selectedLocation);
     mapRef.current?.animateToRegion?.({ ...center, latitudeDelta: DEFAULT_DELTA, longitudeDelta: DEFAULT_DELTA }, 300);
     let cancelled = false;
-    void labelFor(center, isDefault).then((next) => {
+    if (isChurch) {
+      return undefined; // the church name is the label
+    }
+    void labelFor(center, isDefault, defaultLabel).then((next) => {
       if (!cancelled) {
         setLabel(next);
       }
@@ -101,7 +108,7 @@ const MapPickerBody = ({ visible, onCancel, onChoose }: Props) => {
           </View>
           {isDefault && !loading ? (
             <View style={styles.chip} testID="map-default-caption">
-              <Text style={styles.chipText}>{MAP_COPY.defaultCaption}</Text>
+              <Text style={styles.chipText}>{isChurch ? MAP_COPY.churchCaption : MAP_COPY.defaultCaption}</Text>
             </View>
           ) : null}
           {!isDefault ? (

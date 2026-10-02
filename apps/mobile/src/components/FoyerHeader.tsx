@@ -81,9 +81,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.82)',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: appColors.primarySoft,
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   avatarImage: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
   },
   initial: {
     fontFamily: appTypography.bodySemibold,

@@ -10,7 +10,6 @@ import { AddDaySheet, FamilyMemberActionSheet, RemoveFamilyMemberSheet } from '@
 import { Avatar, EmptyState, PillButton, SectionLabel } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { FAMILY_COPY } from '@constants/foyerCopy';
-import { childShareSupported } from '@foyer/birthdays';
 import { isMonthYearOnly, memberBirthLine, memberInitials } from '@foyer/family';
 import { useHouseholdEditSupported } from '@foyer/householdCapability';
 import { fetchFamilyMembers, type FamilyMember } from '@services/foyerService';
@@ -116,7 +115,6 @@ export const MyFamilyScreen = () => {
       <AddFamilyMemberSheet
         visible={editing != null}
         member={editing}
-        showShare={editing != null && childShareSupported(editing as unknown as Record<string, unknown>)}
         onRemove={(member) => {
           setEditing(null);
           setRemoving(member);

@@ -12,6 +12,7 @@ import { View } from '@components/RNCompat';
 import { COMMON_COPY, GATHERING_CHAT_COPY, MEMBER_COPY } from '@constants/foyerCopy';
 import { canSendMessage, withDividers } from '@foyer/directChat';
 import { collapseBlockedMessages, gatheringChatErrorMessage } from '@foyer/gatheringChat';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
@@ -27,6 +28,7 @@ import { appColors, appTypography, radii } from '@theme/index';
  * The native header's Back returns to the gathering.
  */
 export const GatheringChatScreen = () => {
+  const insets = useSafeInsets();
   const route = useRoute<RouteProp<MainStackParamList, 'GatheringChat'>>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -189,7 +191,7 @@ export const GatheringChatScreen = () => {
         }}
       />
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: Math.max(24, insets.bottom + 12) }]}>
         <TextInput
           accessibilityLabel={GATHERING_CHAT_COPY.composerPlaceholder}
           value={text}

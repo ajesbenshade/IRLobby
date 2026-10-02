@@ -107,6 +107,12 @@ export const SwipeActionButtons = ({
   const going = swipeGoingColors(kind, goingPressed && !goingInactive);
   const pass = swipePassColors(passPressed && !disabled);
   const quiet = !isTappableGoingKind(kind);
+  // No hint on closed / full / cancelled / sent: the button does nothing there.
+  const goingHint = goingInactive
+    ? undefined
+    : kind === 'join'
+      ? 'Opens the list of who is coming, then confirms your RSVP'
+      : 'Opens the list of who is coming, then sends your request';
 
   return (
     <View style={styles.wrap}>
@@ -134,7 +140,7 @@ export const SwipeActionButtons = ({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={goingLabel}
-          accessibilityHint="Opens the list of who is coming, then confirms your RSVP"
+          accessibilityHint={goingHint}
           accessibilityState={{ disabled: goingInactive }}
           testID="swipe-going"
           disabled={goingInactive}

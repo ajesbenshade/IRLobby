@@ -7,7 +7,7 @@ import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { SheetScaffold } from '@components/SheetScaffold';
 import { APPROVAL_COPY, COMMON_COPY, GOING_COPY } from '@constants/foyerCopy';
-import { buildRsvpPeople } from '@foyer/rsvp';
+import { applyClientEligibility, buildRsvpPeople, eligibleMemberIds, type AgeRange } from '@foyer/rsvp';
 import { buildRsvpPayload, defaultRsvpSelection, peopleCount, type WhosComingResponse } from '@foyer/logic';
 import { appColors, appTypography, fontSize, radii } from '@theme/index';
 
@@ -18,7 +18,7 @@ type WhosComingSheetProps = {
   /** Inline error from the last Confirm attempt, shown inside the sheet. */
   error?: string | null;
   /** The event's age range, used to word `Not eligible: ages 13–17`. */
-  ageRange?: { age_min?: number | null; age_max?: number | null } | null;
+  ageRange?: AgeRange | null;
   /**
    * `request` = Require approval: title `Request to join`, the guest line about what the host sees,
    * `Send request` and a Cancel link. Nothing here takes a spot until the host approves.
@@ -42,7 +42,8 @@ export const WhosComingSheet = ({
   onConfirm,
 }: WhosComingSheetProps) => {
   const isRequest = mode === 'request';
-  const initial = useMemo(() => defaultRsvpSelection(response), [response]);
+  // The server's eligible flag is not trusted on its own: a family member outside the age range is also blocked here.
+  const initial = useMemo(() => defaultRsvpSelection(applyClientEligibility(response, ageRange)), [response, ageRange]);
   const people = useMemo(() => buildRsvpPeople(response, ageRange), [response, ageRange]);
   const [includeSelf, setIncludeSelf] = useState(initial.includeSelf);
   const [dependentIds, setDependentIds] = useState<number[]>(initial.dependentIds);
@@ -68,9 +69,9 @@ export const WhosComingSheet = ({
           ) : null}
           <PillButton
             label={isRequest ? APPROVAL_COPY.sendRequest : GOING_COPY.confirmRsvp}
-            disabled={pending || count < 1}
+            disabled={pending || count < 1 || (!includeSelf && eligibleMemberIds(response, ageRange, dependentIds).length === 0)}
             loading={pending}
-            onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
+            onPress={() => onConfirm(buildRsvpPayload(includeSelf, eligibleMemberIds(response, ageRange, dependentIds)))}
             testID="whos-coming-confirm"
           />
           {isRequest ? (

@@ -15,7 +15,9 @@ const { addFamilyMember, updateFamilyMember } = jest.requireMock('@services/foye
 
 // A day inside the allowed range: the earliest allowed month, on a day that month allows.
 const limits = familyBirthDayLimits();
-const pickedDay = { year: limits.min.year, month: limits.min.month, day: Math.max(limits.min.day, 15) };
+// The empty wheel opens ten years back (about 2016); pick the 15th of that month.
+const now = new Date();
+const pickedDay = { year: now.getFullYear() - 10, month: now.getMonth() + 1, day: 15 };
 const pickedIso = `${pickedDay.year}-${String(pickedDay.month).padStart(2, '0')}-${String(pickedDay.day).padStart(2, '0')}`;
 
 const chooseBirthday = (view: ReturnType<typeof render>) => {
@@ -38,13 +40,27 @@ describe('Add family member sheet', () => {
     expect(view.getByLabelText('Female')).toBeTruthy();
     expect(view.getByText('Birthday')).toBeTruthy();
     expect(view.getByText('Month, day and year')).toBeTruthy();
-    expect(view.getByText('Only you can see this unless you choose to share it.')).toBeTruthy();
+    expect(view.getByText('Only you can see this.')).toBeTruthy();
+    expect(view.queryByText(/choose to share/i)).toBeNull();
     for (const word of ['Spouse', 'Child', 'Relationship']) {
       expect(view.queryByText(word)).toBeNull();
       expect(view.queryByLabelText(word)).toBeNull();
     }
-    // Proposed share switch stays hidden unless a build turns it on.
+    // Family birthdays are never shareable: there is no per-child switch.
     expect(view.queryByText('Show on my profile')).toBeNull();
+    expect(view.queryByRole('switch')).toBeNull();
+  });
+
+  it('shows the subtitle under the title and the under-13 note above Add (not in Edit)', () => {
+    const view = render(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
+    expect(view.getByText("Add your children under 18 so hosts know who's coming.")).toBeTruthy();
+    expect(view.getByText("Family members under 13 are RSVP names only — they don't have accounts.")).toBeTruthy();
+  });
+
+  it('the empty birthday wheel opens on the year 2016 (ten years back)', () => {
+    const view = render(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
+    fireEvent.press(view.getByTestId('family-birthday-row'));
+    expect(view.getByLabelText(`Year ${now.getFullYear() - 10}`).props.accessibilityState.selected).toBe(true);
   });
 
   it('keeps Add disabled until name, sex and birthday are all set', () => {
@@ -104,6 +120,11 @@ describe('Add family member sheet', () => {
     fireEvent.press(view.getByTestId('family-birthday-row'));
     fireEvent.press(view.getByLabelText('Next'));
     const edge = limits.min;
+    // The grid opens ten years back; walk to the earliest allowed month.
+    const monthsBack = (now.getFullYear() - 10 - edge.year) * 12 + (now.getMonth() + 1 - edge.month);
+    for (let step = 0; step < monthsBack; step += 1) {
+      fireEvent.press(view.getByLabelText('Previous month'));
+    }
     if (edge.day > 1) {
       const blocked = view.getByLabelText(`${MONTH_NAMES[edge.month - 1]} ${edge.day - 1}, ${edge.year}`);
       expect(blocked.props.accessibilityState.disabled).toBe(true);

@@ -28,6 +28,7 @@ import {
   toIsoDateTime,
   type DayValue,
 } from '@foyer/dates';
+import { churchCenterOf } from '@foyer/mapLocation';
 import { compressGatheringPhoto } from '@foyer/photos';
 import { APPROVAL_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
 import { parseTurnOffFallback } from '@foyer/approval';
@@ -111,6 +112,8 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
     setHostAsChurch(values.hostAsChurch);
     setRequireApproval(values.requireApproval);
     setAllowRerequest(values.allowRerequest);
+    // Keep the saved map location unless the host picks a new one (editing must not send 0,0).
+    setCoords((current) => current ?? churchCenterOf({ latitude: existing.latitude, longitude: existing.longitude }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing]);
 
@@ -149,8 +152,8 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         title: title.trim(),
         description: description.trim(),
         location: place.trim(),
-        latitude: coords?.latitude ?? 0,
-        longitude: coords?.longitude ?? 0,
+        latitude: coords?.latitude ?? Number(existing?.latitude ?? 0),
+        longitude: coords?.longitude ?? Number(existing?.longitude ?? 0),
         time: day && startMinutes != null ? toIsoDateTime(day, startMinutes) : '',
         end_time: day && endMinutes != null ? toIsoDateTime(day, endMinutes) : undefined,
         capacity: capacityResult.capacity,
@@ -247,6 +250,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         <PillButton label={MAP_COPY.chooseOnMap} variant="outline" icon="map-marker-outline" onPress={() => setMapOpen(true)} />
         <MapPickerSheet
           visible={mapOpen}
+          homeChurch={user?.church}
           onCancel={() => setMapOpen(false)}
           onChoose={(chosen) => {
             setCoords({ latitude: chosen.latitude, longitude: chosen.longitude });

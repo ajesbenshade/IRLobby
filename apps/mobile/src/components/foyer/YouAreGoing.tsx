@@ -10,6 +10,8 @@ import { GOING_COPY } from '@constants/foyerCopy';
 import type { WhosComingResponse } from '@foyer/logic';
 import {
   buildRsvpPeople,
+  eligibleMemberIds,
+  type AgeRange,
   hasSelectionChanged,
   isEmptySelection,
   type RsvpSelection,
@@ -23,7 +25,7 @@ type YouAreGoingProps = {
   response: WhosComingResponse;
   /** What the server has saved right now. */
   saved: RsvpSelection;
-  ageRange?: { age_min?: number | null; age_max?: number | null } | null;
+  ageRange?: AgeRange | null;
   saving?: boolean;
   error?: string | null;
   onSave: (selection: RsvpSelection) => void;
@@ -78,7 +80,7 @@ export const YouAreGoing = ({
         <View style={styles.footer}>
           <InlineError message={error} />
           {changed && !empty ? (
-            <PillButton label={GOING_COPY.saveChanges} loading={saving} onPress={() => onSave(selection)} />
+            <PillButton label={GOING_COPY.saveChanges} loading={saving} onPress={() => onSave({ ...selection, memberIds: eligibleMemberIds(response, ageRange, selection.memberIds) })} />
           ) : null}
           {changed && empty ? (
             <PillButton label={GOING_COPY.cancelRsvp} loading={saving} onPress={onCancelRsvp} />

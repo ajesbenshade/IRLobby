@@ -45,7 +45,7 @@ export const toastMessage = (toast: DownloadToast): string => {
     case 'partial':
       return PHOTO_COPY.partialToast(toast.saved, toast.total);
     default:
-      return PHOTO_COPY.failedAll;
+      return PHOTO_COPY.failedBanner;
   }
 };
 

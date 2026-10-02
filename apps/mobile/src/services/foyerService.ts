@@ -11,6 +11,8 @@ export type ChurchRecord = {
   id: number;
   name: string;
   is_verified?: boolean;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
 };
 
 export type HouseholdChild = {

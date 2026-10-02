@@ -16,6 +16,9 @@ export const COMMON_COPY = {
   genericError: 'Something went wrong. Please try again.',
   offline: "You're offline. Check your connection and try again.",
   unavailable: "This isn't available yet. Please try again later.",
+  photosAddFailed: "Couldn't add those photos. Please try again.",
+  requestOpenFailed: "Couldn't open the request. Please try again.",
+  requestSendFailed: "Couldn't send your request. Please try again.",
 } as const;
 
 export const PHOTO_COPY = {
@@ -45,7 +48,6 @@ export const PHOTO_COPY = {
     `Download cancelled. ${saved} of ${total} photos were saved.`,
   partialToast: (saved: number, total: number) =>
     `Saved ${saved} of ${total} photos. ${total - saved} couldn't be saved.`,
-  failedAll: "Photos couldn't be saved. Please try again.",
   deniedTitle: 'Allow photo access to save photos',
   deniedBody:
     'The Foyer needs permission to add photos to your library. In Settings, tap Photos and choose Add Photos Only.',
@@ -241,7 +243,6 @@ export const ATTENDEE_COPY = {
   goingCount: (count: number) => `${count} going`,
   youHost: 'You, host',
   ageBand: { adult: 'Adult', teen: '13–17', under13: 'Under 13' },
-  relationship: { self: '', spouse: 'Spouse', child: 'Child' },
   pastTitle: (count: number) => `Who was there · ${count}`,
   pastLabel: 'Past event',
   familyMember: 'Family member',
@@ -272,6 +273,8 @@ export const GOING_COPY = {
   underThirteenNote: "Family members under 13 are RSVP names only — they don't have accounts.",
   notEligible: (band: string) => `Not eligible: ${band}`,
   outsideRange: "Outside this event's age range",
+  /** Shown when the server still rejects someone for age (the app already blocks them first). */
+  ageRangeRejected: "Someone you chose isn't in this gathering's age range. Update who's coming and try again.",
   eligibilityMissing: 'This gathering is for a different age range.',
   hasStarted: 'This gathering has already started.',
 } as const;
@@ -286,6 +289,7 @@ export const FAMILY_COPY = {
   emptyTitle: 'No family members yet',
   emptyBody: 'Add your children so hosts can plan for them.',
   sheetTitle: 'Add family member',
+  sheetSubtitle: "Add your children under 18 so hosts know who's coming.",
   editTitle: 'Edit family member',
   name: 'Name',
   namePlaceholder: 'First name',
@@ -294,7 +298,7 @@ export const FAMILY_COPY = {
   birthday: 'Birthday',
   birthdayPlaceholder: 'Month, day and year',
   /** Under the Birthday field and on the day grid. */
-  birthdayHelper: 'Only you can see this unless you choose to share it.',
+  birthdayHelper: 'Only you can see this.',
   birthdayWheelHelper: 'Choose the month and year, then pick the day.',
   /** Field-level, under the Birthday row (server 400 for 18+). */
   adultError: 'Only children under 18 can be added to a household.',
@@ -320,9 +324,6 @@ export const FAMILY_COPY = {
   remove: 'Remove',
   keep: 'Keep',
   removeFailed: "Couldn't remove. Check your connection and try again.",
-  /** PROPOSED, pending Aaron; hidden unless the birthdays flag is on. */
-  showOnProfile: 'Show on my profile',
-  showOnProfileCaption: (name: string) => `Friends you choose can see ${name}'s birthday. Hosts and guests never see it.`,
   membersCount: (count: number) => (count === 1 ? '1 member' : `${count} members`),
 } as const;
 
@@ -331,6 +332,7 @@ export const MAP_COPY = {
   title: 'Choose a location',
   youAreHere: 'You are here',
   defaultCaption: 'Showing Franconia. Turn on location in your profile to center on you.',
+  churchCaption: 'Showing your church. Turn on location in your profile to center on you.',
   selectedLocation: 'Selected location',
   drag: 'Drag the map to move the pin.',
   useThisLocation: 'Use this location',
@@ -610,8 +612,6 @@ export const APPROVAL_COPY = {
   // Toasts
   approvedToast: 'Approved',
   declinedToast: 'Declined',
-  // Push (client fallback titles only; the server writes the real push text)
-  relationship: { spouse: 'Spouse', child: 'Child', parent: 'Parent', other: 'Other' },
 } as const;
 
 /** Discover deck primary pill labels (Design frame 141). Long enough that Pass is 110pt and the primary pill 240pt. */

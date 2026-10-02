@@ -12,7 +12,7 @@ import { appColors, appTypography, radii } from '@theme/index';
 
 /** Literal fill and label for `contained` (see PillButton): never a Pressable style callback or a theme lookup. */
 export const CONTAINED_FILL = '#a2033f';
-export const CONTAINED_FILL_PRESSED = '#800232';
+export const CONTAINED_FILL_PRESSED = '#870234';
 export const CONTAINED_LABEL = '#ffffff';
 import { palette } from '@theme/tokens';
 

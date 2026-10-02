@@ -5,7 +5,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Avatar, PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { ATTENDEE_COPY, CANCEL_COPY } from '@constants/foyerCopy';
-import { ageBandLabel, personRelationshipLine, sanitizeHouseholds, splitVisiblePeople } from '@foyer/attendees';
+import { ageBandLabel, sanitizeHouseholds, splitVisiblePeople } from '@foyer/attendees';
 import type { HostAttendeesResponse } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -44,14 +44,13 @@ export const HostAttendeesCard = ({
         <View key={`${group.name}-${index}`} style={styles.group}>
           <Text style={styles.groupName}>{group.name}</Text>
           {group.people.map((person, personIndex) => {
-            const relationship = personRelationshipLine(person);
             const isHost = person.relationship === 'self';
             return (
               <View key={`${person.name}-${personIndex}`} style={styles.row}>
                 <Avatar initials={person.name.charAt(0).toUpperCase()} size={36} />
                 <View style={styles.copy}>
                   <Text style={styles.name}>{person.name}</Text>
-                  {isHost && hostName === person.name ? <Text style={styles.sub}>{ATTENDEE_COPY.youHost}</Text> : relationship ? <Text style={styles.sub}>{relationship}</Text> : null}
+                  {isHost && hostName === person.name ? <Text style={styles.sub}>{ATTENDEE_COPY.youHost}</Text> : null}
                 </View>
                 <View style={styles.band}>
                   <Text style={styles.bandText}>{ageBandLabel(person.age_band)}</Text>

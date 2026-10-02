@@ -31,6 +31,18 @@ describe('map picker', () => {
     expect(onChoose.mock.calls[0][0]).toMatchObject({ latitude: expect.any(Number), longitude: expect.any(Number) });
   });
 
+  it('opens on the home church with the church name and a church caption when location is off', () => {
+    mapLocation.useMapCenter.mockReturnValue({ center: { latitude: 40.25, longitude: -75.38 }, source: 'church', loading: false });
+    const view = render(
+      <MapPickerSheet visible onCancel={jest.fn()} onChoose={jest.fn()} homeChurch={{ id: 7, name: 'Plains Mennonite Church', latitude: 40.25, longitude: -75.38 }} />,
+    );
+    expect(mapLocation.useMapCenter).toHaveBeenCalledWith(true, expect.objectContaining({ id: 7 }));
+    expect(view.getByText(MAP_COPY.churchCaption)).toBeTruthy();
+    expect(view.getByText('Plains Mennonite Church')).toBeTruthy();
+    expect(view.queryByLabelText(MAP_COPY.recenter)).toBeNull();
+    expect(view.queryByText('You are here')).toBeNull();
+  });
+
   it('centered on the user: You are here + recenter, no caption chip', () => {
     mapLocation.useMapCenter.mockReturnValue({ center: { latitude: 40.3, longitude: -75.3 }, source: 'user', loading: false });
     const view = render(<MapPickerSheet visible onCancel={jest.fn()} onChoose={jest.fn()} />);

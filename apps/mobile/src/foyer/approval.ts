@@ -176,15 +176,8 @@ export const cardInitials = (firstName: string) => (firstName.trim()[0] ?? '?').
 
 export const partyLine = (request: JoinRequest) => APPROVAL_COPY.partyOf(request.party.size, request.card.first_name);
 
-export const relationshipLabel = (value: string | null | undefined): string => {
-  const key = String(value ?? '').toLowerCase() as keyof typeof APPROVAL_COPY.relationship;
-  return APPROVAL_COPY.relationship[key] ?? (value ? value[0].toUpperCase() + value.slice(1) : '');
-};
-
-export const memberRowLabel = (member: RequestMember) => {
-  const parts = [relationshipLabel(member.relationship), member.age_band ? APPROVAL_COPY.ageBand(member.age_band) : ''].filter(Boolean);
-  return parts.join(' · ');
-};
+/** Hosts see an age-band chip only (Adult / 13–17 / Under 13). No relationship wording (Spouse, Child, ...) anywhere. */
+export const memberRowLabel = (member: RequestMember): string => (member.age_band ? APPROVAL_COPY.ageBand(member.age_band) : '');
 
 /** Does this request still fit? Unlimited (`null`) always fits. */
 export const partyFits = (request: JoinRequest, spotsLeft: number | null) =>

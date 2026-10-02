@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
 const tagStyles = StyleSheet.create({
   cancelled: { backgroundColor: '#e1dbd7' },
   pending: { borderWidth: 1.5, borderColor: appColors.primary, backgroundColor: appColors.white },
-  declined: { backgroundColor: '#a49b96' },
+  declined: { backgroundColor: '#e1dbd7' },
   closed: { borderWidth: 1.5, borderColor: '#cec8c4', backgroundColor: '#f3f0ee' },
   approved: { backgroundColor: appColors.primarySoft },
 });
@@ -276,7 +276,7 @@ const tagStyles = StyleSheet.create({
 const tagTextStyles = StyleSheet.create({
   cancelled: { color: '#5b5551' },
   pending: { color: appColors.primary },
-  declined: { color: '#ffffff' },
+  declined: { color: '#5b5551' },
   closed: { color: '#7a7572' },
   approved: { color: appColors.primary },
 });

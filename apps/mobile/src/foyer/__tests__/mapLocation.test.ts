@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   FRANCONIA_CENTER,
+  churchCenterOf,
   USE_LOCATION_KEY,
   getUseMyLocation,
   resolveMapCenter,
@@ -104,5 +105,49 @@ describe('source guard: OS location permission', () => {
     // CreateActivityScreen returns FoyerHostForm before its legacy code runs; Onboarding hides its button in Foyer mode.
     expect(readFileSync(join(src, 'screens/main/CreateActivityScreen.tsx'), 'utf8')).toMatch(/if \(isFoyerMode\(\)\) \{\s*return <FoyerHostForm/);
     expect(readFileSync(join(src, 'screens/main/OnboardingScreen.tsx'), 'utf8')).toMatch(/isFoyerMode\(\) \? null : \(\s*<AppButton onPress=\{\(\) => void requestLocationPermission/);
+  });
+});
+
+describe('home church map center (setting off, denied, or unavailable)', () => {
+  const church = { id: 7, name: 'Plains Mennonite Church', latitude: 40.2512, longitude: -75.3801 };
+  const churchCenter = { latitude: 40.2512, longitude: -75.3801 };
+
+  beforeEach(async () => {
+    await AsyncStorage.removeItem(USE_LOCATION_KEY);
+  });
+
+  it('setting off + church coordinates: centers on the church and never loads the OS location module', async () => {
+    const loadLocation = jest.fn();
+    const result = await resolveMapCenter({ homeChurch: church, loadLocation: loadLocation as never });
+    expect(loadLocation).not.toHaveBeenCalled();
+    expect(result).toEqual({ center: churchCenter, source: 'church' });
+  });
+
+  it('setting off + no church (or a church without coordinates): Franconia', async () => {
+    expect((await resolveMapCenter({ homeChurch: null })).source).toBe('default');
+    expect(await resolveMapCenter({ homeChurch: { id: 1, name: 'Zion Mennonite Church' } })).toEqual({ center: FRANCONIA_CENTER, source: 'default' });
+  });
+
+  it.each([
+    ['OS denied', location({ status: 'denied' })],
+    ['unavailable', location({ position: async () => { throw new Error('Location unavailable'); } })],
+  ])('setting on but %s: the church, not Franconia', async (_name, module) => {
+    const result = await resolveMapCenter({ enabled: true, homeChurch: church, loadLocation: async () => module as never });
+    expect(result).toEqual({ center: churchCenter, source: 'church' });
+  });
+
+  it('setting on and allowed: the user wins over the church', async () => {
+    const result = await resolveMapCenter({ enabled: true, homeChurch: church, loadLocation: async () => location() as never });
+    expect(result.source).toBe('user');
+  });
+
+  it('accepts string coordinates and rejects malformed, out-of-range and 0,0 values', () => {
+    expect(churchCenterOf({ latitude: '40.25', longitude: '-75.38' })).toEqual({ latitude: 40.25, longitude: -75.38 });
+    expect(churchCenterOf({ latitude: null, longitude: -75 })).toBeNull();
+    expect(churchCenterOf({ latitude: 'abc', longitude: -75 })).toBeNull();
+    expect(churchCenterOf({ latitude: '', longitude: '' })).toBeNull();
+    expect(churchCenterOf({ latitude: 95, longitude: 10 })).toBeNull();
+    expect(churchCenterOf({ latitude: 0, longitude: 0 })).toBeNull();
+    expect(churchCenterOf(undefined)).toBeNull();
   });
 });

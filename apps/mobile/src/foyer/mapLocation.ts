@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 /**
  * `Use my location for maps` (Profile). A LOCAL on-device setting, default OFF, stored in AsyncStorage. There is no
  * account-level API for it. The OS location permission is requested only when this is ON; with it off (or denied, or
- * unavailable, or timed out) every map falls back silently to the Franconia, PA default: no OS prompt and no error.
+ * unavailable, or timed out) every map falls back silently, with no OS prompt and no error, to the user's home church when
+ * the account payload carries its coordinates, else to the Franconia, PA default.
  */
 export const USE_LOCATION_KEY = '@irlobby/maps/use-my-location';
 
@@ -12,6 +13,33 @@ export type MapCenter = { latitude: number; longitude: number };
 
 /** Franconia, PA (Franconia Mennonite Church area). */
 export const FRANCONIA_CENTER: MapCenter = { latitude: 40.2866, longitude: -75.3877 };
+/**
+ * The user's home church as the account payload exposes it. `latitude` / `longitude` are NOT sent by the backend today (the
+ * Church model has no coordinates); they are read here so the maps pick them up the moment Backend adds them.
+ */
+export type HomeChurchGeo = { id?: number; name?: string; latitude?: number | string | null; longitude?: number | string | null };
+
+const toCoordinate = (value: unknown): number | null => {
+  const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+  return typeof number === 'number' && Number.isFinite(number) ? number : null;
+};
+
+/** Valid coordinates of the home church, or null (missing, malformed, out of range, or the 0,0 placeholder). */
+export const churchCenterOf = (church: HomeChurchGeo | null | undefined): MapCenter | null => {
+  if (!church) {
+    return null;
+  }
+  const latitude = toCoordinate(church.latitude);
+  const longitude = toCoordinate(church.longitude);
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || (latitude === 0 && longitude === 0)) {
+    return null;
+  }
+  return { latitude, longitude };
+};
+
 export const DEFAULT_DELTA = 0.05;
 export const LOCATION_TIMEOUT_MS = 8000;
 
@@ -52,17 +80,25 @@ const withTimeout = <T,>(work: Promise<T>, ms: number): Promise<T> =>
     );
   });
 
-export type MapCenterResult = { center: MapCenter; source: 'user' | 'default' };
+/** `user` = device fix (setting on), `church` = the user's home church, `default` = Franconia, PA. */
+export type MapCenterResult = { center: MapCenter; source: 'user' | 'church' | 'default' };
 
-const FALLBACK: MapCenterResult = { center: FRANCONIA_CENTER, source: 'default' };
+const DEFAULT_RESULT: MapCenterResult = { center: FRANCONIA_CENTER, source: 'default' };
+
+/** Where a map opens when the device location is off, denied or unavailable. */
+export const fallbackCenter = (church?: HomeChurchGeo | null): MapCenterResult => {
+  const center = churchCenterOf(church);
+  return center ? { center, source: 'church' } : DEFAULT_RESULT;
+};
 
 /**
  * Where a map should open. The location module is loaded only when the setting is on, so with it off nothing native is
  * touched and nothing can prompt.
  */
 export const resolveMapCenter = async (
-  options: { enabled?: boolean; loadLocation?: () => Promise<LocationModule>; timeoutMs?: number } = {},
+  options: { enabled?: boolean; loadLocation?: () => Promise<LocationModule>; timeoutMs?: number; homeChurch?: HomeChurchGeo | null } = {},
 ): Promise<MapCenterResult> => {
+  const FALLBACK = fallbackCenter(options.homeChurch);
   const enabled = options.enabled ?? (await getUseMyLocation());
   if (!enabled) {
     return FALLBACK;
@@ -84,9 +120,14 @@ export const resolveMapCenter = async (
   }
 };
 
-/** Map center for a picker. Starts at Franconia and moves to the user only if the setting is on and a fix arrives. */
-export const useMapCenter = (active = true): MapCenterResult & { loading: boolean } => {
-  const [state, setState] = useState<MapCenterResult>(FALLBACK);
+/**
+ * Map center for a picker. Starts at the home church (else Franconia) and moves to the user only if the setting is on and a
+ * fix arrives. Pass `user.church` as `homeChurch`.
+ */
+export const useMapCenter = (active = true, homeChurch?: HomeChurchGeo | null): MapCenterResult & { loading: boolean } => {
+  const churchLat = churchCenterOf(homeChurch)?.latitude;
+  const churchLng = churchCenterOf(homeChurch)?.longitude;
+  const [state, setState] = useState<MapCenterResult>(() => fallbackCenter(homeChurch));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -95,7 +136,7 @@ export const useMapCenter = (active = true): MapCenterResult & { loading: boolea
     }
     let cancelled = false;
     setLoading(true);
-    void resolveMapCenter().then((result) => {
+    void resolveMapCenter({ homeChurch }).then((result) => {
       if (!cancelled) {
         setState(result);
         setLoading(false);
@@ -104,7 +145,8 @@ export const useMapCenter = (active = true): MapCenterResult & { loading: boolea
     return () => {
       cancelled = true;
     };
-  }, [active]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- homeChurch is tracked through its validated coordinates
+  }, [active, churchLat, churchLng]);
 
   return { ...state, loading };
 };

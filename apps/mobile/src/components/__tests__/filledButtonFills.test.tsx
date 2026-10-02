@@ -16,7 +16,7 @@ describe('white-on-burgundy buttons always carry the burgundy fill', () => {
     expect(StyleSheet.flatten(button.props.style).backgroundColor).toBe('#a2033f');
     expect(StyleSheet.flatten(view.getByText('Continue').props.style).color).toBe('#ffffff');
     fireEvent(button, 'pressIn');
-    expect(StyleSheet.flatten(view.getByRole('button').props.style).backgroundColor).toBe('#800232');
+    expect(StyleSheet.flatten(view.getByRole('button').props.style).backgroundColor).toBe('#870234');
 
     const disabled = render(<AppButton disabled>Nope</AppButton>);
     expect(StyleSheet.flatten(disabled.getByRole('button').props.style).backgroundColor).toBe('#a2033f');

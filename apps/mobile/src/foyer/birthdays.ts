@@ -1,14 +1,15 @@
 import { FEATURES } from '@constants/features';
 
 /**
- * Birthday sharing is OFF until Aaron answers the privacy questions (per-child "Show on my profile", adult opt-in,
- * wishes versus push, and whether adults can be added). Even when forced on with EXPO_PUBLIC_FOYER_BIRTHDAYS=on, each
- * piece also needs its backend field or endpoint to exist, so nothing half-works.
+ * Birthday policy (Aaron's decision, Oct 2):
+ *  - ONLY the primary account holder can share their OWN birthday: an adult opt-in `Show my birthday`, default off,
+ *    month and day only (never the year), never for anyone under 18.
+ *  - Family members' (household) birthdays are NEVER shown or shareable to anyone. There is no per-child switch, flag or
+ *    string. They exist only to check a gathering's age range, and only the parent sees them (My family, RSVP list).
+ *  - Hosts and guests see a family member's name and age band only.
  *
- * Hard rules that hold with the flag on or off:
- *  - a birthday is never shown to a host or a guest, and a child's birthday is never returned to anyone but their parent;
- *  - accounts under 18 never show a birthday (the switch is off and disabled);
- *  - the year of an adult's birthday is never shown.
+ * The own-birthday UI and the friends card stay OFF (EXPO_PUBLIC_FOYER_BIRTHDAYS, default off) and also need their backend
+ * field or endpoint to exist, so nothing half-works.
  */
 export const birthdaysEnabled = (): boolean => FEATURES.birthdays === 'on';
 
@@ -18,9 +19,6 @@ const has = (value: Rec, key: string) => Boolean(value) && typeof value === 'obj
 
 /** Own `Show my birthday` row: flag on AND the profile payload carries `show_birthday`. */
 export const ownBirthdaySwitchSupported = (profile: Rec): boolean => birthdaysEnabled() && has(profile, 'show_birthday');
-
-/** Per-child `Show on my profile`: flag on AND the household payload carries `show_birthday` for that member. */
-export const childShareSupported = (member: Rec): boolean => birthdaysEnabled() && has(member, 'show_birthday');
 
 /** `Birthdays this week` card: flag on AND the friends endpoint answered (a 404 means not deployed). */
 export const friendBirthdaysSupported = (status: number | null | undefined): boolean => birthdaysEnabled() && status === 200;

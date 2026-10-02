@@ -57,6 +57,8 @@ type DayProps = CommonProps & {
   onDone: (value: DayValue) => void;
   /** Birth date only. Default 13. */
   minAge?: number;
+  /** Birth date only: the empty wheel opens this many years back (default 30; family members use 10 = about 2016). */
+  defaultYearsBack?: number;
   /** Birth date wheel step helper line. Defaults to the account birth date text. */
   wheelHelper?: string;
   /** Line under the day grid. Defaults to the account birth date caption. Pass '' to hide. */
@@ -104,7 +106,7 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
       props.value != null
         ? { year: props.value.year, month: props.value.month }
         : mode === 'birthdate'
-          ? defaultBirthMonth(now)
+          ? defaultBirthMonth(now, props.mode === 'birthdate' ? props.defaultYearsBack : undefined)
           : mode === 'monthYear'
             ? monthLimits.max
             : monthLimits.min;

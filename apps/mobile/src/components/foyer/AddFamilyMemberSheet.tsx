@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
 import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { COMMON_COPY, FAMILY_COPY } from '@constants/foyerCopy';
+import { COMMON_COPY, FAMILY_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { familyBirthDayLimits, formatBirthdayLong, toIsoDate, type DayValue } from '@foyer/dates';
 import { canAddFamilyMember, familyEditChanged, isAdultBirthdayError, memberBirthDay, sexOf } from '@foyer/family';
 import { addFamilyMember, updateFamilyMember, type FamilyMember, type FamilySex } from '@services/foyerService';
@@ -18,7 +18,6 @@ type Props = {
   /** Edit only: `Remove from family` link under Save. */
   onRemove?: (member: FamilyMember) => void;
   /** Edit only: show the proposed `Show on my profile` switch (birthdays flag + backend field). Default hidden. */
-  showShare?: boolean;
   onCancel: () => void;
   onAdded: () => void;
 };
@@ -49,12 +48,11 @@ export const SexSegments = ({ value, onChange, disabled }: { value: FamilySex | 
  * Add / Edit family member: Name, Sex (Male | Female), and a Birthday row that opens the same two-step day-grid picker as
  * the account birth date (last 18 years, no future dates). No relationship is chosen or sent.
  */
-export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showShare = false, onCancel, onAdded }: Props) => {
+export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCancel, onAdded }: Props) => {
   const editing = member != null;
   const [name, setName] = useState('');
   const [sex, setSex] = useState<FamilySex | null>(null);
   const [birthday, setBirthday] = useState<DayValue | null>(null);
-  const [share, setShare] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [birthdayError, setBirthdayError] = useState<string | null>(null);
@@ -66,7 +64,6 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
       setName(member?.name ?? '');
       setSex(sexOf(member?.sex));
       setBirthday(member ? memberBirthDay(member) : null);
-      setShare(false);
       setBirthdayError(null);
       setError(null);
       setPending(false);
@@ -115,6 +112,11 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
         }}
         footer={
           <SheetButtons>
+            {editing ? null : (
+              <Text style={styles.note} testID="family-under13-note">
+                {GOING_COPY.underThirteenNote}
+              </Text>
+            )}
             <PillButton
               label={editing ? FAMILY_COPY.save : FAMILY_COPY.addCta}
               loadingLabel={editing ? FAMILY_COPY.saving : FAMILY_COPY.adding}
@@ -141,6 +143,7 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
           <Text accessibilityRole="header" style={styles.title}>
             {editing ? FAMILY_COPY.editTitle : FAMILY_COPY.sheetTitle}
           </Text>
+          {editing ? null : <Text style={styles.subtitle}>{FAMILY_COPY.sheetSubtitle}</Text>}
           <View style={styles.group}>
             <Text style={styles.label}>{FAMILY_COPY.name}</Text>
             <TextInput
@@ -170,20 +173,6 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
             />
             <Text style={styles.helper}>{FAMILY_COPY.birthdayHelper}</Text>
           </View>
-          {showShare ? (
-            <View style={styles.group}>
-              <View style={styles.shareRow}>
-                <Text style={styles.shareLabel}>{FAMILY_COPY.showOnProfile}</Text>
-                <Switch
-                  accessibilityLabel={FAMILY_COPY.showOnProfile}
-                  value={share}
-                  onValueChange={setShare}
-                  trackColor={{ true: appColors.primary, false: appColors.line }}
-                />
-              </View>
-              <Text style={styles.helper}>{FAMILY_COPY.showOnProfileCaption(name.trim() || 'their')}</Text>
-            </View>
-          ) : null}
         </View>
       </FoyerSheet>
       <DatePickerSheet
@@ -193,6 +182,7 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
         value={birthday}
         limits={familyBirthDayLimits()}
         minAge={0}
+        defaultYearsBack={10}
         wheelHelper={FAMILY_COPY.birthdayWheelHelper}
         caption={FAMILY_COPY.birthdayHelper}
         onCancel={() => setPickerOpen(false)}
@@ -209,6 +199,8 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, showSha
 
 const styles = StyleSheet.create({
   title: { fontFamily: appTypography.heading, fontSize: 24, lineHeight: 32, color: appColors.ink },
+  subtitle: { fontFamily: appTypography.bodyRegular, fontSize: 14, lineHeight: 20, color: appColors.mutedInk, marginTop: 4 },
+  note: { fontFamily: appTypography.bodyRegular, fontSize: 12, lineHeight: 17, color: appColors.mutedInk, textAlign: 'center' },
   dim: { opacity: 0.5 },
   group: { gap: 6, marginTop: 14 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
@@ -235,16 +227,4 @@ const styles = StyleSheet.create({
   segmentText: { fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.mutedInk },
   segmentTextOn: { color: '#a2033f' },
   helper: { fontFamily: appTypography.bodyRegular, fontSize: 12, lineHeight: 17, color: appColors.mutedInk },
-  shareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 54,
-    borderRadius: radii.input,
-    borderWidth: 1,
-    borderColor: appColors.line,
-    paddingHorizontal: 14,
-    backgroundColor: appColors.white,
-  },
-  shareLabel: { fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
 });

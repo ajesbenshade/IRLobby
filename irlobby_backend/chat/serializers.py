@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from users.social import blocked_user_ids
 from utils.sanitize import strip_html
 
 from .models import Conversation, Message
@@ -27,7 +28,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ConversationSerializer(serializers.ModelSerializer):
-    messages = MessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()
     match = serializers.StringRelatedField()
     matchId = serializers.IntegerField(source="match.id", read_only=True)
     activityId = serializers.IntegerField(
@@ -39,6 +40,16 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = ("id", "match", "matchId", "activityId", "otherUserId", "messages", "created_at")
         read_only_fields = ("id", "created_at")
+
+    def get_messages(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        messages = obj.messages.select_related("sender").order_by("id")
+        if user is not None and getattr(user, "is_authenticated", False):
+            hidden = blocked_user_ids(user)
+            if hidden:
+                messages = messages.exclude(sender_id__in=hidden)
+        return MessageSerializer(messages, many=True, context=self.context).data
 
     def get_otherUserId(self, obj):
         request = self.context.get("request")

@@ -684,6 +684,12 @@ def activity_chat(request, pk):
             conversation, created = Conversation.objects.get_or_create(match=match)
 
             messages = conversation.messages.all().order_by("created_at")
+            from users.social import blocked_user_ids
+
+            hidden = blocked_user_ids(user)
+            if hidden:
+                # Messages from people blocked either way are hidden from this viewer.
+                messages = messages.exclude(sender_id__in=hidden)
             from chat.serializers import MessageSerializer
 
             serializer = MessageSerializer(messages, many=True)

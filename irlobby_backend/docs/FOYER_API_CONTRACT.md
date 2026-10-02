@@ -596,3 +596,13 @@ Existing endpoints now fill the same fields and return `target_type` and `target
 
 New field on photos: `EventPhoto.uploaded_by` (set when the host uploads; not shown in any payload).
 
+## Blocks inside gatherings
+
+People blocked either way (you blocked them, or they blocked you) are hidden from you inside gatherings. No response shape changes; the items are simply left out:
+
+- `GET /api/activities/<id>/chat/` leaves out messages whose sender is blocked either way with the viewer. Other members still see those messages.
+- `GET /api/messages/conversations/<id>/messages/` (and the `messages` array nested in `GET /api/messages/conversations/`) leave out the same messages.
+- Websockets: both the gathering socket (`/ws/?activityId=`) and the conversation socket (`/ws/chat/<id>/`) no longer deliver `chat_message`, typing, read receipts or presence events whose `userId` is blocked either way with the receiving user. This is checked on every event, so a block made while a socket is open takes effect immediately. (There is no websocket history replay; history comes from the REST calls above.)
+- `GET /api/activities/<id>/attendees/` (host view) leaves out the households of users blocked either way with the host. `going_count` is still the true total. The attendee-facing list of other people going already left out blocked users.
+- Chat message reports on a blocked sender's message return 404 (see Report content).
+

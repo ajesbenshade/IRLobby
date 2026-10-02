@@ -298,12 +298,20 @@ def _going_participants(activity):
     )
 
 
-def _host_attendee_households(activity) -> list:
-    """Host view: one entry per going household. Names, relationship and age band only."""
+def _host_attendee_households(activity, viewer=None) -> list:
+    """Host view: one entry per going household. Names, relationship and age band only.
+
+    Households of people blocked either way with the viewer are left out.
+    """
+    from users.social import blocked_user_ids
+
     on_date = event_local_date(activity)
+    excluded = blocked_user_ids(viewer) if viewer is not None else set()
     households = []
     for participant in _going_participants(activity):
         user = participant.user
+        if user.id in excluded:
+            continue
         people = []
         if participant.include_self:
             people.append(
@@ -354,7 +362,7 @@ def activity_attendees(request, pk):
     user = request.user
     going = confirmed_people_count(activity)
     if user.is_staff or is_activity_host(user, activity):
-        return Response({"going_count": going, "households": _host_attendee_households(activity)})
+        return Response({"going_count": going, "households": _host_attendee_households(activity, user)})
     if activity.time <= timezone.now() and user_has_going_rsvp(user, activity):
         return Response({"going_count": going, "attendees": _past_attendee_names(activity, user)})
     return Response(

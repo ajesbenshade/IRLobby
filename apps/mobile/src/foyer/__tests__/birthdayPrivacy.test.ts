@@ -26,8 +26,8 @@ describe('birthday privacy (Aaron, Oct 2)', () => {
     expect(src('foyer/birthdays.ts')).not.toMatch(/export const childShareSupported/);
   });
 
-  it("family help text no longer promises sharing: 'Only you can see this.'", () => {
-    expect(FAMILY_COPY.birthdayHelper).toBe('Only you can see this.');
+  it("family help text no longer promises sharing: 'Only you can see this. We use it to check event age ranges.'", () => {
+    expect(FAMILY_COPY.birthdayHelper).toBe('Only you can see this. We use it to check event age ranges.');
   });
 
   it('hosts and guests see name + age band only: no relationship wording or birth data in host views', () => {

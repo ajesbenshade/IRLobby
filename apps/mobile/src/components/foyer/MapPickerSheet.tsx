@@ -7,6 +7,7 @@ import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, MAP_COPY } from '@constants/foyerCopy';
 import { DEFAULT_DELTA, FRANCONIA_CENTER, useMapCenter, type HomeChurchGeo, type MapCenter } from '@foyer/mapLocation';
+import { shortRegion } from '@foyer/regions';
 import { useSafeInsets } from '@hooks/useSafeInsets';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -29,7 +30,7 @@ const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel: str
     const Location = await import('expo-location');
     const [match] = await Location.reverseGeocodeAsync(center);
     const city = match?.city || match?.subregion || match?.region || '';
-    const region = match?.region && match.region !== city ? match.region : '';
+    const region = match?.region && match.region !== city ? shortRegion(match.region) : '';
     const label = [city, region].filter(Boolean).join(', ');
     if (label) {
       return label;
@@ -63,8 +64,9 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
     setLabel(isDefault ? defaultLabel : MAP_COPY.selectedLocation);
     mapRef.current?.animateToRegion?.({ ...center, latitudeDelta: DEFAULT_DELTA, longitudeDelta: DEFAULT_DELTA }, 300);
     let cancelled = false;
-    if (isChurch) {
-      return undefined; // the church name is the label
+    if (isDefault) {
+      // Franconia, PA and the church name are fixed strings: a geocoder could answer "Souderton" or "Pennsylvania" here.
+      return undefined;
     }
     void labelFor(center, isDefault, defaultLabel).then((next) => {
       if (!cancelled) {

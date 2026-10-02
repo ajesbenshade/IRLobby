@@ -106,6 +106,7 @@ export const FoyerFriendsScreen = () => {
 
   return (
     <AppScrollView
+      headerless
       contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl

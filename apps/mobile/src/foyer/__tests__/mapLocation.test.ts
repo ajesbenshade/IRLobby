@@ -151,3 +151,19 @@ describe('home church map center (setting off, denied, or unavailable)', () => {
     expect(churchCenterOf(undefined)).toBeNull();
   });
 });
+
+describe('map place label', () => {
+  it('shortens US state names so Android and iOS read alike', () => {
+    const { shortRegion } = require('../regions') as typeof import('../regions');
+    expect(shortRegion('Pennsylvania')).toBe('PA');
+    expect(shortRegion('PA')).toBe('PA');
+    expect(shortRegion('Ontario')).toBe('Ontario');
+  });
+
+  it('the default and church labels are fixed strings, never reverse-geocoded', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const text = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'foyer', 'MapPickerSheet.tsx'), 'utf8');
+    expect(text).toMatch(/if \(isDefault\) \{[\s\S]*?return undefined;/);
+  });
+});

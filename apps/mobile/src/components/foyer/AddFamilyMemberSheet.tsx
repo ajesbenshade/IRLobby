@@ -112,11 +112,6 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
         }}
         footer={
           <SheetButtons>
-            {editing ? null : (
-              <Text style={styles.note} testID="family-under13-note">
-                {GOING_COPY.underThirteenNote}
-              </Text>
-            )}
             <PillButton
               label={editing ? FAMILY_COPY.save : FAMILY_COPY.addCta}
               loadingLabel={editing ? FAMILY_COPY.saving : FAMILY_COPY.adding}
@@ -171,8 +166,13 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
               onPress={() => setPickerOpen(true)}
               testID="family-birthday-row"
             />
-            <Text style={styles.helper}>{FAMILY_COPY.birthdayHelper}</Text>
+            {birthdayError ? null : <Text style={styles.helper}>{FAMILY_COPY.birthdayHelper}</Text>}
           </View>
+          {editing ? null : (
+            <Text style={styles.note} testID="family-under13-note">
+              {GOING_COPY.underThirteenNote}
+            </Text>
+          )}
         </View>
       </FoyerSheet>
       <DatePickerSheet
@@ -200,7 +200,7 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
 const styles = StyleSheet.create({
   title: { fontFamily: appTypography.heading, fontSize: 24, lineHeight: 32, color: appColors.ink },
   subtitle: { fontFamily: appTypography.bodyRegular, fontSize: 14, lineHeight: 20, color: appColors.mutedInk, marginTop: 4 },
-  note: { fontFamily: appTypography.bodyRegular, fontSize: 12, lineHeight: 17, color: appColors.mutedInk, textAlign: 'center' },
+  note: { fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18, color: appColors.mutedInk, marginTop: 14 },
   dim: { opacity: 0.5 },
   group: { gap: 6, marginTop: 14 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },

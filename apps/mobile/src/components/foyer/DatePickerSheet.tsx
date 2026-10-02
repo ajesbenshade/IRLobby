@@ -475,7 +475,7 @@ export const PickerField = ({ label, value, placeholder, icon = 'calendar-month-
       <MaterialCommunityIcons name="chevron-down" size={20} color={appColors.mutedInk} />
     </Pressable>
     {error ? (
-      <View style={styles.fieldErrorRow} accessibilityRole="alert">
+      <View style={[styles.fieldErrorRow, errorStrong ? styles.fieldErrorBox : null]} accessibilityRole="alert">
         {errorStrong ? <MaterialCommunityIcons name="alert-circle-outline" size={18} color={ERROR_INK} /> : null}
         <Text style={[styles.fieldError, errorStrong ? { color: ERROR_INK } : null]}>{error}</Text>
       </View>
@@ -549,6 +549,8 @@ const styles = StyleSheet.create({
   fieldPlaceholder: { color: appColors.softInk },
   fieldRowStrongError: { borderColor: ERROR_INK, borderWidth: 2 },
   fieldErrorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  // Adult-birthday refusal: light pink box with a red border (frame 97).
+  fieldErrorBox: { backgroundColor: '#fbe9ee', borderWidth: 1, borderColor: ERROR_INK, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginTop: 4 },
   helper: { fontFamily: appTypography.bodyRegular, fontSize: 14, lineHeight: 20, color: appColors.mutedInk, marginBottom: 10 },
   readout: { fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink, textAlign: 'center', marginBottom: 4 },
   readoutEmpty: { color: appColors.softInk },

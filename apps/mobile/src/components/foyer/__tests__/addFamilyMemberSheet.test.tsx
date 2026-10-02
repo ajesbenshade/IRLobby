@@ -40,7 +40,7 @@ describe('Add family member sheet', () => {
     expect(view.getByLabelText('Female')).toBeTruthy();
     expect(view.getByText('Birthday')).toBeTruthy();
     expect(view.getByText('Month, day and year')).toBeTruthy();
-    expect(view.getByText('Only you can see this.')).toBeTruthy();
+    expect(view.getByText('Only you can see this. We use it to check event age ranges.')).toBeTruthy();
     expect(view.queryByText(/choose to share/i)).toBeNull();
     for (const word of ['Spouse', 'Child', 'Relationship']) {
       expect(view.queryByText(word)).toBeNull();

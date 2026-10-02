@@ -298,7 +298,7 @@ export const FAMILY_COPY = {
   birthday: 'Birthday',
   birthdayPlaceholder: 'Month, day and year',
   /** Under the Birthday field and on the day grid. */
-  birthdayHelper: 'Only you can see this.',
+  birthdayHelper: 'Only you can see this. We use it to check event age ranges.',
   birthdayWheelHelper: 'Choose the month and year, then pick the day.',
   /** Field-level, under the Birthday row (server 400 for 18+). */
   adultError: 'Only children under 18 can be added to a household.',

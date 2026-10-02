@@ -33,7 +33,7 @@ export const MyFamilyScreen = () => {
   const refresh = () => void queryClient.invalidateQueries({ queryKey: FAMILY_QUERY_KEY });
 
   return (
-    <AppScrollView contentContainerStyle={styles.container}>
+    <AppScrollView headerless contentContainerStyle={styles.container}>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text maxFontSizeMultiplier={1.4} style={styles.back}>

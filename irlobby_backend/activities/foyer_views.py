@@ -416,6 +416,8 @@ def whos_coming(request, pk):
                     "relationship": member.relationship,
                     "birth_month": shape["birth_month"],
                     "birth_year": shape["birth_year"],
+                    "birth_day": shape["birth_day"],
+                    "birth_precision": shape["birth_precision"],
                 },
             )
         )

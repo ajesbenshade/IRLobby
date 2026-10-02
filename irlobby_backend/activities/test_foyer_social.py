@@ -1,6 +1,6 @@
 """Family members, host/attendee lists, photo downloads, hidden addresses, RSVP cancel."""
 
-from datetime import timedelta
+from datetime import date, timedelta
 from io import BytesIO
 from unittest.mock import patch
 
@@ -202,6 +202,54 @@ class FamilyMemberTests(APITestCase):
         self.assertEqual(data["members"][0]["relationship"], "spouse")
         self.assertIsNone(data["members"][0]["age"])
         self.assertTrue(data["members"][0]["eligible"])
+
+    def test_whos_coming_includes_birth_day_and_precision(self):
+        year = ny_today().year - 6
+        HouseholdDependent.objects.create(parent=self.parent, name="Pat", relationship="spouse")
+        month_kid = HouseholdDependent.objects.create(
+            parent=self.parent, name="MonthKid", birth_month=3, birth_year=year
+        )
+        day_kid = HouseholdDependent.objects.create(
+            parent=self.parent,
+            name="DayKid",
+            birth_month=7,
+            birth_year=year,
+            date_of_birth=date(year, 7, 15),
+        )
+        activity = _activity(_user("host"))
+        data = self.client.get(reverse("activity-whos-coming", args=[activity.id])).data
+        self.assertEqual(data["dependents"], data["members"])
+        by_id = {m["id"]: m for m in data["members"]}
+        month = by_id[month_kid.id]
+        self.assertEqual((month["birth_month"], month["birth_year"]), (3, year))
+        self.assertIsNone(month["birth_day"])
+        self.assertEqual(month["birth_precision"], "month")
+        day = by_id[day_kid.id]
+        self.assertEqual((day["birth_month"], day["birth_year"]), (7, year))
+        self.assertEqual(day["birth_day"], 15)
+        self.assertEqual(day["birth_precision"], "day")
+        spouse = [m for m in data["members"] if m["relationship"] == "spouse"][0]
+        for key in ("birth_month", "birth_year", "birth_day", "birth_precision"):
+            self.assertIsNone(spouse[key])
+        for member in data["members"]:
+            self.assertNotIn("date_of_birth", member)
+
+    def test_whos_coming_never_shows_another_households_children(self):
+        year = ny_today().year - 6
+        HouseholdDependent.objects.create(
+            parent=self.parent,
+            name="Secret",
+            birth_month=7,
+            birth_year=year,
+            date_of_birth=date(year, 7, 15),
+        )
+        other = _user("other")
+        self.client.force_authenticate(other)
+        activity = _activity(_user("host"))
+        data = self.client.get(reverse("activity-whos-coming", args=[activity.id])).data
+        self.assertEqual(data["members"], [])
+        self.assertEqual(data["dependents"], [])
+        self.assertNotIn("Secret", str(data))
 
     def test_months_only_child_blocks_matching_teen_signup(self):
         from activities.household_rules import dependent_blocks_minor_account

@@ -339,7 +339,7 @@ Every endpoint below requires auth unless stated. Nothing here removes or rename
 
 `POST /api/activities/<id>/rsvp/` accepts `member_ids` (same list as `dependent_ids`; both are merged). The response and `my_rsvp` return both `dependent_ids` and `member_ids`. A spouse counts as an adult for sex rules and any age range, except events with `age_max` under 18.
 
-`GET /api/activities/<id>/whos-coming/` returns the same people under `dependents` and `members` (each has `relationship`, `birth_month`, `birth_year`; spouse `age` is `null`).
+`GET /api/activities/<id>/whos-coming/` returns the same people under `dependents` and `members` (each has `relationship`, `birth_month`, `birth_year`, `birth_day`, `birth_precision`; spouse `age` is `null`). `birth_day` and `birth_precision` use the same values as the household endpoint: `birth_day` is `null` and `birth_precision` is `"month"` for a month-only child, `birth_day` is 1-31 and `birth_precision` is `"day"` when a full date is stored, and a spouse has all four birth fields `null`. This list is only the requesting user's own household (parent-only data); another user's call never includes these children. `date_of_birth` is not included here.
 
 ## Host-only attendees, and past-event attendees
 

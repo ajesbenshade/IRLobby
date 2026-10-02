@@ -15,7 +15,7 @@ import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { isFoyerMode } from '@constants/appMode';
-import { GATHERING_CHAT_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, GATHERING_CHAT_COPY } from '@constants/foyerCopy';
 import { DirectChatScreen } from '@screens/main/DirectChatScreen';
 import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
@@ -24,6 +24,7 @@ import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
 import { MessagingScreen } from '@screens/main/MessagingScreen';
 import { PhotoGalleryScreen } from '@screens/main/PhotoGalleryScreen';
 import { GatheringDetailScreen } from '@screens/main/GatheringDetailScreen';
+import { RequestsScreen } from '@screens/main/RequestsScreen';
 import { MyFamilyScreen } from '@screens/main/MyFamilyScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
@@ -287,6 +288,7 @@ export const MainNavigator = () => (
       component={GatheringDetailScreen}
       options={{ title: 'Gathering' }}
     />
+    <Stack.Screen name="Requests" component={RequestsScreen} options={{ headerShown: false, title: APPROVAL_COPY.deckTitle }} />
     <Stack.Screen
       name="GatheringChat"
       component={GatheringChatScreen}

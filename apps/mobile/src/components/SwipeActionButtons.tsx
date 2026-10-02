@@ -16,13 +16,17 @@ type SwipeActionButtonsProps = {
   disabled?: boolean;
   /** Inline error from the last attempt. Shown above the helper line. */
   error?: string | null;
+  /** Require approval: `Request to join` / `Ask again` (default `I'm going`). */
+  goingLabel?: string;
+  /** `Request sent` / `Request closed` are not tappable. */
+  goingDisabled?: boolean;
 };
 
 /**
  * Real, always-visible Pass / I'm going buttons for the Discover card. They call
  * the same handlers as the swipe gesture, so the gesture is only a shortcut.
  */
-export const SwipeActionButtons = ({ onPass, onGoing, disabled = false, error }: SwipeActionButtonsProps) => (
+export const SwipeActionButtons = ({ onPass, onGoing, disabled = false, error, goingLabel = "I'm going", goingDisabled = false }: SwipeActionButtonsProps) => (
   <View style={styles.wrap}>
     <View style={styles.row}>
       <Pressable
@@ -45,20 +49,20 @@ export const SwipeActionButtons = ({ onPass, onGoing, disabled = false, error }:
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="I'm going"
+        accessibilityLabel={goingLabel}
         accessibilityHint="Opens the list of who is coming, then confirms your RSVP"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
+        accessibilityState={{ disabled: disabled || goingDisabled }}
+        disabled={disabled || goingDisabled}
         onPress={onGoing}
         style={({ pressed }) => [
           styles.button,
           styles.going,
-          disabled ? styles.disabled : null,
+          goingDisabled ? styles.goingClosed : disabled ? styles.disabled : null,
           pressed ? styles.pressed : null,
         ]}
       >
-        <Text maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE} style={[styles.label, styles.goingLabel]}>
-          I'm going
+        <Text maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE} style={[styles.label, goingDisabled ? styles.goingClosedLabel : styles.goingLabel]}>
+          {goingLabel}
         </Text>
       </Pressable>
     </View>
@@ -95,6 +99,8 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.85 },
+  goingClosed: { backgroundColor: '#e1dbd7', borderColor: '#e1dbd7' },
+  goingClosedLabel: { color: '#7a7572' },
   label: {
     fontFamily: appTypography.bodySemibold,
     fontSize: 17,

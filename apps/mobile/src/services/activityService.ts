@@ -6,6 +6,7 @@ import {
   parseActivityListResponse,
 } from "@shared/schema";
 
+import { noteActivityPayload } from "../foyer/capabilities";
 import type { Activity } from "../types/activity";
 
 export interface ActivityFetchFilters {
@@ -28,12 +29,16 @@ export const fetchActivities = async (
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES, {
     params: filters,
   });
-  return parseActivityListResponse(response.data) as Activity[];
+  const rows = parseActivityListResponse(response.data) as Activity[];
+  noteActivityPayload(rows);
+  return rows;
 };
 
 export const fetchHostedActivities = async (): Promise<Activity[]> => {
   const response = await api.get<Activity[]>(API_ROUTES.ACTIVITIES_HOSTED);
-  return parseActivityListResponse(response.data) as Activity[];
+  const rows = parseActivityListResponse(response.data) as Activity[];
+  noteActivityPayload(rows);
+  return rows;
 };
 
 export interface CreateActivityPayload {
@@ -48,7 +53,10 @@ export interface CreateActivityPayload {
   capacity: number;
   visibility?: string[];
   is_private?: boolean;
+  /** Legacy IRLobby create screen only. The Foyer host form sends it solely when Require approval is enabled. */
   requires_approval?: boolean;
+  /** Foyer Require approval; sent only when the feature is enabled. */
+  allow_rerequest?: boolean;
   price?: number;
   currency?: string;
   age_restriction?: string;
@@ -94,6 +102,7 @@ export const fetchActivity = async (
   const response = await api.get<Activity>(
     API_ROUTE_BUILDERS.activityDetail(activityId)
   );
+  noteActivityPayload(response.data);
   return response.data;
 };
 

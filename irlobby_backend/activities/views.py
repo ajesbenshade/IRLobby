@@ -59,6 +59,10 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         if self.request.user.is_staff:
             queryset = Activity.objects.all()
 
+        # Cancelled gatherings never show in the browse/swipe deck (detail, hosted and going
+        # lists still return them).
+        queryset = queryset.filter(is_cancelled=False)
+
         if not ticketing_enabled(self.request):
             queryset = queryset.filter(Q(is_ticketed=False) | Q(host=self.request.user))
 
@@ -249,6 +253,12 @@ class ActivityTicketPurchaseView(APIView):
             Activity.objects.filter(Q(is_approved=True) | Q(host=request.user)),
             pk=pk,
         )
+
+        if activity.is_cancelled:
+            return Response(
+                {"message": "This gathering was cancelled by the host."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not activity.is_ticketed:
             return Response(
@@ -558,6 +568,12 @@ class ValidateTicketView(APIView):
 def join_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
+
+    if activity.is_cancelled:
+        return Response(
+            {"message": "This gathering was cancelled by the host."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     existing_participant = ActivityParticipant.objects.filter(activity=activity, user=user).first()
     if existing_participant:

@@ -27,6 +27,8 @@ class SwipeListView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         activity = serializer.validated_data.get("activity")
+        if activity is not None and activity.is_cancelled:
+            raise ValidationError({"activity": "This gathering was cancelled by the host."})
         if Swipe.objects.filter(user=self.request.user, activity=activity).exists():
             raise ValidationError({"activity": "Already swiped on this activity"})
         check_swipe_daily_limit(self.request.user)
@@ -49,6 +51,12 @@ def swipe_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
     direction = request.data.get("direction")
+
+    if activity.is_cancelled:
+        return Response(
+            {"error": "This gathering was cancelled by the host."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if direction not in ["left", "right"]:
         return Response({"error": "Invalid direction"}, status=status.HTTP_400_BAD_REQUEST)

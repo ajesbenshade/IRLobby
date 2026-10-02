@@ -37,7 +37,9 @@ _SIGNER = Signer(salt=ICS_TOKEN_SALT)
 
 def public_calendar_queryset():
     return (
-        Activity.objects.filter(list_on_church_calendar=True, calendar_approved=True)
+        Activity.objects.filter(
+            list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
+        )
         .select_related("host", "host_church")
         .prefetch_related("photos")
         .order_by("time", "id")
@@ -220,9 +222,11 @@ def _vevent_lines(
             f"SUMMARY:{_ics_escape(activity.title)}",
             f"LOCATION:{_ics_escape('' if hide_location else activity.location or '')}",
             f"DESCRIPTION:{_ics_escape(description)}",
-            "END:VEVENT",
         ]
     )
+    if getattr(activity, "is_cancelled", False):
+        lines.append("STATUS:CANCELLED")
+    lines.append("END:VEVENT")
     return lines
 
 

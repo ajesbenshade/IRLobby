@@ -161,3 +161,15 @@ def send_activity_join_notification(activity, joiner):
         payload,
     )
 
+
+def send_activity_cancelled_notification(activity, recipient, reason=""):
+    """Tell one confirmed attendee that the host cancelled the gathering."""
+    body = f"{activity.title} was cancelled."
+    if reason:
+        body = f"{body} Reason: {reason}"
+    payload = {
+        "type": "activity_cancelled",
+        "activityId": activity.id,
+        "screen": "Activity",
+    }
+    send_push_to_user(recipient, f"{activity.title} was cancelled", body[:240], payload)

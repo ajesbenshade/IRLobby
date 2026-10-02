@@ -155,6 +155,38 @@ class ProfileCardTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["phone"], PHONE)
 
+    def test_church_level_includes_accepted_friend_from_another_church(self):
+        """Levels nest: a friend outside the owner's church still sees a church-level profile."""
+        self.set_level("church")
+        other_church = Church.objects.create(name="Other Church")
+        User.objects.filter(pk=self.viewer.pk).update(church=other_church)
+        self.viewer.refresh_from_db()
+        # A non-friend from another church cannot see it.
+        self.assertEqual(self.get().status_code, 404)
+        Friendship.objects.create(requester=self.viewer, recipient=self.owner, status="accepted")
+        resp = self.get()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["friendship"], "friends")
+        self.assertEqual(resp.data["phone"], PHONE)
+
+    def test_church_level_includes_friend_with_no_church_at_all(self):
+        self.set_level("church")
+        self.assertIsNone(self.viewer.church_id)
+        Friendship.objects.create(requester=self.owner, recipient=self.viewer, status="accepted")
+        self.assertEqual(self.get().status_code, 200)
+
+    def test_church_level_pending_friend_request_from_another_church_is_not_enough(self):
+        self.set_level("church")
+        other_church = Church.objects.create(name="Other Church")
+        User.objects.filter(pk=self.viewer.pk).update(church=other_church)
+        Friendship.objects.create(requester=self.viewer, recipient=self.owner, status="pending")
+        # At most the limited "add friend" card: no contact details, not visible.
+        resp = self.get()
+        if resp.status_code == 200:
+            self.assertFalse(resp.data["visible"])
+            self.assertNotIn("phone", resp.data)
+            self.assertNotIn("email", resp.data)
+
     def test_church_level_hides_contact_from_outside_church_even_with_toggle(self):
         # Viewer shares an event (so can send a request) but is not in the church.
         self.set_level("church")

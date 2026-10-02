@@ -49,6 +49,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     my_rsvp = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
     calendar_links = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -115,6 +116,10 @@ class ActivitySerializer(serializers.ModelSerializer):
             "my_rsvp",
             "photos",
             "calendar_links",
+            "is_cancelled",
+            "cancelled_at",
+            "cancel_reason",
+            "status",
         )
         read_only_fields = (
             "id",
@@ -122,6 +127,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             "created_at",
             "tickets_sold",
             "calendar_approved",
+            "is_cancelled",
+            "cancelled_at",
+            "cancel_reason",
         )
 
     def to_internal_value(self, data):
@@ -281,6 +289,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             data["latitude"] = None
             data["longitude"] = None
         return data
+
+    def get_status(self, obj):
+        return "cancelled" if obj.is_cancelled else "active"
 
     def get_ticketsAvailable(self, obj):
         return obj.tickets_available

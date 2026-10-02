@@ -1219,7 +1219,7 @@ class SeedReviewAccountTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data["results"] if isinstance(response.data, dict) else response.data
-        self.assertEqual(len(results), 6)
+        self.assertEqual(len(results), 8)
         self.assertNotIn("London Walk", [item["title"] for item in results])
 
     def test_seed_review_account_requires_password(self):

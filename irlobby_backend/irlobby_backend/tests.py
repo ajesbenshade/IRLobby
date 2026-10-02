@@ -234,3 +234,17 @@ class StripeBouncePageTests(TestCase):
         request = RequestFactory().get("/stripe/connect/evil/")
         with self.assertRaises(Http404):
             stripe_app_bounce(request, "stripe/connect/evil")
+
+
+class CeleryBeatScheduleTests(TestCase):
+    def test_legacy_matchmaking_entry_is_not_scheduled(self):
+        schedule = settings.CELERY_BEAT_SCHEDULE
+        self.assertNotIn("run-matchmaking", schedule)
+        self.assertNotIn(
+            "matches.tasks.run_matchmaking",
+            {entry["task"] for entry in schedule.values()},
+        )
+
+    def test_other_schedule_entries_remain(self):
+        entry = settings.CELERY_BEAT_SCHEDULE["notify-upcoming-activities"]
+        self.assertEqual(entry["task"], "activities.tasks.notify_upcoming_activities")

@@ -446,10 +446,6 @@ if _IS_TESTING:
     CELERY_TASK_EAGER_PROPAGATES = True
 
 CELERY_BEAT_SCHEDULE = {
-    "run-matchmaking": {
-        "task": "matches.tasks.run_matchmaking",
-        "schedule": 60.0,
-    },
     "notify-upcoming-activities": {
         "task": "activities.tasks.notify_upcoming_activities",
         "schedule": 300.0,

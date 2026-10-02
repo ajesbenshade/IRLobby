@@ -39,7 +39,7 @@ import { submitReport } from '@services/reportAdapter';
 import { appColors, appTypography, radii } from '@theme/index';
 
 type View_ = 'deck' | 'list';
-type SafetyTarget = { userId: number; name: string } | null;
+type SafetyTarget = { userId: number | null; requestId: number; name: string } | null;
 
 /**
  * Host's Require approval deck (frames 54-62, 67). Swipe right or tap Approve; swipe left or tap
@@ -170,7 +170,7 @@ export const RequestsScreen = () => {
   });
 
   const openSafety = (request: JoinRequest) => {
-    setSafety({ userId: request.user_id, name: request.card.first_name });
+    setSafety({ userId: request.user_id ?? null, requestId: request.id, name: request.card.first_name });
     setSafetySheet('menu');
   };
 
@@ -306,15 +306,19 @@ export const RequestsScreen = () => {
         visible={safetySheet === 'menu'}
         onClose={() => setSafetySheet(null)}
         rows={[
-          { label: MEMBER_COPY.report, sub: MEMBER_COPY.reportSub, onPress: () => setSafetySheet('report'), testID: 'request-report' },
-          { label: MEMBER_COPY.block, sub: MEMBER_COPY.blockSub, onPress: () => setSafetySheet('block'), testID: 'request-block' },
+          { label: MEMBER_COPY.reportName(safety?.name ?? ''), onPress: () => setSafetySheet('report'), testID: 'request-report' },
+          ...(safety?.userId != null
+            ? [{ label: MEMBER_COPY.blockName(safety.name), onPress: () => setSafetySheet('block'), testID: 'request-block' }]
+            : []),
         ]}
       />
       <ReportSheet
         visible={safetySheet === 'report'}
         name={safety?.name ?? ''}
         onClose={() => setSafetySheet(null)}
-        onSubmit={(payload) => submitReport({ type: 'join_request', userId: safety?.userId ?? 0, activityId }, payload)}
+        onSubmit={(payload) =>
+          submitReport({ type: 'join_request', userId: safety?.userId ?? null, requestId: safety?.requestId ?? null, activityId }, payload)
+        }
         onSent={() => {
           setSafetySheet(null);
           setToast(MEMBER_COPY.reportSent);
@@ -324,7 +328,7 @@ export const RequestsScreen = () => {
         visible={safetySheet === 'block'}
         name={safety?.name ?? ''}
         onClose={() => setSafetySheet(null)}
-        onConfirm={() => blockUser(safety?.userId ?? 0)}
+        onConfirm={() => (safety?.userId != null ? blockUser(safety.userId) : Promise.resolve())}
         onDone={() => {
           setSafetySheet(null);
           void refresh();
@@ -382,7 +386,9 @@ const RequestCard = ({
           </>
         ) : null}
         <Text style={styles.label}>{APPROVAL_COPY.party}</Text>
-        <Text style={styles.body}>{partyLine(request)}</Text>
+        <View style={styles.partyPill} testID="party-pill">
+          <Text style={styles.partyPillText}>{partyLine(request)}</Text>
+        </View>
         {(request.party.members ?? []).map((member, index) => (
           <View key={`${member.name}-${index}`} style={styles.memberRow}>
             <Text style={styles.memberName}>{member.name}</Text>
@@ -541,6 +547,8 @@ const styles = StyleSheet.create({
   churchTagText: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.primary },
   more: { position: 'absolute', top: 10, right: 10, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)' },
   cardBody: { padding: 16, gap: 6 },
+  partyPill: { alignSelf: 'flex-start', backgroundColor: '#a2033f', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  partyPillText: { fontFamily: appTypography.bodySemibold, fontSize: 14, lineHeight: 20, color: '#ffffff' },
   memberRow: { gap: 2, paddingVertical: 4 },
   memberName: { fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   noFit: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fde8e8', borderRadius: 12, padding: 10, marginTop: 8 },
@@ -573,7 +581,7 @@ const styles = StyleSheet.create({
   counter: { alignSelf: 'flex-end', fontFamily: appTypography.bodyRegular, fontSize: 12.5, color: appColors.mutedInk },
   listWrap: { gap: 12 },
   tabs: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 12, padding: 4 },
-  tab: { flex: 1, minHeight: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  tab: { flex: 1, minHeight: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   tabOn: { borderWidth: 1, borderColor: appColors.line },
   tabText: { fontFamily: appTypography.bodyMedium, color: appColors.mutedInk },
   tabTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },

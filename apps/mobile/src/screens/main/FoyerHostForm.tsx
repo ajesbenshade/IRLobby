@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.background,
   },
   navTitle: { flex: 1, textAlign: 'center', fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink },
-  topButton: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
+  topButton: { minHeight: 48, minWidth: 48, justifyContent: 'center' },
   topAction: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.primary },
   content: { padding: 20, gap: 14, paddingBottom: 48 },
   cover: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
   ageRow: { flexDirection: 'row', gap: 12 },
   ageCell: { flex: 1 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 56 },
   checkLabel: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   warn: { backgroundColor: appColors.warnBg, borderRadius: radii.list, padding: 12 },
   warnText: { color: appColors.warnText, fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18 },

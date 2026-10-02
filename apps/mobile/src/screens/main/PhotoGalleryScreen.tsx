@@ -20,7 +20,7 @@ import { PhotoDownloadUnavailableError, type DownloadablePhoto } from '@services
 import { canReport, submitReport, type ReportTarget } from '@services/reportAdapter';
 import { appColors, appTypography } from '@theme/index';
 
-/** `ownerId` is only present once the backend exposes who uploaded a photo; without it Report is not offered (gap). */
+/** `ownerId` is only used for the fallback when the photo-report endpoint is not deployed (404); Report is gated on the photo id. */
 type GalleryPhoto = { id: number | null; url: string; ownerId: number | string | null };
 
 type PhotoPayload = {

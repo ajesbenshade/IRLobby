@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Switch, Text } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text } from 'react-native';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -25,15 +25,16 @@ import {
 } from '@services/pushNotificationService';
 import { appColors, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
-import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
+import { LegalConsentText } from '@components/foyer/LegalConsentText';
+import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
+import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
+import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 
 import { VibeQuizScreen } from './vibeQuiz/VibeQuizScreen';
 
 // First-session onboarding: location → vibe → notifications.
 // Profile photo is deferred to Profile completion after first value.
 const STEP_ORDER = ['location', 'preferences', 'notifications'] as const;
-const TERMS_URL = 'https://irlobby.com/terms-of-service';
-const PRIVACY_URL = 'https://irlobby.com/privacy-policy';
 
 type OnboardingStepKey = (typeof STEP_ORDER)[number];
 
@@ -91,6 +92,11 @@ export const OnboardingScreen = () => {
   const [locationStatus, setLocationStatus] = useState<'idle' | 'granted' | 'denied'>('idle');
   const [enableNotifications, setEnableNotifications] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const legalLinks = useAppConfig();
+  const legalSheet = useLegalSheet();
+  useEffect(() => {
+    void refreshAppConfig();
+  }, []);
 
   const resolveInitialStep = (nextUser: typeof user): OnboardingStepKey => {
     if (!nextUser) {
@@ -223,19 +229,12 @@ export const OnboardingScreen = () => {
     await saveOnboardingStep({ city: nextCity }, 'preferences');
   };
 
-  const openLegalUrl = (url: string) => {
-    if (!isAllowedIrlobbyUrl(url)) {
-      return;
-    }
-    void Linking.openURL(url).catch(() => undefined);
-  };
-
   const handleNotificationsContinue = async () => {
     notificationsMutation.reset();
     setStepError(null);
 
     if (!acceptedLegal) {
-      setStepError('Accept the Terms of Service and Privacy Policy to enter the app.');
+      setStepError(LEGAL_CONSENT_COPY.onboardingRequired);
       return;
     }
 
@@ -347,17 +346,13 @@ export const OnboardingScreen = () => {
           <View style={[styles.checkBox, acceptedLegal ? styles.checkBoxOn : null]}>
             {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
           </View>
-          <Text style={styles.legalText}>
-            I agree to the{' '}
-            <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
-              Terms of Service
-            </Text>{' '}
-            and{' '}
-            <Text style={styles.legalLink} onPress={() => openLegalUrl(PRIVACY_URL)}>
-              Privacy Policy
-            </Text>
-            .
-          </Text>
+          <LegalConsentText
+            variant="checkbox"
+            termsUrl={legalLinks.termsUrl}
+            privacyUrl={legalLinks.privacyUrl}
+            onOpen={legalSheet.open}
+            style={styles.legalText}
+          />
         </Pressable>
         {!acceptedLegal ? (
           <Text style={styles.hintText}>
@@ -365,6 +360,7 @@ export const OnboardingScreen = () => {
           </Text>
         ) : null}
       </View>
+      {legalSheet.element}
     </PanelCard>
   );
 
@@ -471,8 +467,9 @@ const styles = StyleSheet.create({
   },
   legalRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
+    minHeight: 48,
   },
   checkBox: {
     width: 22,
@@ -483,7 +480,6 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.cardStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
   },
   checkBoxOn: {
     backgroundColor: appColors.primary,
@@ -498,10 +494,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: appColors.mutedInk,
     lineHeight: 20,
-  },
-  legalLink: {
-    color: appColors.primaryGlow,
-    fontWeight: '600',
   },
   hintText: {
     color: appColors.mutedInk,

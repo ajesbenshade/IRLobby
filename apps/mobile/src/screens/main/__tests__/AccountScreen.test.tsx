@@ -44,8 +44,11 @@ describe('AccountScreen (delete account)', () => {
     renderScreen();
     expect(screen.getByText(DELETE_ACCOUNT_COPY.screenBody)).toBeTruthy();
     expect(screen.getByText('Photos you added')).toBeTruthy();
-    expect(screen.getByText(/up to 30 days/)).toBeTruthy();
-    expect(screen.getByText(/12 months/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'We keep a minimal record of safety reports for up to 12 months so we can protect other members. Backups are cleared within 30 days.',
+      ),
+    ).toBeTruthy();
   });
 
   it('keeps Delete my account locked until DELETE is typed', () => {

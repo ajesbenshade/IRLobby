@@ -16,6 +16,7 @@ import {
   unwrapGoogleAuthPayload,
   wrapGoogleExchangeError,
 } from '@lib/googleAuth';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@constants/churchAdmin';
 import { isAllowedTwitterOAuthUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
@@ -297,6 +298,20 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
   return persistAuthResponse(response.data);
 }
 
+/**
+ * Terms / Privacy acceptance sent with sign-up and social sign-in when the box was checked. The server
+ * records it when it supports these fields and ignores them otherwise, so nothing here can fail a request.
+ */
+export const legalAcceptanceFields = (accepted: boolean | undefined) =>
+  accepted
+    ? {
+        terms_accepted: true,
+        privacy_accepted: true,
+        terms_version: TERMS_VERSION,
+        privacy_version: PRIVACY_VERSION,
+      }
+    : {};
+
 export async function register(
   payload: RegisterPayload
 ): Promise<AuthResponse> {
@@ -314,7 +329,7 @@ export async function register(
     last_name: payload.lastName,
     ...(payload.dateOfBirth ? { date_of_birth: payload.dateOfBirth } : {}),
     ...(payload.sex ? { sex: payload.sex } : {}),
-    ...(payload.termsAccepted ? { terms_accepted: true, privacy_accepted: true } : {}),
+    ...legalAcceptanceFields(payload.termsAccepted),
   };
 
   const response = await api.post<AuthResponse>(
@@ -490,7 +505,8 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 }
 
 export async function loginWithGoogleIdToken(
-  idToken: string
+  idToken: string,
+  options: { acceptedLegal?: boolean } = {}
 ): Promise<AuthResponse> {
   const trimmedToken = typeof idToken === 'string' ? idToken.trim() : '';
   if (!trimmedToken) {
@@ -503,6 +519,7 @@ export async function loginWithGoogleIdToken(
   try {
     const response = await api.post<unknown>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
       id_token: trimmedToken,
+      ...legalAcceptanceFields(options.acceptedLegal),
     });
     const payload = unwrapGoogleAuthPayload(response.data);
     return persistAuthResponse(payload as unknown as AuthResponse);
@@ -518,6 +535,8 @@ export type AppleSignInPayload = {
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  /** True when the person ticked the Terms / Privacy box on this screen. */
+  acceptedLegal?: boolean;
 };
 
 /**
@@ -532,6 +551,7 @@ export function buildAppleAuthBody(payload: AppleSignInPayload) {
     email: payload.email,
     first_name: payload.firstName,
     last_name: payload.lastName,
+    ...legalAcceptanceFields(payload.acceptedLegal),
   };
 }
 

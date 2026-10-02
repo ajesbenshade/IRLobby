@@ -193,6 +193,6 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: appColors.primary, borderColor: appColors.primary },
   chipOff: { opacity: 0.45 },
   chipText: { fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
-  chipTextOn: { color: '#f6f1ee' },
+  chipTextOn: { color: '#ffffff' },
   helper: { fontFamily: appTypography.bodyRegular, fontSize: 12, color: appColors.mutedInk },
 });

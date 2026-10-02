@@ -178,7 +178,9 @@ export const GatheringChatScreen = () => {
         name={target?.name ?? ''}
         onClose={() => setSheet(null)}
         onConfirm={() =>
-          target && target.report.type === 'chat_message' ? blockUser(target.report.senderId) : Promise.resolve()
+          target && target.report.type === 'chat_message' && target.report.senderId != null
+            ? blockUser(target.report.senderId)
+            : Promise.resolve()
         }
         onDone={() => {
           setSheet(null);
@@ -223,10 +225,10 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleMine: { alignSelf: 'flex-end', backgroundColor: appColors.primary },
   bubbleTheirs: { alignSelf: 'flex-start', backgroundColor: appColors.white },
-  more: { alignSelf: 'flex-end', minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
+  more: { alignSelf: 'flex-end', minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   sender: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.mutedInk, marginBottom: 2 },
   bubbleText: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.ink },
-  bubbleTextMine: { color: '#f6f1ee' },
+  bubbleTextMine: { color: '#ffffff' },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12, paddingBottom: 24, backgroundColor: appColors.background },
   input: {
     flex: 1,

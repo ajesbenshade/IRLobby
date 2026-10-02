@@ -60,23 +60,35 @@ describe('app config', () => {
       termsUrl: 'https://example.org/terms',
       privacyUrl: 'https://example.org/privacy',
     });
-    expect(config.adminContactUrl.startsWith('mailto:admin@church.org')).toBe(true);
+    expect(config.adminContactUrl?.startsWith('mailto:admin@church.org')).toBe(true);
     expect(getAppConfig().adminEmail).toBe('admin@church.org');
   });
 
-  it('reads the admin email from church_admin, then support_email, then the bundled constant', () => {
+  it('reads the admin email from church_admin, then support_email, then nothing (no bundled address)', () => {
     expect(resolveAppConfig({ church_admin: { email: 'a@b.org' }, support_email: 'help@b.org' }).adminEmail).toBe('a@b.org');
     expect(resolveAppConfig({ church_admin: null, support_email: 'help@b.org' }).adminEmail).toBe('help@b.org');
-    expect(resolveAppConfig({ church_admin: { email: null }, support_email: null }).adminEmail).toBe(BUNDLED_APP_CONFIG.adminEmail);
-    expect(resolveAppConfig({}).adminContactUrl).toBe(BUNDLED_APP_CONFIG.adminContactUrl);
+    expect(resolveAppConfig({ church_admin: { email: null }, support_email: null }).adminEmail).toBeNull();
+    expect(resolveAppConfig({ church_admin: null, support_email: null }).adminContactUrl).toBeNull();
+    expect(resolveAppConfig({}).adminContactUrl).toBeNull();
+    expect(BUNDLED_APP_CONFIG.adminEmail).toBeNull();
+    expect(JSON.stringify(BUNDLED_APP_CONFIG)).not.toContain('support@irlobby.com');
   });
 
-  it('keeps bundled values for null, partial, malformed or non-https fields', () => {
+  it('uses https://irlobby.com/terms and /privacy as the bundled fallback links', () => {
+    expect(BUNDLED_APP_CONFIG.termsUrl).toBe('https://irlobby.com/terms');
+    expect(BUNDLED_APP_CONFIG.privacyUrl).toBe('https://irlobby.com/privacy');
+  });
+
+  it('hides a legal link when the server sends null, junk or a non-https value; keeps the fallback only when the field is absent', () => {
     expect(resolveAppConfig({ terms_url: 'http://insecure.example/terms', privacy_url: 'javascript:alert(1)' })).toMatchObject({
-      termsUrl: BUNDLED_APP_CONFIG.termsUrl,
-      privacyUrl: BUNDLED_APP_CONFIG.privacyUrl,
+      termsUrl: null,
+      privacyUrl: null,
     });
-    expect(resolveAppConfig({ church_admin: { email: 'not an email' } }).adminEmail).toBe(BUNDLED_APP_CONFIG.adminEmail);
+    expect(resolveAppConfig({ terms_url: null, privacy_url: 'https://irlobby.com/privacy' })).toMatchObject({
+      termsUrl: null,
+      privacyUrl: 'https://irlobby.com/privacy',
+    });
+    expect(resolveAppConfig({ church_admin: { email: 'not an email' } }).adminEmail).toBeNull();
     expect(resolveAppConfig(null)).toEqual(BUNDLED_APP_CONFIG);
     expect(resolveAppConfig({ terms_url: 'https://example.org/t' }).privacyUrl).toBe(BUNDLED_APP_CONFIG.privacyUrl);
   });

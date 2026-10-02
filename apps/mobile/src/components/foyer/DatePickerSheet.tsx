@@ -186,7 +186,12 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
               </>
             ) : (
               <>
-                {mode === 'birthdate' ? (
+                {mode === 'birthdate' && underAge ? (
+                  <View style={styles.underAge} accessibilityRole="alert" testID="picker-under13">
+                    <MaterialCommunityIcons name="alert-circle-outline" size={20} color={ERROR_INK} />
+                    <Text style={styles.underAgeText}>{PICKER_COPY.under13}</Text>
+                  </View>
+                ) : mode === 'birthdate' ? (
                   <Text accessibilityLiveRegion="polite" style={[styles.readout, selectedDay ? null : styles.readoutEmpty]}>
                     {selectedDay ? formatDayWithWeekday(selectedDay) : PICKER_COPY.pickADay}
                   </Text>
@@ -201,12 +206,6 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
                   onSelect={setSelectedDay}
                   now={now}
                 />
-                {underAge ? (
-                  <View style={styles.underAge} accessibilityRole="alert">
-                    <MaterialCommunityIcons name="alert-circle-outline" size={20} color={ERROR_INK} />
-                    <Text style={styles.underAgeText}>{PICKER_COPY.under13}</Text>
-                  </View>
-                ) : null}
                 {mode === 'birthdate' ? <Text style={styles.caption}>{PICKER_COPY.birthCaption}</Text> : null}
               </>
             )}
@@ -266,6 +265,7 @@ export const DayGrid = ({ month, limits, selected, onMonthChange, onHeaderPress,
           style={styles.monthHeader}
         >
           <Text style={styles.monthHeaderText}>{formatMonthHeader(month)}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={22} color={appColors.primary} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -466,9 +466,19 @@ const styles = StyleSheet.create({
   done: { flex: 1 },
   grid: { gap: 8 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  chevron: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  monthHeader: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  monthHeaderText: { fontFamily: appTypography.heading, fontSize: 18, lineHeight: 26, color: appColors.ink, textAlign: 'center' },
+  chevron: { minWidth: 48, minHeight: 48, borderRadius: 24, backgroundColor: appColors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  monthHeader: {
+    flex: 1,
+    minHeight: 48,
+    marginHorizontal: 8,
+    borderRadius: 24,
+    backgroundColor: appColors.primarySoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  monthHeaderText: { fontFamily: appTypography.heading, fontSize: 18, lineHeight: 26, color: appColors.primary, textAlign: 'center' },
   weekRow: { flexDirection: 'row' },
   weekday: { flex: 1, textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodySemibold, fontSize: 12 },
   dayWrap: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -478,7 +488,7 @@ const styles = StyleSheet.create({
   daySelected: { backgroundColor: appColors.primary },
   dayText: { color: appColors.ink, fontFamily: appTypography.bodyMedium, fontSize: 16 },
   dayDisabled: { color: '#cec8c4' },
-  daySelectedText: { color: '#f6f1ee', fontFamily: appTypography.bodySemibold },
+  daySelectedText: { color: '#ffffff', fontFamily: appTypography.bodySemibold },
   wheelRow: { flexDirection: 'row', gap: 12 },
   wheelColumn: { flex: 1 },
   wheelScroll: { height: WHEEL_ROW_HEIGHT * 5 },
@@ -513,7 +523,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 12,
+    marginBottom: 4,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 999,

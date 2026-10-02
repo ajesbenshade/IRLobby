@@ -7,6 +7,7 @@ import { Text } from 'react-native-paper';
 
 import { AppScrollView } from '@components/AppChrome';
 import { FoyerHeader } from '@components/FoyerHeader';
+import { GRAYSCALE_IMAGE_STYLE } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import {
   coverPhotoUrl,
@@ -164,7 +165,8 @@ const Section = ({
       const photo = coverPhotoUrl(row);
       const tag = rowTag(row);
       const cancelled = tag === 'cancelled';
-      const summaryText = summary(row);
+      // On a cancelled row the tag replaces the going count / "You" line.
+      const summaryText = cancelled ? '' : summary(row);
       return (
         <Pressable
           key={String(row.id)}
@@ -173,9 +175,9 @@ const Section = ({
           style={styles.card}
         >
           {photo ? (
-            <Image source={{ uri: photo }} style={[styles.thumb, cancelled ? styles.thumbCancelled : null]} />
+            <Image source={{ uri: photo }} style={[styles.thumb, cancelled ? GRAYSCALE_IMAGE_STYLE : null]} />
           ) : (
-            <View style={[styles.thumb, cancelled ? styles.thumbCancelled : null]} />
+            <View style={[styles.thumb, cancelled ? GRAYSCALE_IMAGE_STYLE : null]} />
           )}
           <View style={styles.cardCopy}>
             <Text style={[styles.cardTitle, cancelled ? styles.mutedText : null]}>{row.title}</Text>
@@ -192,7 +194,7 @@ const Section = ({
           </View>
           {showChat(row) ? (
             <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={() => onChat(row)} style={[styles.chat, cancelled ? styles.chatMuted : null]}>
-              <Text maxFontSizeMultiplier={1.4} style={[styles.chatText, cancelled ? styles.mutedText : null]}>Chat</Text>
+              <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
             </Pressable>
           ) : null}
         </Pressable>
@@ -226,13 +228,12 @@ const styles = StyleSheet.create({
   tagText: { fontFamily: appTypography.bodySemibold, fontSize: 12, lineHeight: 16 },
   struck: { textDecorationLine: 'line-through', color: '#7a7572' },
   mutedText: { color: '#7a7572' },
-  thumbCancelled: { opacity: 0.4 },
-  chatMuted: { backgroundColor: '#efe9e5' },
+  chatMuted: { backgroundColor: appColors.white, borderWidth: 1.5, borderColor: appColors.primary },
   // No paddingBottom here: AppScrollView adds tab bar height + safe area + 16 inside the tabs.
   container: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
   title: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 12, padding: 4 },
-  segmentItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
+  segmentItem: { flex: 1, minHeight: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
   segmentOn: { backgroundColor: appColors.white, borderWidth: 1, borderColor: appColors.line },
   segmentText: { fontFamily: appTypography.bodyMedium, color: appColors.mutedInk },
   segmentTextOn: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
@@ -256,7 +257,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     alignSelf: 'center',
-    minHeight: 36,
+    minHeight: 48,
+    minWidth: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

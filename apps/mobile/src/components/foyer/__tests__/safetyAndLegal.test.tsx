@@ -3,13 +3,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import { collapseBlockedMessages } from '@foyer/gatheringChat';
 import { GATHERING_CHAT_COPY } from '@constants/foyerCopy';
+import { StyleSheet } from 'react-native';
+import { LegalConsentText } from '../LegalConsentText';
 import { LegalWebViewSheet } from '../LegalWebViewSheet';
 import { ReportSheet } from '../SafetySheets';
 
 jest.mock('@expo/vector-icons', () => ({ MaterialCommunityIcons: 'MaterialCommunityIcons' }));
-jest.mock('@services/appConfig', () => ({
-  useAppConfig: () => ({ adminContactUrl: 'mailto:admin@church.org' }),
-}));
 
 describe('ReportSheet', () => {
   it('disables Submit until a reason is picked, then shows the Report sent confirmation', async () => {
@@ -17,7 +16,8 @@ describe('ReportSheet', () => {
     const onSent = jest.fn();
     render(<ReportSheet visible name="Maria" onClose={jest.fn()} onSubmit={onSubmit} onSent={onSent} />);
     expect(screen.getByText("Tell the church admins what's wrong. Maria won't be told.")).toBeTruthy();
-    expect(screen.getByText('Something urgent? Contact the church admins.')).toBeTruthy();
+    expect(screen.queryByText('Something urgent? Contact the church admins.')).toBeNull();
+    expect(screen.queryByTestId('report-admin-contact')).toBeNull();
     fireEvent.press(screen.getByLabelText('Spam or a fake account'));
     fireEvent.press(screen.getByLabelText('Submit report'));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ reason: 'spam', description: undefined }));
@@ -72,5 +72,32 @@ describe('LegalWebViewSheet', () => {
     expect(screen.getByText('Check your connection and try again.')).toBeTruthy();
     fireEvent.press(screen.getByTestId('legal-done'));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('LegalConsentText', () => {
+  it('reads "I agree to the Terms of Use and Privacy Policy." with burgundy underlined links that open the sheet', () => {
+    const onOpen = jest.fn();
+    const { toJSON } = render(
+      <LegalConsentText termsUrl="https://irlobby.com/terms" privacyUrl="https://irlobby.com/privacy" onOpen={onOpen} />,
+    );
+    expect(JSON.stringify(toJSON())).toContain('I agree to the ');
+    const terms = screen.getByText('Terms of Use');
+    const style = StyleSheet.flatten(terms.props.style);
+    expect(style.color).toBe('#a2033f');
+    expect(style.textDecorationLine).toBe('underline');
+    fireEvent.press(terms);
+    expect(onOpen).toHaveBeenCalledWith('https://irlobby.com/terms', 'Terms of Use');
+    fireEvent.press(screen.getByText('Privacy Policy'));
+    expect(onOpen).toHaveBeenCalledWith('https://irlobby.com/privacy', 'Privacy Policy');
+  });
+
+  it('draws a name as plain text when its URL is null', () => {
+    const onOpen = jest.fn();
+    render(<LegalConsentText termsUrl={null} privacyUrl="https://irlobby.com/privacy" onOpen={onOpen} />);
+    expect(screen.queryByText('Terms of Use')).toBeNull(); // not its own link element
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    fireEvent.press(screen.getByText('Privacy Policy'));
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

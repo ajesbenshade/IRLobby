@@ -22,7 +22,8 @@ import { registrationFieldError } from '@foyer/logic';
 import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
-import { LEGAL_VIEW_COPY } from '@constants/foyerCopy';
+import { LegalConsentText } from '@components/foyer/LegalConsentText';
+import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -117,7 +118,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
     error: googleError,
   } = useMutation({
     mutationFn: async (idToken: string) => {
-      const result = await signInWithGoogleIdToken(idToken);
+      const result = await signInWithGoogleIdToken(idToken, { acceptedLegal });
       await persistLegalAcceptance();
       return result;
     },
@@ -150,6 +151,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
+        acceptedLegal,
       });
       await persistLegalAcceptance();
       return result;
@@ -278,21 +280,17 @@ export const RegisterScreen = ({ navigation }: Props) => {
           <View style={[styles.checkBox, acceptedLegal ? styles.checkBoxOn : null]}>
             {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
           </View>
-          <Text style={styles.legalText}>
-            {authCopy.register.legalPrefix}{' '}
-            <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.termsUrl, LEGAL_VIEW_COPY.termsTitle)}>
-              {authCopy.register.legalTerms}
-            </Text>
-            {authCopy.register.legalAnd}
-            <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)}>
-              {authCopy.register.legalPrivacy}
-            </Text>
-            {authCopy.register.legalSuffix}
-          </Text>
+          <LegalConsentText
+            variant="checkbox"
+            termsUrl={legal.termsUrl}
+            privacyUrl={legal.privacyUrl}
+            onOpen={legalSheet.open}
+            style={styles.legalText}
+          />
         </Pressable>
 
         {!acceptedLegal ? (
-          <Text style={styles.hintText}>{authCopy.register.legalRequired}</Text>
+          <Text style={styles.hintText}>{LEGAL_CONSENT_COPY.signUpRequired}</Text>
         ) : null}
 
         <AppButton onPress={handleSubmit} disabled={!isFormValid || isBusy} loading={isPending}>
@@ -351,9 +349,10 @@ const styles = StyleSheet.create({
   },
   legalRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
     marginTop: 4,
+    minHeight: 48,
   },
   checkBox: {
     width: 22,
@@ -364,7 +363,6 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.cardStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
   },
   checkBoxOn: {
     backgroundColor: appColors.primary,
@@ -379,10 +377,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: appColors.mutedInk,
     lineHeight: 20,
-  },
-  legalLink: {
-    color: appColors.primaryGlow,
-    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',

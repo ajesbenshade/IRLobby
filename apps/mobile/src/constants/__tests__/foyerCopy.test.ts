@@ -50,16 +50,18 @@ describe('account deletion and safety copy', () => {
 
   it('states the approved retention periods in one place', () => {
     const text = JSON.stringify(copy.DELETE_ACCOUNT_COPY);
-    expect(text).toContain('up to 30 days');
+    expect(copy.DELETE_ACCOUNT_COPY.retention).toBe(
+      'We keep a minimal record of safety reports for up to 12 months so we can protect other members. Backups are cleared within 30 days.',
+    );
     expect(text).toContain('12 months');
-    expect(text).toMatch(/who reported, a reference to the content, the reason and the date/);
+    expect(text).toContain('30 days');
   });
 
   it('has the full and approval strings', () => {
     expect(copy.FULL_COPY.notice).toBe('This gathering is full.');
     expect(copy.APPROVAL_COPY.requestToJoin).toBe('Request to join');
     expect(copy.APPROVAL_COPY.closedTitle).toBe('Request closed');
-    expect(copy.ACCOUNT_SAFETY_COPY.reportHelp).toMatch(/church admins/);
+    expect((copy.ACCOUNT_SAFETY_COPY as Record<string, unknown>).reportHelp).toBeUndefined();
   });
 
   it('lists visibility Only me, Friends, People in my church, Public', () => {

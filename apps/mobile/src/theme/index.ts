@@ -68,6 +68,7 @@ export const appTypography = {
   bodyRegular: typographyTokens.bodyRegular,
   bodyMedium: typographyTokens.bodyMedium,
   bodySemibold: typographyTokens.bodySemibold,
+  bodyBold: typographyTokens.bodyBold,
   display: typographyTokens.display,
 } as const;
 

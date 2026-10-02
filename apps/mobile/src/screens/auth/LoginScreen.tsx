@@ -28,7 +28,7 @@ import { appColors, appTypography, loginGradients, spacing } from '@theme/index'
 import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
-import { LEGAL_VIEW_COPY } from '@constants/foyerCopy';
+import { LegalConsentText } from '@components/foyer/LegalConsentText';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -298,17 +298,14 @@ export const LoginScreen = ({ navigation }: Props) => {
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.legalText}>
-                {authCopy.login.legalPrefix}{' '}
-                <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.termsUrl, LEGAL_VIEW_COPY.termsTitle)}>
-                  {authCopy.login.legalTerms}
-                </Text>
-                {authCopy.login.legalAnd}
-                <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)}>
-                  {authCopy.login.legalPrivacy}
-                </Text>
-                {authCopy.login.legalSuffix}
-              </Text>
+              <LegalConsentText
+                variant="footer"
+                termsUrl={legal.termsUrl}
+                privacyUrl={legal.privacyUrl}
+                onOpen={legalSheet.open}
+                style={styles.legalText}
+                linkStyle={styles.legalLink}
+              />
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={authCopy.login.footerCta}

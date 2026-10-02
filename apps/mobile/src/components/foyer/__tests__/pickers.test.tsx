@@ -115,6 +115,9 @@ describe('DatePickerSheet age and future-month rules (injected today)', () => {
   it('one day younger than 13 shows the pill and keeps Confirm disabled', () => {
     const onDone = openBirth({ year: 2013, month: 10, day: 3 });
     expect(screen.getByText('Accounts are not available under age 13.')).toBeTruthy();
+    // The message replaces the date readout instead of sitting under the grid.
+    expect(screen.queryByText(/Thursday|Friday|Saturday|Sunday|Monday|Tuesday|Wednesday/)).toBeNull();
+    expect(screen.queryByText('Pick a day')).toBeNull();
     expect(screen.getByTestId('picker-confirm').props.accessibilityState?.disabled).toBe(true);
     expect(onDone).not.toHaveBeenCalled();
   });

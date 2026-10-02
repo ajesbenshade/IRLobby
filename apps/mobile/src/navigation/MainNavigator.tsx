@@ -222,18 +222,24 @@ export const MainNavigator = () => (
       initialParams={{ title: 'Help & Support', url: 'https://irlobby.com/help-support' }}
       options={{ title: 'Help & Support' }}
     />
-    <Stack.Screen
-      name="PrivacyPolicy"
-      component={WebContentScreen}
-      initialParams={{ title: 'Privacy Policy', url: 'https://irlobby.com/privacy-policy' }}
-      options={{ title: 'Privacy Policy' }}
-    />
-    <Stack.Screen
-      name="TermsOfService"
-      component={WebContentScreen}
-      initialParams={{ title: 'Terms of Service', url: 'https://irlobby.com/terms-of-service' }}
-      options={{ title: 'Terms of Service' }}
-    />
+    {/* Foyer mode shows Terms and Privacy through the config-driven web view sheet (Profile, sign-up,
+        onboarding). These hosted-page routes only exist for the legacy irlobby mode. */}
+    {!isFoyerMode() ? (
+      <>
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={WebContentScreen}
+          initialParams={{ title: 'Privacy Policy', url: 'https://irlobby.com/privacy-policy' }}
+          options={{ title: 'Privacy Policy' }}
+        />
+        <Stack.Screen
+          name="TermsOfService"
+          component={WebContentScreen}
+          initialParams={{ title: 'Terms of Service', url: 'https://irlobby.com/terms-of-service' }}
+          options={{ title: 'Terms of Service' }}
+        />
+      </>
+    ) : null}
     <Stack.Screen
       name="WebContent"
       component={WebContentScreen}

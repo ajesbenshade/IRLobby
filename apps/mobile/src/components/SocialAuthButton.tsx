@@ -73,7 +73,7 @@ export const SocialAuthButton = ({
     appearance === 'onLight' || provider === 'google'
       ? 'light'
       : provider === 'email'
-        ? 'coral'
+        ? 'burgundy'
         : 'dark';
   const spinnerColor = tone === 'light' ? appColors.primary : appColors.white;
   const iconColor = tone === 'light' ? appColors.ink : appColors.white;
@@ -90,7 +90,7 @@ export const SocialAuthButton = ({
         styles.base,
         tone === 'dark' ? styles.dark : null,
         tone === 'light' ? styles.light : null,
-        tone === 'coral' ? styles.coral : null,
+        tone === 'burgundy' ? styles.burgundy : null,
         isDisabled && !loading ? styles.disabled : null,
         pressed && !isDisabled ? styles.pressed : null,
         style,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: appColors.lineStrong,
   },
-  coral: {
+  burgundy: {
     backgroundColor: appColors.primary,
   },
   disabled: {

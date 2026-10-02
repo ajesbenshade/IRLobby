@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { CREAM, SwipeActionButtons } from '../SwipeActionButtons';
+import { SwipeActionButtons } from '../SwipeActionButtons';
 
 describe('SwipeActionButtons', () => {
   it('renders real Pass and I\'m going buttons that call their handlers', () => {
@@ -17,7 +17,7 @@ describe('SwipeActionButtons', () => {
     expect(onGoing).toHaveBeenCalledTimes(1);
   });
 
-  it('styles Pass as an outlined ink pill and I\'m going as a solid burgundy pill with cream text', () => {
+  it('styles Pass as an outlined ink pill and I\'m going as a solid burgundy pill with pure white text', () => {
     render(<SwipeActionButtons onPass={jest.fn()} onGoing={jest.fn()} />);
 
     const pass = StyleSheet.flatten(screen.getByRole('button', { name: 'Pass' }).props.style);
@@ -30,8 +30,7 @@ describe('SwipeActionButtons', () => {
     expect(going.backgroundColor).toBe('#a2033f');
 
     const goingLabel = StyleSheet.flatten(screen.getByText("I'm going").props.style);
-    expect(goingLabel.color).toBe(CREAM);
-    expect(CREAM).toBe('#f6f1ee');
+    expect(goingLabel.color).toBe('#ffffff');
     expect(StyleSheet.flatten(screen.getByText('Pass').props.style).color).toBe('#222222');
   });
 

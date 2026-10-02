@@ -1,52 +1,62 @@
+import { api } from './apiClient';
 import { reportMember } from './foyerService';
 
 /**
  * Single seam for every "Report" affordance in the app.
  *
- * TODAY the backend only has USER reports (POST /api/users/<id>/report/, POST /api/moderation/report/ and
- * POST /api/messages/direct/<conv_id>/report/). Reporting a gathering-chat message, an event photo or a
- * gathering itself will get its own endpoint with a `target_type` / `target_id` shape that is not final.
- * Until then those targets are reported AGAINST THE PERSON (sender / owner) through the user-report endpoint,
- * with the context folded into `description`. When the new endpoints ship, change `submitReport` only.
+ * Content is reported against the CONTENT, not the person, through the target-specific endpoints
+ * (all need login; body `{ reason?, description? }` up to 500 chars; 201 `{ id, status: 'pending',
+ * target_type, target_id }`, or 200 with the same shape when it was already reported; 400 for your own):
+ *   gathering chat message  POST /api/activities/<id>/chat/<message_id>/report/   (403 without chat access)
+ *   event photo             POST /api/activities/<id>/photos/<photo_id>/report/
+ *   gathering               POST /api/activities/<id>/report/
+ *   requester card          POST /api/activities/<id>/requests/<request_id>/report/   (host / staff only)
+ * People (profiles, attendees, 1:1 chat) still go through the user-report / direct-chat endpoints.
+ *
+ * If a content endpoint answers 404 (backend not deployed yet) the report falls back to the old user-report
+ * endpoint, with the context folded into `description`, and ONLY when the person is known.
  */
 export type ReportTarget =
   | { type: 'member'; userId: number | string }
   | { type: 'attendee'; userId: number | string }
-  | { type: 'join_request'; userId: number | string; activityId?: number | string }
-  | { type: 'chat_message'; senderId: number | string; messageId?: number | string; activityId?: number | string; excerpt?: string }
+  | { type: 'join_request'; userId?: number | string | null; requestId?: number | string | null; activityId?: number | string }
+  | { type: 'chat_message'; senderId?: number | string | null; messageId?: number | string; activityId?: number | string; excerpt?: string }
   | { type: 'photo'; ownerId?: number | string | null; photoId?: number | string | null; activityId?: number | string }
   | { type: 'gathering'; hostId?: number | string | null; activityId?: number | string };
 
-export type ReportSupport = 'user_report' | 'gap';
+export type ReportSupport = 'content_report' | 'user_report' | 'gap';
 
-/** What each target maps to today. `gap` = no way to identify the person, so no Report affordance is shown. */
-export const reportSupportFor = (target: ReportTarget): ReportSupport => {
+/** The content endpoint for a target, or null when the ids it needs are missing. */
+export const contentReportPath = (target: ReportTarget): string | null => {
   switch (target.type) {
-    case 'member':
-    case 'attendee':
-    case 'join_request':
-      return target.userId != null ? 'user_report' : 'gap';
     case 'chat_message':
-      return target.senderId != null ? 'user_report' : 'gap';
+      return target.activityId != null && target.messageId != null
+        ? `/api/activities/${target.activityId}/chat/${target.messageId}/report/`
+        : null;
     case 'photo':
-      return target.ownerId != null ? 'user_report' : 'gap';
+      return target.activityId != null && target.photoId != null
+        ? `/api/activities/${target.activityId}/photos/${target.photoId}/report/`
+        : null;
     case 'gathering':
-      return target.hostId != null ? 'user_report' : 'gap';
+      return target.activityId != null ? `/api/activities/${target.activityId}/report/` : null;
+    case 'join_request':
+      return target.activityId != null && target.requestId != null
+        ? `/api/activities/${target.activityId}/requests/${target.requestId}/report/`
+        : null;
     default:
-      return 'gap';
+      return null;
   }
 };
-
-export const canReport = (target: ReportTarget): boolean => reportSupportFor(target) === 'user_report';
 
 const personOf = (target: ReportTarget): number | string | null => {
   switch (target.type) {
     case 'member':
     case 'attendee':
+      return target.userId ?? null;
     case 'join_request':
-      return target.userId;
+      return target.userId ?? null;
     case 'chat_message':
-      return target.senderId;
+      return target.senderId ?? null;
     case 'photo':
       return target.ownerId ?? null;
     case 'gathering':
@@ -55,6 +65,16 @@ const personOf = (target: ReportTarget): number | string | null => {
       return null;
   }
 };
+
+/** How a target can be reported. `gap` = nothing identifies it, so no Report affordance is shown. */
+export const reportSupportFor = (target: ReportTarget): ReportSupport => {
+  if (contentReportPath(target)) {
+    return 'content_report';
+  }
+  return personOf(target) != null ? 'user_report' : 'gap';
+};
+
+export const canReport = (target: ReportTarget): boolean => reportSupportFor(target) !== 'gap';
 
 /** Context line added to the report so moderators can find the content (only for non-profile targets). */
 export const reportContext = (target: ReportTarget): string => {
@@ -88,11 +108,29 @@ export const reportDescription = (target: ReportTarget, details?: string): strin
   return parts.length ? parts.join('\n') : undefined;
 };
 
-/** Sends the report. Throws when the target cannot be tied to a person (callers should hide the button instead). */
+const isNotFound = (error: unknown) => (error as { response?: { status?: number } })?.response?.status === 404;
+
+/** Sends the report. Throws when nothing identifies the target (callers should hide the button instead). */
 export const submitReport = async (
   target: ReportTarget,
   payload: { reason: string; description?: string },
 ): Promise<void> => {
+  const path = contentReportPath(target);
+  if (path) {
+    const details = payload.description?.trim();
+    try {
+      await api.post(path, {
+        reason: payload.reason,
+        ...(details ? { description: details.slice(0, 500) } : {}),
+      });
+      return;
+    } catch (error) {
+      // Only "not deployed yet" falls back to the person; 400 / 403 / 5xx surface to the sheet.
+      if (!isNotFound(error) || personOf(target) == null) {
+        throw error;
+      }
+    }
+  }
   const person = personOf(target);
   if (person == null) {
     throw new Error('This cannot be reported yet.');

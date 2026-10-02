@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   bubbleMine: { alignSelf: 'flex-end', backgroundColor: appColors.primary },
   bubbleTheirs: { alignSelf: 'flex-start', backgroundColor: appColors.white },
   bubbleText: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 21, color: appColors.ink },
-  bubbleTextMine: { color: '#f6f1ee' },
+  bubbleTextMine: { color: '#ffffff' },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12, paddingBottom: 24, backgroundColor: appColors.background },
   input: {
     flex: 1,

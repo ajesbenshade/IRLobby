@@ -4,7 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { Avatar, PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { ATTENDEE_COPY } from '@constants/foyerCopy';
+import { ATTENDEE_COPY, CANCEL_COPY } from '@constants/foyerCopy';
 import { ageBandLabel, personRelationshipLine, sanitizeHouseholds, splitVisiblePeople } from '@foyer/attendees';
 import type { HostAttendeesResponse } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
@@ -12,7 +12,16 @@ import { appColors, appTypography, radii } from '@theme/index';
 export const HOST_PREVIEW_LIMIT = 8;
 
 /** Host-only "Who's coming": households, relationship lines and age-band chips. Never contact data. */
-export const HostAttendeesCard = ({ data, hostName }: { data: HostAttendeesResponse; hostName?: string }) => {
+export const HostAttendeesCard = ({
+  data,
+  hostName,
+  cancelled = false,
+}: {
+  data: HostAttendeesResponse;
+  hostName?: string;
+  /** Cancelled gathering: the card reads "Who was invited", "N RSVPed" and "Show N more" (no "going"). */
+  cancelled?: boolean;
+}) => {
   const [expanded, setExpanded] = useState(false);
   const groups = sanitizeHouseholds(data);
   const view = splitVisiblePeople(groups, HOST_PREVIEW_LIMIT, expanded);
@@ -21,14 +30,16 @@ export const HostAttendeesCard = ({ data, hostName }: { data: HostAttendeesRespo
     <View style={styles.card}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
-          {ATTENDEE_COPY.whosComing}
+          {cancelled ? CANCEL_COPY.invitedHeading : ATTENDEE_COPY.whosComing}
         </Text>
         <View style={styles.pill}>
           <MaterialCommunityIcons name="lock-outline" size={14} color={appColors.primary} />
           <Text style={styles.pillText}>{ATTENDEE_COPY.hostOnlyPill}</Text>
         </View>
       </View>
-      <Text style={styles.count}>{ATTENDEE_COPY.goingCount(data.going_count)}</Text>
+      <Text style={styles.count}>
+        {cancelled ? CANCEL_COPY.rsvpedCount(data.going_count) : ATTENDEE_COPY.goingCount(data.going_count)}
+      </Text>
       {view.groups.map((group, index) => (
         <View key={`${group.name}-${index}`} style={styles.group}>
           <Text style={styles.groupName}>{group.name}</Text>
@@ -51,7 +62,7 @@ export const HostAttendeesCard = ({ data, hostName }: { data: HostAttendeesRespo
         </View>
       ))}
       {view.hidden > 0 ? (
-        <PillButton label={ATTENDEE_COPY.showMore(view.hidden)} variant="text" onPress={() => setExpanded(true)} />
+        <PillButton label={cancelled ? ATTENDEE_COPY.showMorePast(view.hidden) : ATTENDEE_COPY.showMore(view.hidden)} variant="text" onPress={() => setExpanded(true)} />
       ) : null}
       <Text style={styles.caption}>{ATTENDEE_COPY.caption}</Text>
     </View>

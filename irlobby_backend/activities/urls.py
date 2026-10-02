@@ -10,6 +10,7 @@ urlpatterns = [
     path("<int:pk>/join/", views.join_activity, name="join-activity"),
     path("<int:pk>/rsvp/", foyer_views.rsvp_activity, name="activity-rsvp"),
     path("<int:pk>/rsvp/cancel/", foyer_views.cancel_rsvp, name="activity-rsvp-cancel"),
+    path("<int:pk>/cancel-event/", foyer_views.cancel_event, name="activity-cancel-event"),
     path("<int:pk>/attendees/", foyer_views.activity_attendees, name="activity-attendees"),
     path("<int:pk>/whos-coming/", foyer_views.whos_coming, name="activity-whos-coming"),
     path(

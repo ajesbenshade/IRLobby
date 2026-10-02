@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -52,7 +54,11 @@ from .public_calendar import (
 )
 from .serializers import ActivitySerializer
 
+logger = logging.getLogger(__name__)
+
 MAX_EVENT_PHOTOS = 50
+MAX_CANCEL_REASON_LENGTH = 280
+CANCELLED_RSVP_ERROR = {"detail": "This gathering was cancelled by the host."}
 
 
 def _display_name(user) -> str:
@@ -397,6 +403,8 @@ def rsvp_activity(request, pk):
 
     with transaction.atomic():
         activity = get_object_or_404(Activity.objects.select_for_update(), pk=pk)
+        if activity.is_cancelled:
+            return Response(CANCELLED_RSVP_ERROR, status=status.HTTP_400_BAD_REQUEST)
         on_date = event_local_date(activity)
         problems = []
         if include_self:
@@ -467,7 +475,7 @@ def cancel_rsvp(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
     if is_activity_host(request.user, activity):
         return Response(
-            {"detail": "Hosts cannot cancel their own gathering this way."},
+            {"detail": "Hosts can't cancel an RSVP; use Cancel this gathering instead."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if activity.time <= timezone.now():
@@ -485,6 +493,100 @@ def cancel_rsvp(request, pk):
         # The card goes back into the deck.
         Swipe.objects.filter(user=request.user, activity=activity).delete()
     return Response({"detail": "RSVP cancelled.", "going_count": confirmed_people_count(activity)})
+
+
+def _notify_cancelled_attendees(activity_id, actor_id, reason):
+    """Push one notification to each confirmed attendee (not the host or whoever cancelled).
+
+    Runs after the cancel transaction commits. Delivery failures never propagate: the
+    push helper logs them and a bad token for one person must not stop the rest.
+    """
+    from users.models import User
+    from users.push_notifications import send_activity_cancelled_notification
+
+    activity = Activity.objects.get(pk=activity_id)
+    recipient_ids = (
+        ActivityParticipant.objects.filter(activity=activity, status="confirmed")
+        .exclude(user_id__in=[activity.host_id, actor_id])
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    for recipient in User.objects.filter(id__in=list(recipient_ids)).order_by("id"):
+        try:
+            send_activity_cancelled_notification(activity, recipient, reason)
+        except Exception:  # pragma: no cover - defensive; send_push_to_user already logs
+            logger.exception(
+                "Cancel notification failed activity_id=%s user_id=%s", activity.id, recipient.id
+            )
+
+
+def _post_cancel_chat_message(activity, sender, reason):
+    """System-style note in every existing gathering chat for this activity."""
+    from chat.models import Conversation, Message
+
+    text = f"{activity.title} was cancelled by the host."
+    if reason:
+        text = f"{text} Reason: {reason}"
+    for conversation in Conversation.objects.filter(match__activity=activity):
+        Message.objects.create(conversation=conversation, sender=sender, text=text)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def cancel_event(request, pk):
+    """Host (or church admin on a church event, or staff) cancels a gathering.
+
+    RSVPs are kept. Idempotent: a second call returns the current state and notifies no one.
+    """
+    user = request.user
+    visible = Activity.objects.filter(Q(is_approved=True) | Q(host=user))
+    if user.is_staff:
+        visible = Activity.objects.all()
+    # 404 for a missing or hidden gathering, before any permission answer.
+    get_object_or_404(visible.distinct(), pk=pk)
+
+    raw_reason = request.data.get("reason", "")
+    if raw_reason is None:
+        raw_reason = ""
+    if not isinstance(raw_reason, str):
+        return Response({"reason": "Reason must be text."}, status=status.HTTP_400_BAD_REQUEST)
+    reason = raw_reason.strip()
+    if len(reason) > MAX_CANCEL_REASON_LENGTH:
+        return Response(
+            {"reason": f"Reason must be {MAX_CANCEL_REASON_LENGTH} characters or fewer."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        activity = Activity.objects.select_for_update().get(pk=pk)
+        if not (user.is_staff or is_activity_host(user, activity)):
+            return Response(
+                {"detail": "Only the host can cancel this gathering."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not activity.is_cancelled:
+            now = timezone.now()
+            if activity.time <= now or (activity.end_time and activity.end_time <= now):
+                return Response(
+                    {"detail": "This gathering has already started, so it can't be cancelled."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            activity.is_cancelled = True
+            activity.cancelled_at = now
+            activity.cancel_reason = reason
+            activity.save(update_fields=["is_cancelled", "cancelled_at", "cancel_reason"])
+            _post_cancel_chat_message(activity, user, reason)
+            transaction.on_commit(lambda: _notify_cancelled_attendees(activity.id, user.id, reason))
+
+    activity = (
+        Activity.objects.select_related("host", "host_church")
+        .prefetch_related("participants__dependents", "photos")
+        .get(pk=pk)
+    )
+    return Response(
+        ActivitySerializer(activity, context={"request": request}).data,
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(["POST"])
@@ -696,7 +798,9 @@ def public_calendar_ics_view(request):
 @permission_classes([AllowAny])
 def public_event_ics_view(request, pk):
     activity = (
-        Activity.objects.filter(pk=pk, list_on_church_calendar=True, calendar_approved=True)
+        Activity.objects.filter(
+            pk=pk, list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
+        )
         .select_related("host", "host_church")
         .first()
     )

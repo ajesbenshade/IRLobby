@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def notify_upcoming_activities():
     now = timezone.now()
     window_end = now + timedelta(hours=1)
-    upcoming = Activity.objects.filter(time__gte=now, time__lte=window_end)
+    upcoming = Activity.objects.filter(time__gte=now, time__lte=window_end, is_cancelled=False)
     participant_count = ActivityParticipant.objects.filter(
         activity__in=upcoming,
         status="confirmed",

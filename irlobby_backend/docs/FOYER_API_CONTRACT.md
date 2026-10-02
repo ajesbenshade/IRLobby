@@ -112,6 +112,10 @@ Response adds:
   "my_rsvp": null,
   "photos": [],
   "platform_fee_percent": "0.00",
+  "is_cancelled": false,
+  "cancelled_at": null,
+  "cancel_reason": "",
+  "status": "active",
   "calendar_links": {
     "ics_url": "https://<host>/api/public/event.ics?token=<signed>",
     "webcal_url": "webcal://<host>/api/public/event.ics?token=<signed>",
@@ -120,6 +124,8 @@ Response adds:
   }
 }
 ```
+
+`is_cancelled`, `cancelled_at` (ISO datetime or `null`), `cancel_reason` (up to 280 characters, `""` if none) and `status` (`"cancelled"` when cancelled, otherwise `"active"`) are read-only and appear in every activity payload (list, detail, hosted, going). See "Cancel a gathering" below.
 
 `audience` chip text: `Everyone`, `Women · 18+` (min ≥ 18 and no max), `Everyone · Ages 6+` (min under 18 and no max), `Everyone · Ages 6–17` (both bounds).
 
@@ -371,6 +377,7 @@ New fields on `GET/PATCH /api/users/profile/` (own profile; also in the login pa
 - `friendship`: `none` | `friends` | `pending_outgoing` | `pending_incoming` | `self`.
 - `email` / `phone` appear only if the owner turned `show_email` / `show_phone` on AND the viewer is inside the owner's level. Levels nest: `public` = any logged-in user; `church` = same church (or accepted friend); `friends` = accepted friends; `only_me` = nobody else.
 - Under-18 accounts are visible only to accepted friends regardless of the setting.
+- The `church` level includes accepted friends: an accepted friend sees a church-level profile even when they are not in the owner's church (or have no church). A non-friend from another church gets 404, and a pending request is not enough.
 - If the viewer is not allowed the full card but could still send a friend request (shared attended event, same church, or a public adult), they get `{ "id", "first_name", "friendship", "visible": false }` so the Add Friend button can work.
 - Otherwise 404. Blocked in either direction → 404. Your own id returns your own `email` and `phone`.
 - Never includes location, family, birth date, username or last name.
@@ -406,9 +413,35 @@ Who may message: accepted friends. If the recipient has `dm_from_shared_events` 
 
 ## Cancel RSVP and clearing a pass
 
-`DELETE /api/activities/<id>/rsvp/cancel/` now also deletes your swipe for that activity, so the card returns to the deck. 400 if the event has started, you are the host, or you have no RSVP.
+`DELETE /api/activities/<id>/rsvp/cancel/` now also deletes your swipe for that activity, so the card returns to the deck. 400 if the event has started, you are the host, or you have no RSVP. For a host the 400 body is `{ "detail": "Hosts can't cancel an RSVP; use Cancel this gathering instead." }`; hosts use `POST /api/activities/<id>/cancel-event/`.
 
 `DELETE /api/swipes/<activity_id>/swipe/` → 200 `{ "deleted": true|false }` (idempotent). 404 only if the activity does not exist.
+
+## Cancel a gathering
+
+`POST /api/activities/<id>/cancel-event/` (auth) body `{ "reason"?: string }` (up to 280 characters, trimmed; optional).
+
+Who: the host, staff, or a church admin on a church-hosted event (the same rule as every other host action). Response: 200 with the full activity payload (same shape as `GET /api/activities/<id>/`), now with:
+
+```json
+{ "id": 12, "is_cancelled": true, "cancelled_at": "2026-10-02T14:00:00Z", "cancel_reason": "Snow storm", "status": "cancelled" }
+```
+
+| Status | When |
+| --- | --- |
+| 200 | Cancelled now, or already cancelled (idempotent: returns the current state and sends nothing again; the first reason and time are kept) |
+| 400 | `reason` is not text or is over 280 characters (`{ "reason": … }`); or the event has already started or ended (`{ "detail": "This gathering has already started, so it can't be cancelled." }`) |
+| 401 | not signed in |
+| 403 | signed in but not the host, staff, or church admin of this event |
+| 404 | the activity does not exist or is not visible to the caller (same visibility as the detail endpoint) |
+
+What happens:
+- RSVPs are kept (nothing is deleted); `my_rsvp` and the going list still show them.
+- Every confirmed attendee except the host and whoever cancelled gets one push notification (`title` "<title> was cancelled", body "<title> was cancelled. Reason: <reason>", data `{ "type": "activity_cancelled", "activityId", "screen": "Activity" }`), including accounts that are going only for a spouse or child. Pending and declined RSVPs are not notified. Sent after the database commit, through the Expo push helper (respects the user's `pushNotifications` preference). There is no separate in-app notification inbox.
+- If a gathering chat already exists, a message "<title> was cancelled by the host. Reason: …" is added to it (sender = the person who cancelled). The chat stays fully open after cancelling: reads and sends (REST and websocket) keep working, so the host can announce a new date.
+- Cancelled gatherings are left out of `GET /api/activities/` (the swipe deck and browse list), `GET /api/public/calendar`, `GET /api/public/calendar.ics` and `GET /api/public/events/<id>.ics` (404). They are still returned by `GET /api/activities/<id>/`, `/hosted/` and `/going/` with `is_cancelled: true`; photos and the signed-token `event.ics` keep working (that file now carries `STATUS:CANCELLED`).
+- New RSVPs (`POST /rsvp/`), legacy `POST /join/`, swipes (`POST /api/swipes/<id>/swipe/`, `POST /api/swipes/`) and ticket purchases on a cancelled gathering → 400.
+- Clients cannot set `is_cancelled`, `cancelled_at` or `cancel_reason` through `PATCH`.
 
 ## Photo downloads
 

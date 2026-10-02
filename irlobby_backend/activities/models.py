@@ -114,6 +114,9 @@ class Activity(models.Model):
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
+    is_cancelled = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.CharField(max_length=280, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, Message
+from .models import Conversation, ConversationUserState, Message
 
 
 @admin.register(Conversation)
@@ -16,3 +16,11 @@ class MessageAdmin(admin.ModelAdmin):
     search_fields = ("sender__username", "text")
     list_filter = ("created_at",)
     raw_id_fields = ("sender", "conversation")
+
+
+@admin.register(ConversationUserState)
+class ConversationUserStateAdmin(admin.ModelAdmin):
+    list_display = ("conversation", "user", "muted", "left")
+    search_fields = ("user__username",)
+    list_filter = ("muted", "left")
+    raw_id_fields = ("conversation", "user")

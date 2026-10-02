@@ -18,6 +18,14 @@ location = /privacy-policy/ {
     try_files /privacy.html @django;
 }
 
+location = /terms {
+    try_files /terms.html @django;
+}
+
+location = /terms/ {
+    try_files /terms.html @django;
+}
+
 location = /support {
     try_files /support.html @django;
 }

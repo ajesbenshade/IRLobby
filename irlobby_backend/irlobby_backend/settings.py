@@ -136,6 +136,11 @@ GOOGLE_IOS_CLIENT_ID = config("GOOGLE_IOS_CLIENT_ID", default="")
 GOOGLE_ANDROID_CLIENT_ID = config("GOOGLE_ANDROID_CLIENT_ID", default="")
 GOOGLE_WEB_CLIENT_ID = config("GOOGLE_WEB_CLIENT_ID", default="")
 APPLE_OAUTH_AUDIENCES = env.list("APPLE_OAUTH_AUDIENCES", default=["com.irlobby.app"])
+# Sign in with Apple token revocation (account deletion). All three must be set for the
+# server to exchange authorization codes and revoke; otherwise that step is skipped.
+APPLE_TEAM_ID = config("APPLE_TEAM_ID", default="")
+APPLE_SIGNIN_KEY_ID = config("APPLE_SIGNIN_KEY_ID", default="")
+APPLE_SIGNIN_PRIVATE_KEY = config("APPLE_SIGNIN_PRIVATE_KEY", default="").replace("\\n", "\n")
 SWIPE_DAILY_LIMIT = config("SWIPE_DAILY_LIMIT", default=500, cast=int)
 
 # Social Account Providers
@@ -309,6 +314,16 @@ FOYER_CHURCH_ADMIN_EMAILS = [
     "ajesbenshade@outlook.com",
     "aesbenshade@dock.org",
 ]
+
+# Sign-up terms: when True, POST /api/users/register/ rejects a missing acceptance.
+REQUIRE_TERMS_ON_REGISTER = config("REQUIRE_TERMS_ON_REGISTER", default=False, cast=bool)
+# Public app config (GET /api/config/). The legal pages are served at irlobby.com.
+FOYER_SUPPORT_EMAIL = config("FOYER_SUPPORT_EMAIL", default="support@irlobby.com")
+FOYER_TERMS_URL = config("FOYER_TERMS_URL", default="https://irlobby.com/terms")
+FOYER_PRIVACY_URL = config("FOYER_PRIVACY_URL", default="https://irlobby.com/privacy")
+FOYER_CHURCH_ADMIN_CONTACT_NAME = config("FOYER_CHURCH_ADMIN_CONTACT_NAME", default="")
+FOYER_CHURCH_ADMIN_CONTACT_EMAIL = config("FOYER_CHURCH_ADMIN_CONTACT_EMAIL", default="")
+FOYER_CHURCH_ADMIN_PHONE = config("FOYER_CHURCH_ADMIN_PHONE", default="")
 
 raw_csrf_origins = config(
     "CSRF_TRUSTED_ORIGINS",

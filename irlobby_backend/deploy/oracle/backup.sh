@@ -63,6 +63,7 @@ tar -cz \
   deploy/oracle/nginx/default.conf.template \
   deploy/oracle/nginx/legal-locations.inc \
   deploy/oracle/legal/privacy.html \
+  deploy/oracle/legal/terms.html \
   deploy/oracle/legal/support.html \
   | encrypt_stream "${BACKUP_DIR}/config_${TIMESTAMP}.tar.gz"
 

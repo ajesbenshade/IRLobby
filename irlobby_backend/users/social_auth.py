@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
+from django.utils import timezone
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import status
@@ -28,6 +29,59 @@ _USERNAME_SANITIZER = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 class SocialAuthConflict(ValueError):
     pass
+
+
+def _truthy(value):
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return value is True or value == 1
+
+
+def legal_acceptance_from_data(data):
+    """Terms/privacy acceptance sent by a client, or {} when it sent nothing.
+
+    Reads terms_accepted / privacy_accepted (also camelCase) and optional
+    terms_version / privacy_version. Older clients send none of them.
+    """
+
+    def pick(*names):
+        for name in names:
+            if name in data:
+                return data.get(name)
+        return None
+
+    def version(*names):
+        value = pick(*names)
+        return value.strip()[:32] if isinstance(value, str) else ""
+
+    return {
+        "terms_accepted": _truthy(pick("terms_accepted", "termsAccepted")),
+        "privacy_accepted": _truthy(pick("privacy_accepted", "privacyAccepted")),
+        "terms_version": version("terms_version", "termsVersion"),
+        "privacy_version": version("privacy_version", "privacyVersion"),
+    }
+
+
+def stamp_legal_acceptance(
+    user, *, terms_accepted=False, privacy_accepted=False, terms_version="", privacy_version=""
+):
+    """Record acceptance once; an earlier timestamp is never overwritten."""
+    now = timezone.now()
+    updates = []
+    if terms_accepted and not user.terms_accepted_at:
+        user.terms_accepted_at = now
+        updates.append("terms_accepted_at")
+        if terms_version:
+            user.terms_version = terms_version
+            updates.append("terms_version")
+    if privacy_accepted and not user.privacy_accepted_at:
+        user.privacy_accepted_at = now
+        updates.append("privacy_accepted_at")
+        if privacy_version:
+            user.privacy_version = privacy_version
+            updates.append("privacy_version")
+    if updates:
+        user.save(update_fields=updates)
 
 
 def _clean_settings_list(name):
@@ -159,6 +213,7 @@ def resolve_or_create_social_user(
     username=None,
     first_name="",
     last_name="",
+    legal=None,
 ):
     normalized_email = normalize_email(email)
     identity = (
@@ -245,6 +300,8 @@ def resolve_or_create_social_user(
         user.save(update_fields=user_updates)
 
     _sync_legacy_oauth_fields(user, provider, provider_user_id)
+    if legal:
+        stamp_legal_acceptance(user, **legal)
 
     return user, user_created
 
@@ -290,15 +347,11 @@ def verify_google_identity_token(id_token_value):
     last_error = None
     candidate_audiences = [token_audience] if token_audience else list(audiences)
     if token_audience:
-        candidate_audiences.extend(
-            audience for audience in audiences if audience != token_audience
-        )
+        candidate_audiences.extend(audience for audience in audiences if audience != token_audience)
 
     for audience in candidate_audiences:
         try:
-            payload = google_id_token.verify_oauth2_token(
-                id_token_value, request_adapter, audience
-            )
+            payload = google_id_token.verify_oauth2_token(id_token_value, request_adapter, audience)
             issuer = payload.get("iss")
             if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
                 raise ValueError("Unexpected Google token issuer")

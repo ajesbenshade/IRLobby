@@ -14,6 +14,7 @@ from urllib.parse import quote, urlencode, urlsplit, urlunsplit
 from django.core.signing import BadSignature, Signer
 from django.utils import timezone
 
+from activities.capacity import is_full
 from activities.eligibility import audience_label, host_display_name
 from activities.models import Activity
 from activities.photos import cover_photo_url
@@ -27,6 +28,7 @@ PUBLIC_EVENT_FIELDS = (
     "audience",
     "description",
     "cover_photo_url",
+    "is_full",
 )
 ICS_PRODID = "-//Franconia Mennonite Church//The Foyer//EN"
 CHURCH_CALENDAR_NAME = "Franconia Mennonite Church – The Foyer"
@@ -41,7 +43,7 @@ def public_calendar_queryset():
             list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
         )
         .select_related("host", "host_church")
-        .prefetch_related("photos")
+        .prefetch_related("photos", "participants__dependents")
         .order_by("time", "id")
     )
 
@@ -61,6 +63,7 @@ def public_event_payload(activity, request=None) -> dict:
         "audience": audience_label(activity),
         "description": activity.description,
         "cover_photo_url": cover_photo_url(activity, request),
+        "is_full": is_full(activity),
     }
 
 

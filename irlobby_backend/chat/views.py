@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from moderation.models import BlockedUser
 from users.push_notifications import send_new_message_notification
+from users.social import blocked_user_ids
 
 from .access import can_read_conversation, can_send_in_conversation
 from .models import Conversation, Message
@@ -58,7 +59,12 @@ class MessageListView(generics.ListCreateAPIView):
         if not _user_can_use_conversation(self.request.user, conversation):
             return Message.objects.none()
 
-        return Message.objects.filter(conversation=conversation).order_by("created_at")
+        messages = Message.objects.filter(conversation=conversation).order_by("created_at")
+        # Messages from people blocked either way are hidden from this viewer.
+        hidden = blocked_user_ids(self.request.user)
+        if hidden:
+            messages = messages.exclude(sender_id__in=hidden)
+        return messages
 
     def perform_create(self, serializer):
         conversation_id = self.kwargs["conversation_id"]

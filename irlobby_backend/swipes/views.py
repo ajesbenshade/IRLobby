@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from activities.capacity import FULL_MESSAGE, is_full_for_newcomer
 from activities.models import Activity
 from chat.models import Conversation
 from matches.models import Match
@@ -31,6 +32,12 @@ class SwipeListView(generics.ListCreateAPIView):
             raise ValidationError({"activity": "This gathering was cancelled by the host."})
         if Swipe.objects.filter(user=self.request.user, activity=activity).exists():
             raise ValidationError({"activity": "Already swiped on this activity"})
+        if (
+            activity is not None
+            and serializer.validated_data.get("direction") == "right"
+            and is_full_for_newcomer(self.request.user, activity)
+        ):
+            raise ValidationError({"detail": FULL_MESSAGE, "activity": FULL_MESSAGE})
         check_swipe_daily_limit(self.request.user)
         serializer.save(user=self.request.user)
 
@@ -75,6 +82,11 @@ def swipe_activity(request, pk):
     if existing_swipe:
         return Response(
             {"error": "Already swiped on this activity"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if direction == "right" and is_full_for_newcomer(user, activity):
+        return Response(
+            {"error": FULL_MESSAGE, "detail": FULL_MESSAGE}, status=status.HTTP_400_BAD_REQUEST
         )
 
     check_swipe_daily_limit(user)

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import Invite, PushDeviceToken, User
+from .models import Friendship, Invite, PushDeviceToken, User
 
 
 @admin.register(User)
@@ -42,3 +42,11 @@ class PushDeviceTokenAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "token")
     list_filter = ("platform", "is_active")
     raw_id_fields = ("user",)
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ("requester", "recipient", "status", "created_at", "responded_at")
+    search_fields = ("requester__username", "recipient__username")
+    list_filter = ("status", "created_at")
+    raw_id_fields = ("requester", "recipient")

@@ -22,6 +22,9 @@ class User(AbstractUser):
     token_created_at = models.DateTimeField(null=True, blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
     privacy_accepted_at = models.DateTimeField(null=True, blank=True)
+    # Which version of the terms/privacy text the client showed when they accepted.
+    terms_version = models.CharField(max_length=32, blank=True, default="")
+    privacy_version = models.CharField(max_length=32, blank=True, default="")
 
     # Stripe Connect (marketplace host payouts)
     stripe_connect_account_id = models.CharField(max_length=255, blank=True, default="")
@@ -117,6 +120,9 @@ class SocialAuthIdentity(models.Model):
     provider = models.CharField(max_length=32, choices=PROVIDER_CHOICES)
     provider_user_id = models.CharField(max_length=255)
     email = models.EmailField(blank=True)
+    # Sign in with Apple only: kept so the token can be revoked when the account is deleted.
+    # Secret. Never serialized, logged or shown in the admin.
+    apple_refresh_token = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from users.models import Friendship, User
 
 from .models import BlockedUser
+from .reporting import notify_support_of_report
 from .serializers import AbuseReportSerializer, BlockedUserSerializer
 
 
@@ -51,4 +52,9 @@ class AbuseReportCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(reporter=self.request.user)
+        report = serializer.save(
+            reporter=self.request.user,
+            target_type="user",
+            target_id=serializer.validated_data["reported_user"].id,
+        )
+        notify_support_of_report(report)

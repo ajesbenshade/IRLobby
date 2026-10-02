@@ -12,6 +12,8 @@ Giving and donations are out of scope for this build. There is no gift amount, C
 
 Extra optional fields: `date_of_birth` (`YYYY-MM-DD`), `sex` (`male` | `female`).
 
+Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters).
+
 A birth date that makes the person under 13 is rejected:
 
 ```json
@@ -437,11 +439,93 @@ Who: the host, staff, or a church admin on a church-hosted event (the same rule 
 
 What happens:
 - RSVPs are kept (nothing is deleted); `my_rsvp` and the going list still show them.
-- Every confirmed attendee except the host and whoever cancelled gets one push notification (`title` "<title> was cancelled", body "<title> was cancelled. Reason: <reason>", data `{ "type": "activity_cancelled", "activityId", "screen": "Activity" }`), including accounts that are going only for a spouse or child. Pending and declined RSVPs are not notified. Sent after the database commit, through the Expo push helper (respects the user's `pushNotifications` preference). There is no separate in-app notification inbox.
+- Every confirmed attendee and every pending requester (see "Require approval") except the host and whoever cancelled gets one push notification (`title` "<title> was cancelled", body "<title> was cancelled. Reason: <reason>", data `{ "type": "activity_cancelled", "activityId", "screen": "Activity" }`), including accounts that are going only for a spouse or child. Declined requests are not notified. Sent after the database commit, through the Expo push helper (respects the user's `pushNotifications` preference). There is no separate in-app notification inbox.
 - If a gathering chat already exists, a message "<title> was cancelled by the host. Reason: …" is added to it (sender = the person who cancelled). The chat stays fully open after cancelling: reads and sends (REST and websocket) keep working, so the host can announce a new date.
 - Cancelled gatherings are left out of `GET /api/activities/` (the swipe deck and browse list), `GET /api/public/calendar`, `GET /api/public/calendar.ics` and `GET /api/public/events/<id>.ics` (404). They are still returned by `GET /api/activities/<id>/`, `/hosted/` and `/going/` with `is_cancelled: true`; photos and the signed-token `event.ics` keep working (that file now carries `STATUS:CANCELLED`).
 - New RSVPs (`POST /rsvp/`), legacy `POST /join/`, swipes (`POST /api/swipes/<id>/swipe/`, `POST /api/swipes/`) and ticket purchases on a cancelled gathering → 400.
 - Clients cannot set `is_cancelled`, `cancelled_at` or `cancel_reason` through `PATCH`.
+
+## Require approval
+
+A host can ask to approve each guest before they are going. Off by default.
+
+**Host setting** (`POST /api/activities/` and `PATCH /api/activities/<id>/`, host only like every other field; guests get 403 on PATCH):
+- `requires_approval` (bool, also `requiresApproval`) and `allow_rerequest` (bool, also `allowRerequest`): after a decline, the guest may ask again.
+- 400 `{ "requires_approval": … }` on a church-hosted event (`host_kind: "church"`) or one on the public church calendar (`list_on_church_calendar` and `calendar_approved`). A member event that is listed but not yet approved by the church may keep it, but `POST /calendar/approve/` then answers 400 until the host turns it off.
+- 400 `{ "requires_approval": "Review your pending requests before turning off Require approval." }` when switching it off while requests are pending. Switching it on affects only new RSVPs; people already going stay going.
+
+**Activity payload** (every activity payload, for anyone who can see the event) adds `requires_approval`, `allow_rerequest` and `my_request_status`: `"none"` | `"pending"` | `"approved"` (a confirmed RSVP) | `"declined"`. Host and staff also get `pending_count` (number of requests waiting, blocked accounts left out); other users do not get that key. `my_rsvp.status` is `"pending"` for a request. The RSVP response also carries `my_request_status` and `my_request_reason`.
+
+`my_request_reason` is the host's decline note, shown only to the requester: it is the stored note (string, up to 280 characters) when `my_request_status` is `"declined"` and the host wrote one, and `null` in every other case (no note, pending, approved, none, or any other viewer, including the host and staff). It is never `""`. The note is stored on the request as `decline_reason` and cleared when the request goes back to pending (re-request) or is approved.
+
+**Guest: ask to join.** `POST /api/activities/<id>/rsvp/` (same body as today: `include_self`, `dependent_ids`, `member_ids`). On a Require-approval event, for anyone but the host:
+
+```json
+{ "status": "pending", "my_request_status": "pending", "include_self": true, "dependent_ids": [4], "member_ids": [4], "people_count": 2, "going_count": 3 }
+```
+
+- 200, a `pending` `ActivityParticipant` is created or updated. Eligibility (audience, age) is still checked; capacity is not (the host checks when approving). Pending people never count in `going_count`, `participant_count`, `spots_left`, attendees, reminders, or `/going/`, and get no exact address, no gathering chat and no attendee list.
+- Asking again while pending is idempotent (200; the party is updated; the host is not notified again).
+- Declined: 400 `{ "detail": "The host declined your request." }`, unless `allow_rerequest` is true, in which case it becomes pending again (and the host is notified). A declined guest cannot clear the decline by cancelling or leaving while `allow_rerequest` is false (same 400).
+- Already confirmed: unchanged behaviour (party edits, capacity check). The host RSVPing to their own event is unchanged (instantly confirmed).
+- Blocked either way with the host: 404 `{ "detail": "Not found." }`, as if the event were hidden.
+- Withdraw: `DELETE` (or `POST`) `/api/activities/<id>/rsvp/cancel/` deletes the pending request and your swipe, like cancelling an RSVP.
+- `GET /api/activities/going/` stays confirmed-only; add `?include_pending=true` to also list events where your request is pending (`my_rsvp.status` tells them apart).
+
+**Host: list requests.** `GET /api/activities/<id>/requests/?status=pending` (default; also `approved` = confirmed, `declined`). Host, staff, or church admin on a church event; 401 anonymous; 403 anyone else; 404 if the event is missing or hidden; 400 for an unknown status. Works on cancelled and started events.
+
+```json
+{
+  "pending_count": 2,
+  "spots_left": 5,
+  "requests": [
+    {
+      "id": 31,
+      "user_id": 8,
+      "requested_at": "2026-10-02T14:00:00Z",
+      "decided_at": null,
+      "status": "pending",
+      "decline_reason": null,
+      "party": { "size": 3, "include_self": true, "members": [ { "name": "Lily", "relationship": "child", "age_band": "under 13" } ] },
+      "card": { "first_name": "Ana", "age_band": "adult", "avatar_url": "https://…", "bio": "…", "church_name": "Plains Mennonite Church" }
+    }
+  ]
+}
+```
+
+- `decline_reason` is the host's own note on a declined request (`null` if none or not declined); it is the same text the requester sees as `my_request_reason`.
+- `id` is the participant id used in the approve/decline URLs. `spots_left` is `capacity` minus people going (never below 0), `null` without a capacity. `pending_count` is always the number of pending requests whatever the `status` filter. Oldest request first. The host themselves and accounts blocked either way with the host are left out.
+- `card` shows first name, avatar and bio regardless of the requester's `profile_visibility`; `church_name` is `null` with no church. Never email, phone, last name or birth date. For an under-18 requester the card is only `first_name` and `age_band` (`avatar_url` and `bio` are `null`, no `church_name`). Family members are `name`, `relationship`, `age_band` only. `age_band` is `"under 13"`, `"13-17"` or `"adult"` on the event date.
+
+**Host: decide.** `POST /api/activities/<id>/requests/<participant_id>/approve/` and `POST …/decline/` (body optional `{ "reason": string }`, up to 280 characters, trimmed; decline only; stored as the request's `decline_reason`, blank if none). Same permissions as the list; 404 for an unknown request, one on another event, or a blocked requester.
+
+```json
+{ "request": { /* same item as in the list, with status "approved" or "declined" */ }, "going_count": 4, "spots_left": 2 }
+```
+
+| Status | When |
+| --- | --- |
+| 200 | Decided now, or already in that state (idempotent, nothing sent again). A host may approve a declined request they reconsider. |
+| 400 | The event is cancelled, or has started or ended; `reason` too long or not text; decline of a request that is already approved |
+| 409 | Approve only: the whole party does not fit in the remaining spots (`{ "detail": "Not enough spots for this party." }`; self, spouse and children all count; no capacity = always fits) |
+
+Approving locks the gathering row (`select_for_update`, the same lock RSVP takes) so two approvals cannot overbook the last spots.
+
+**Push notifications** (after the database commit, through the Expo helper, never repeated for idempotent calls):
+- Host: title "New request to join <title>", body "<First name> asked to join <title>.", data `{ "type": "join_request", "activityId", "userId", "screen": "Requests" }`. Sent for a new request, or a re-request after a decline; not when a pending request is repeated.
+- Requester: title "Your request to join <title> was approved" / "…was declined"; body "Your request to join <title> was approved." / "…declined. Reason: <reason>" (reason only when the host gave one); data `{ "type": "join_request_approved" | "join_request_declined", "activityId", "screen": "Activity" }`.
+- Cancelling the gathering also notifies pending requesters (same text as attendees); declined requesters are not notified.
+
+## Full gatherings
+
+A gathering with a capacity is **full** when confirmed people (the account holder if going, plus every spouse and child going) reach `capacity`. Pending requests never count. No capacity (`null`) is never full. Fullness is computed from the RSVPs each time, never stored, so a freed spot (cancelled RSVP, host removal, a smaller party) reopens the gathering by itself. A cancelled gathering uses the same rule.
+
+- **Payload:** every activity payload has `is_full` (bool). `GET /api/public/calendar` items also have `is_full`; full church events stay on the calendar JSON and `.ics`.
+- **Deck:** `GET /api/activities/` leaves out full gatherings for people with no RSVP or request row on them (any status) who are not the host or staff. Anyone with a confirmed, pending or declined row, the host, and staff still see it, and `GET /api/activities/<id>/` works for everyone with the link.
+- **Joining a full gathering** (new RSVP, a declined guest asking again with `allow_rerequest`, legacy `POST /join/`, a new request on a Require-approval gathering) → 400 `{ "detail": "This gathering is full.", "message": "Activity is full" }` (`message` is the older clients' text). Swipe-right (`POST /api/swipes/<id>/swipe/`, `POST /api/swipes/`) on a full gathering you have no row on → 400 `{ "error": "This gathering is full.", "detail": "This gathering is full." }` (the swipe-list endpoint puts it under `detail` and `activity`). Swipe-left is allowed. Host, staff and anyone with a row can still swipe.
+- **Existing participants keep working:** an already confirmed guest re-sending the same or a smaller party gets 200; growing it past capacity is 400. A pending request can still be edited or withdrawn.
+- **Party too big, event not yet full:** 400 `{ "detail": "Not enough spots for this party.", "message": "Activity is full" }` on RSVP (the same wording the host's approve uses). Approving on a full gathering stays 409 `Not enough spots for this party.`
+- Require-approval gatherings are full by approved (confirmed) people only.
 
 ## Photo downloads
 
@@ -450,3 +534,107 @@ What happens:
 ## Hidden addresses
 
 For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
+
+# Apple App Store compliance pack
+
+## Terms at sign-up
+
+`POST /api/users/register/` also takes these optional fields (camelCase `termsAccepted`, `privacyAccepted`, `termsVersion`, `privacyVersion` work too):
+
+| Field | Type | Effect |
+| --- | --- | --- |
+| `terms_accepted` | bool | `true` sets `terms_accepted_at` to now |
+| `privacy_accepted` | bool | `true` sets `privacy_accepted_at` to now |
+| `terms_version` | string, up to 32 | stored as `terms_version` when terms are accepted |
+| `privacy_version` | string, up to 32 | stored as `privacy_version` when privacy is accepted |
+
+Old clients that send none of them keep working: nothing is stamped and the existing onboarding screen still collects acceptance (`PATCH /api/users/onboarding/`). An existing timestamp is never overwritten.
+
+`POST /api/auth/apple/mobile/` and `POST /api/auth/google/mobile/` accept the same four fields in the request body and stamp them on the signed-in account the same way (new or existing; once only).
+
+Setting `REQUIRE_TERMS_ON_REGISTER` (environment variable, default `false`): when `true`, register answers 400 without both acceptances:
+
+```json
+{ "terms_accepted": "You must accept the Terms of Use to create an account.", "privacy_accepted": "You must accept the Privacy Policy to create an account." }
+```
+
+(Only the missing key is present.) It applies to `register` only, not to social sign-in.
+
+## App config (public)
+
+`GET /api/config/` (no auth; a bad token header is ignored) → 200:
+
+```json
+{
+  "terms_url": "https://irlobby.com/terms",
+  "privacy_url": "https://irlobby.com/privacy",
+  "support_email": "support@irlobby.com",
+  "church_admin": { "name": "Pastor Rob", "email": "rob@example.org", "phone": "+12155550100" }
+}
+```
+
+`terms_url`, `privacy_url` and `support_email` are strings (or `null` if configured blank). `church_admin` is `null` when no contact is configured; otherwise each of `name`, `email`, `phone` is a string or `null`. Environment: `FOYER_TERMS_URL`, `FOYER_PRIVACY_URL`, `FOYER_SUPPORT_EMAIL` (default `support@irlobby.com`), `FOYER_CHURCH_ADMIN_CONTACT_NAME`, `FOYER_CHURCH_ADMIN_CONTACT_EMAIL`, `FOYER_CHURCH_ADMIN_PHONE` (all default empty).
+
+The server also serves `GET /terms` and `/terms/` as HTML, exactly like `/privacy`, from `deploy/oracle/legal/terms.html` (and nginx serves the same file at `https://irlobby.com/terms`). The file in the repo is a marked placeholder until the approved terms replace it.
+
+## Report content
+
+Every report is stored as an `AbuseReport` with `target_type` (`user` | `chat_message` | `direct_message` | `event_photo` | `activity` | `join_request`, default `user`), `target_id` (id of what was reported, or `null` for old reports) and `target_snapshot` (a copy of the content, whitespace collapsed, up to 200 characters, so it can still be reviewed if the content is deleted). `reported_user` is the person responsible (the host for a photo or gathering) and may be `null` on very old data. New reports also email `FOYER_SUPPORT_EMAIL` (best effort; a mail failure never fails the request, and a duplicate sends nothing). Reports show in the Django admin under Moderation > Abuse reports, filterable by status and target type.
+
+All endpoints need auth (401 otherwise). Body for all: `{ "reason"?: string, "description"?: string }`. `reason` is one of `inappropriate`, `spam`, `harassment`, `fake_profile`, `threat`, `other` (default `other`; anything else → 400 `{ "reason": "Unknown reason." }`). `description` is HTML-stripped, up to 500 characters (longer → 400 `{ "description": … }`).
+
+| Endpoint | Who may report | Reported user | `target_id` | Snapshot |
+| --- | --- | --- | --- | --- |
+| `POST /api/activities/<id>/chat/<message_id>/report/` | host, staff, or going attendee (same access as the gathering chat) | the message's sender | message id | message text |
+| `POST /api/activities/<id>/photos/<photo_id>/report/` | anyone who can see the gathering | uploader (`EventPhoto.uploaded_by`), else the host | photo id | the photo's stored file path |
+| `POST /api/activities/<id>/report/` | anyone who can see the gathering | the host | activity id | "title: description" |
+| `POST /api/activities/<id>/requests/<request_id>/report/` | host, staff or church admin only (like the requests list) | the requester | the request (participant) id | "first name: bio" |
+
+Responses: **201** `{ "id", "status": "pending", "target_type", "target_id" }` for a new report. **200** with the same shape and the existing `id` if this reporter already reported this exact target (nothing new is created or emailed). **400** for reporting yourself (`{ "detail": "You cannot report yourself." }`), an unknown reason, or a long description. **401** anonymous. **403** a chat message report from someone outside the chat, or a request report from anyone but the host/staff. **404** the gathering is hidden from you (same visibility as the detail endpoint), the message/photo/request is not part of that gathering, or the person involved is blocked either way with you (a blocked person's messages are hidden from you, and a blocked requester is hidden from the host).
+
+Existing endpoints now fill the same fields and return `target_type` and `target_id` too: `POST /api/users/<id>/report/` and `POST /api/moderation/report/` record `target_type: "user"`; `POST /api/messages/direct/<conversation_id>/report/` records `direct_message` (with the message id and text snapshot) when `message_id` is sent, otherwise `user`. Those three do not de-duplicate and keep their previous responses plus the two new keys.
+
+New field on photos: `EventPhoto.uploaded_by` (set when the host uploads; not shown in any payload).
+
+## Blocks inside gatherings
+
+People blocked either way (you blocked them, or they blocked you) are hidden from you inside gatherings. No response shape changes; the items are simply left out:
+
+- `GET /api/activities/<id>/chat/` leaves out messages whose sender is blocked either way with the viewer. Other members still see those messages.
+- `GET /api/messages/conversations/<id>/messages/` (and the `messages` array nested in `GET /api/messages/conversations/`) leave out the same messages.
+- Websockets: both the gathering socket (`/ws/?activityId=`) and the conversation socket (`/ws/chat/<id>/`) no longer deliver `chat_message`, typing, read receipts or presence events whose `userId` is blocked either way with the receiving user. This is checked on every event, so a block made while a socket is open takes effect immediately. (There is no websocket history replay; history comes from the REST calls above.)
+- `GET /api/activities/<id>/attendees/` (host view) leaves out the households of users blocked either way with the host. `going_count` is still the true total. The attendee-facing list of other people going already left out blocked users.
+- Chat message reports on a blocked sender's message return 404 (see Report content).
+
+## Account deletion
+
+`DELETE /api/users/profile/delete/` (auth required; 401 otherwise) deletes the signed-in account. No body. Returns **204** (empty on the wire) on success. A `500` `{ "error": "Failed to delete profile", ... }` means nothing more could be done; the call is safe to retry. It is a hard delete: there is no grace period and the tokens stop working at once.
+
+Order of work: (1) upcoming gatherings the user hosts are cancelled and attendees told, (2) the user's uploaded photos, invites and gathering chats are handled, (3) the account row is deleted (database cascades), (4) the Sign in with Apple token is revoked at Apple.
+
+**Removed**
+- The account and everything on it: name, username, email, phone, bio, birth date, sex, avatar, church, location, preferences (including notification and privacy settings), terms/privacy acceptance record, password and login identities (email, Apple, Google), device push tokens, and refresh tokens.
+- Friends, friend requests (sent and received) and blocks (both ways).
+- Family members (household dependents).
+- Every RSVP, join request, swipe and ticket.
+- 1:1 chats, including the other person's messages in them.
+- The user's own messages in gathering chats.
+- Reviews written by or about the user.
+- Every photo the user uploaded to any gathering, as database rows and as files on disk (the host's delete-photo call and any deletion of a photo now remove the file too).
+- Every gathering the user hosted, with its RSVPs, chats and photos. Upcoming ones (not cancelled, not started) are cancelled first: each confirmed attendee and pending requester gets the "<title> was cancelled" push with reason "The host deleted their account." and a chat note is posted in the gathering chat. The gathering is then deleted, so it no longer appears anywhere (it does not remain as a cancelled entry). Past and already-cancelled gatherings are deleted without notifications. A failed push never blocks deletion.
+- Contact details in invites that other people sent to the user's email address (case-insensitive) or phone number, and in invites the user accepted: `contact_name` and `contact_value` are blanked, `invitee` is cleared. The row itself stays for the inviter. Invites the user sent are deleted.
+- Sign in with Apple: the stored refresh token is revoked at `https://appleid.apple.com/auth/revoke` (best effort).
+
+**Kept**
+- Gathering chats other people are still in, without the user's messages. A gathering chat is tied to two "anchor" attendees; if the user was one, the chat is moved to the first and last remaining confirmed attendees (or merged into the chat that pair already has). If fewer than two confirmed attendees remain, nobody could open it, so it is deleted.
+- Abuse reports the user filed, and reports about the user (for 12 months of moderation; the retention sweep is operational, not an API). `reporter` / `reported_user` are cleared; kept: report id, reason, description, status, created date, admin notes, `target_type`, `target_id`, and the short `target_snapshot` text. No name or email is stored on a report.
+- Server logs and backups age out on their normal schedule.
+
+Not touched: payments. Foyer takes none; any leftover Stripe Connect account id on the user row is deleted with the row but no Stripe account is closed.
+
+### Sign in with Apple token (optional)
+
+`POST /api/auth/apple/mobile/` accepts one more optional field, `authorization_code` (or `authorizationCode`): the one-time code from the native Sign in with Apple result. When the server has Apple signing configured it trades the code at `https://appleid.apple.com/auth/token` and stores Apple's refresh token on the Apple login record, only so it can be revoked on deletion. The response is unchanged and never contains it. Anything that goes wrong (no code, Apple down, bad code, not configured) is ignored and sign-in still succeeds. Env (all must be set for this to run): `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` (the `.p8` contents; `\n` allowed for newlines), and the client id is the first entry of `APPLE_OAUTH_AUDIENCES`. With any of them missing, deletion skips the Apple call.
+
+Database changes: `SocialAuthIdentity.apple_refresh_token` (secret text, default ""); `AbuseReport.reporter` is now nullable with `on_delete=SET_NULL`.
+

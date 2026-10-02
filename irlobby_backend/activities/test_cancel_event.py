@@ -176,10 +176,10 @@ class CancelEventSideEffectTests(CancelEventBase):
     def test_idempotent_second_call_returns_state_and_does_not_renotify(self):
         with patch(PUSH) as push:
             first = self.cancel_and_commit(self.host, {"reason": "Rain"})
-            self.assertEqual(push.call_count, 2)
+            self.assertEqual(push.call_count, 3)
             second = self.cancel_and_commit(self.host, {"reason": "A different reason"})
         self.assertEqual(second.status_code, status.HTTP_200_OK)
-        self.assertEqual(push.call_count, 2)
+        self.assertEqual(push.call_count, 3)
         self.assertEqual(second.data["cancel_reason"], "Rain")
         self.assertEqual(second.data["cancelled_at"], first.data["cancelled_at"])
 
@@ -190,12 +190,14 @@ class CancelEventSideEffectTests(CancelEventBase):
         )
         self.assertEqual(self.cancel(self.host).status_code, status.HTTP_200_OK)
 
-    def test_confirmed_attendees_are_notified_but_not_host_pending_or_outsiders(self):
+    def test_confirmed_and_pending_are_notified_but_not_host_declined_or_outsiders(self):
+        declined = _user("declined")
+        ActivityParticipant.objects.create(activity=self.activity, user=declined, status="declined")
         with patch(PUSH) as push:
             self.cancel_and_commit(self.host, {"reason": "Rain"})
         recipients = {call.args[0].id for call in push.call_args_list}
-        self.assertEqual(recipients, {self.attendee.id, self.family.id})
-        self.assertEqual(push.call_count, 2)
+        self.assertEqual(recipients, {self.attendee.id, self.family.id, self.pending.id})
+        self.assertEqual(push.call_count, 3)
         title, body, data = push.call_args_list[0].args[1:]
         self.assertEqual(title, "Game Night was cancelled")
         self.assertIn("Game Night was cancelled.", body)
@@ -215,7 +217,7 @@ class CancelEventSideEffectTests(CancelEventBase):
         with patch(PUSH) as push:
             self.cancel_and_commit(self.staff)
         recipients = {call.args[0].id for call in push.call_args_list}
-        self.assertEqual(recipients, {self.attendee.id, self.family.id})
+        self.assertEqual(recipients, {self.attendee.id, self.family.id, self.pending.id})
 
     def test_nothing_is_sent_until_the_transaction_commits(self):
         with patch(PUSH) as push:

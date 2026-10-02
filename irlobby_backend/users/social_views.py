@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from moderation.models import AbuseReport
+from moderation.reporting import notify_support_of_report, report_body
 from utils.sanitize import strip_html
 
 from .models import Friendship, User
@@ -114,8 +115,11 @@ def report_user(request, user_id):
         reported_user=target,
         reason=reason,
         description=strip_html(str(request.data.get("description") or ""))[:2000],
+        target_type="user",
+        target_id=target.id,
     )
-    return Response({"id": report.id, "status": report.status}, status=status.HTTP_201_CREATED)
+    notify_support_of_report(report)
+    return Response(report_body(report), status=status.HTTP_201_CREATED)
 
 
 # ---- Friends -------------------------------------------------------------------------

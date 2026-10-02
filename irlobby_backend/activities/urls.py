@@ -1,6 +1,8 @@
 from django.urls import path
 
-from . import foyer_views, views
+from moderation import content_views
+
+from . import approval, foyer_views, views
 
 urlpatterns = [
     path("", views.ActivityListCreateView.as_view(), name="activity-list"),
@@ -11,6 +13,33 @@ urlpatterns = [
     path("<int:pk>/rsvp/", foyer_views.rsvp_activity, name="activity-rsvp"),
     path("<int:pk>/rsvp/cancel/", foyer_views.cancel_rsvp, name="activity-rsvp-cancel"),
     path("<int:pk>/cancel-event/", foyer_views.cancel_event, name="activity-cancel-event"),
+    path("<int:pk>/requests/", approval.activity_requests, name="activity-requests"),
+    path(
+        "<int:pk>/requests/<int:participant_id>/approve/",
+        approval.approve_request,
+        name="activity-request-approve",
+    ),
+    path(
+        "<int:pk>/requests/<int:participant_id>/decline/",
+        approval.decline_request,
+        name="activity-request-decline",
+    ),
+    path("<int:pk>/report/", content_views.report_activity, name="activity-report"),
+    path(
+        "<int:pk>/requests/<int:request_id>/report/",
+        content_views.report_join_request,
+        name="activity-request-report",
+    ),
+    path(
+        "<int:pk>/photos/<int:photo_id>/report/",
+        content_views.report_event_photo,
+        name="activity-photo-report",
+    ),
+    path(
+        "<int:pk>/chat/<int:message_id>/report/",
+        content_views.report_chat_message,
+        name="activity-chat-report",
+    ),
     path("<int:pk>/attendees/", foyer_views.activity_attendees, name="activity-attendees"),
     path("<int:pk>/whos-coming/", foyer_views.whos_coming, name="activity-whos-coming"),
     path(

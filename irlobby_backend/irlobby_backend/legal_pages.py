@@ -1,4 +1,4 @@
-"""Public legal pages for App Store review (Privacy Policy and Support)."""
+"""Public legal pages for App Store review (Privacy Policy, Terms of Use and Support)."""
 
 from pathlib import Path
 
@@ -6,7 +6,7 @@ from django.conf import settings
 from django.http import Http404, HttpResponse
 
 LEGAL_DIR = Path(settings.BASE_DIR) / "deploy" / "oracle" / "legal"
-_ALLOWED = {"privacy.html", "support.html"}
+_ALLOWED = {"privacy.html", "support.html", "terms.html"}
 
 
 def _legal_page(filename: str):
@@ -22,6 +22,10 @@ def _legal_page(filename: str):
 
 def privacy_policy(_request):
     return _legal_page("privacy.html")
+
+
+def terms_of_use(_request):
+    return _legal_page("terms.html")
 
 
 def support_page(_request):

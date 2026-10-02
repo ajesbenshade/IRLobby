@@ -12,6 +12,7 @@ from redis.asyncio import Redis
 from activities.access import user_can_access_activity_chat
 from activities.models import Activity, ActivityParticipant
 from matches.models import Match
+from users.social import blocked_user_ids
 
 from .access import can_read_conversation, can_send_in_conversation
 from .models import Conversation, Message
@@ -211,8 +212,17 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
             )
 
     async def chat_message(self, event):
-        # Send message to WebSocket
+        # Send message to WebSocket, unless the sender is blocked either way with this user.
+        if await self.sender_is_blocked((event.get("data") or {}).get("userId")):
+            return
         await self.send(text_data=json.dumps(event))
+
+    @database_sync_to_async
+    def sender_is_blocked(self, sender_id):
+        user = getattr(self, "user", None)
+        if user is None or sender_id is None or sender_id == user.id:
+            return False
+        return sender_id in blocked_user_ids(user)
 
     async def handle_typing(self, data):
         activity_id = data.get("activityId")
@@ -266,12 +276,18 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def typing_indicator(self, event):
+        if await self.sender_is_blocked((event.get("payload") or {}).get("userId")):
+            return
         await self.send(text_data=json.dumps(event))
 
     async def read_receipt(self, event):
+        if await self.sender_is_blocked((event.get("payload") or {}).get("userId")):
+            return
         await self.send(text_data=json.dumps(event))
 
     async def presence_update(self, event):
+        if await self.sender_is_blocked((event.get("payload") or {}).get("userId")):
+            return
         await self.send(text_data=json.dumps(event))
 
     @database_sync_to_async
@@ -453,8 +469,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await set_user_online(user.id)
 
     async def chat_message(self, event):
-        # Send message to WebSocket
+        # Send message to WebSocket, unless the sender is blocked either way with this user.
+        if await self.sender_is_blocked(event["payload"].get("userId")):
+            return
         await self.send(text_data=json.dumps(event["payload"]))
+
+    @database_sync_to_async
+    def sender_is_blocked(self, sender_id):
+        user = self.scope.get("user")
+        if user is None or user.is_anonymous or sender_id is None or sender_id == user.id:
+            return False
+        return sender_id in blocked_user_ids(user)
 
     async def handle_typing(self, data):
         is_typing = bool(data.get("isTyping", True))
@@ -503,12 +528,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def typing_indicator(self, event):
+        if await self.sender_is_blocked(event["payload"].get("userId")):
+            return
         await self.send(text_data=json.dumps(event["payload"]))
 
     async def read_receipt(self, event):
+        if await self.sender_is_blocked(event["payload"].get("userId")):
+            return
         await self.send(text_data=json.dumps(event["payload"]))
 
     async def presence_update(self, event):
+        if await self.sender_is_blocked(event["payload"].get("userId")):
+            return
         await self.send(text_data=json.dumps(event["payload"]))
 
     async def send_presence_snapshot(self, user):

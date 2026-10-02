@@ -93,7 +93,11 @@ class Activity(models.Model):
     )
     visibility = models.JSONField(default=list)
     is_private = models.BooleanField(default=False)
+    # Require approval: a guest's RSVP is a pending request until the host approves it.
+    # Not available on church-hosted or public-calendar gatherings.
     requires_approval = models.BooleanField(default=False)
+    # After a decline, the guest may send a new request.
+    allow_rerequest = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     currency = models.CharField(max_length=8, default="USD")
     age_restriction = models.CharField(max_length=32, blank=True, default="")
@@ -181,6 +185,10 @@ class ActivityParticipant(models.Model):
         related_name="rsvps",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    # When the host approved or declined a request (Require approval).
+    decided_at = models.DateTimeField(null=True, blank=True)
+    # The host's optional note when declining; only the requester and the host ever see it.
+    decline_reason = models.CharField(max_length=280, blank=True, default="")
 
     class Meta:
         unique_together = ("activity", "user")
@@ -218,6 +226,13 @@ class HouseholdDependent(models.Model):
 class EventPhoto(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="event_photos/")
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_event_photos",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

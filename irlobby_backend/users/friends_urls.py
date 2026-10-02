@@ -4,6 +4,7 @@ from . import social_views
 
 urlpatterns = [
     path("", social_views.friend_list, name="friend-list"),
+    path("birthdays/", social_views.friend_birthdays, name="friend-birthdays"),
     path("requests/", social_views.friend_requests, name="friend-requests"),
     path(
         "requests/<int:request_id>/accept/",

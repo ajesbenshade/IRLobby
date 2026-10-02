@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
 
+from activities.eligibility import age_on, ny_today
 from activities.household_rules import (
     MINOR_DEPENDENT_ACCOUNT_ERROR,
     account_age_error,
@@ -14,6 +15,7 @@ from utils.sanitize import strip_html
 
 from .models import Invite, PushDeviceToken, User
 from .reliability import build_reliability_summary
+from .social import BIRTHDAY_MINOR_ERROR, BIRTHDAY_NO_DOB_ERROR
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -101,6 +103,7 @@ class UserSerializer(serializers.ModelSerializer):
             "show_email",
             "show_phone",
             "dm_from_shared_events",
+            "show_birthday",
         )
         read_only_fields = ("id",)
 
@@ -153,7 +156,21 @@ class UserSerializer(serializers.ModelSerializer):
                 first_name=first, last_name=last, username=username, date_of_birth=dob
             ):
                 raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
+        self._validate_show_birthday(attrs, dob)
         return attrs
+
+    def _validate_show_birthday(self, attrs, dob):
+        """Only accounts that are 18 or older, with a birth date, can share a birthday."""
+        age = age_on(dob, ny_today()) if dob is not None else None
+        if attrs.get("show_birthday"):
+            if dob is None:
+                raise serializers.ValidationError({"show_birthday": BIRTHDAY_NO_DOB_ERROR})
+            if age is None or age < 18:
+                raise serializers.ValidationError({"show_birthday": BIRTHDAY_MINOR_ERROR})
+        elif "show_birthday" not in attrs and "date_of_birth" in attrs:
+            # A birth date change that makes the account a minor switches sharing off.
+            if age is None or age < 18:
+                attrs["show_birthday"] = False
 
     def get_church(self, obj):
         church = obj.church

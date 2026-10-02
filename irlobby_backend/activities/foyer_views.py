@@ -35,9 +35,17 @@ from .eligibility import (
     ny_today,
 )
 from .household_rules import (
+    FUTURE_BIRTH_ERROR,
+    INVALID_BIRTH_ERROR,
+    MINOR_ACCOUNT_DEPENDENT_ERROR,
     dependent_create_errors,
+    full_birth_date,
     member_age,
     member_birth_date,
+    member_birth_fields,
+    minor_account_for_dependent,
+    month_year_in_future,
+    parse_birth_day,
     parse_birth_month_year,
     spouse_create_errors,
 )
@@ -122,32 +130,36 @@ def church_list_create(request):
 
 
 def dependent_payload(dependent, *, today=None) -> dict:
-    """Legacy child shape (kept for builds 88/89), plus relationship and birth month/year."""
+    """Legacy child shape (kept for builds 88/89), plus relationship and birth data.
+
+    Only the owning parent ever receives this. ``date_of_birth`` is a real stored date or
+    null (never the last day of the month); ``age`` still uses the last day of a
+    month-only birth so a child never looks older than they are.
+    """
     today = today or ny_today()
-    dob = member_birth_date(dependent)
+    age_dob = member_birth_date(dependent)
+    fields = member_birth_fields(dependent)
     return {
         "id": dependent.id,
         "name": dependent.name,
-        "date_of_birth": dob.isoformat() if dob else None,
+        "date_of_birth": fields.pop("date_of_birth", None),
         "sex": dependent.sex or "",
-        "age": age_on(dob, today),
+        "age": age_on(age_dob, today),
         "relationship": dependent.relationship,
-        "birth_month": dob.month if dob else None,
-        "birth_year": dob.year if dob else None,
+        **fields,
     }
 
 
 def member_payload(member, *, today=None) -> dict:
-    """Family member shape: no exact birth date, and no age for a spouse."""
+    """Family member shape for the owning parent. ``date_of_birth`` appears only when a
+    real full date is stored. No age for a spouse."""
     today = today or ny_today()
-    dob = member_birth_date(member) if member.relationship == "child" else None
     return {
         "id": member.id,
         "name": member.name,
         "relationship": member.relationship,
         "sex": member.sex or "",
-        "birth_month": dob.month if dob else None,
-        "birth_year": dob.year if dob else None,
+        **member_birth_fields(member),
         "age": member_age(member, today),
     }
 
@@ -203,8 +215,17 @@ def household_list_create(request):
     from django.utils.dateparse import parse_date
 
     dob = request.data.get("date_of_birth") or request.data.get("birth_date")
-    parsed = parse_date(dob) if isinstance(dob, str) else dob
+    try:
+        parsed = parse_date(dob) if isinstance(dob, str) else dob
+    except ValueError:
+        return Response({"date_of_birth": INVALID_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST)
+    if parsed is not None and not hasattr(parsed, "year"):
+        parsed = None
     if parsed is not None:
+        if parsed > ny_today():
+            return Response(
+                {"date_of_birth": FUTURE_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST
+            )
         month, year, check_dob = parsed.month, parsed.year, parsed
     else:
         month, year, error = parse_birth_month_year(
@@ -215,9 +236,20 @@ def household_list_create(request):
                 {"birth_month": error or "Enter a birth month and year."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        check_dob = member_birth_date(
-            HouseholdDependent(birth_month=month, birth_year=year, relationship="child")
-        )
+        day, error = parse_birth_day(request.data.get("birth_day"))
+        if error:
+            return Response({"birth_day": error}, status=status.HTTP_400_BAD_REQUEST)
+        if month_year_in_future(month, year):
+            return Response({"birth_month": FUTURE_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST)
+        if day is not None:
+            parsed, error = full_birth_date(year, month, day)
+            if error:
+                return Response({"birth_day": error}, status=status.HTTP_400_BAD_REQUEST)
+            check_dob = parsed
+        else:
+            check_dob = member_birth_date(
+                HouseholdDependent(birth_month=month, birth_year=year, relationship="child")
+            )
     errors = dependent_create_errors(
         parent=request.user, name=name, date_of_birth=check_dob, month_year_only=parsed is None
     )
@@ -235,9 +267,120 @@ def household_list_create(request):
     return _household_created(request.user, child)
 
 
-@api_view(["DELETE"])
+@api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
-def household_delete(request, pk):
+def household_detail(request, pk):
+    if request.method == "PATCH":
+        return _household_patch(request, pk)
+    return _household_remove(request, pk)
+
+
+def _household_patch(request, pk):
+    """PATCH /api/users/household/<id>/ — owner only. Set or clear a child's birth day.
+
+    Accepts optional ``name``, ``sex``, ``birth_day`` (null clears it, back to
+    month-only) or a full ``date_of_birth``. The result must be a real date, not in the
+    future, and under 18. Anyone but the owning parent gets 404.
+    """
+    from django.utils.dateparse import parse_date
+
+    member = HouseholdDependent.objects.filter(parent=request.user, pk=pk).first()
+    if member is None:
+        return Response({"detail": "Family member not found."}, status=status.HTTP_404_NOT_FOUND)
+    data = request.data
+    changes = {}
+
+    if "name" in data:
+        name = (data.get("name") or "").strip() if isinstance(data.get("name"), str) else ""
+        if not name:
+            return Response({"name": "Enter a name."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(name) > 120:
+            return Response({"name": "Name is too long."}, status=status.HTTP_400_BAD_REQUEST)
+        changes["name"] = name
+    if "sex" in data:
+        sex = str(data.get("sex") or "").strip().lower()
+        if sex in {"m", "male"}:
+            sex = "male"
+        elif sex in {"f", "female"}:
+            sex = "female"
+        elif sex:
+            return Response(
+                {"sex": "Sex must be male or female."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        changes["sex"] = sex
+
+    birth_keys = {"birth_day", "date_of_birth", "birth_date"} & set(data.keys())
+    if birth_keys:
+        if member.relationship == "spouse":
+            return Response(
+                {"birth_day": "A spouse has no birth data."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        full = data.get("date_of_birth") or data.get("birth_date")
+        if full:
+            try:
+                new_dob = parse_date(full) if isinstance(full, str) else None
+            except ValueError:
+                return Response(
+                    {"date_of_birth": INVALID_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST
+                )
+            if new_dob is None:
+                return Response(
+                    {"date_of_birth": INVALID_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST
+                )
+            if new_dob > ny_today():
+                return Response(
+                    {"date_of_birth": FUTURE_BIRTH_ERROR}, status=status.HTTP_400_BAD_REQUEST
+                )
+        elif "birth_day" in data:
+            day, error = parse_birth_day(data.get("birth_day"))
+            if error:
+                return Response({"birth_day": error}, status=status.HTTP_400_BAD_REQUEST)
+            if day is None:
+                new_dob = None  # clear the day, keep month and year
+            else:
+                base = member_birth_date(member)
+                if base is None:
+                    return Response(
+                        {"birth_day": "Add a birth month and year first."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                year = member.birth_year or base.year
+                month = member.birth_month or base.month
+                new_dob, error = full_birth_date(year, month, day)
+                if error:
+                    return Response({"birth_day": error}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            new_dob = None
+        if new_dob is not None:
+            if (age_on(new_dob, ny_today()) or 0) >= 18:
+                return Response(
+                    {"date_of_birth": "Only children under 18 can be added to a household."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if minor_account_for_dependent(changes.get("name", member.name), new_dob):
+                return Response(
+                    {"name": MINOR_ACCOUNT_DEPENDENT_ERROR}, status=status.HTTP_400_BAD_REQUEST
+                )
+            changes.update(
+                date_of_birth=new_dob, birth_month=new_dob.month, birth_year=new_dob.year
+            )
+        else:
+            # Back to month-only. Keep month and year (older rows only had the full date).
+            if member.date_of_birth is not None:
+                changes["birth_month"] = member.date_of_birth.month
+                changes["birth_year"] = member.date_of_birth.year
+            changes["date_of_birth"] = None
+
+    if changes:
+        for field, value in changes.items():
+            setattr(member, field, value)
+        member.save(update_fields=list(changes))
+    body = dependent_payload(member)
+    body["members"] = [member_payload(m) for m in _household_members(request.user)]
+    return Response(body)
+
+
+def _household_remove(request, pk):
     deleted, _ = HouseholdDependent.objects.filter(parent=request.user, pk=pk).delete()
     if not deleted:
         return Response({"detail": "Family member not found."}, status=status.HTTP_404_NOT_FOUND)

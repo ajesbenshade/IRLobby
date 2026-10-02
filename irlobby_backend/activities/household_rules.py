@@ -146,6 +146,72 @@ def member_age(member, on_date) -> int | None:
     return age_on(member_birth_date(member), on_date)
 
 
+def member_birth_fields(member) -> dict:
+    """Birth month/year/day and precision for the owning parent only.
+
+    ``date_of_birth`` is present only when a real full date is stored, never a made-up
+    last day of the month. ``birth_precision`` is "day" with a real date, else "month".
+    Spouses carry no birth data.
+    """
+    fields = {
+        "birth_month": None,
+        "birth_year": None,
+        "birth_day": None,
+        "birth_precision": None,
+    }
+    if member.relationship == "spouse":
+        return fields
+    real = member.date_of_birth
+    if real is not None:
+        fields.update(
+            birth_month=real.month,
+            birth_year=real.year,
+            birth_day=real.day,
+            birth_precision="day",
+            date_of_birth=real.isoformat(),
+        )
+    elif member.birth_month and member.birth_year:
+        fields.update(
+            birth_month=member.birth_month, birth_year=member.birth_year, birth_precision="month"
+        )
+    return fields
+
+
+FUTURE_BIRTH_ERROR = "Birth date cannot be in the future."
+INVALID_BIRTH_ERROR = "Enter a valid birth date."
+
+
+def parse_birth_day(value):
+    """Return (day, error). ``None``/"" means no day. Must be a whole number 1-31."""
+    if value in (None, ""):
+        return None, None
+    if isinstance(value, bool):
+        return None, "Enter a birth day (1-31)."
+    try:
+        day = int(value)
+    except (TypeError, ValueError):
+        return None, "Enter a birth day (1-31)."
+    if not 1 <= day <= 31:
+        return None, "Enter a birth day (1-31)."
+    return day, None
+
+
+def full_birth_date(year: int, month: int, day: int):
+    """Return (date, error) for a real calendar date that is not in the future."""
+    try:
+        value = date(year, month, day)
+    except ValueError:
+        return None, INVALID_BIRTH_ERROR
+    if value > ny_today():
+        return None, FUTURE_BIRTH_ERROR
+    return value, None
+
+
+def month_year_in_future(month: int, year: int) -> bool:
+    today = ny_today()
+    return (year, month) > (today.year, today.month)
+
+
 def parse_birth_month_year(month, year):
     """Return (month, year, error). Both must be sent together."""
     if month in (None, "") and year in (None, ""):

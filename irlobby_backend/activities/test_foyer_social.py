@@ -59,8 +59,21 @@ class FamilyMemberTests(APITestCase):
         self.assertEqual(resp.status_code, 201)
         spouse = [m for m in resp.data["members"] if m["relationship"] == "spouse"][0]
         self.assertEqual(
-            set(spouse), {"id", "name", "relationship", "sex", "birth_month", "birth_year", "age"}
+            set(spouse),
+            {
+                "id",
+                "name",
+                "relationship",
+                "sex",
+                "birth_month",
+                "birth_year",
+                "birth_day",
+                "birth_precision",
+                "age",
+            },
         )
+        self.assertIsNone(spouse["birth_day"])
+        self.assertIsNone(spouse["birth_precision"])
         self.assertIsNone(spouse["age"])
         self.assertIsNone(spouse["birth_month"])
         self.assertIsNone(HouseholdDependent.objects.get(pk=spouse["id"]).birth_year)

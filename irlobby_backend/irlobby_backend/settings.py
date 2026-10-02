@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 import dj_database_url
 import environ
 import sentry_sdk
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -452,6 +453,11 @@ CELERY_BEAT_SCHEDULE = {
     "notify-upcoming-activities": {
         "task": "activities.tasks.notify_upcoming_activities",
         "schedule": 300.0,
+    },
+    # 13:00 UTC = 9am Eastern (8am in winter). Pushes friends of adults who share a birthday.
+    "friend-birthday-notifications": {
+        "task": "users.tasks.send_birthday_notifications",
+        "schedule": crontab(hour=13, minute=0),
     },
 }
 

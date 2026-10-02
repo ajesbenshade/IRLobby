@@ -6,7 +6,9 @@ Everything that decides "may A see / contact B" lives here so profile, friends, 
 
 from __future__ import annotations
 
+import calendar
 import re
+from datetime import date
 
 from django.db.models import Q
 from django.utils import timezone
@@ -209,3 +211,49 @@ def short_name(user) -> str:
 def full_name(user) -> str:
     full = f"{user.first_name} {user.last_name}".strip()
     return full or "Guest"
+
+
+# ---- Birthdays -----------------------------------------------------------------------
+# Only an adult's own month and day, only when they switched it on, only to people the
+# profile visibility level lets in. The year is never shared. Children's birthdays are
+# never shared at all (household members have no such setting).
+
+BIRTHDAY_MINOR_ERROR = "Birthdays can only be shared by accounts 18 and older."
+BIRTHDAY_NO_DOB_ERROR = "Add your birth date before sharing your birthday."
+
+
+def birthday_in_year(dob: date, year: int) -> date:
+    """The day `dob` is celebrated in `year`. Feb 29 falls on Feb 28 in non-leap years."""
+    if dob.month == 2 and dob.day == 29 and not calendar.isleap(year):
+        return date(year, 2, 28)
+    return date(year, dob.month, dob.day)
+
+
+def next_birthday(dob: date, today: date) -> date:
+    """Today if it is the birthday, otherwise the next one (rolls into next year)."""
+    upcoming = birthday_in_year(dob, today.year)
+    if upcoming < today:
+        upcoming = birthday_in_year(dob, today.year + 1)
+    return upcoming
+
+
+def days_until_birthday(dob: date, today: date) -> int:
+    return (next_birthday(dob, today) - today).days
+
+
+def birthday_is_shareable(owner, *, today: date | None = None) -> bool:
+    """The owner turned sharing on, has a birth date, and is 18 or older."""
+    if not owner.show_birthday or owner.date_of_birth is None:
+        return False
+    age = age_on(owner.date_of_birth, today or ny_today())
+    return age is not None and age >= 18
+
+
+def birthday_visible_to(viewer, owner, *, today: date | None = None) -> bool:
+    """May `viewer` see `owner`'s month and day? Never for yourself (you have the full
+    profile), blocked pairs, minors, or anyone outside the owner's visibility level."""
+    if viewer.id == owner.id or not birthday_is_shareable(owner, today=today):
+        return False
+    if is_blocked_either_way(viewer.id, owner.id):
+        return False
+    return level_allows(viewer, owner)

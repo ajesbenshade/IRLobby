@@ -59,6 +59,9 @@ class User(AbstractUser):
     show_phone = models.BooleanField(default=False)
     # Adults only: let people who attended a shared event with you start a 1:1 chat.
     dm_from_shared_events = models.BooleanField(default=False)
+    # Adults only: let people inside profile_visibility see your birthday (month and day,
+    # never the year). Always False for children; household members have no such setting.
+    show_birthday = models.BooleanField(default=False)
 
     class Meta:
         # Add unique constraint on email to prevent duplicates

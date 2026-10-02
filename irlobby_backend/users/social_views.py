@@ -4,6 +4,8 @@ Rules live in users/social.py. Nothing here returns location, family, birth date
 username, or (unless the owner allowed it) email or phone.
 """
 
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -13,15 +15,19 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from activities.eligibility import ny_today
 from moderation.models import AbuseReport
 from moderation.reporting import notify_support_of_report, report_body
 from utils.sanitize import strip_html
 
 from .models import Friendship, User
 from .social import (
+    birthday_in_year,
+    birthday_visible_to,
     blocked_user_ids,
     can_send_friend_request,
     can_view_profile,
+    days_until_birthday,
     friend_ids,
     friendship_between,
     friendship_state,
@@ -95,6 +101,9 @@ def user_profile_card(request, user_id):
             body["email"] = owner.email
         if owner.show_phone and owner.phone:
             body["phone"] = owner.phone
+    # Month and day only (never the year), and only for an adult who chose to share it.
+    if birthday_visible_to(viewer, owner):
+        body["birthday"] = {"month": owner.date_of_birth.month, "day": owner.date_of_birth.day}
     return Response(body)
 
 
@@ -262,6 +271,45 @@ def friend_list(request):
             ]
         }
     )
+
+
+BIRTHDAY_WINDOW_DAYS = 7
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def friend_birthdays(request):
+    """GET /api/friends/birthdays/ — friends with a birthday today or in the next 7 days.
+
+    Only adults who turned on show_birthday, whose visibility level includes the viewer,
+    and never blocked users. month/day are the upcoming celebration (Feb 29 is Feb 28 in
+    non-leap years). The birth year is never returned.
+    """
+    viewer = request.user
+    today = ny_today()
+    ids = friend_ids(viewer) - blocked_user_ids(viewer)
+    candidates = User.objects.filter(
+        id__in=ids, is_active=True, show_birthday=True, date_of_birth__isnull=False
+    )
+    upcoming = []
+    for friend in candidates:
+        if not birthday_visible_to(viewer, friend, today=today):
+            continue
+        days = days_until_birthday(friend.date_of_birth, today)
+        if days > BIRTHDAY_WINDOW_DAYS:
+            continue
+        when = birthday_in_year(friend.date_of_birth, (today + timedelta(days=days)).year)
+        upcoming.append(
+            {
+                "user_id": friend.id,
+                "name": friend.first_name or "Guest",
+                "month": when.month,
+                "day": when.day,
+                "days_until": days,
+            }
+        )
+    upcoming.sort(key=lambda row: (row["days_until"], row["name"].lower(), row["user_id"]))
+    return Response({"birthdays": upcoming})
 
 
 @api_view(["DELETE"])

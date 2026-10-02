@@ -454,12 +454,17 @@ CELERY_BEAT_SCHEDULE = {
         "task": "activities.tasks.notify_upcoming_activities",
         "schedule": 300.0,
     },
+}
+
+# Daily friend-birthday push is OFF unless BIRTHDAY_PUSH_ENABLED=true (not yet approved).
+# The beat entry is only registered when enabled, and the task is also a no-op when disabled.
+BIRTHDAY_PUSH_ENABLED = config("BIRTHDAY_PUSH_ENABLED", default=False, cast=bool)
+if BIRTHDAY_PUSH_ENABLED:
     # 13:00 UTC = 9am Eastern (8am in winter). Pushes friends of adults who share a birthday.
-    "friend-birthday-notifications": {
+    CELERY_BEAT_SCHEDULE["friend-birthday-notifications"] = {
         "task": "users.tasks.send_birthday_notifications",
         "schedule": crontab(hour=13, minute=0),
-    },
-}
+    }
 
 
 # Static files (CSS, JavaScript, Images)

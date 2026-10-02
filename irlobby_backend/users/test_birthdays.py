@@ -7,6 +7,7 @@ year); a child's birth date goes to the owning parent only and is used for age c
 from datetime import date, timedelta
 from unittest.mock import patch
 
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -630,6 +631,7 @@ class FriendBirthdaysTests(APITestCase):
         self.assertEqual(self.get(), [])
 
 
+@override_settings(BIRTHDAY_PUSH_ENABLED=True)
 class BirthdayPushTaskTests(APITestCase):
     def setUp(self):
         self.today = date(2026, 10, 2)
@@ -714,8 +716,60 @@ class BirthdayPushTaskTests(APITestCase):
             send_birthday_notifications()
             post.assert_called_once()
 
-    def test_beat_schedule_registered(self):
+    def test_beat_schedule_registered_only_when_enabled(self):
+        import importlib
+        import os
+        from unittest.mock import patch as env_patch
+
+        # Settings are evaluated at import time; re-run the module with the env flag on and off.
+        def schedule(value):
+            env = {"BIRTHDAY_PUSH_ENABLED": value} if value is not None else {}
+            with env_patch.dict(os.environ, env):
+                if value is None:
+                    os.environ.pop("BIRTHDAY_PUSH_ENABLED", None)
+                mod = importlib.reload(importlib.import_module(os.environ["DJANGO_SETTINGS_MODULE"]))
+            return mod.CELERY_BEAT_SCHEDULE
+
+        try:
+            self.assertNotIn("friend-birthday-notifications", schedule(None))
+            self.assertNotIn("friend-birthday-notifications", schedule("false"))
+            entry = schedule("true")["friend-birthday-notifications"]
+            self.assertEqual(entry["task"], "users.tasks.send_birthday_notifications")
+        finally:
+            importlib.reload(importlib.import_module(os.environ["DJANGO_SETTINGS_MODULE"]))
+
+
+class BirthdayPushDisabledTests(APITestCase):
+    """BIRTHDAY_PUSH_ENABLED defaults to False: the task must send nothing."""
+
+    def test_default_setting_is_off(self):
         from django.conf import settings
 
-        entry = settings.CELERY_BEAT_SCHEDULE["friend-birthday-notifications"]
-        self.assertEqual(entry["task"], "users.tasks.send_birthday_notifications")
+        self.assertIs(settings.BIRTHDAY_PUSH_ENABLED, False)
+
+    def test_task_does_nothing_when_disabled(self):
+        celebrant = make("bday", dob=date(2026 - 30, 10, 2), show_birthday=True)
+        celebrant.profile_visibility = "friends"
+        celebrant.save()
+        befriend(make("pal"), celebrant)
+        with (
+            patch("users.tasks.ny_today", return_value=date(2026, 10, 2)),
+            patch("users.tasks.send_push_to_user") as push,
+        ):
+            result = send_birthday_notifications()
+        push.assert_not_called()
+        self.assertEqual(result["sent"], 0)
+
+    @override_settings(BIRTHDAY_PUSH_ENABLED=True)
+    def test_task_sends_when_enabled(self):
+        celebrant = make("bday", dob=date(1990, 10, 2), show_birthday=True)
+        celebrant.profile_visibility = "friends"
+        celebrant.save()
+        befriend(make("pal"), celebrant)
+        with (
+            patch("users.tasks.ny_today", return_value=date(2026, 10, 2)),
+            patch("users.tasks.send_push_to_user") as push,
+        ):
+            result = send_birthday_notifications()
+        push.assert_called_once()
+        self.assertEqual(result["sent"], 1)

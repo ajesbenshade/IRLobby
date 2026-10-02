@@ -694,7 +694,9 @@ Your accepted friends whose birthday is today or in the next 7 days, sorted by `
 
 ## Daily birthday push
 
-Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
+**Off by default (not yet approved).** The push is gated by the env var / Django setting `BIRTHDAY_PUSH_ENABLED` (default `False`). While it is off, the beat entry `friend-birthday-notifications` is not registered and `users.tasks.send_birthday_notifications` is a no-op (returns `{"celebrants": 0, "sent": 0, "disabled": true}`, sends nothing). Set `BIRTHDAY_PUSH_ENABLED=true` and restart `celery_beat` and `celery_worker` to turn it on. The endpoint `GET /api/friends/birthdays/` is not affected by this flag.
+
+When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
 
 Database change: `users.User.show_birthday` (bool, default false), migration `users/0016_user_show_birthday`. No change to `HouseholdDependent`.
 

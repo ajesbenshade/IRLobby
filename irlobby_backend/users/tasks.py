@@ -4,6 +4,7 @@ import calendar
 import logging
 
 from celery import shared_task
+from django.conf import settings
 from django.db.models import Q
 
 from activities.eligibility import ny_today
@@ -27,7 +28,11 @@ def _born_today_filter(today):
 def send_birthday_notifications():
     """Notify each friend allowed to see the birthday. Same rules as GET /api/friends/birthdays/:
     show_birthday on, owner 18+, visibility level includes the friend, not blocked either way.
-    Respects each recipient's pushNotifications preference (via send_push_to_user)."""
+    Respects each recipient's pushNotifications preference (via send_push_to_user).
+    Does nothing unless settings.BIRTHDAY_PUSH_ENABLED (env BIRTHDAY_PUSH_ENABLED=true)."""
+    if not getattr(settings, "BIRTHDAY_PUSH_ENABLED", False):
+        logger.info("Birthday notifications skipped: BIRTHDAY_PUSH_ENABLED is off")
+        return {"celebrants": 0, "sent": 0, "disabled": True}
     today = ny_today()
     celebrants = User.objects.filter(
         _born_today_filter(today), is_active=True, show_birthday=True, date_of_birth__isnull=False

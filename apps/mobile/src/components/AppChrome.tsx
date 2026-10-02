@@ -13,6 +13,7 @@ import { Surface, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KeyboardAvoidingView, ScrollView, View } from '@components/RNCompat';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import { appColors, appTypography, fontSize, radii, shadows, spacing } from '@theme/index';
 
@@ -23,6 +24,12 @@ type AppScrollViewProps = PropsWithChildren<{
   refreshControl?: ReactNode;
   /** Lets a screen scroll to a section (e.g. the host's "Who's coming" button). */
   scrollRef?: MutableRefObject<{ scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void } | null>;
+  /**
+   * Stack screens with `headerShown: false` and their own top row. iOS clears the status bar through
+   * `contentInsetAdjustmentBehavior="automatic"`; Android is edge-to-edge and has no such inset, so the status-bar
+   * height is added here. Tab screens are always headerless and need no flag.
+   */
+  headerless?: boolean;
 }>;
 
 type AppScreenContainerProps = PropsWithChildren<{
@@ -76,12 +83,14 @@ type DetailRowProps = {
   onPress?: () => void;
 };
 
-export const AppScrollView = ({ children, contentContainerStyle, refreshControl, scrollRef }: AppScrollViewProps) => {
+export const AppScrollView = ({ children, contentContainerStyle, refreshControl, scrollRef, headerless = false }: AppScrollViewProps) => {
   // Only defined inside the tab navigator; stack screens pushed above the tabs have no bar to clear.
   const tabBottomPadding = useTabScreenBottomPadding();
+  const insets = useSafeInsets();
+  const statusBarClearance = Platform.OS === 'android' && (headerless || tabBottomPadding != null) ? insets.top : 0;
 
   return (
-    <View style={styles.screenRoot}>
+    <View style={[styles.screenRoot, statusBarClearance > 0 ? { paddingTop: statusBarClearance } : null]} testID="app-scroll-root">
       <ScrollView
         {...({ ref: scrollRef } as object)}
         contentInsetAdjustmentBehavior="automatic"

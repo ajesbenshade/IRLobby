@@ -131,7 +131,7 @@ export const yearsBetween = (min: MonthValue, max: MonthValue): number[] =>
   Array.from({ length: max.year - min.year + 1 }, (_, index) => max.year - index);
 
 /** Birthdate picker opens on the wheel about 30 years back when empty. */
-export const defaultBirthMonth = (now = new Date()): MonthValue => ({ year: now.getFullYear() - 30, month: now.getMonth() + 1 });
+export const defaultBirthMonth = (now = new Date(), yearsBack = 30): MonthValue => ({ year: now.getFullYear() - yearsBack, month: now.getMonth() + 1 });
 
 // ---- Times ---------------------------------------------------------------
 
@@ -226,3 +226,34 @@ export const formatDayWithWeekday = (value: DayValue): string => {
 };
 
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+
+// ---- Family member birthdays (children under 18) ----
+
+/** `March 4, 2016` (family Birthday field and rows). */
+export const formatBirthdayLong = (value: DayValue) => `${MONTH_NAMES[value.month - 1]} ${value.day}, ${value.year}`;
+
+/** The day after `value`. */
+export const nextDay = (value: DayValue): DayValue => {
+  const date = new Date(value.year, value.month - 1, value.day + 1);
+  return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() };
+};
+
+/**
+ * Child birthday range: the last 18 years, no future dates. A day is out of range when that person would already be 18
+ * (turning 18 today is already an adult), so the earliest allowed day is the day after the 18th birthday cut-off.
+ */
+export const familyBirthDayLimits = (now = new Date()): DayLimits => ({
+  min: nextDay(latestBirthDateForAge(18, now)),
+  max: todayValue(now),
+});
+
+/** Day limits for adding the missing day to a saved month and year. */
+export const dayLimitsWithinMonth = (month: MonthValue, now = new Date()): DayLimits => {
+  const outer = familyBirthDayLimits(now);
+  const first: DayValue = { year: month.year, month: month.month, day: 1 };
+  const last: DayValue = { year: month.year, month: month.month, day: daysInMonth(month.year, month.month) };
+  return {
+    min: compareDays(first, outer.min) < 0 ? outer.min : first,
+    max: compareDays(last, outer.max) > 0 ? outer.max : last,
+  };
+};

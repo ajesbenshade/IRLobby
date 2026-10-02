@@ -30,7 +30,7 @@ export const MessagingScreen = () => {
   });
 
   return (
-    <AppScrollView contentContainerStyle={styles.container}>
+    <AppScrollView headerless contentContainerStyle={styles.container}>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.back}>Profile</Text>

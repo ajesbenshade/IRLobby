@@ -69,13 +69,13 @@ describe('who is coming people', () => {
         dependents: [],
         members: [
           { id: 1, name: 'Rachel', eligible: true, relationship: 'spouse' },
-          { id: 2, name: 'Noah', eligible: false, age: 11, relationship: 'child', reason: null },
+          { id: 2, name: 'Noah', eligible: false, age: 11, relationship: 'child', reason: null, birth_month: 3, birth_year: 2015, birth_day: 4 },
         ],
       },
       { age_min: 13, age_max: 17 },
     );
     expect(people.map((person) => person.name)).toEqual(['Me', 'Rachel', 'Noah']);
-    expect(people[2]).toMatchObject({ eligible: false, reason: 'Not eligible: ages 13–17', subtitle: 'Child · age 11' });
-    expect(people[1].subtitle).toBe('Spouse');
+    expect(people[2]).toMatchObject({ eligible: false, reason: 'Not eligible: ages 13–17', subtitle: 'Born March 4, 2015 · age 11' });
+    expect(people[1].subtitle).toBe('Adult');
   });
 });

@@ -23,7 +23,7 @@ describe('tap targets are at least 48pt', () => {
 
 describe('text on burgundy is pure white', () => {
   it.each([
-    ['components/SwipeActionButtons.tsx', /goingLabel: \{ color: '#ffffff' \}/],
+    ['components/SwipeActionButtons.tsx', /textColor: PILL_WHITE/],
     ['screens/main/GatheringDetailScreen.tsx', /statusChipText: \{ color: '#ffffff'/],
     ['screens/main/GatheringChatScreen.tsx', /bubbleTextMine: \{ color: '#ffffff' \}/],
     ['screens/main/DirectChatScreen.tsx', /bubbleTextMine: \{ color: '#ffffff' \}/],

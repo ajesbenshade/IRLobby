@@ -1,4 +1,4 @@
-import { type PropsWithChildren } from 'react';
+import { useState, type PropsWithChildren } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,6 +9,11 @@ import {
 } from 'react-native';
 
 import { appColors, appTypography, radii } from '@theme/index';
+
+/** Literal fill and label for `contained` (see PillButton): never a Pressable style callback or a theme lookup. */
+export const CONTAINED_FILL = '#a2033f';
+export const CONTAINED_FILL_PRESSED = '#870234';
+export const CONTAINED_LABEL = '#ffffff';
 import { palette } from '@theme/tokens';
 
 type ButtonVariant = 'contained' | 'outline' | 'ghost' | 'social';
@@ -36,6 +41,8 @@ export const AppButton = ({
   accessibilityLabel,
 }: AppButtonProps) => {
   const isDisabled = disabled || loading;
+  const [pressed, setPressed] = useState(false);
+  const isPressed = pressed && !isDisabled;
 
   return (
     <Pressable
@@ -43,15 +50,18 @@ export const AppButton = ({
       accessibilityLabel={accessibilityLabel}
       disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.base,
         compact ? styles.compact : styles.regular,
         variant === 'contained' ? styles.contained : null,
+        variant === 'contained' ? { backgroundColor: isPressed ? CONTAINED_FILL_PRESSED : CONTAINED_FILL } : null,
         variant === 'outline' ? styles.outline : null,
         variant === 'ghost' ? styles.ghost : null,
         variant === 'social' ? styles.social : null,
         isDisabled ? styles.disabled : null,
-        pressed && !isDisabled ? styles.pressed : null,
+        isPressed ? styles.pressed : null,
         style,
       ]}
     >
@@ -66,6 +76,7 @@ export const AppButton = ({
           style={[
             styles.label,
             variant === 'contained' ? styles.labelContained : styles.labelQuiet,
+            variant === 'contained' ? { color: CONTAINED_LABEL } : null,
             textColor ? { color: textColor } : null,
           ]}
         >

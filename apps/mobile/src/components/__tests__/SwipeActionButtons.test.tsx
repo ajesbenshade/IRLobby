@@ -17,7 +17,7 @@ describe('SwipeActionButtons', () => {
     expect(onGoing).toHaveBeenCalledTimes(1);
   });
 
-  it('styles Pass as an outlined ink pill and I\'m going as a solid burgundy pill with pure white text', () => {
+  it('styles Pass as a white outlined pill with ink text and I\'m going as a solid burgundy pill with pure white text', () => {
     render(<SwipeActionButtons onPass={jest.fn()} onGoing={jest.fn()} />);
 
     const pass = StyleSheet.flatten(screen.getByRole('button', { name: 'Pass' }).props.style);
@@ -25,7 +25,7 @@ describe('SwipeActionButtons', () => {
 
     expect(pass.minHeight).toBe(54);
     expect(going.minHeight).toBe(54);
-    expect(pass.borderColor).toBe('#222222');
+    expect(pass.borderColor).toBe('#c8beba');
     expect(pass.borderWidth).toBeGreaterThan(1);
     expect(going.backgroundColor).toBe('#a2033f');
 

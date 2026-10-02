@@ -15,7 +15,7 @@ export const IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION =
 
 /** Guideline 5.1.1(ii) — keep every NSLocation* string identical to this copy. */
 export const IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION =
-  'The Foyer uses your location to show gatherings near you on Discover — for example, a church event a few miles away tonight.';
+  'The Foyer uses your location to center the map when you choose a place. You can turn this off in your profile.';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const googleIosClientId = readExpoPublic('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID') || '';

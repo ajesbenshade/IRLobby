@@ -1,6 +1,10 @@
-import { GOING_COPY } from '@constants/foyerCopy';
+import { FAMILY_COPY, GOING_COPY } from '@constants/foyerCopy';
 
+import { MONTH_NAMES, daysInMonth, formatBirthdayLong, parseIsoDate, type DayValue } from './dates';
 import { whosComingPeople, type WhosComingDependent, type WhosComingResponse } from './logic';
+
+/** An event's age range plus the start time (the age is checked on the event's local day). A whole Activity fits. */
+export type AgeRange = { age_min?: number | null; age_max?: number | null; time?: string | null };
 
 export type RsvpPerson = {
   /** `me` or the family member id as a string. */
@@ -16,16 +20,8 @@ export type RsvpPerson = {
 
 const initialsOf = (name: string) => name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
 
-const RELATIONSHIP_LABEL: Record<string, string> = {
-  spouse: 'Spouse',
-  child: 'Child',
-};
-
 /** `Not eligible: ages 13–17` when the server gave the generic age reason and we know the range. */
-export const notEligibleReason = (
-  reason: string | null | undefined,
-  range: { age_min?: number | null; age_max?: number | null } | null,
-): string => {
+export const notEligibleReason = (reason: string | null | undefined, range: AgeRange | null): string => {
   const trimmed = reason?.trim() ?? '';
   const generic = !trimmed || /outside this event'?s age range/i.test(trimmed);
   if (generic && range && (range.age_min != null || range.age_max != null)) {
@@ -42,17 +38,134 @@ export const notEligibleReason = (
   return trimmed || GOING_COPY.outsideRange;
 };
 
+/**
+ * Under each person on the RSVP screens: `Adult` for a legacy spouse row, else `Born March 4, 2016 · age 10`
+ * (or `Born March 2016 · age 10` for a legacy month/year row). Only the account owner sees this; hosts never do.
+ */
 export const personSubtitle = (member: WhosComingDependent): string => {
-  const label = RELATIONSHIP_LABEL[member.relationship ?? 'child'] ?? 'Child';
   const isChild = (member.relationship ?? 'child') === 'child';
-  return isChild && member.age != null ? `${label} · age ${member.age}` : label;
+  const dob = parseIsoDate(member.date_of_birth ?? null);
+  const month = member.birth_month ?? dob?.month ?? null;
+  const year = member.birth_year ?? dob?.year ?? null;
+  if (!isChild || month == null || year == null) {
+    return FAMILY_COPY.adult;
+  }
+  // A saved day wins; a bare date that is the last day of its month is how the server stores month/year-only rows.
+  const dayKnown =
+    member.birth_day != null || (member.birth_day === undefined && dob != null && dob.day !== daysInMonth(dob.year, dob.month));
+  const day = member.birth_day ?? dob?.day ?? null;
+  const born = dayKnown && day != null ? formatBirthdayLong({ year, month, day }) : `${MONTH_NAMES[month - 1]} ${year}`;
+  const line = FAMILY_COPY.born(born);
+  return member.age != null ? `${line} · age ${member.age}` : line;
+};
+
+const NY_DAY = (() => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+  } catch {
+    return null;
+  }
+})();
+
+/** The event's calendar day in America/New_York (the server checks ages on this day). Null when the time is unusable. */
+export const eventLocalDay = (time: string | null | undefined): DayValue | null => {
+  const date = time ? new Date(time) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const text = NY_DAY ? NY_DAY.format(date) : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return parseIsoDate(text);
+};
+
+const ageOnDay = (born: DayValue, on: DayValue): number => {
+  let years = on.year - born.year;
+  if (on.month < born.month || (on.month === born.month && on.day < born.day)) {
+    years -= 1;
+  }
+  return years;
+};
+
+/**
+ * Birth day used for the age check. A saved day is used as is. A legacy month/year-only row counts as the LAST day of that
+ * month (Backend's rule, so a child never looks older than they are). A spouse row has no birth data.
+ */
+export const birthDayForAgeCheck = (member: WhosComingDependent): DayValue | null => {
+  if ((member.relationship ?? 'child') !== 'child') {
+    return null;
+  }
+  const dob = parseIsoDate(member.date_of_birth ?? null);
+  const month = member.birth_month ?? dob?.month ?? null;
+  const year = member.birth_year ?? dob?.year ?? null;
+  if (month == null || year == null) {
+    return null;
+  }
+  if (member.birth_day != null) {
+    return { year, month, day: member.birth_day };
+  }
+  if (dob && dob.month === month && dob.year === year) {
+    return dob;
+  }
+  return { year, month, day: daysInMonth(year, month) };
+};
+
+/**
+ * Age on the event day, from the family member's birthdate on this device. The whos-coming list drops the day for exact
+ * birthdates, so the server's own event-day `age` is used too whenever it is older: the check never blocks a child the
+ * server would let in, but it also does not depend on the server's `eligible` flag.
+ */
+export const memberAgeOnEvent = (member: WhosComingDependent, range: AgeRange | null): number | null => {
+  const eventDay = eventLocalDay(range?.time);
+  const born = birthDayForAgeCheck(member);
+  const local = eventDay && born ? ageOnDay(born, eventDay) : null;
+  const server = typeof member.age === 'number' ? member.age : null;
+  if (local == null && server == null) {
+    return null;
+  }
+  return Math.max(local ?? Number.NEGATIVE_INFINITY, server ?? Number.NEGATIVE_INFINITY);
+};
+
+/** True when the gathering has an age range and the age is known and outside it. */
+export const isOutsideAgeRange = (age: number | null, range: AgeRange | null): boolean => {
+  if (age == null || !range) {
+    return false;
+  }
+  return (range.age_min != null && age < range.age_min) || (range.age_max != null && age > range.age_max);
+};
+
+/**
+ * Never trust only the server's `eligible` flag: a family member whose age on the event day is outside the gathering's age
+ * range is marked ineligible here too (disabled row with the reason, never selected, never sent). Already-ineligible people
+ * and people without birth data keep the server's answer.
+ */
+export const applyClientEligibility = (response: WhosComingResponse, range: AgeRange | null): WhosComingResponse => {
+  if (!range || (range.age_min == null && range.age_max == null)) {
+    return response;
+  }
+  const fix = (member: WhosComingDependent): WhosComingDependent =>
+    member.eligible && isOutsideAgeRange(memberAgeOnEvent(member, range), range)
+      ? { ...member, eligible: false, reason: notEligibleReason(null, range) }
+      : member;
+  const changed = (list: WhosComingDependent[] | undefined) => (list ?? []).map(fix);
+  return {
+    ...response,
+    dependents: changed(response.dependents),
+    ...(response.members ? { members: changed(response.members) } : {}),
+  };
+};
+
+/** Ids that may be sent: only checked people who are eligible right now. */
+export const eligibleMemberIds = (response: WhosComingResponse, range: AgeRange | null, ids: number[]): number[] => {
+  const allowed = new Set(
+    whosComingPeople(applyClientEligibility(response, range))
+      .filter((member) => member.eligible)
+      .map((member) => member.id),
+  );
+  return ids.filter((id) => allowed.has(id));
 };
 
 /** Me plus every family member, in the order the screens draw them. Ineligible people are kept, never hidden. */
-export const buildRsvpPeople = (
-  response: WhosComingResponse,
-  range: { age_min?: number | null; age_max?: number | null } | null = null,
-): RsvpPerson[] => {
+export const buildRsvpPeople = (serverResponse: WhosComingResponse, range: AgeRange | null = null): RsvpPerson[] => {
+  const response = applyClientEligibility(serverResponse, range);
   const me: RsvpPerson = {
     key: 'me',
     id: null,

@@ -19,7 +19,7 @@ import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { GRAYSCALE_IMAGE_STYLE, PillButton, Toast } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { WhosComingSheet } from '@components/WhosComingSheet';
-import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, COMMON_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import {
   declineNoteFor,
   gatheringRequiresApproval,
@@ -98,7 +98,7 @@ export const GatheringDetailScreen = () => {
       setPickedUris([]);
       await queryClient.invalidateQueries({ queryKey: ['foyer-gathering', activityId] });
     },
-    onError: (uploadError) => setError(getErrorMessage(uploadError, 'Unable to add those photos.')),
+    onError: (uploadError) => setError(getErrorMessage(uploadError, COMMON_COPY.photosAddFailed)),
   });
 
   const activity = activityQuery.data;
@@ -166,7 +166,7 @@ export const GatheringDetailScreen = () => {
     try {
       setAskSheet(await fetchWhosComing(activityId));
     } catch (failure) {
-      setToast({ message: friendlyRsvpMessage(getErrorMessage(failure, 'Unable to open the request.')), error: true });
+      setToast({ message: friendlyRsvpMessage(getErrorMessage(failure, COMMON_COPY.requestOpenFailed)), error: true });
     } finally {
       setAskPending(false);
     }
@@ -185,7 +185,7 @@ export const GatheringDetailScreen = () => {
         queryClient.invalidateQueries({ queryKey: ['foyer-going'] }),
       ]);
     } catch (failure) {
-      const message = friendlyRsvpMessage(getErrorMessage(failure, 'Unable to send your request.'));
+      const message = friendlyRsvpMessage(getErrorMessage(failure, COMMON_COPY.requestSendFailed));
       if (isFullMessage(message)) {
         // The last spot went (frame 76): close the sheet, show the error inline under the button, refresh so it disables.
         setAskSheet(null);

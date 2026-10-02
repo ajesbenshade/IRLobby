@@ -104,7 +104,7 @@ export const MemberProfileScreen = () => {
 
   if (profileQuery.isLoading) {
     return (
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView headerless contentContainerStyle={styles.container}>
         {header}
         <Text style={styles.sub}>Loading…</Text>
       </AppScrollView>
@@ -113,7 +113,7 @@ export const MemberProfileScreen = () => {
 
   if (blocked) {
     return (
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView headerless contentContainerStyle={styles.container}>
         {header}
         <View style={styles.blocked}>
           <MaterialCommunityIcons name="account-off-outline" size={40} color={appColors.mutedInk} />
@@ -128,7 +128,7 @@ export const MemberProfileScreen = () => {
 
   if (!profile) {
     return (
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView headerless contentContainerStyle={styles.container}>
         {header}
         <InlineError message={profileQuery.error ? getErrorMessage(profileQuery.error, MEMBER_COPY.loadError) : MEMBER_COPY.loadError} />
         <PillButton label={COMMON_COPY.tryAgain} variant="outline" onPress={() => void profileQuery.refetch()} />
@@ -140,7 +140,7 @@ export const MemberProfileScreen = () => {
 
   return (
     <>
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView headerless contentContainerStyle={styles.container}>
         {header}
         <View style={styles.hero}>
           {profile.avatar_url ? (

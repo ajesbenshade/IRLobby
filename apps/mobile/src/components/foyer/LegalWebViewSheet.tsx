@@ -1,10 +1,11 @@
 import { useCallback, useState, type ComponentType } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { WebView, type WebViewProps } from 'react-native-webview';
 
 import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { LEGAL_VIEW_COPY } from '@constants/foyerCopy';
+import { useSafeInsets } from '@hooks/useSafeInsets';
 import { appColors, appTypography } from '@theme/index';
 import { parseHttpsUrl } from '@utils/safeUrl';
 
@@ -30,6 +31,11 @@ export const LegalWebViewSheet = ({ visible, title, url, onClose }: Props) => {
   const safe = url && parseHttpsUrl(url) ? url : null;
   const host = safe ? hostOf(safe) : '';
 
+  // iOS draws a page sheet below the status bar already. Where the sheet is full screen (Android, some tablets) the header must
+  // clear the status bar itself.
+  const insets = useSafeInsets();
+  const headerTopInset = Platform.OS === 'ios' ? 14 : insets.top + 14;
+
   const retry = useCallback(() => {
     setState('loading');
     setAttempt((value) => value + 1);
@@ -38,7 +44,7 @@ export const LegalWebViewSheet = ({ visible, title, url, onClose }: Props) => {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} onShow={() => setState('loading')}>
       <View style={styles.sheet} testID="legal-sheet">
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: headerTopInset }]} testID="legal-header">
           <View style={styles.titles}>
             <Text accessibilityRole="header" style={styles.title}>{title}</Text>
             {host ? <Text style={styles.host}>{host}</Text> : null}
@@ -62,13 +68,13 @@ export const LegalWebViewSheet = ({ visible, title, url, onClose }: Props) => {
           />
         ) : null}
         {safe && state === 'loading' ? (
-          <View style={styles.overlay} pointerEvents="none" testID="legal-loading">
+          <View style={[styles.overlay, { top: headerTopInset + 66 }]} pointerEvents="none" testID="legal-loading">
             <ActivityIndicator color={appColors.primary} />
             <Text style={styles.message}>{LEGAL_VIEW_COPY.loading}</Text>
           </View>
         ) : null}
         {!safe || state === 'failed' ? (
-          <View style={styles.overlay} testID="legal-failed">
+          <View style={[styles.overlay, { top: headerTopInset + 66 }]} testID="legal-failed">
             <Text style={styles.failedTitle}>{LEGAL_VIEW_COPY.failedTitle}</Text>
             <Text style={styles.message}>{LEGAL_VIEW_COPY.failedBody}</Text>
             <PillButton label={LEGAL_VIEW_COPY.tryAgain} onPress={retry} disabled={!safe} />
@@ -91,14 +97,14 @@ export const useLegalSheet = () => {
 
 const styles = StyleSheet.create({
   sheet: { flex: 1, backgroundColor: appColors.white },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e1dbd7' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e1dbd7' },
   titles: { flex: 1 },
   title: { fontFamily: appTypography.heading, fontSize: 20, color: appColors.ink },
   host: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk },
   done: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
   doneText: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.primary },
   web: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, top: 80, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: appColors.white },
+  overlay: { ...StyleSheet.absoluteFillObject, top: 0, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: appColors.white },
   message: { fontFamily: appTypography.bodyRegular, fontSize: 15, color: appColors.mutedInk, textAlign: 'center' },
   failedTitle: { fontFamily: appTypography.heading, fontSize: 20, color: appColors.ink, textAlign: 'center' },
 });

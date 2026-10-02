@@ -6,7 +6,7 @@ import type { ConfigContext } from 'expo/config';
 import appConfig, { IOS_LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION, IOS_PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION } from '../../app.config';
 
 const REQUIRED_LOCATION_COPY =
-  'The Foyer uses your location to show gatherings near you on Discover — for example, a church event a few miles away tonight.';
+  'The Foyer uses your location to center the map when you choose a place. You can turn this off in your profile.';
 
 describe('iOS location usage description', () => {
   it('sets every NSLocation* Info.plist string to the App Review copy', () => {

@@ -16,6 +16,9 @@ export const COMMON_COPY = {
   genericError: 'Something went wrong. Please try again.',
   offline: "You're offline. Check your connection and try again.",
   unavailable: "This isn't available yet. Please try again later.",
+  photosAddFailed: "Couldn't add those photos. Please try again.",
+  requestOpenFailed: "Couldn't open the request. Please try again.",
+  requestSendFailed: "Couldn't send your request. Please try again.",
 } as const;
 
 export const PHOTO_COPY = {
@@ -29,7 +32,12 @@ export const PHOTO_COPY = {
   addOnlyGoing: 'Photos can be added by the host and people who are going.',
   galleryTitle: (count: number) => `Photos · ${count}`,
   downloadAll: 'Download all',
-  downloadSelected: (count: number) => `Download ${count}`,
+  downloadSelected: (count: number) => `Download (${count})`,
+  selectAll: 'Select all',
+  downloading: 'Downloading…',
+  emptyTitle: 'No photos yet',
+  emptyBody: 'Photos added by people who were at this gathering will show up here.',
+  failedBanner: "Couldn't download. Check your connection and try again.",
   viewerPosition: (index: number, total: number) => `${index} of ${total}`,
   saveToPhotos: 'Save to Photos',
   progressTitle: (done: number, total: number) => `Saving ${done} of ${total}…`,
@@ -40,7 +48,6 @@ export const PHOTO_COPY = {
     `Download cancelled. ${saved} of ${total} photos were saved.`,
   partialToast: (saved: number, total: number) =>
     `Saved ${saved} of ${total} photos. ${total - saved} couldn't be saved.`,
-  failedAll: "Photos couldn't be saved. Please try again.",
   deniedTitle: 'Allow photo access to save photos',
   deniedBody:
     'The Foyer needs permission to add photos to your library. In Settings, tap Photos and choose Add Photos Only.',
@@ -236,7 +243,6 @@ export const ATTENDEE_COPY = {
   goingCount: (count: number) => `${count} going`,
   youHost: 'You, host',
   ageBand: { adult: 'Adult', teen: '13–17', under13: 'Under 13' },
-  relationship: { self: '', spouse: 'Spouse', child: 'Child' },
   pastTitle: (count: number) => `Who was there · ${count}`,
   pastLabel: 'Past event',
   familyMember: 'Family member',
@@ -267,6 +273,8 @@ export const GOING_COPY = {
   underThirteenNote: "Family members under 13 are RSVP names only — they don't have accounts.",
   notEligible: (band: string) => `Not eligible: ${band}`,
   outsideRange: "Outside this event's age range",
+  /** Shown when the server still rejects someone for age (the app already blocks them first). */
+  ageRangeRejected: "Someone you chose isn't in this gathering's age range. Update who's coming and try again.",
   eligibilityMissing: 'This gathering is for a different age range.',
   hasStarted: 'This gathering has already started.',
 } as const;
@@ -274,22 +282,67 @@ export const GOING_COPY = {
 export const FAMILY_COPY = {
   title: 'My family',
   back: 'Profile',
-  intro: 'Add a spouse or child under 18 so you can RSVP for them. Only you can see this list.',
+  intro: 'Add your children under 18 so you can RSVP for them. Only you can see this list.',
   section: 'FAMILY MEMBERS',
-  ageBand: (band: string) => `Age band: ${band}`,
   add: 'Add family member',
-  footer: 'We only keep names and, for children under 18, birth month and year. No photos.',
+  footer: 'We only keep names and, for children under 18, birth dates. No photos.',
+  emptyTitle: 'No family members yet',
+  emptyBody: 'Add your children so hosts can plan for them.',
   sheetTitle: 'Add family member',
+  sheetSubtitle: "Add your children under 18 so hosts know who's coming.",
+  editTitle: 'Edit family member',
   name: 'Name',
-  relationship: 'Relationship',
+  namePlaceholder: 'First name',
   sex: 'Sex',
-  birth: 'Birth month and year',
-  birthHelper: 'Shown only for children. We keep just the month and year.',
-  addCta: 'Add',
-  remove: 'Remove',
-  relationships: { spouse: 'Spouse', child: 'Child' },
   sexes: { male: 'Male', female: 'Female' },
+  birthday: 'Birthday',
+  birthdayPlaceholder: 'Month, day and year',
+  /** Under the Birthday field and on the day grid. */
+  birthdayHelper: 'Only you can see this. We use it to check event age ranges.',
+  birthdayWheelHelper: 'Choose the month and year, then pick the day.',
+  /** Field-level, under the Birthday row (server 400 for 18+). */
+  adultError: 'Only children under 18 can be added to a household.',
+  addCta: 'Add',
+  adding: 'Adding…',
+  addFailed: (name: string) => `Couldn't add ${name}. Check your connection and try again.`,
+  save: 'Save',
+  saving: 'Saving…',
+  saveFailed: "Couldn't save changes. Check your connection and try again.",
+  born: (date: string) => `Born ${date}`,
+  adult: 'Adult',
+  addDay: 'Add day',
+  addDayTitle: (name: string) => `Add the day to ${name}'s birthday`,
+  addDayFailed: "Couldn't save the day. Check your connection and try again.",
+  editDetails: 'Edit details',
+  removeFromFamily: 'Remove from family',
+  removeTitle: (name: string) => `Remove ${name}?`,
+  /** Frame 102 says "He'll ... for him"; the pronoun follows the stored sex, else "They'll ... for them". */
+  removeBody: (sex?: string | null) => {
+    const [subject, object] = sex === 'male' ? ["He'll", 'him'] : sex === 'female' ? ["She'll", 'her'] : ["They'll", 'them'];
+    return `${subject} be taken off your family list and off any gatherings you've RSVP'd to for ${object}.`;
+  },
+  remove: 'Remove',
+  keep: 'Keep',
+  removeFailed: "Couldn't remove. Check your connection and try again.",
   membersCount: (count: number) => (count === 1 ? '1 member' : `${count} members`),
+} as const;
+
+/** Map picker and the on-device `Use my location for maps` setting (Design frames 142-147). */
+export const MAP_COPY = {
+  title: 'Choose a location',
+  youAreHere: 'You are here',
+  defaultCaption: 'Showing Franconia. Turn on location in your profile to center on you.',
+  churchCaption: 'Showing your church. Turn on location in your profile to center on you.',
+  selectedLocation: 'Selected location',
+  drag: 'Drag the map to move the pin.',
+  useThisLocation: 'Use this location',
+  recenter: 'Center on my location',
+  chooseOnMap: 'Choose on map',
+  franconiaLabel: 'Franconia, PA',
+  settingSection: 'PRIVACY',
+  settingTitle: 'Use my location for maps',
+  settingCaption: 'Centers maps on you. Off by default; we never ask your phone for location unless this is on.',
+  settingError: "Couldn't update your location setting. Try again.",
 } as const;
 
 export const PROFILE_COPY = {
@@ -559,8 +612,18 @@ export const APPROVAL_COPY = {
   // Toasts
   approvedToast: 'Approved',
   declinedToast: 'Declined',
-  // Push (client fallback titles only; the server writes the real push text)
-  relationship: { spouse: 'Spouse', child: 'Child', parent: 'Parent', other: 'Other' },
+} as const;
+
+/** Discover deck primary pill labels (Design frame 141). Long enough that Pass is 110pt and the primary pill 240pt. */
+export const SWIPE_COPY = {
+  join: "I'm going",
+  request: 'Request to join',
+  askAgain: 'Ask again',
+  sent: 'Request sent',
+  closed: 'Registration closed',
+  full: 'This gathering is full',
+  cancelled: 'This gathering was cancelled',
+  pass: 'Pass',
 } as const;
 
 /** Full gatherings (backend `is_full`). No Design frame yet: follows the theme. */

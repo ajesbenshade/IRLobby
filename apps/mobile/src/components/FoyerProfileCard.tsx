@@ -10,6 +10,7 @@ import { API_ROUTES } from '@shared/schema';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { InlineError, PillButton, SectionLabel } from '@components/foyer/ui';
+import { MapLocationSettingRow } from '@components/foyer/MapLocationSettingRow';
 import { Image, View } from '@components/RNCompat';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { useAppConfig } from '@services/appConfig';
@@ -17,6 +18,7 @@ import {
   COMMON_COPY,
   FAMILY_COPY,
   FRIEND_COPY,
+  MAP_COPY,
   MESSAGING_COPY,
   LEGAL_VIEW_COPY,
   PICKER_COPY,
@@ -336,6 +338,9 @@ export const FoyerProfileCard = () => {
         })}
       </View>
       <Text style={styles.helper}>{PROFILE_COPY.visibilityFooter}</Text>
+
+      <SectionLabel>{MAP_COPY.settingSection}</SectionLabel>
+      <MapLocationSettingRow />
 
       <SectionLabel>{PROFILE_COPY.contactInfo}</SectionLabel>
       <View style={styles.rowsCard}>
@@ -705,7 +710,7 @@ const styles = StyleSheet.create({
   },
   subscribeText: { color: appColors.white, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   calendarNote: { fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18, color: appColors.mutedInk },
-  copyRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  copyRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   copyText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   copied: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
   error: { color: appColors.danger },

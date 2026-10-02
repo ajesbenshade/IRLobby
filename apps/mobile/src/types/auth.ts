@@ -56,7 +56,8 @@ export interface AuthUser {
   canSellTickets?: boolean;
   dateOfBirth?: string | null;
   sex?: 'male' | 'female' | '';
-  church?: { id: number; name: string; is_verified?: boolean } | null;
+  // latitude / longitude are not sent by the backend yet (Church has no coordinates); optional so maps center on the church once they are.
+  church?: { id: number; name: string; is_verified?: boolean; latitude?: number | string | null; longitude?: number | string | null } | null;
   churchId?: number | null;
   isChurchAdmin?: boolean;
   householdChildCount?: number;

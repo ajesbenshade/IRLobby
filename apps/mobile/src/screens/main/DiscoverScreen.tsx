@@ -62,12 +62,13 @@ import {
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
 import { APPROVAL_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
-import { gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
+import { useMapCenter } from '@foyer/mapLocation';
+import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
 import { isActivityCancelled, isCancelledMessage } from '@foyer/cancel';
-import { fullBlocksJoin, fullNotice, isFullMessage } from '@foyer/full';
+import { fullBlocksJoin, isFullMessage } from '@foyer/full';
 import { formatDayShort, formatGatheringWhen, hostDayLimits, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
-import { selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
+import { applyClientEligibility, selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import type { Activity } from '../../types/activity';
@@ -126,6 +127,7 @@ export const DiscoverScreen = () => {
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const mapCenter = useMapCenter(showMap, user?.church);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
@@ -411,7 +413,7 @@ export const DiscoverScreen = () => {
     setRsvpPending(true);
     setRsvpError(null);
     try {
-      const sheet = await fetchWhosComing(currentActivity.id);
+      const sheet = applyClientEligibility(await fetchWhosComing(currentActivity.id), currentActivity);
       setRequestMode(asRequest);
       // A request always shows the sheet: the guest sees what the host will see before sending.
       if (!asRequest && shouldSkipWhosComingSheet(sheet)) {
@@ -530,6 +532,7 @@ export const DiscoverScreen = () => {
     : '';
   const currentJoinButton = joinButtonFor(currentActivity, "I'm going");
   const currentFull = fullBlocksJoin({ activity: currentActivity });
+  const discoverGoing = discoverGoingButton({ join: currentJoinButton, full: currentFull, cancelled: currentActivity ? isActivityCancelled(currentActivity) : false });
   const foyerHostName = currentActivity ? hostDisplayName(currentActivity) : '';
   const foyerHostAvatar = currentActivity ? hostAvatarUrl(currentActivity) : null;
 
@@ -722,8 +725,9 @@ export const DiscoverScreen = () => {
               <MapView
                 style={styles.map}
                 initialRegion={{
-                  latitude: Number(activities[0].latitude ?? 37.7749),
-                  longitude: Number(activities[0].longitude ?? -122.4194),
+                  // Setting on and allowed: the user. Otherwise the home church (when Backend sends its coordinates), else the first gathering, else Franconia. Never an OS prompt when off.
+                  latitude: mapCenter.source !== 'default' ? mapCenter.center.latitude : Number(activities[0].latitude ?? mapCenter.center.latitude),
+                  longitude: mapCenter.source !== 'default' ? mapCenter.center.longitude : Number(activities[0].longitude ?? mapCenter.center.longitude),
                   latitudeDelta: 0.12,
                   longitudeDelta: 0.12,
                 }}
@@ -898,9 +902,10 @@ export const DiscoverScreen = () => {
               onPass={() => void swipe.commit('left')}
               onGoing={() => void swipe.commit('right')}
               disabled={isBusy || rsvpPending}
-              error={rsvpError ?? fullNotice(currentFull)}
-              goingLabel={currentFull ? FULL_COPY.buttonLabel : currentJoinButton.kind === 'join' ? undefined : currentJoinButton.label}
-              goingDisabled={currentJoinButton.disabled || currentFull}
+              error={rsvpError}
+              goingLabel={discoverGoing.label}
+              goingDisabled={discoverGoing.disabled}
+              goingKind={discoverGoing.kind}
             />
           ) : null}
           {currentActivity && !foyerMode ? (

@@ -1,4 +1,4 @@
-import { APPROVAL_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, SWIPE_COPY } from '@constants/foyerCopy';
 import { isRequireApprovalEnabled } from '@foyer/capabilities';
 import { hasEventStarted } from '@foyer/rsvp';
 
@@ -67,6 +67,38 @@ export const joinButtonFor = (activity: ApprovalActivity | null | undefined, joi
     default:
       return { kind: 'request', label: APPROVAL_COPY.requestToJoin, disabled: false, filled: true };
   }
+};
+
+export type DiscoverGoingKind = 'join' | 'request' | 'askAgain' | 'sent' | 'closed' | 'full' | 'cancelled';
+
+/**
+ * The primary Discover button for one card: the approval state, with Full and Cancelled taking over.
+ * `join` and `request` are filled burgundy with white text, `askAgain` is a burgundy outline on white, `sent` is the soft rose disabled pill
+ * and `closed`, `full`, `cancelled` are the grey disabled pill.
+ */
+export const discoverGoingButton = (input: {
+  join: JoinButton;
+  full: boolean;
+  cancelled: boolean;
+}): { kind: DiscoverGoingKind; label: string | undefined; disabled: boolean } => {
+  if (input.cancelled) {
+    return { kind: 'cancelled', label: SWIPE_COPY.cancelled, disabled: true };
+  }
+  if (input.full) {
+    return { kind: 'full', label: SWIPE_COPY.full, disabled: true };
+  }
+  const kind = input.join.kind;
+  return {
+    kind,
+    // The plain I'm going state keeps the component's default label.
+    label:
+      kind === 'join'
+        ? undefined
+        : kind === 'closed'
+          ? SWIPE_COPY.closed
+          : input.join.label,
+    disabled: input.join.disabled,
+  };
 };
 
 /** A request that is still pending when the event starts is closed (no auto-decline, no push). */
@@ -144,15 +176,8 @@ export const cardInitials = (firstName: string) => (firstName.trim()[0] ?? '?').
 
 export const partyLine = (request: JoinRequest) => APPROVAL_COPY.partyOf(request.party.size, request.card.first_name);
 
-export const relationshipLabel = (value: string | null | undefined): string => {
-  const key = String(value ?? '').toLowerCase() as keyof typeof APPROVAL_COPY.relationship;
-  return APPROVAL_COPY.relationship[key] ?? (value ? value[0].toUpperCase() + value.slice(1) : '');
-};
-
-export const memberRowLabel = (member: RequestMember) => {
-  const parts = [relationshipLabel(member.relationship), member.age_band ? APPROVAL_COPY.ageBand(member.age_band) : ''].filter(Boolean);
-  return parts.join(' · ');
-};
+/** Hosts see an age-band chip only (Adult / 13–17 / Under 13). No relationship wording (Spouse, Child, ...) anywhere. */
+export const memberRowLabel = (member: RequestMember): string => (member.age_band ? APPROVAL_COPY.ageBand(member.age_band) : '');
 
 /** Does this request still fit? Unlimited (`null`) always fits. */
 export const partyFits = (request: JoinRequest, spotsLeft: number | null) =>

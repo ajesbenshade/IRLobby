@@ -1,3 +1,5 @@
+import { GOING_COPY } from '@constants/foyerCopy';
+
 export type AudienceGender = 'everyone' | 'men' | 'women';
 export type HostKind = 'person' | 'church';
 
@@ -101,6 +103,8 @@ export type WhosComingDependent = {
   sex?: string | null;
   birth_month?: number | null;
   birth_year?: number | null;
+  birth_day?: number | null;
+  date_of_birth?: string | null;
 };
 
 export type WhosComingResponse = {
@@ -218,8 +222,16 @@ export const gatheringLocationLabel = (location: string | null | undefined): str
 };
 
 /** Older servers answer an empty RSVP with "Choose yourself or a child."; show the family wording. */
-export const friendlyRsvpMessage = (message: string): string =>
-  /choose yourself or a child/i.test(message) ? RSVP_CHOOSE_PEOPLE_MESSAGE : message;
+export const friendlyRsvpMessage = (message: string): string => {
+  if (/choose yourself or a child/i.test(message)) {
+    return RSVP_CHOOSE_PEOPLE_MESSAGE;
+  }
+  // Server 400 when someone chosen is outside the age range ("Some people are not eligible for this gathering.").
+  if (/not eligible for this gathering|outside this event'?s age range/i.test(message)) {
+    return GOING_COPY.ageRangeRejected;
+  }
+  return message;
+};
 
 /**
  * True when nobody in the RSVP list can be selected, so posting would send an

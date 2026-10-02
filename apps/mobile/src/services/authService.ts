@@ -314,6 +314,7 @@ export async function register(
     last_name: payload.lastName,
     ...(payload.dateOfBirth ? { date_of_birth: payload.dateOfBirth } : {}),
     ...(payload.sex ? { sex: payload.sex } : {}),
+    ...(payload.termsAccepted ? { terms_accepted: true, privacy_accepted: true } : {}),
   };
 
   const response = await api.post<AuthResponse>(
@@ -510,18 +511,32 @@ export async function loginWithGoogleIdToken(
   }
 }
 
-export async function loginWithAppleIdentityToken(payload: {
+export type AppleSignInPayload = {
   identityToken: string;
+  /** Apple's one-time `credential.authorizationCode`; the server uses it to revoke the Apple token on account deletion. */
+  authorizationCode?: string | null;
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
-}): Promise<AuthResponse> {
-  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_APPLE_MOBILE, {
+};
+
+/**
+ * Body for POST /api/auth/apple/mobile/. `authorization_code` is an extra field that is only sent when
+ * Apple returned one (never null/empty), so a server that ignores it and a missing code both keep working.
+ */
+export function buildAppleAuthBody(payload: AppleSignInPayload) {
+  const authorizationCode = payload.authorizationCode?.trim();
+  return {
     identity_token: payload.identityToken,
+    ...(authorizationCode ? { authorization_code: authorizationCode } : {}),
     email: payload.email,
     first_name: payload.firstName,
     last_name: payload.lastName,
-  });
+  };
+}
+
+export async function loginWithAppleIdentityToken(payload: AppleSignInPayload): Promise<AuthResponse> {
+  const response = await api.post<AuthResponse>(API_ROUTES.AUTH_APPLE_MOBILE, buildAppleAuthBody(payload));
   return persistAuthResponse(response.data);
 }
 

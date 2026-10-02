@@ -124,14 +124,7 @@ export const ProfileScreen = () => {
   };
 
   const pickAvatarFromLibrary = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setImageError(
-        "Media library permission is required to update your avatar."
-      );
-      return;
-    }
-
+    // The system photo picker needs no library permission (add-only access is used for saving).
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: false,
@@ -160,12 +153,7 @@ export const ProfileScreen = () => {
       return;
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setImageError("Media library permission is required to add photos.");
-      return;
-    }
-
+    // The system photo picker needs no library permission (add-only access is used for saving).
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,

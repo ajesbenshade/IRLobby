@@ -6,7 +6,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
   StatusBar,
@@ -27,24 +26,23 @@ import { auth as authCopy } from '@constants/copy';
 import { useAuth } from '@hooks/useAuth';
 import { appColors, appTypography, loginGradients, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
-import { isAllowedIrlobbyUrl } from '@utils/safeUrl';
+import { refreshAppConfig, useAppConfig } from '@services/appConfig';
+import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
+import { LEGAL_VIEW_COPY } from '@constants/foyerCopy';
 
 import type { AuthStackParamList } from '@navigation/types';
 
-const TERMS_URL = 'https://irlobby.com/terms-of-service';
-const PRIVACY_URL = 'https://irlobby.com/privacy-policy';
 const EMAIL_PATTERN = /\S+@\S+\.\S+/;
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
-const openLegalUrl = (url: string) => {
-  if (!isAllowedIrlobbyUrl(url)) {
-    return;
-  }
-  void Linking.openURL(url).catch(() => undefined);
-};
 
 export const LoginScreen = ({ navigation }: Props) => {
+  const legal = useAppConfig();
+  const legalSheet = useLegalSheet();
+  useEffect(() => {
+    void refreshAppConfig();
+  }, []);
   const {
     signIn,
     signInWithAppleIdentityToken,
@@ -114,6 +112,7 @@ export const LoginScreen = ({ navigation }: Props) => {
 
       return signInWithAppleIdentityToken({
         identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
@@ -300,13 +299,15 @@ export const LoginScreen = ({ navigation }: Props) => {
 
             <View style={styles.footer}>
               <Text style={styles.legalText}>
-                <Text style={styles.legalLink} onPress={() => openLegalUrl(TERMS_URL)}>
+                {authCopy.login.legalPrefix}{' '}
+                <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.termsUrl, LEGAL_VIEW_COPY.termsTitle)}>
                   {authCopy.login.legalTerms}
                 </Text>
-                {' & '}
-                <Text style={styles.legalLink} onPress={() => openLegalUrl(PRIVACY_URL)}>
+                {authCopy.login.legalAnd}
+                <Text accessibilityRole="link" style={styles.legalLink} onPress={() => legalSheet.open(legal.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)}>
                   {authCopy.login.legalPrivacy}
                 </Text>
+                {authCopy.login.legalSuffix}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -335,6 +336,7 @@ export const LoginScreen = ({ navigation }: Props) => {
         actionLabel={authCopy.login.signInToastAction}
         onAction={handleRetrySocialSignIn}
       />
+      {legalSheet.element}
     </LinearGradient>
   );
 };

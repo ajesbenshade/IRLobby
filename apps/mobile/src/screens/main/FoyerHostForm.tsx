@@ -1,16 +1,16 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FoyerHeader } from '@components/FoyerHeader';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { TimePickerSheet } from '@components/foyer/TimePickerSheet';
 import { ScrollView, View } from '@components/RNCompat';
-import { AppButton } from '@components/ui/Button';
+import { PillButton } from '@components/foyer/ui';
 import {
   CALENDAR_ADDRESS_WARNING,
   parseCapacity,
@@ -28,11 +28,20 @@ import {
   type DayValue,
 } from '@foyer/dates';
 import { compressGatheringPhoto } from '@foyer/photos';
-import { PICKER_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { parseTurnOffFallback } from '@foyer/approval';
+import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
+import {
+  approvalCardVisible,
+  approvalPayload,
+  canPostGathering,
+  hostFormValuesFromActivity,
+  shouldBlockTurnOff,
+} from '@foyer/hostForm';
 import { useAuth } from '@hooks/useAuth';
 import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import type { MainStackParamList } from '@navigation/types';
-import { createActivity, updateActivity } from '@services/activityService';
+import { createActivity, fetchActivity, updateActivity } from '@services/activityService';
 import { uploadGatheringPhoto } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -63,6 +72,69 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [hostAsChurch, setHostAsChurch] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [requireApproval, setRequireApproval] = useState(false);
+  const [allowRerequest, setAllowRerequest] = useState(false);
+
+  // Require approval shows only when the backend supports it (field detection or FEATURES switch).
+  useDetectedCapabilities();
+  const approvalEnabled = isRequireApprovalEnabled();
+  const showApprovalCard = approvalCardVisible({ enabled: approvalEnabled, listOnCalendar, hostAsChurch });
+
+  // Edit: start from what was posted (the form used to open blank and would send blanks).
+  const existingQuery = useQuery({
+    queryKey: ['foyer-gathering', activityId],
+    queryFn: () => fetchActivity(activityId as number | string),
+    enabled: isEditing,
+  });
+  const existing = existingQuery.data;
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (!existing || prefilled.current) {
+      return;
+    }
+    prefilled.current = true;
+    const values = hostFormValuesFromActivity(existing, approvalEnabled);
+    setTitle(values.title);
+    setDescription(values.description);
+    setPlace(values.place);
+    setDay(values.day);
+    setStartMinutes(values.startMinutes);
+    setEndMinutes(values.endMinutes);
+    setCapacity(values.capacity);
+    setAudience(values.audience);
+    setAgeMin(values.ageMin);
+    setAgeMax(values.ageMax);
+    setListOnCalendar(values.listOnCalendar);
+    setHostAsChurch(values.hostAsChurch);
+    setRequireApproval(values.requireApproval);
+    setAllowRerequest(values.allowRerequest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing]);
+
+  const reviewRequests = () => {
+    if (activityId) {
+      navigation.navigate('Requests', { activityId });
+    }
+  };
+
+  const showTurnOffBlocked = (count: number) => {
+    Alert.alert(APPROVAL_COPY.turnOffTitle, APPROVAL_COPY.turnOffBody(count), [
+      { text: APPROVAL_COPY.reviewRequests, onPress: reviewRequests },
+      { text: APPROVAL_COPY.notNow, style: 'cancel' },
+    ]);
+  };
+
+  const toggleRequireApproval = (next: boolean) => {
+    if (shouldBlockTurnOff({ wasOn: existing?.requires_approval === true, turningOff: !next, pendingCount: existing?.pending_count })) {
+      // Client check first: the switch stays on and the host is sent to the deck.
+      showTurnOffBlocked(Number(existing?.pending_count ?? 0));
+      return;
+    }
+    setRequireApproval(next);
+    if (!next) {
+      setAllowRerequest(false);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -84,6 +156,13 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         age_max: ageMax.trim() ? Number(ageMax) : null,
         list_on_church_calendar: listOnCalendar,
         host_kind: (hostAsChurch ? 'church' : 'person') as HostKind,
+        // Only when Require approval is enabled; nothing here ever writes the legacy field otherwise.
+        ...approvalPayload({
+          enabled: approvalEnabled,
+          listOnCalendar,
+          hostAsChurch,
+          state: { requireApproval, allowRerequest },
+        }),
       };
       const saved = isEditing && activityId
         ? await updateActivity(activityId, payload as never)
@@ -98,16 +177,20 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       navigation.navigate('Tabs', { screen: 'Activity' });
     },
     onError: (saveError) => {
-      setError(getErrorMessage(saveError, 'Unable to post this gathering.'));
+      const message = getErrorMessage(saveError, 'Unable to post this gathering.');
+      // Server fallback for "turn off with waiting requests": same alert as the client check.
+      const waiting = parseTurnOffFallback(message);
+      if (waiting != null) {
+        setRequireApproval(true);
+        showTurnOffBlocked(waiting);
+        return;
+      }
+      setError(message);
     },
   });
 
   const pickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Photo library access is needed to add a cover photo.');
-      return;
-    }
+    // The system photo picker needs no library permission (add-only access is used for saving).
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 1,
@@ -142,12 +225,11 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
           <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Cancel</Text>
         </Pressable>
         <Text style={styles.navTitle}>Host a gathering</Text>
-        <Pressable accessibilityRole="button" onPress={submit} style={styles.topButton}>
-          <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Post</Text>
-        </Pressable>
+        {/* Spacer keeps the title centred; the only Post action is the sticky footer pill. */}
+        <View style={styles.topButton} />
       </SafeAreaView>
       <ScrollView
-        contentContainerStyle={[styles.content, tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null]}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         <FoyerHeader />
@@ -269,6 +351,21 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
           <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
         </View>
 
+        {showApprovalCard ? (
+          <View style={styles.approvalCard}>
+            <CheckRow label={APPROVAL_COPY.toggleLabel} value={requireApproval} onChange={toggleRequireApproval} />
+            <Text style={styles.helper}>{APPROVAL_COPY.toggleHelper}</Text>
+            {requireApproval ? (
+              <>
+                <View style={styles.divider} />
+                <CheckRow label={APPROVAL_COPY.askAgainLabel} value={allowRerequest} onChange={setAllowRerequest} />
+                <Text style={styles.helper}>{APPROVAL_COPY.askAgainHelper}</Text>
+              </>
+            ) : null}
+          </View>
+        ) : null}
+        {showApprovalCard && requireApproval ? <Text style={styles.helper}>{APPROVAL_COPY.guestLine}</Text> : null}
+
         {user?.isChurchAdmin ? (
           <View style={styles.admin}>
             <Text style={styles.adminLabel}>Admin only</Text>
@@ -282,11 +379,18 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <AppButton onPress={submit} loading={saveMutation.isPending} disabled={saveMutation.isPending}>
-          Post gathering
-        </AppButton>
-        <Text style={styles.footer}>Chat opens for people who are going.</Text>
       </ScrollView>
+      <View style={[styles.stickyFooter, tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null]}>
+        <PillButton
+          label={APPROVAL_COPY.post}
+          loadingLabel={APPROVAL_COPY.posting}
+          loading={saveMutation.isPending}
+          disabled={!canPostGathering({ title, day })}
+          onPress={submit}
+          testID="host-post-button"
+        />
+        <Text style={styles.footer}>Chat opens for people who are going.</Text>
+      </View>
     </View>
   );
 };
@@ -399,5 +503,16 @@ const styles = StyleSheet.create({
   admin: { borderRadius: radii.list, borderWidth: 1, borderColor: appColors.line, padding: 12, gap: 8, backgroundColor: appColors.white },
   adminLabel: { fontFamily: appTypography.bodySemibold, fontSize: 12, color: appColors.mutedInk, textTransform: 'uppercase' },
   error: { color: appColors.danger, fontFamily: appTypography.bodyMedium },
+  approvalCard: { borderRadius: radii.list, borderWidth: 1, borderColor: appColors.line, padding: 14, gap: 8, backgroundColor: appColors.white },
+  divider: { height: 1, backgroundColor: appColors.line, marginVertical: 4 },
+  stickyFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    gap: 6,
+    backgroundColor: appColors.background,
+    borderTopWidth: 1,
+    borderTopColor: appColors.line,
+  },
   footer: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
 });

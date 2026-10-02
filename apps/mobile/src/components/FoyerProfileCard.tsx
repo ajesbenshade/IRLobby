@@ -11,13 +11,15 @@ import { API_ROUTES } from '@shared/schema';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { InlineError, PillButton, SectionLabel } from '@components/foyer/ui';
 import { Image, View } from '@components/RNCompat';
-import { CHURCH_ADMIN_CONTACT_URL } from '@constants/churchAdmin';
+import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
+import { useAppConfig } from '@services/appConfig';
 import {
-  ACCOUNT_SAFETY_COPY,
   COMMON_COPY,
   FAMILY_COPY,
   FRIEND_COPY,
   MESSAGING_COPY,
+  LEGAL_VIEW_COPY,
+  PICKER_COPY,
   PROFILE_COPY,
   VISIBILITY_OPTIONS,
   type VisibilityLevel,
@@ -29,6 +31,7 @@ import {
   buildProfilePatch,
   formatPhoneForField,
   isDraftDirty,
+  isUnder13Rejection,
   phoneError,
   phoneToggleEnabled,
   type ProfileDraft,
@@ -59,6 +62,8 @@ export const FoyerProfileCard = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const queryClient = useQueryClient();
   const { user, refreshProfile } = useAuth();
+  const appConfig = useAppConfig();
+  const legalSheet = useLegalSheet();
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [baseline, setBaseline] = useState<ProfileDraft>(emptyDraft);
   const [locationOn, setLocationOn] = useState(false);
@@ -68,6 +73,7 @@ export const FoyerProfileCard = () => {
   const [open, setOpen] = useState(false);
   const [birthOpen, setBirthOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [birthError, setBirthError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +132,9 @@ export const FoyerProfileCard = () => {
 
   const update = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
     setSaved(false);
+    if (key === 'dateOfBirth') {
+      setBirthError(null);
+    }
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
@@ -143,16 +152,23 @@ export const FoyerProfileCard = () => {
     },
     onSuccess: () => {
       setError(null);
+      setBirthError(null);
       setSaved(true);
     },
-    onError: (saveError) => setError(getErrorMessage(saveError, 'Unable to save your profile.')),
+    onError: (saveError) => {
+      const message = getErrorMessage(saveError, 'Unable to save your profile.');
+      if (isUnder13Rejection(message)) {
+        // Inline under Birth date; Save stays enabled so they can pick another date.
+        setBirthError(PICKER_COPY.under13);
+        setError(null);
+        return;
+      }
+      setError(message);
+    },
   });
 
   const pickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      return;
-    }
+    // The system photo picker needs no library permission (add-only access is used for saving).
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
     if (result.canceled || !result.assets[0]) {
       return;
@@ -209,6 +225,8 @@ export const FoyerProfileCard = () => {
         label={PROFILE_COPY.birthDate}
         value={birthValue ? formatDayShort(birthValue) : ''}
         placeholder="Choose a date"
+        error={birthError}
+        errorStrong
         onPress={() => setBirthOpen(true)}
         testID="profile-birth-date"
       />
@@ -412,16 +430,32 @@ export const FoyerProfileCard = () => {
       ) : null}
       <Text style={styles.pull}>{PROFILE_COPY.pullToRefresh}</Text>
 
+      <SectionLabel>{PROFILE_COPY.contactAdmins.toUpperCase()}</SectionLabel>
+      <Text style={styles.helper}>{PROFILE_COPY.contactAdminsLead}</Text>
+      {appConfig.adminEmail ? (
+        <View style={styles.rowsCard} testID="church-contact-card">
+          <View style={styles.adminCard}>
+            {appConfig.adminName ? <Text style={styles.navLabel}>{appConfig.adminName}</Text> : null}
+            <Text style={styles.helper}>{PROFILE_COPY.churchAdminRole}</Text>
+            <Text style={styles.helper} selectable>{appConfig.adminEmail}</Text>
+            {appConfig.adminPhone ? <Text style={styles.helper} selectable>{appConfig.adminPhone}</Text> : null}
+          </View>
+          <PillButton
+            label={PROFILE_COPY.emailAdmins}
+            onPress={() => void Linking.openURL(appConfig.adminContactUrl).catch(() => undefined)}
+            testID="email-admins"
+          />
+        </View>
+      ) : (
+        <Text style={styles.helper} testID="church-contact-missing">{PROFILE_COPY.contactMissing}</Text>
+      )}
       <View style={styles.rowsCard}>
-        <NavRow
-          icon="lifebuoy"
-          label={PROFILE_COPY.contactAdmins}
-          count={undefined}
-          onPress={() => void Linking.openURL(CHURCH_ADMIN_CONTACT_URL).catch(() => undefined)}
-          last
-        />
+        <NavRow icon="file-document-outline" label={PROFILE_COPY.termsRow} onPress={() => legalSheet.open(appConfig.termsUrl, LEGAL_VIEW_COPY.termsTitle)} />
+        <NavRow icon="shield-lock-outline" label={PROFILE_COPY.privacyRow} onPress={() => legalSheet.open(appConfig.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)} />
+        <NavRow icon="account-remove-outline" label={PROFILE_COPY.deleteRow} danger onPress={() => navigation.navigate('Account')} last />
       </View>
-      <Text style={styles.helper}>{ACCOUNT_SAFETY_COPY.adminContactBody}</Text>
+      <Text style={styles.helper}>{PROFILE_COPY.versionLine}</Text>
+      {legalSheet.element}
 
       <Text style={styles.calendarSection}>CALENDAR</Text>
       <View style={styles.calendarCard}>
@@ -492,7 +526,9 @@ const NavRow = ({
   count,
   onPress,
   last,
+  danger,
 }: {
+  danger?: boolean;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   label: string;
   count?: string;
@@ -505,8 +541,8 @@ const NavRow = ({
     onPress={onPress}
     style={[styles.navRow, last ? null : styles.rowDivider]}
   >
-    <MaterialCommunityIcons name={icon} size={22} color={appColors.primary} />
-    <Text style={styles.navLabel}>{label}</Text>
+    <MaterialCommunityIcons name={icon} size={22} color={danger ? '#8a0a1f' : appColors.primary} />
+    <Text style={[styles.navLabel, danger ? { color: '#8a0a1f' } : null]}>{label}</Text>
     {count ? <Text style={styles.navCount}>{count}</Text> : null}
     <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.mutedInk} />
   </Pressable>
@@ -544,6 +580,7 @@ const ToggleRow = ({
 );
 
 const styles = StyleSheet.create({
+  adminCard: { padding: 14, gap: 2 },
   card: { gap: 10, marginBottom: 12 },
   screenTitle: { fontFamily: appTypography.bodySemibold, fontSize: 17, lineHeight: 24, color: appColors.ink, textAlign: 'center' },
   photoButton: { alignItems: 'center', gap: 10 },

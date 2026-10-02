@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useMemo, useState } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
@@ -18,6 +19,10 @@ import {
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchGoingActivities } from '@services/foyerService';
+import { APPROVAL_COPY, CANCEL_COPY, FULL_COPY } from '@constants/foyerCopy';
+import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
+import { sortCancelledLast } from '@foyer/cancel';
+import { rowShowsChat, rowTag, splitGoingRows, type RowTag } from '@foyer/gatheringsList';
 import { openGatheringChat, type StackNavigate } from '@foyer/gatheringChat';
 import { canSeeChat, isGoingRsvp } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
@@ -60,16 +65,19 @@ export const FoyerGatherings = () => {
     queryKey: ['foyer-hosted'],
     queryFn: fetchHostedActivities,
   });
+  // The going list also carries pending/declined requests once the backend supports Require approval.
+  useDetectedCapabilities();
+  const approvalOn = isRequireApprovalEnabled();
   const goingQuery = useQuery({
-    queryKey: ['foyer-going'],
+    queryKey: ['foyer-going', approvalOn],
     queryFn: () => fetchGoingActivities<Row>(),
   });
 
   const filterRows = (rows: Row[]) =>
     rows.filter((row) => (segment === 'upcoming' ? isUpcomingGathering(row.time) : !isUpcomingGathering(row.time)));
 
-  const hosting = useMemo(() => filterRows((hostedQuery.data ?? []) as Row[]), [hostedQuery.data, segment]);
-  const going = useMemo(() => filterRows(goingQuery.data ?? []), [goingQuery.data, segment]);
+  const hosting = useMemo(() => sortCancelledLast(filterRows((hostedQuery.data ?? []) as Row[])), [hostedQuery.data, segment]);
+  const { requests, going } = useMemo(() => splitGoingRows(filterRows(goingQuery.data ?? [])), [goingQuery.data, segment]);
 
   return (
     <AppScrollView
@@ -110,11 +118,21 @@ export const FoyerGatherings = () => {
         onChat={(row) => openGatheringChat(stackNavigation(), { activityId: row.id, title: row.title })}
         onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
       />
+      {approvalOn && requests.length > 0 ? (
+        <Section
+          label={APPROVAL_COPY.groupRequests}
+          rows={requests}
+          summary={() => ''}
+          showChat={() => false}
+          onChat={() => undefined}
+          onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
+        />
+      ) : null}
       <Section
         label="GOING"
         rows={going}
         summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
-        showChat={(row) => canSeeChat({ isHost: false, isGoing: isGoingRsvp(row.my_rsvp) })}
+        showChat={(row) => canSeeChat({ isHost: false, isGoing: isGoingRsvp(row.my_rsvp) }) && rowShowsChat(row)}
         onChat={(row) => openGatheringChat(stackNavigation(), { activityId: row.id, title: row.title })}
         onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
       />
@@ -144,6 +162,9 @@ const Section = ({
     {rows.length === 0 ? <Text style={styles.empty}>Nothing here yet.</Text> : null}
     {rows.map((row) => {
       const photo = coverPhotoUrl(row);
+      const tag = rowTag(row);
+      const cancelled = tag === 'cancelled';
+      const summaryText = summary(row);
       return (
         <Pressable
           key={String(row.id)}
@@ -152,18 +173,26 @@ const Section = ({
           style={styles.card}
         >
           {photo ? (
-            <Image source={{ uri: photo }} style={styles.thumb} />
+            <Image source={{ uri: photo }} style={[styles.thumb, cancelled ? styles.thumbCancelled : null]} />
           ) : (
-            <View style={styles.thumb} />
+            <View style={[styles.thumb, cancelled ? styles.thumbCancelled : null]} />
           )}
           <View style={styles.cardCopy}>
-            <Text style={styles.cardTitle}>{row.title}</Text>
-            <Text style={styles.meta}>{formatWhen(row.time)}</Text>
-            <Text style={styles.meta}>{summary(row)}</Text>
+            <Text style={[styles.cardTitle, cancelled ? styles.mutedText : null]}>{row.title}</Text>
+            <Text style={[styles.meta, cancelled ? styles.struck : null]}>{formatWhen(row.time)}</Text>
+            {summaryText ? <Text style={styles.meta}>{summaryText}</Text> : null}
+            <View style={styles.tagRow}>
+              {tag ? <TagPill tag={tag} /> : null}
+              {row.is_full === true && tag !== 'cancelled' ? (
+                <View style={[styles.tag, tagStyles.cancelled]} accessibilityLabel={FULL_COPY.tag} testID="full-tag">
+                  <Text maxFontSizeMultiplier={1.4} style={[styles.tagText, tagTextStyles.cancelled]}>{FULL_COPY.tag}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
           {showChat(row) ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={() => onChat(row)} style={styles.chat}>
-              <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={() => onChat(row)} style={[styles.chat, cancelled ? styles.chatMuted : null]}>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.chatText, cancelled ? styles.mutedText : null]}>Chat</Text>
             </Pressable>
           ) : null}
         </Pressable>
@@ -172,7 +201,33 @@ const Section = ({
   </View>
 );
 
+const TAG_LABEL: Record<RowTag, string> = {
+  cancelled: CANCEL_COPY.tag,
+  pending: APPROVAL_COPY.tagPending,
+  declined: APPROVAL_COPY.tagDeclined,
+  closed: APPROVAL_COPY.tagClosed,
+  approved: APPROVAL_COPY.tagApproved,
+};
+
+/** Pending = burgundy outline + clock; Approved = tint + check; Declined/Cancelled = grey fill; Closed = muted outline. */
+const TagPill = ({ tag }: { tag: RowTag }) => (
+  <View style={[styles.tag, tagStyles[tag]]} accessibilityLabel={TAG_LABEL[tag]}>
+    {tag === 'pending' ? <MaterialCommunityIcons name="clock-outline" size={13} color={appColors.primary} /> : null}
+    {tag === 'approved' ? <MaterialCommunityIcons name="check" size={13} color={appColors.primary} /> : null}
+    <Text maxFontSizeMultiplier={1.4} style={[styles.tagText, tagTextStyles[tag]]}>
+      {TAG_LABEL[tag]}
+    </Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, marginTop: 4 },
+  tagText: { fontFamily: appTypography.bodySemibold, fontSize: 12, lineHeight: 16 },
+  struck: { textDecorationLine: 'line-through', color: '#7a7572' },
+  mutedText: { color: '#7a7572' },
+  thumbCancelled: { opacity: 0.4 },
+  chatMuted: { backgroundColor: '#efe9e5' },
   // No paddingBottom here: AppScrollView adds tab bar height + safe area + 16 inside the tabs.
   container: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
   title: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
@@ -206,4 +261,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chatText: { color: appColors.primary, fontFamily: appTypography.bodySemibold },
+});
+
+const tagStyles = StyleSheet.create({
+  cancelled: { backgroundColor: '#e1dbd7' },
+  pending: { borderWidth: 1.5, borderColor: appColors.primary, backgroundColor: appColors.white },
+  declined: { backgroundColor: '#a49b96' },
+  closed: { borderWidth: 1.5, borderColor: '#cec8c4', backgroundColor: '#f3f0ee' },
+  approved: { backgroundColor: appColors.primarySoft },
+});
+
+const tagTextStyles = StyleSheet.create({
+  cancelled: { color: '#5b5551' },
+  pending: { color: appColors.primary },
+  declined: { color: '#ffffff' },
+  closed: { color: '#7a7572' },
+  approved: { color: appColors.primary },
 });

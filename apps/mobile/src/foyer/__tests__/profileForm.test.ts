@@ -27,11 +27,11 @@ const draft: ProfileDraft = {
 
 describe('profile visibility', () => {
   it('offers all four levels with Only me first', () => {
-    expect(VISIBILITY_OPTIONS.map((option) => option.value)).toEqual(['only_me', 'church', 'friends', 'public']);
+    expect(VISIBILITY_OPTIONS.map((option) => option.value)).toEqual(['only_me', 'friends', 'church', 'public']);
     expect(VISIBILITY_OPTIONS.map((option) => option.label)).toEqual([
       'Only me',
-      'People in my church',
       'Friends',
+      'People in my church',
       'Public',
     ]);
   });
@@ -85,5 +85,16 @@ describe('profile payload', () => {
     expect(ageFromIso('2012-03-04', new Date(2026, 9, 1))).toBe(14);
     expect(ageFromIso('1988-12-31', new Date(2026, 9, 1))).toBe(37);
     expect(ageFromIso(null)).toBeNull();
+  });
+});
+
+describe('under-13 server rejection', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { isUnder13Rejection } = require('../profileForm') as typeof import('../profileForm');
+  it('recognises the age message and ignores other errors', () => {
+    expect(isUnder13Rejection('You must be at least 13 years old.')).toBe(true);
+    expect(isUnder13Rejection('Accounts are not available under age 13.')).toBe(true);
+    expect(isUnder13Rejection('Enter a valid phone number.')).toBe(false);
+    expect(isUnder13Rejection(null)).toBe(false);
   });
 });

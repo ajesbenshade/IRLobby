@@ -19,6 +19,7 @@ export const COMMON_COPY = {
 } as const;
 
 export const PHOTO_COPY = {
+  download: 'Download',
   uploadTitle: 'Add photos',
   uploadNotice: 'Photos you add can be viewed and saved by everyone who was at this gathering.',
   uploadCta: 'Add photos',
@@ -119,6 +120,12 @@ export const MEMBER_COPY = {
   reportDetails: 'Add details (optional)',
   submitReport: 'Submit report',
   reportSent: 'Report sent. Thank you.',
+  reportSentTitle: 'Report sent',
+  reportSentBody: 'The church admins will take a look. Thank you for helping keep The Foyer kind.',
+  reportPhoto: 'Report photo',
+  reportPhotoLead: "Tell the church admins what's wrong. The person who added it won't be told.",
+  minorNoMenu: "Teens' profiles aren't shown. Use Report on a message or photo instead.",
+  thisPerson: 'this person',
 } as const;
 
 function contactSentence(contact: 'phone' | 'email' | 'both' | null) {
@@ -157,8 +164,25 @@ export const CHAT_COPY = {
   loadError: "Messages couldn't be loaded.",
 } as const;
 
+/** In-app web view for the hosted Terms / Privacy pages (frames 83-84). */
+export const LEGAL_VIEW_COPY = {
+  done: 'Done',
+  loading: 'Loading…',
+  failedTitle: "Couldn't load this page.",
+  failedBody: 'Check your connection and try again.',
+  tryAgain: 'Try again',
+  close: 'Close',
+  termsTitle: 'Terms of Use',
+  privacyTitle: 'Privacy Policy',
+} as const;
+
 export const GATHERING_CHAT_COPY = {
   title: 'Chat',
+  /** Frame gathering-chat-blocked.png says "Her messages"; neutral wording avoids guessing a pronoun. */
+  blockedLine: (name: string) => `You blocked ${name || 'this person'}. Their messages are hidden.`,
+  copy: 'Copy',
+  reportMessage: 'Report message',
+  blockPerson: (name: string) => `Block ${name || 'this person'}`,
   banner: 'Only the host and people who are going can see this chat.',
   emptyTitle: 'No messages yet',
   emptyBody: 'Say hello. Chat starts once at least two people are going.',
@@ -211,10 +235,13 @@ export const GOING_COPY = {
   saveChanges: 'Save changes',
   addToCalendar: 'Add to calendar',
   cancelRsvp: 'Cancel RSVP',
+  /** Confirm button inside the "Cancel your RSVP?" sheet (cancel-rsvp-fixed.png). */
+  cancelRsvpConfirm: 'Cancel my RSVP',
   keepRsvp: 'Keep my RSVP',
   cancelTitle: 'Cancel your RSVP?',
-  cancelBody: (title: string) =>
-    `You and your family members will be removed from ${title}. This event will return to your Discover deck.`,
+  cancelBody: "You'll be removed from the guest list and the host will be told.",
+  /** Server 400 for a host who tries the guest cancel. Shown as-is if the server sends it. */
+  hostCannotCancelRsvp: "Hosts can't cancel an RSVP; use Cancel this gathering instead.",
   cancelled: 'RSVP cancelled',
   photos: 'Photos',
   chat: 'Chat',
@@ -283,30 +310,39 @@ export const PROFILE_COPY = {
   saved: 'Profile saved',
   contactAdmins: 'Contact the church admins',
   contactAdminsSub: 'Questions, reports or help with your account.',
+  contactAdminsLead: 'Questions, problems or a report you want to follow up on? Write to the church admins.',
+  churchAdminRole: 'Church admin',
+  emailAdmins: 'Email the church admins',
+  contactMissing: "Contact details aren't available right now. Please try again later.",
+  termsRow: 'Terms of Use',
+  privacyRow: 'Privacy Policy',
+  deleteRow: 'Delete account',
+  versionLine: 'The Foyer v1.0',
 } as const;
 
 export type VisibilityLevel = 'only_me' | 'church' | 'friends' | 'public';
 
+/** Most private to widest (profile-v3.png, visibility-ladder-v3.png). API values are unchanged. */
 export const VISIBILITY_OPTIONS: ReadonlyArray<{
   value: VisibilityLevel;
   label: string;
   helper: string;
 }> = [
-  { value: 'only_me', label: 'Only me', helper: 'Nobody else can open your profile.' },
-  {
-    value: 'church',
-    label: 'People in my church',
-    helper: 'People in your church can see your first name, photo and short bio.',
-  },
+  { value: 'only_me', label: 'Only me', helper: 'Only you can see your profile.' },
   {
     value: 'friends',
     label: 'Friends',
-    helper: 'Only friends you have accepted can see your first name, photo and short bio.',
+    helper: 'Your friends can see your first name, photo and short bio.',
+  },
+  {
+    value: 'church',
+    label: 'People in my church',
+    helper: 'Your friends and people in your church can see your first name, photo and short bio.',
   },
   {
     value: 'public',
     label: 'Public',
-    helper: 'Any signed-in Foyer user can see your first name, photo and short bio.',
+    helper: 'Your friends, your church and other people on The Foyer can see your first name, photo and short bio.',
   },
 ];
 
@@ -327,10 +363,225 @@ export const PICKER_COPY = {
   nextMonth: 'Next month',
   chooseMonthYear: 'Choose month and year',
   weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+  /** Birth date grid uses three-letter weekdays, Sunday first (birthdate-day-grid.png). */
+  weekdaysLong: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  next: 'Next',
+  back: 'Back',
+  confirm: 'Confirm',
+  birthWheelHelper: 'Choose your month and year, then pick the day.',
+  pickADay: 'Pick a day',
+  birthCaption: 'Only used to check age ranges on events. Never shown to other people.',
+  under13: 'Accounts are not available under age 13.',
+  monthYearHelper: "Month and year only. We don't keep the day.",
+  pickPastMonth: 'Pick a month that has already passed.',
 } as const;
 
 export const ACCOUNT_SAFETY_COPY = {
   adminContactTitle: 'Church admin contact',
+  /** Shown at the bottom of the Report sheet. */
+  reportHelp: 'Something urgent? Contact the church admins.',
   adminContactBody:
     'To report a problem, ask for help, or have something removed, contact the church admins.',
+} as const;
+
+/** Host "Cancel this gathering" (frames 34-42). Wording not final: edit here only. */
+export const CANCEL_COPY = {
+  hostingBadge: "You're hosting",
+  edit: 'Edit',
+  whosComing: "Who's coming",
+  cancelButton: 'Cancel this gathering',
+  helper: 'Everyone who RSVPed will be notified.',
+  helperStarted: 'This gathering has already started.',
+  sheetTitle: 'Cancel this gathering?',
+  sheetBody: "Everyone who RSVPed will be notified right away. This can't be undone.",
+  reasonLabel: 'Reason (optional)',
+  reasonPlaceholder: 'Let people know why',
+  reasonCounter: (count: number, max: number) => `${count}/${max}`,
+  confirm: 'Cancel gathering',
+  keep: 'Keep gathering',
+  successToast: 'Gathering cancelled',
+  bannerTitle: 'This gathering was cancelled',
+  bannerDate: (date: string) => `Cancelled ${date}`,
+  /** Open item (Aaron): heading is "Who was invited" even though the list is people who RSVPed. */
+  invitedHeading: 'Who was invited',
+  rsvpedCount: (count: number) => `${count} RSVPed`,
+  tag: 'Cancelled',
+  guestPill: 'Cancelled',
+  guestNote: 'You were going',
+  seeAll: 'See all',
+  openChat: 'Open chat',
+  errorGeneric: "Couldn't cancel. Please try again.",
+  errorStarted: "This gathering has already started, so it can't be cancelled.",
+  /** 404/405 from an older backend that does not have the endpoint yet. */
+  errorUnavailable: "Cancelling isn't available yet. Please try again later.",
+  errorForbidden: 'Only the host can cancel this gathering.',
+} as const;
+
+/** Require approval (frames 43-66). Wording not final: edit here only. */
+export const APPROVAL_COPY = {
+  // Host form
+  toggleLabel: 'Require approval',
+  toggleHelper: 'Review each RSVP request before it counts. Only approved guests take a spot.',
+  askAgainLabel: 'Allow asking again',
+  askAgainHelper: 'If you decline someone, they can send another request.',
+  guestLine: 'Guests will be told the host will see their first name, photo and short bio.',
+  turnOffTitle: 'Review your requests first',
+  turnOffBody: (count: number) =>
+    `You still have ${count === 1 ? '1 request' : `${count} requests`} waiting. Approve or decline them before turning this off.`,
+  reviewRequests: 'Review requests',
+  notNow: 'Not now',
+  // Post gathering footer
+  post: 'Post gathering',
+  posting: 'Posting…',
+  // Guest button states
+  requestToJoin: 'Request to join',
+  requestSent: 'Request sent',
+  requestClosed: 'Request closed',
+  askAgain: 'Ask again',
+  approvalRequiredTag: 'Approval required',
+  // Request sheet
+  sheetTitle: 'Request to join',
+  sheetGuestLine: 'The host will see your first name, photo and short bio.',
+  sendRequest: 'Send request',
+  sheetFooter: "You'll get a notification when the host decides.",
+  // Guest event states
+  pendingEyebrow: 'Request sent',
+  pendingTitle: 'Waiting for the host',
+  pendingBody: "You'll get a notification when they decide. The address and chat open if you're approved.",
+  addressLocked: 'Address shared after approval',
+  guestListLocked: 'Guest list opens after approval',
+  cancelRequest: 'Cancel request',
+  approvedTitle: "You're approved",
+  approvedBody: 'The host approved your request. See you there.',
+  declinedTitle: 'Request declined',
+  declinedBody: "The host can't take your request this time.",
+  /** Label above the host's decline note on the declined guest's gathering. Not drawn yet (Aaron approved showing it); placeholder wording. */
+  declinedNoteLabel: 'NOTE FROM THE HOST',
+  askAgainClearsNote: 'Asking again clears this note.',
+  browseOthers: 'Browse other gatherings',
+  declinedByHost: 'The host declined your request.',
+  requestCancelled: 'Request cancelled',
+  /** Guest whose request was pending when the event started (frame 68). */
+  closedTitle: 'Request closed',
+  closedBody: 'This gathering has already started.',
+  tagClosed: 'Closed',
+  // Gatherings list tags / groups
+  groupRequests: 'REQUESTS',
+  tagPending: 'Pending',
+  tagApproved: 'Approved',
+  tagDeclined: 'Declined',
+  // Host gathering row
+  requestsRow: 'Requests',
+  newBadge: (count: number) => `${count} new`,
+  spotsLeftOf: (left: number, total: number) => `${left} ${left === 1 ? 'spot' : 'spots'} left of ${total}`,
+  spotsLeft: (left: number) => `${left} ${left === 1 ? 'spot' : 'spots'} left`,
+  approvedOnly: 'Approved guests only',
+  // Deck
+  deckTitle: 'Requests',
+  deckBack: 'Gathering',
+  deckList: 'List',
+  deckSummary: (waiting: number, spotsLeft: number | null) =>
+    spotsLeft == null ? `${waiting} waiting` : `${waiting} waiting · ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`,
+  about: 'ABOUT',
+  party: 'PARTY',
+  partyOf: (size: number, firstName: string) =>
+    size <= 1 ? 'Party of 1' : `Party of ${size}: ${firstName}, plus ${size - 1}`,
+  ageBand: (band: string) => `Age band: ${band}`,
+  decline: 'Decline',
+  approve: 'Approve',
+  swipeHint: 'Swipe right to approve, left to decline.',
+  stampApprove: 'APPROVE',
+  stampDecline: 'DECLINE',
+  minorLine: 'Teens share their first name and age band only.',
+  noFit: 'Not enough spots for this party.',
+  noFitCaption: (left: number) =>
+    `${left} ${left === 1 ? 'spot' : 'spots'} left. Decline, or raise the limit by editing your gathering.`,
+  // Decline sheet. Open: gendered "her" in Design's wording; kept neutral here.
+  declineTitle: (name: string) => `Decline ${name}'s request?`,
+  declineNoteLabel: 'Add a note (optional)',
+  declineHelper: (name: string) => `${name} will see your note in the app and in their notification.`,
+  declineCounter: (count: number, max: number) => `${count}/${max}`,
+  // Empty / reviewed / list
+  emptyTitle: 'No requests waiting',
+  emptyBody: "When someone asks to join, they'll show up here.",
+  backToGathering: 'Back to gathering',
+  reviewedTitle: "You've reviewed everyone",
+  reviewedSummary: (going: number, spotsLeft: number | null) =>
+    spotsLeft == null
+      ? `${going} going`
+      : `${going} going · ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`,
+  seeApproved: 'See who you approved',
+  tabPending: 'Pending',
+  tabApproved: 'Approved',
+  tabDeclined: 'Declined',
+  approvedChip: 'Approved',
+  /** Event started: approve/decline return 400. */
+  deckClosedTitle: 'Requests are closed',
+  deckClosedBody: "This gathering has already started, so you can't approve or decline requests.",
+  loadError: "Requests couldn't be loaded.",
+  decideError: "Couldn't save that. Please try again.",
+  // Toasts
+  approvedToast: 'Approved',
+  declinedToast: 'Declined',
+  // Push (client fallback titles only; the server writes the real push text)
+  relationship: { spouse: 'Spouse', child: 'Child', parent: 'Parent', other: 'Other' },
+} as const;
+
+/** Full gatherings (backend `is_full`). No Design frame yet: follows the theme. */
+export const FULL_COPY = {
+  notice: 'This gathering is full.',
+  /** Grey banner (frames 74-75) and the disabled button label that replaces I'm going / Request to join. */
+  banner: 'This gathering is full',
+  buttonLabel: 'Gathering full',
+  tag: 'Full',
+  hostCaption: "Pending requests can't be approved until a spot opens.",
+  /** Server 400 detail on RSVP / join / swipe / request. */
+  serverMessage: 'This gathering is full.',
+} as const;
+
+/**
+ * Delete account (Settings > Account). Retention numbers approved by Aaron:
+ * backups up to 30 days, minimal safety reports kept 12 months. If Backend changes what the server removes,
+ * edit here only.
+ */
+export const DELETE_ACCOUNT_COPY = {
+  deleteRowTitle: 'Delete account',
+  rowSubtitle: 'Permanently delete your profile and everything attached to it.',
+  cardSubtitle:
+    'This permanently deletes your account: your profile, friends, messages, photos, family members and contact information. It is not a deactivate.',
+  confirmBody:
+    "This permanently removes your profile, friends, messages, photos, family members and contact information. You can't undo this.",
+  retention:
+    'Deleted accounts can remain in our server backups for up to 30 days. Safety reports are kept in a minimal form (who reported, a reference to the content, the reason and the date) for 12 months so we can protect other members.',
+  /** Backend wording for the whole-screen body (frames 90-91). */
+  screenBody:
+    "This permanently deletes your profile, photo, contact info, friends, friend requests, one-to-one chats, your messages in gathering chats, family members, RSVPs and photos you added. Gatherings you host will be cancelled, and the people going will be told first. This can't be undone.",
+  bullets: [
+    'Your profile and photo',
+    'Your contact info',
+    'Friends and friend requests',
+    'One-to-one chats',
+    'Your messages in gathering chats',
+    'Family members',
+    'RSVPs',
+    'Photos you added',
+    'Gatherings you host are cancelled, and the people going are told first',
+  ],
+  hostingNote: (count: number) =>
+    `You host ${count} upcoming ${count === 1 ? 'gathering' : 'gatherings'}. ${count === 1 ? "It'll" : "They'll"} be cancelled and the people going will be told.`,
+  typeLabel: 'Type DELETE to confirm',
+  typeWord: 'DELETE',
+  deleteButton: 'Delete my account',
+  keepButton: 'Keep my account',
+  alertTitle: 'Delete your account?',
+  alertBody: "This can't be undone.",
+  alertCancel: 'Cancel',
+  alertDelete: 'Delete',
+  working: 'Deleting your account…',
+  failedTitle: "Couldn't delete your account.",
+  failedBody: 'Nothing was removed. Please try again.',
+  tryAgain: 'Try again',
+  doneTitle: 'Your account was deleted',
+  doneBody: "Your data has been removed. You're welcome back any time.",
+  close: 'Close',
 } as const;

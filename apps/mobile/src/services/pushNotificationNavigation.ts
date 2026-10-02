@@ -43,6 +43,27 @@ export const messagePushTarget = (data: PushData) => {
   return null;
 };
 
+const DETAIL_PUSH_TYPES = new Set(['activity_cancelled', 'join_request_approved', 'join_request_declined']);
+
+/**
+ * Host cancel and Require approval pushes.
+ *  - `activity_cancelled`, `join_request_approved`, `join_request_declined` -> that gathering's detail
+ *  - `join_request` (screen `Requests`) -> the host's Requests deck for that gathering
+ * Returns null for anything else so the existing routing is unchanged.
+ */
+export const activityPushTarget = (data: PushData) => {
+  if (data.activityId == null) {
+    return null;
+  }
+  if (data.type === 'join_request' || (data.screen === 'Requests' && data.type !== 'activity_cancelled')) {
+    return { screen: 'Requests' as const, params: { activityId: data.activityId } };
+  }
+  if (data.type && DETAIL_PUSH_TYPES.has(data.type)) {
+    return { screen: 'GatheringDetail' as const, params: { activityId: data.activityId } };
+  }
+  return null;
+};
+
 const navigateFromPushData = (
   navigation: NavigationContainerRefWithCurrent<RootStackParamList>,
   data: PushData | undefined,
@@ -52,6 +73,17 @@ const navigateFromPushData = (
   }
 
   const screen = data.screen || data.type;
+  if (isFoyerMode()) {
+    const target = activityPushTarget(data);
+    if (target) {
+      if (target.screen === 'Requests') {
+        // Gathering underneath, so Back returns to it.
+        navigation.navigate('Main', { screen: 'GatheringDetail', params: { activityId: target.params.activityId } });
+      }
+      navigation.navigate('Main', target as never);
+      return;
+    }
+  }
   // The Foyer has no Chat tab: message pushes open that gathering's (or friend's) chat.
   if (isFoyerMode() && (screen === 'Chat' || screen === 'new_message')) {
     const target = messagePushTarget(data);

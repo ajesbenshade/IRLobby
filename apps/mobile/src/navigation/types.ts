@@ -83,6 +83,8 @@ export type MainStackParamList = {
    */
   GatheringChat: { activityId: number | string; conversationId?: number | string; title?: string };
   PhotoGallery: { activityId: number | string };
+  /** Host's Require approval deck. */
+  Requests: { activityId: number | string };
   MemberProfile: { userId: number | string };
   DirectChat: { conversationId: number | string; name?: string };
   Messaging: undefined;

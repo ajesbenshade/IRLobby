@@ -17,6 +17,8 @@ type FoyerGatheringCardProps = {
   hostName: string;
   hostAvatarUrl?: string | null;
   coverImageUrl?: string | null;
+  /** `Approval required` pill, top-left of the cover. Only passed when Require approval is on for this gathering. */
+  approvalTag?: string | null;
 };
 
 /**
@@ -34,10 +36,19 @@ export const FoyerGatheringCard = ({
   hostName,
   hostAvatarUrl,
   coverImageUrl,
+  approvalTag,
 }: FoyerGatheringCardProps) => (
   <View style={styles.card}>
     <View style={styles.photoWrap}>
       {coverImageUrl ? <Image source={{ uri: coverImageUrl }} style={styles.photo} /> : <View style={styles.photo} />}
+      {approvalTag ? (
+        <View style={styles.approvalTag} accessibilityLabel={approvalTag}>
+          <MaterialCommunityIcons name="lock-outline" size={13} color="#a2033f" />
+          <Text maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE} style={styles.approvalTagText}>
+            {approvalTag}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.coverBadge}>
         <Text maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE} style={styles.coverBadgeText}>
           Cover photo
@@ -83,6 +94,21 @@ export const FoyerGatheringCard = ({
 );
 
 const styles = StyleSheet.create({
+  approvalTag: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#a2033f',
+  },
+  approvalTagText: { color: '#a2033f', fontFamily: appTypography.bodySemibold, fontSize: 11.5, lineHeight: 15 },
   card: {
     alignSelf: 'stretch',
     backgroundColor: appColors.white,

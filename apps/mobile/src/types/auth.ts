@@ -73,6 +73,8 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload extends LoginPayload {
+  /** Sent as terms_accepted / privacy_accepted when true. Servers that do not take them yet ignore the extra fields. */
+  termsAccepted?: boolean;
   firstName: string;
   lastName: string;
   username?: string;

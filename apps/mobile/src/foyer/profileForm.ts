@@ -93,3 +93,10 @@ export const ageFromIso = (iso: string | null | undefined, now = new Date()): nu
   }
   return age;
 };
+
+/**
+ * The server can still reject a birth date that makes the account under 13 (stale clock, edited request).
+ * That message belongs under the Birth date row, not in the generic save error.
+ */
+export const isUnder13Rejection = (message: string | null | undefined): boolean =>
+  Boolean(message) && /\b13\b/.test(message as string) && /(age|old|under|younger|birth)/i.test(message as string);

@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { ConfirmSheet } from '@components/foyer/ConfirmSheet';
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
 import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
-import { ACCOUNT_SAFETY_COPY, COMMON_COPY, MEMBER_COPY } from '@constants/foyerCopy';
-import { useAppConfig } from '@services/appConfig';
+import { COMMON_COPY, MEMBER_COPY } from '@constants/foyerCopy';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
@@ -77,7 +76,6 @@ type ReportProps = {
 
 /** Report sheet: five reasons (radio, one required), optional details, `Submit report` disabled until a reason is chosen. */
 export const ReportSheet = ({ visible, name, onClose, onSubmit, onSent, lead, title }: ReportProps) => {
-  const appConfig = useAppConfig();
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState('');
   const [pending, setPending] = useState(false);
@@ -193,15 +191,6 @@ export const ReportSheet = ({ visible, name, onClose, onSubmit, onSent, lead, ti
         multiline
         style={styles.details}
       />
-      <Pressable
-        accessibilityRole="link"
-        accessibilityLabel={ACCOUNT_SAFETY_COPY.reportHelp}
-        onPress={() => void Linking.openURL(appConfig.adminContactUrl).catch(() => undefined)}
-        style={styles.helpLink}
-        testID="report-admin-contact"
-      >
-        <Text style={styles.helpLinkText}>{ACCOUNT_SAFETY_COPY.reportHelp}</Text>
-      </Pressable>
     </FoyerSheet>
   );
 };
@@ -246,8 +235,6 @@ export const ActionSheet = ({
 export { ConfirmSheet };
 
 const styles = StyleSheet.create({
-  helpLink: { minHeight: 48, justifyContent: 'center' },
-  helpLinkText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 14, textDecorationLine: 'underline' },
   title: { fontFamily: appTypography.heading, fontSize: 24, lineHeight: 32, color: appColors.ink },
   body: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 22, color: appColors.ink },
   bulletRow: { flexDirection: 'row', gap: 8 },

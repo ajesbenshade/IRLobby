@@ -14,7 +14,7 @@ import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
 import { HostAttendeesCard } from '@components/foyer/HostAttendeesCard';
 import { PastAttendeesCard } from '@components/foyer/PastAttendeesCard';
 import { PhotoUploadSheet } from '@components/foyer/PhotoUploadSheet';
-import { PillButton, Toast } from '@components/foyer/ui';
+import { GRAYSCALE_IMAGE_STYLE, PillButton, Toast } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { WhosComingSheet } from '@components/WhosComingSheet';
 import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, FULL_COPY, GOING_COPY, PHOTO_COPY } from '@constants/foyerCopy';
@@ -201,9 +201,9 @@ export const GatheringDetailScreen = () => {
       }
     >
       {cover ? (
-        <Image source={{ uri: cover }} style={[styles.cover, cancelled ? styles.coverCancelled : null]} />
+        <Image source={{ uri: cover }} style={[styles.cover, cancelled ? GRAYSCALE_IMAGE_STYLE : null]} />
       ) : (
-        <View style={[styles.cover, cancelled ? styles.coverCancelled : null]} />
+        <View style={[styles.cover, cancelled ? GRAYSCALE_IMAGE_STYLE : null]} />
       )}
       <Text style={styles.chip}>{audienceChipLabel(activity)}</Text>
       {isHost ? (
@@ -213,10 +213,10 @@ export const GatheringDetailScreen = () => {
       ) : null}
       <Text style={[styles.title, cancelled ? styles.mutedText : null]}>{activity.title}</Text>
       {cancelled ? (
-        <View style={styles.banner} accessibilityRole="alert">
-          <MaterialCommunityIcons name="calendar-remove-outline" size={22} color="#5b5551" />
+        <View style={[styles.banner, styles.bannerCancelled]} accessibilityRole="alert" testID="cancelled-banner">
+          <MaterialCommunityIcons name="calendar-remove-outline" size={22} color={appColors.primary} />
           <View style={styles.bannerCopy}>
-            <Text style={styles.bannerTitle}>{CANCEL_COPY.bannerTitle}</Text>
+            <Text style={[styles.bannerTitle, styles.bannerTitleCancelled]}>{CANCEL_COPY.bannerTitle}</Text>
             {activity.cancel_reason?.trim() ? <Text style={styles.bannerBody}>{activity.cancel_reason.trim()}</Text> : null}
             {cancelledDateLabel(activity.cancelled_at) ? (
               <Text style={styles.bannerMeta}>{cancelledDateLabel(activity.cancelled_at)}</Text>
@@ -241,15 +241,15 @@ export const GatheringDetailScreen = () => {
         </Text>
       ) : null}
       {started && !cancelled ? <Text style={styles.pastLabel}>{ATTENDEE_COPY.pastLabel}</Text> : null}
-      {isGoing && !cancelled && !requestLocked ? (
+      {isGoing && !isHost && !cancelled && !requestLocked ? (
         <View style={styles.statusChip}>
           <Text style={styles.statusChipText}>{GOING_COPY.title}</Text>
         </View>
       ) : null}
-      {cancelled && isGoing ? (
-        <View style={styles.cancelledRow}>
+      {cancelled && !isHost ? (
+        <View style={styles.cancelledBlock} testID="cancelled-guest">
           <PillButton label={CANCEL_COPY.guestPill} disabled onPress={() => undefined} style={styles.cancelledPill} />
-          <Text style={styles.meta}>{CANCEL_COPY.guestNote}</Text>
+          {isGoing ? <Text style={styles.cancelledNote}>{CANCEL_COPY.guestNote}</Text> : null}
         </View>
       ) : null}
       {fullNotice(fullBlocked) ? (
@@ -378,12 +378,7 @@ export const GatheringDetailScreen = () => {
           <Text style={styles.meta}>{APPROVAL_COPY.guestListLocked}</Text>
         </View>
       ) : null}
-      {hostView && attendeesQuery.data && cancelled ? (
-        <Text style={styles.section}>
-          {CANCEL_COPY.invitedHeading} · {CANCEL_COPY.rsvpedCount(activity.going_count ?? activity.participant_count ?? 0)}
-        </Text>
-      ) : null}
-      {hostView && attendeesQuery.data ? <HostAttendeesCard data={attendeesQuery.data} /> : null}
+      {hostView && attendeesQuery.data ? <HostAttendeesCard data={attendeesQuery.data} cancelled={cancelled} /> : null}
       {pastAttendees.length > 0 ? (
         <PastAttendeesCard
           attendees={pastAttendees}
@@ -551,7 +546,8 @@ const RequestBanner = ({ view, note }: { view: GuestRequestView; note: string | 
 };
 
 const styles = StyleSheet.create({
-  coverCancelled: { opacity: 0.4 },
+  bannerCancelled: { backgroundColor: '#f9e8ee' },
+  bannerTitleCancelled: { fontFamily: appTypography.bodyBold, color: '#8a0a1f' },
   fullNotice: { fontFamily: appTypography.bodySemibold, fontSize: 14, color: '#8a0a1f' },
   mutedText: { color: '#7a7572' },
   struck: { textDecorationLine: 'line-through', color: '#7a7572' },
@@ -564,15 +560,16 @@ const styles = StyleSheet.create({
   noteBlock: { marginTop: 10, gap: 4, paddingLeft: 12, borderLeftWidth: 3, borderLeftColor: appColors.primary },
   noteQuote: { fontFamily: appTypography.heading, fontStyle: 'italic', fontSize: 16, lineHeight: 22, color: appColors.ink },
   helperCaption: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk },
-  cancelledRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cancelledPill: { minWidth: 140 },
+  cancelledBlock: { gap: 6 },
+  cancelledPill: { alignSelf: 'stretch' },
+  cancelledNote: { fontFamily: appTypography.bodyRegular, fontSize: 14, lineHeight: 20, color: appColors.mutedInk, textAlign: 'center' },
   lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   requestsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: appColors.white, borderRadius: radii.list, padding: 14, minHeight: 56 },
   requestsCopy: { flex: 1, gap: 2 },
   requestsTitle: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink },
   newBadge: { backgroundColor: appColors.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   newBadgeText: { color: '#ffffff', fontFamily: appTypography.bodySemibold, fontSize: 12 },
-  cancelBlock: { gap: 6, marginTop: 8 },
+  cancelBlock: { gap: 6, marginTop: 14 },
   helperText: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk, textAlign: 'center' },
   container: { padding: 20, gap: 10, paddingBottom: 48 },
   cover: { width: '100%', height: 180, borderRadius: radii.card, backgroundColor: '#c4b2a8' },
@@ -595,7 +592,7 @@ const styles = StyleSheet.create({
   thumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: appColors.background },
   pastLabel: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.mutedInk },
   statusChip: { alignSelf: 'flex-start', backgroundColor: appColors.primary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  statusChipText: { color: '#f6f1ee', fontFamily: appTypography.bodySemibold, fontSize: 13 },
+  statusChipText: { color: '#ffffff', fontFamily: appTypography.bodySemibold, fontSize: 13 },
   alignStart: { alignSelf: 'flex-start' },
   pillRow: { flexDirection: 'row', gap: 12 },
   pillEqual: { flex: 1 },

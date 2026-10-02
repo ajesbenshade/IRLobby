@@ -440,18 +440,24 @@ export const FoyerProfileCard = () => {
             <Text style={styles.helper} selectable>{appConfig.adminEmail}</Text>
             {appConfig.adminPhone ? <Text style={styles.helper} selectable>{appConfig.adminPhone}</Text> : null}
           </View>
-          <PillButton
-            label={PROFILE_COPY.emailAdmins}
-            onPress={() => void Linking.openURL(appConfig.adminContactUrl).catch(() => undefined)}
-            testID="email-admins"
-          />
+          {appConfig.adminContactUrl ? (
+            <PillButton
+              label={PROFILE_COPY.emailAdmins}
+              onPress={() => void Linking.openURL(appConfig.adminContactUrl as string).catch(() => undefined)}
+              testID="email-admins"
+            />
+          ) : null}
         </View>
       ) : (
         <Text style={styles.helper} testID="church-contact-missing">{PROFILE_COPY.contactMissing}</Text>
       )}
       <View style={styles.rowsCard}>
-        <NavRow icon="file-document-outline" label={PROFILE_COPY.termsRow} onPress={() => legalSheet.open(appConfig.termsUrl, LEGAL_VIEW_COPY.termsTitle)} />
-        <NavRow icon="shield-lock-outline" label={PROFILE_COPY.privacyRow} onPress={() => legalSheet.open(appConfig.privacyUrl, LEGAL_VIEW_COPY.privacyTitle)} />
+        {appConfig.termsUrl ? (
+          <NavRow icon="file-document-outline" label={PROFILE_COPY.termsRow} onPress={() => legalSheet.open(appConfig.termsUrl as string, LEGAL_VIEW_COPY.termsTitle)} />
+        ) : null}
+        {appConfig.privacyUrl ? (
+          <NavRow icon="shield-lock-outline" label={PROFILE_COPY.privacyRow} onPress={() => legalSheet.open(appConfig.privacyUrl as string, LEGAL_VIEW_COPY.privacyTitle)} />
+        ) : null}
         <NavRow icon="account-remove-outline" label={PROFILE_COPY.deleteRow} danger onPress={() => navigation.navigate('Account')} last />
       </View>
       <Text style={styles.helper}>{PROFILE_COPY.versionLine}</Text>

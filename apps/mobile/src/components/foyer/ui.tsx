@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
 import { appColors, appTypography, radii } from '@theme/index';
@@ -26,6 +26,9 @@ export const PILL_DESTRUCTIVE_PRESSED = '#680617';
 export const PILL_WHITE = '#ffffff';
 export const PILL_INK = '#222222';
 export const PILL_CREAM = '#f6f1ee';
+
+/** Cancelled gatherings: cover and list thumbnails are greyscale, not just dimmed (New Architecture `filter` style; ImageStyle does not type it). */
+export const GRAYSCALE_IMAGE_STYLE = { filter: [{ grayscale: 1 }] } as unknown as ImageStyle;
 
 export type PillVariant = 'primary' | 'outline' | 'text' | 'destructive' | 'destructiveOutline';
 
@@ -245,7 +248,7 @@ const styles = StyleSheet.create({
   pillRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 1 },
   pillLabel: { fontFamily: appTypography.bodySemibold, fontSize: 16, lineHeight: 22, textAlign: 'center', flexShrink: 1 },
   sheetButtons: { gap: 10 },
-  error: { color: appColors.primary, fontFamily: appTypography.bodyMedium, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  error: { color: PILL_DESTRUCTIVE, fontFamily: appTypography.bodyMedium, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   empty: { alignItems: 'center', gap: 12, paddingVertical: 40, paddingHorizontal: 24 },
   emptyCircle: {
     width: 72,

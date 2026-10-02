@@ -438,7 +438,7 @@ const CreateActivityScreenLegacy = ({ activityId }: CreateActivityScreenProps = 
 
   return (
     <View style={styles.frameRoot}>
-      <SafeAreaView edges={['top']} style={styles.coralHeader}>
+      <SafeAreaView edges={['top']} style={styles.topHeader}>
         <FoyerHeader tone="onPrimary" />
       </SafeAreaView>
 
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: appColors.primary,
   },
-  coralHeader: {
+  topHeader: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },

@@ -2,13 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { Linking } from 'react-native';
 
-import {
-  CHURCH_ADMIN_CONTACT_URL,
-  CHURCH_ADMIN_EMAIL,
-  CHURCH_ADMIN_MAIL_SUBJECT,
-  PRIVACY_URL,
-  TERMS_URL,
-} from '@constants/churchAdmin';
+import { CHURCH_ADMIN_MAIL_SUBJECT, PRIVACY_URL, TERMS_URL } from '@constants/churchAdmin';
 import { parseHttpsUrl } from '@utils/safeUrl';
 
 import { api } from './apiClient';
@@ -18,9 +12,12 @@ import { api } from './apiClient';
  *
  *   { terms_url, privacy_url, support_email, church_admin: { name, email, phone } | null }
  *
- * Every field may be null or missing. Admin email: church_admin.email, then support_email, then the bundled constant.
- * Every field is optional. Anything missing, malformed or unreachable falls back to the bundled constants
- * in constants/churchAdmin.ts. A 404 (endpoint not deployed yet) or a network error is silent.
+ * Every field may be null or missing.
+ * - Admin email: church_admin.email, then support_email, then nothing (no bundled address; the contact
+ *   screen shows its "not available" state and hides the email button).
+ * - Terms / Privacy URLs: a server value wins; an explicit null (or a non-https value) means "hide the link";
+ *   a field that is absent because the request never succeeded falls back to the bundled defaults.
+ * A 404 (endpoint not deployed yet) or a network error is silent.
  */
 export const APP_CONFIG_PATH = '/api/config/';
 export const APP_CONFIG_CACHE_KEY = '@irlobby/app-config/v1';
@@ -36,19 +33,21 @@ export type AppConfigPayload = {
 
 export type ResolvedAppConfig = {
   adminName: string | null;
-  adminEmail: string;
+  /** null when the server has neither church_admin.email nor support_email. */
+  adminEmail: string | null;
   adminPhone: string | null;
-  /** mailto: link for the contact row (built from the email). */
-  adminContactUrl: string;
-  termsUrl: string;
-  privacyUrl: string;
+  /** mailto: link for the contact button (built from the email); null when there is no email. */
+  adminContactUrl: string | null;
+  /** null hides the row / makes the sign-up words plain text. */
+  termsUrl: string | null;
+  privacyUrl: string | null;
 };
 
 export const BUNDLED_APP_CONFIG: ResolvedAppConfig = {
   adminName: null,
-  adminEmail: CHURCH_ADMIN_EMAIL,
+  adminEmail: null,
   adminPhone: null,
-  adminContactUrl: CHURCH_ADMIN_CONTACT_URL,
+  adminContactUrl: null,
   termsUrl: TERMS_URL,
   privacyUrl: PRIVACY_URL,
 };
@@ -63,6 +62,14 @@ const httpsUrl = (value: unknown): string | null => {
   return candidate && parseHttpsUrl(candidate) ? candidate : null;
 };
 
+/** A url field: absent -> bundled default; present -> the https value, or null (hide) when null/invalid. */
+const urlField = (payload: AppConfigPayload | null | undefined, key: 'terms_url' | 'privacy_url', fallback: string): string | null => {
+  if (!payload || typeof payload !== 'object' || !(key in payload) || payload[key] === undefined) {
+    return fallback;
+  }
+  return httpsUrl(payload[key]);
+};
+
 /** Merge a (possibly partial or junk) server payload over the bundled defaults, field by field. */
 export const resolveAppConfig = (payload: AppConfigPayload | null | undefined): ResolvedAppConfig => {
   const admin = payload && typeof payload === 'object' ? payload.church_admin : null;
@@ -73,13 +80,13 @@ export const resolveAppConfig = (payload: AppConfigPayload | null | undefined): 
   const validEmail = validEmailOf(admin?.email) ?? validEmailOf(payload?.support_email);
   return {
     adminName: text(admin?.name) ?? BUNDLED_APP_CONFIG.adminName,
-    adminEmail: validEmail ?? BUNDLED_APP_CONFIG.adminEmail,
+    adminEmail: validEmail,
     adminPhone: text(admin?.phone) ?? BUNDLED_APP_CONFIG.adminPhone,
     adminContactUrl: validEmail
       ? `mailto:${validEmail}?subject=${encodeURIComponent(CHURCH_ADMIN_MAIL_SUBJECT)}`
-      : BUNDLED_APP_CONFIG.adminContactUrl,
-    termsUrl: httpsUrl(payload?.terms_url) ?? BUNDLED_APP_CONFIG.termsUrl,
-    privacyUrl: httpsUrl(payload?.privacy_url) ?? BUNDLED_APP_CONFIG.privacyUrl,
+      : null,
+    termsUrl: urlField(payload, 'terms_url', BUNDLED_APP_CONFIG.termsUrl as string),
+    privacyUrl: urlField(payload, 'privacy_url', BUNDLED_APP_CONFIG.privacyUrl as string),
   };
 };
 

@@ -1,17 +1,34 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { CHURCH_ADMIN_CONTACT_URL } from '../churchAdmin';
+import { CHURCH_ADMIN_MAIL_SUBJECT, PRIVACY_URL, PRIVACY_VERSION, TERMS_URL, TERMS_VERSION } from '../churchAdmin';
 
-describe('church admin contact', () => {
-  it('is a single placeholder constant (still the support mailto until the real contact is known)', () => {
-    expect(CHURCH_ADMIN_CONTACT_URL).toBe('mailto:support@irlobby.com?subject=The%20Foyer%20help');
+const read = (relative: string) => fs.readFileSync(path.join(__dirname, '../..', relative), 'utf8');
+
+describe('church admin contact and legal fallbacks', () => {
+  it('has no bundled church admin email anywhere in the app source', () => {
+    for (const file of ['constants/churchAdmin.ts', 'services/appConfig.ts', 'components/FoyerProfileCard.tsx', 'components/foyer/SafetySheets.tsx']) {
+      expect(read(file)).not.toContain('support@irlobby.com');
+    }
+    expect(CHURCH_ADMIN_MAIL_SUBJECT).toBe('The Foyer help');
   });
 
-  it('is defined only in constants/churchAdmin.ts and read by the Profile card through the app-config service', () => {
-    const card = fs.readFileSync(path.join(__dirname, '../../components/FoyerProfileCard.tsx'), 'utf8');
+  it('falls back to the backend default Terms and Privacy pages', () => {
+    expect(TERMS_URL).toBe('https://irlobby.com/terms');
+    expect(PRIVACY_URL).toBe('https://irlobby.com/privacy');
+    expect(TERMS_VERSION).toBeTruthy();
+    expect(PRIVACY_VERSION).toBeTruthy();
+  });
+
+  it('is read by the Profile card through the app-config service', () => {
+    const card = read('components/FoyerProfileCard.tsx');
     expect(card).toContain("from '@services/appConfig'");
-    expect(card).not.toMatch(/export const CHURCH_ADMIN_CONTACT_URL/);
     expect(card).not.toContain('mailto:');
+  });
+
+  it('no screen hardcodes a legal URL', () => {
+    for (const file of ['screens/main/OnboardingScreen.tsx', 'screens/auth/RegisterScreen.tsx', 'screens/auth/LoginScreen.tsx']) {
+      expect(read(file)).not.toMatch(/irlobby\.com\/(terms|privacy)/);
+    }
   });
 });

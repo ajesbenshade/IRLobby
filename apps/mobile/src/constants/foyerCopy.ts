@@ -41,7 +41,6 @@ export const PHOTO_COPY = {
   partialToast: (saved: number, total: number) =>
     `Saved ${saved} of ${total} photos. ${total - saved} couldn't be saved.`,
   failedAll: "Photos couldn't be saved. Please try again.",
-  iosAddUsage: 'Save event photos to your library.',
   deniedTitle: 'Allow photo access to save photos',
   deniedBody:
     'The Foyer needs permission to add photos to your library. In Settings, tap Photos and choose Add Photos Only.',
@@ -89,6 +88,8 @@ export const MEMBER_COPY = {
   reportOrBlock: 'Report or block',
   report: 'Report',
   block: 'Block',
+  reportName: (name: string) => `Report ${name || 'this person'}`,
+  blockName: (name: string) => `Block ${name || 'this person'}`,
   reportSub: 'Tell the church admins',
   blockSub: "You won't see each other",
   blockedTitle: "You can't view this person",
@@ -174,6 +175,18 @@ export const LEGAL_VIEW_COPY = {
   close: 'Close',
   termsTitle: 'Terms of Use',
   privacyTitle: 'Privacy Policy',
+} as const;
+
+/** Terms / Privacy consent wording (sign-up, onboarding, login footer). Links are drawn only when the config has a URL. */
+export const LEGAL_CONSENT_COPY = {
+  checkboxPrefix: 'I agree to the ',
+  loginPrefix: 'By continuing you agree to the ',
+  terms: 'Terms of Use',
+  and: ' and ',
+  privacy: 'Privacy Policy',
+  suffix: '.',
+  signUpRequired: 'Please accept the terms to continue.',
+  onboardingRequired: 'Accept the Terms of Use and Privacy Policy to enter the app.',
 } as const;
 
 export const GATHERING_CHAT_COPY = {
@@ -378,8 +391,6 @@ export const PICKER_COPY = {
 
 export const ACCOUNT_SAFETY_COPY = {
   adminContactTitle: 'Church admin contact',
-  /** Shown at the bottom of the Report sheet. */
-  reportHelp: 'Something urgent? Contact the church admins.',
   adminContactBody:
     'To report a problem, ask for help, or have something removed, contact the church admins.',
 } as const;
@@ -547,12 +558,8 @@ export const FULL_COPY = {
 export const DELETE_ACCOUNT_COPY = {
   deleteRowTitle: 'Delete account',
   rowSubtitle: 'Permanently delete your profile and everything attached to it.',
-  cardSubtitle:
-    'This permanently deletes your account: your profile, friends, messages, photos, family members and contact information. It is not a deactivate.',
-  confirmBody:
-    "This permanently removes your profile, friends, messages, photos, family members and contact information. You can't undo this.",
   retention:
-    'Deleted accounts can remain in our server backups for up to 30 days. Safety reports are kept in a minimal form (who reported, a reference to the content, the reason and the date) for 12 months so we can protect other members.',
+    'We keep a minimal record of safety reports for up to 12 months so we can protect other members. Backups are cleared within 30 days.',
   /** Backend wording for the whole-screen body (frames 90-91). */
   screenBody:
     "This permanently deletes your profile, photo, contact info, friends, friend requests, one-to-one chats, your messages in gathering chats, family members, RSVPs and photos you added. Gatherings you host will be cancelled, and the people going will be told first. This can't be undone.",

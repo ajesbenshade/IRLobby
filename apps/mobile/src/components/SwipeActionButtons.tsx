@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   passLabel: { color: appColors.ink },
-  goingLabel: { color: CREAM },
+  goingLabel: { color: '#ffffff' },
   error: {
     color: appColors.danger,
     fontFamily: appTypography.bodyMedium,

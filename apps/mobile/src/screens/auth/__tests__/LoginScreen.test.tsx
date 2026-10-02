@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { auth as authCopy } from '@constants/copy';
+import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
 import { LoginScreen } from '../LoginScreen';
 
 const mockNavigate = jest.fn();
@@ -130,9 +131,8 @@ describe('LoginScreen dressed layout', () => {
     expect(screen.getByLabelText('Email')).toBeTruthy();
     expect(screen.getByPlaceholderText(authCopy.login.emailPlaceholder)).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.primaryCta)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.legalTerms)).toBeTruthy();
-    expect(screen.getByText(authCopy.login.legalPrivacy)).toBeTruthy();
-    expect(screen.queryByText(authCopy.login.legalPrefix)).toBeNull();
+    expect(screen.getByText(LEGAL_CONSENT_COPY.terms)).toBeTruthy();
+    expect(screen.getByText(LEGAL_CONSENT_COPY.privacy)).toBeTruthy();
     expect(screen.queryByLabelText(authCopy.login.forgotPassword)).toBeNull();
   });
 

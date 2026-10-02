@@ -90,8 +90,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'CAMERA',
       'ACCESS_FINE_LOCATION',
       'ACCESS_COARSE_LOCATION',
-      'READ_EXTERNAL_STORAGE',
-      'WRITE_EXTERNAL_STORAGE',
       'VIBRATE',
     ],
     adaptiveIcon: {

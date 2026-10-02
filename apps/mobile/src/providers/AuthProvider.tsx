@@ -36,13 +36,14 @@ interface AuthContextValue {
   accountDeleted: boolean;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
-  signInWithGoogleIdToken: (idToken: string) => Promise<AuthUser>;
+  signInWithGoogleIdToken: (idToken: string, options?: { acceptedLegal?: boolean }) => Promise<AuthUser>;
   signInWithAppleIdentityToken: (payload: {
     identityToken: string;
     authorizationCode?: string | null;
     email?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    acceptedLegal?: boolean;
   }) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
@@ -128,8 +129,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
-  const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
-    const { user: nextUser } = await loginWithGoogleIdToken(idToken);
+  const signInWithGoogleIdToken = useCallback(async (idToken: string, options?: { acceptedLegal?: boolean }) => {
+    const { user: nextUser } = await loginWithGoogleIdToken(idToken, options);
     if (nextUser == null || nextUser.id === undefined || nextUser.id === null) {
       throw new Error('Google sign-in did not return a user.');
     }
@@ -146,6 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      acceptedLegal?: boolean;
     }) => {
       const { user: nextUser } = await loginWithAppleIdentityToken(payload);
       setUser(nextUser);

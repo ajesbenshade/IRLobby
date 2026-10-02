@@ -10,6 +10,7 @@ import { FoyerHeader } from '@components/FoyerHeader';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { TimePickerSheet } from '@components/foyer/TimePickerSheet';
 import { ScrollView, View } from '@components/RNCompat';
+import { MapPickerSheet } from '@components/foyer/MapPickerSheet';
 import { PillButton } from '@components/foyer/ui';
 import {
   CALENDAR_ADDRESS_WARNING,
@@ -28,7 +29,7 @@ import {
   type DayValue,
 } from '@foyer/dates';
 import { compressGatheringPhoto } from '@foyer/photos';
-import { APPROVAL_COPY, HOST_FORM_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
 import { parseTurnOffFallback } from '@foyer/approval';
 import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
 import {
@@ -59,6 +60,8 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [place, setPlace] = useState('');
+  const [mapOpen, setMapOpen] = useState(false);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [day, setDay] = useState<DayValue | null>(null);
   const [startMinutes, setStartMinutes] = useState<number | null>(null);
   const [endMinutes, setEndMinutes] = useState<number | null>(null);
@@ -146,8 +149,8 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         title: title.trim(),
         description: description.trim(),
         location: place.trim(),
-        latitude: 0,
-        longitude: 0,
+        latitude: coords?.latitude ?? 0,
+        longitude: coords?.longitude ?? 0,
         time: day && startMinutes != null ? toIsoDateTime(day, startMinutes) : '',
         end_time: day && endMinutes != null ? toIsoDateTime(day, endMinutes) : undefined,
         capacity: capacityResult.capacity,
@@ -241,6 +244,18 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         <Field label="Title" value={title} onChange={setTitle} placeholder="Women's Fall Brunch" />
         <Field label="Description" value={description} onChange={setDescription} multiline placeholder="Egg casseroles, apple crisp, and good conversation." />
         <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship Hall, Franconia Mennonite Church" />
+        <PillButton label={MAP_COPY.chooseOnMap} variant="outline" icon="map-marker-outline" onPress={() => setMapOpen(true)} />
+        <MapPickerSheet
+          visible={mapOpen}
+          onCancel={() => setMapOpen(false)}
+          onChoose={(chosen) => {
+            setCoords({ latitude: chosen.latitude, longitude: chosen.longitude });
+            if (!place.trim()) {
+              setPlace(chosen.label);
+            }
+            setMapOpen(false);
+          }}
+        />
         <Text style={styles.sectionLabel}>{PICKER_COPY.when}</Text>
         <PickerField
           label={PICKER_COPY.date}

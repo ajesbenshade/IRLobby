@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { isFoyerMode } from '@constants/appMode';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text } from 'react-native';
@@ -274,12 +275,19 @@ export const OnboardingScreen = () => {
     <PanelCard>
       <SectionIntro
         eyebrow="Nearby plans"
-        title="Share location or type your city"
-        subtitle="The Foyer is built for gatherings within a few miles. Location makes the feed useful on day one."
+        title={isFoyerMode() ? 'Type your city' : 'Share location or type your city'}
+        subtitle={
+          isFoyerMode()
+            ? 'The Foyer is built for gatherings within a few miles. Add your city so Discover has a place to start.'
+            : 'The Foyer is built for gatherings within a few miles. Location makes the feed useful on day one.'
+        }
       />
-      <AppButton onPress={() => void requestLocationPermission()}>
-        {locationStatus === 'granted' ? 'Location enabled' : 'Use my location'}
-      </AppButton>
+      {/* Foyer never asks the OS for location here: maps use the on-device "Use my location for maps" setting in Profile. */}
+      {isFoyerMode() ? null : (
+        <AppButton onPress={() => void requestLocationPermission()}>
+          {locationStatus === 'granted' ? 'Location enabled' : 'Use my location'}
+        </AppButton>
+      )}
       {locationStatus === 'denied' ? (
         <Text style={styles.hintText}>
           No problem — type your city below so Discover still has a place to start.

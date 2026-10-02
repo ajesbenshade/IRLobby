@@ -321,6 +321,23 @@ export const FAMILY_COPY = {
   membersCount: (count: number) => (count === 1 ? '1 member' : `${count} members`),
 } as const;
 
+/** Map picker and the on-device `Use my location for maps` setting (Design frames 142-147). */
+export const MAP_COPY = {
+  title: 'Choose a location',
+  youAreHere: 'You are here',
+  defaultCaption: 'Showing Franconia. Turn on location in your profile to center on you.',
+  selectedLocation: 'Selected location',
+  drag: 'Drag the map to move the pin.',
+  useThisLocation: 'Use this location',
+  recenter: 'Center on my location',
+  chooseOnMap: 'Choose on map',
+  franconiaLabel: 'Franconia, PA',
+  settingSection: 'PRIVACY',
+  settingTitle: 'Use my location for maps',
+  settingCaption: 'Centers maps on you. Off by default; we never ask your phone for location unless this is on.',
+  settingError: "Couldn't update your location setting. Try again.",
+} as const;
+
 export const PROFILE_COPY = {
   title: 'Profile',
   changePhoto: 'Change photo',

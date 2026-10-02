@@ -62,6 +62,7 @@ import {
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
 import { APPROVAL_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
+import { useMapCenter } from '@foyer/mapLocation';
 import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
 import { isActivityCancelled, isCancelledMessage } from '@foyer/cancel';
@@ -126,6 +127,7 @@ export const DiscoverScreen = () => {
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const mapCenter = useMapCenter(showMap);
   const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
@@ -723,8 +725,9 @@ export const DiscoverScreen = () => {
               <MapView
                 style={styles.map}
                 initialRegion={{
-                  latitude: Number(activities[0].latitude ?? 37.7749),
-                  longitude: Number(activities[0].longitude ?? -122.4194),
+                  // Setting on and allowed: the user. Otherwise the first gathering, else Franconia. Never an OS prompt when off.
+                  latitude: mapCenter.source === 'user' ? mapCenter.center.latitude : Number(activities[0].latitude ?? mapCenter.center.latitude),
+                  longitude: mapCenter.source === 'user' ? mapCenter.center.longitude : Number(activities[0].longitude ?? mapCenter.center.longitude),
                   latitudeDelta: 0.12,
                   longitudeDelta: 0.12,
                 }}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ConfirmSheet } from '@components/foyer/ConfirmSheet';
 import { GOING_COPY } from '@constants/foyerCopy';
 import { CANCEL_QUERY_KEYS } from '@foyer/rsvp';
-import { cancelRsvp, clearPass } from '@services/foyerService';
+import { cancelRsvp, clearPass, withdrawJoinRequest } from '@services/foyerService';
 import { getErrorMessage } from '@utils/error';
 
 type Props = {
@@ -12,6 +12,10 @@ type Props = {
   activityId: number | string;
   title: string;
   onClose: () => void;
+  /** A host never sees this sheet: hosts cancel the whole gathering instead. */
+  isHost?: boolean;
+  /** Withdraw a pending request to join (POST rsvp/cancel/) instead of cancelling a confirmed RSVP. */
+  withdrawRequest?: boolean;
   /** Runs after the server confirms. Callers show the `RSVP cancelled` toast and reset the deck. */
   onCancelled: () => void;
 };
@@ -28,7 +32,7 @@ export const cancelErrorMessage = (error: unknown): string => {
 };
 
 /** Confirm sheet for Cancel RSVP. Refreshes the deck, Gatherings and detail on success. */
-export const CancelRsvpSheet = ({ visible, activityId, title, onClose, onCancelled }: Props) => {
+export const CancelRsvpSheet = ({ visible, activityId, onClose, onCancelled, isHost = false, withdrawRequest = false }: Props) => {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +41,11 @@ export const CancelRsvpSheet = ({ visible, activityId, title, onClose, onCancell
     setPending(true);
     setError(null);
     try {
-      await cancelRsvp(activityId);
+      if (withdrawRequest) {
+        await withdrawJoinRequest(activityId);
+      } else {
+        await cancelRsvp(activityId);
+      }
       // The server clears the pass too; this is a best-effort second clear and never blocks.
       await clearPass(activityId).catch(() => false);
       await Promise.all(CANCEL_QUERY_KEYS.map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })));
@@ -49,12 +57,16 @@ export const CancelRsvpSheet = ({ visible, activityId, title, onClose, onCancell
     }
   };
 
+  if (isHost) {
+    return null;
+  }
+
   return (
     <ConfirmSheet
       visible={visible}
       title={GOING_COPY.cancelTitle}
-      body={GOING_COPY.cancelBody(title)}
-      confirmLabel={GOING_COPY.cancelRsvp}
+      body={GOING_COPY.cancelBody}
+      confirmLabel={GOING_COPY.cancelRsvpConfirm}
       cancelLabel={GOING_COPY.keepRsvp}
       pending={pending}
       error={error}

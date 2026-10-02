@@ -27,26 +27,27 @@ describe('DatePickerSheet', () => {
     expect(onDone).toHaveBeenCalledWith({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() });
   });
 
-  it('birthdate mode: opens on the month/year wheel, Done goes to the day grid, second Done saves', () => {
+  it('birthdate mode: opens on the month/year wheel, Next goes to the day grid, Confirm saves', () => {
     const onDone = jest.fn();
     render(
       <DatePickerSheet visible mode="birthdate" title="Birth date" value={{ year: 1988, month: 3, day: 4 }} limits={birthDayLimits()} onCancel={jest.fn()} onDone={onDone} />,
     );
     expect(screen.getByLabelText('Month March')).toBeTruthy();
     expect(screen.getByLabelText('Year 1988')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Done'));
+    fireEvent.press(screen.getByLabelText('Next'));
+    expect(screen.getByLabelText('Back')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('March 4, 1988'));
-    fireEvent.press(screen.getByLabelText('Done'));
+    fireEvent.press(screen.getByLabelText('Confirm'));
     expect(onDone).toHaveBeenCalledWith({ year: 1988, month: 3, day: 4 });
   });
 
-  it('month-year mode: wheel only, Done saves month and year with no day grid', () => {
+  it('month-year mode: wheel only, Confirm saves month and year with no day grid', () => {
     const onDone = jest.fn();
     render(
       <DatePickerSheet visible mode="monthYear" title="Birth month and year" value={{ year: 2012, month: 3 }} limits={familyBirthMonthLimits()} onCancel={jest.fn()} onDone={onDone} />,
     );
     expect(screen.queryByLabelText('Previous month')).toBeNull();
-    fireEvent.press(screen.getByLabelText('Done'));
+    fireEvent.press(screen.getByLabelText('Confirm'));
     expect(onDone).toHaveBeenCalledWith({ year: 2012, month: 3 });
   });
 
@@ -80,5 +81,67 @@ describe('TimePickerSheet', () => {
     expect(screen.queryByLabelText('7:00 PM')).toBeNull();
     fireEvent.press(screen.getByLabelText('Done'));
     expect(onDone).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('DatePickerSheet age and future-month rules (injected today)', () => {
+  const NOW = new Date(2026, 9, 2, 12, 0, 0); // Oct 2, 2026, device-local
+
+  const openBirth = (value: { year: number; month: number; day: number }) => {
+    const onDone = jest.fn();
+    render(
+      <DatePickerSheet
+        visible
+        mode="birthdate"
+        title="Birth date"
+        value={value}
+        limits={birthDayLimits(NOW)}
+        now={NOW}
+        onCancel={jest.fn()}
+        onDone={onDone}
+      />,
+    );
+    fireEvent.press(screen.getByLabelText('Next'));
+    return onDone;
+  };
+
+  it('turning 13 today is allowed', () => {
+    const onDone = openBirth({ year: 2013, month: 10, day: 2 });
+    expect(screen.queryByText('Accounts are not available under age 13.')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Confirm'));
+    expect(onDone).toHaveBeenCalledWith({ year: 2013, month: 10, day: 2 });
+  });
+
+  it('one day younger than 13 shows the pill and keeps Confirm disabled', () => {
+    const onDone = openBirth({ year: 2013, month: 10, day: 3 });
+    expect(screen.getByText('Accounts are not available under age 13.')).toBeTruthy();
+    expect(screen.getByTestId('picker-confirm').props.accessibilityState?.disabled).toBe(true);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('family month/year: a future month is greyed with a note and cannot be confirmed', () => {
+    const onDone = jest.fn();
+    render(
+      <DatePickerSheet
+        visible
+        mode="monthYear"
+        title="Birth month and year"
+        value={{ year: 2026, month: 11 }}
+        limits={familyBirthMonthLimits(NOW)}
+        now={NOW}
+        onCancel={jest.fn()}
+        onDone={onDone}
+      />,
+    );
+    expect(screen.getByText('Pick a month that has already passed.')).toBeTruthy();
+    expect(screen.getByTestId('picker-confirm').props.accessibilityState?.disabled).toBe(true);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('confirm pill is the 54pt filled burgundy pill', () => {
+    openBirth({ year: 1988, month: 3, day: 4 });
+    const style = [screen.getByTestId('picker-confirm').props.style].flat(Infinity).filter(Boolean);
+    const merged = Object.assign({}, ...style);
+    expect(merged.minHeight ?? merged.height).toBeGreaterThanOrEqual(54);
   });
 });

@@ -96,9 +96,17 @@ export const hasSelectionChanged = (saved: RsvpSelection, current: RsvpSelection
 /** Nobody checked: Save is replaced by the Cancel RSVP flow. */
 export const isEmptySelection = (selection: RsvpSelection) => selectionCount(selection) === 0;
 
+/** RSVP statuses that never mean "going" (a pending or declined request still has people_count > 0). */
+const NOT_GOING_STATUSES = new Set(['pending', 'declined', 'rejected', 'cancelled']);
+
 export const isGoingRsvp = (
   myRsvp: { status?: string; people_count?: number } | null | undefined,
-): boolean => Boolean(myRsvp && (myRsvp.status === 'confirmed' || (myRsvp.people_count ?? 0) > 0));
+): boolean =>
+  Boolean(
+    myRsvp &&
+      !NOT_GOING_STATUSES.has(String(myRsvp.status ?? '').toLowerCase()) &&
+      (myRsvp.status === 'confirmed' || (myRsvp.people_count ?? 0) > 0),
+  );
 
 export const hasEventStarted = (time: string | null | undefined, now = new Date()): boolean => {
   if (!time) {
@@ -129,4 +137,5 @@ export const CANCEL_QUERY_KEYS: ReadonlyArray<ReadonlyArray<string>> = [
   ['mobile-conversations'],
   // Gathering chats: someone who cancelled must not keep seeing cached messages.
   ['foyer-gathering-chat'],
+  ['foyer-requests'],
 ];

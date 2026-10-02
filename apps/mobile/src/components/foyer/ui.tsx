@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { PropsWithChildren, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
@@ -13,7 +14,81 @@ export const DISABLED_TEXT = '#7a7572';
 export const PRESSED_TINT = '#f9e8ee';
 export const MIN_TARGET = 54;
 
-type PillVariant = 'primary' | 'outline' | 'text';
+/**
+ * Literal hex values for the filled pills. They are deliberately NOT read from the theme or from a
+ * Pressable style callback: a TestFlight build showed confirm buttons as white text on a white
+ * background, so the fill is applied inline as a plain colour string and unit-tested.
+ */
+export const PILL_BURGUNDY = '#a2033f';
+export const PILL_BURGUNDY_PRESSED = '#800232';
+export const PILL_DESTRUCTIVE = '#8a0a1f';
+export const PILL_DESTRUCTIVE_PRESSED = '#680617';
+export const PILL_WHITE = '#ffffff';
+export const PILL_INK = '#222222';
+export const PILL_CREAM = '#f6f1ee';
+
+export type PillVariant = 'primary' | 'outline' | 'text' | 'destructive' | 'destructiveOutline';
+
+export type PillColors = { backgroundColor: string; borderColor: string; borderWidth: number; textColor: string };
+
+/** Pure colour table for every pill state (see button-states.png). */
+export const pillColors = (
+  variant: PillVariant,
+  state: { disabled?: boolean; loading?: boolean; pressed?: boolean; tone?: 'burgundy' | 'ink' } = {},
+): PillColors => {
+  const inactive = Boolean(state.disabled);
+  const busy = Boolean(state.loading);
+  const pressed = Boolean(state.pressed) && !inactive;
+  switch (variant) {
+    case 'primary':
+      if (inactive && !busy) {
+        return { backgroundColor: DISABLED_FILL, borderColor: DISABLED_FILL, borderWidth: 0, textColor: DISABLED_TEXT };
+      }
+      return {
+        backgroundColor: pressed || busy ? PILL_BURGUNDY_PRESSED : PILL_BURGUNDY,
+        borderColor: PILL_BURGUNDY,
+        borderWidth: 0,
+        textColor: PILL_WHITE,
+      };
+    case 'destructive':
+      if (inactive && !busy) {
+        return { backgroundColor: DISABLED_FILL, borderColor: DISABLED_FILL, borderWidth: 0, textColor: DISABLED_TEXT };
+      }
+      return {
+        backgroundColor: pressed || busy ? PILL_DESTRUCTIVE_PRESSED : PILL_DESTRUCTIVE,
+        borderColor: PILL_DESTRUCTIVE,
+        borderWidth: 0,
+        textColor: PILL_WHITE,
+      };
+    case 'destructiveOutline':
+      if (inactive) {
+        return { backgroundColor: DISABLED_OUTLINE_FILL, borderColor: DISABLED_OUTLINE, borderWidth: 1.5, textColor: DISABLED_TEXT };
+      }
+      return {
+        backgroundColor: pressed ? PRESSED_TINT : PILL_CREAM,
+        borderColor: PILL_DESTRUCTIVE,
+        borderWidth: 1.5,
+        textColor: PILL_DESTRUCTIVE,
+      };
+    case 'outline':
+      if (inactive) {
+        return { backgroundColor: DISABLED_OUTLINE_FILL, borderColor: DISABLED_OUTLINE, borderWidth: 1.5, textColor: DISABLED_TEXT };
+      }
+      return {
+        backgroundColor: pressed ? PRESSED_TINT : 'transparent',
+        borderColor: PILL_INK,
+        borderWidth: 1.5,
+        textColor: PILL_INK,
+      };
+    default:
+      return {
+        backgroundColor: pressed ? PRESSED_TINT : 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        textColor: inactive ? DISABLED_TEXT : state.tone === 'ink' ? PILL_INK : PILL_BURGUNDY,
+      };
+  }
+};
 
 type PillButtonProps = {
   label: string;
@@ -21,9 +96,12 @@ type PillButtonProps = {
   variant?: PillVariant;
   disabled?: boolean;
   loading?: boolean;
+  /** Shown next to the spinner while loading (e.g. `Posting…`). Without it the label is replaced by the spinner. */
+  loadingLabel?: string;
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
   /** Text buttons only: burgundy (default) or ink. */
   tone?: 'burgundy' | 'ink';
 };
@@ -38,52 +116,44 @@ export const PillButton = ({
   variant = 'primary',
   disabled = false,
   loading = false,
+  loadingLabel,
   icon,
   accessibilityLabel,
   style,
+  testID,
+  tone,
 }: PillButtonProps) => {
+  const [pressed, setPressed] = useState(false);
   const inactive = disabled || loading;
-  const textColor =
-    variant === 'primary'
-      ? inactive
-        ? DISABLED_TEXT
-        : appColors.white
-      : inactive
-        ? DISABLED_TEXT
-        : variant === 'text'
-          ? appColors.primary
-          : appColors.ink;
+  const colors = pillColors(variant, { disabled: inactive, loading, pressed, tone });
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={accessibilityLabel ?? (loading && loadingLabel ? loadingLabel : label)}
       accessibilityState={{ disabled: inactive, busy: loading }}
+      testID={testID}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.pill,
-        variant === 'primary' ? styles.primary : null,
-        variant === 'outline' ? styles.outline : null,
-        variant === 'text' ? styles.textButton : null,
-        variant === 'primary' && inactive && !loading ? { backgroundColor: DISABLED_FILL } : null,
-        variant === 'outline' && inactive && !loading
-          ? { backgroundColor: DISABLED_OUTLINE_FILL, borderColor: DISABLED_OUTLINE }
-          : null,
-        pressed && !inactive
-          ? variant === 'primary'
-            ? { backgroundColor: appColors.primaryDeep }
-            : { backgroundColor: PRESSED_TINT }
-          : null,
+        {
+          backgroundColor: colors.backgroundColor,
+          borderColor: colors.borderColor,
+          borderWidth: colors.borderWidth,
+        },
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? appColors.white : appColors.primary} />
+      {loading && !loadingLabel ? (
+        <ActivityIndicator color={colors.textColor} />
       ) : (
         <View style={styles.pillRow}>
-          {icon ? <MaterialCommunityIcons name={icon} size={20} color={textColor} /> : null}
-          <Text style={[styles.pillLabel, { color: textColor }]}>{label}</Text>
+          {loading ? <ActivityIndicator color={colors.textColor} /> : null}
+          {!loading && icon ? <MaterialCommunityIcons name={icon} size={20} color={colors.textColor} /> : null}
+          <Text style={[styles.pillLabel, { color: colors.textColor }]}>{loading && loadingLabel ? loadingLabel : label}</Text>
         </View>
       )}
     </Pressable>
@@ -124,9 +194,20 @@ type ToastProps = {
   onDismiss?: () => void;
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   bottom?: number;
+  /** Dismiss itself after this many ms (error toasts use 5000). */
+  autoDismissMs?: number;
 };
 
-export const Toast = ({ message, action, onDismiss, icon = 'check-circle', bottom = 24 }: ToastProps) => (
+export const Toast = ({ message, action, onDismiss, icon = 'check-circle', bottom = 24, autoDismissMs }: ToastProps) => {
+  useEffect(() => {
+    if (!autoDismissMs || !onDismiss) {
+      return undefined;
+    }
+    const id = setTimeout(onDismiss, autoDismissMs);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDismissMs, message]);
+  return (
   <View style={[styles.toast, { bottom }]} accessibilityLiveRegion="polite">
     <MaterialCommunityIcons name={icon} size={20} color={icon === 'check-circle' ? '#e98aa8' : '#f6f1ee'} />
     <Text style={styles.toastText}>{message}</Text>
@@ -141,7 +222,8 @@ export const Toast = ({ message, action, onDismiss, icon = 'check-circle', botto
       </Pressable>
     ) : null}
   </View>
-);
+  );
+};
 
 export const SectionLabel = ({ children }: { children: ReactNode }) => <Text style={styles.sectionLabel}>{children}</Text>;
 
@@ -160,9 +242,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  primary: { backgroundColor: appColors.primary },
-  outline: { borderWidth: 1.5, borderColor: appColors.ink, backgroundColor: 'transparent' },
-  textButton: { backgroundColor: 'transparent' },
   pillRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 1 },
   pillLabel: { fontFamily: appTypography.bodySemibold, fontSize: 16, lineHeight: 22, textAlign: 'center', flexShrink: 1 },
   sheetButtons: { gap: 10 },

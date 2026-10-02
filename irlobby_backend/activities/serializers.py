@@ -11,6 +11,7 @@ from .approval import (
     my_request_status,
     pending_request_count,
 )
+from .capacity import is_full
 from .eligibility import audience_label, confirmed_people_count, host_display_name
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
@@ -52,6 +53,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     )
     cover_photo_url = serializers.SerializerMethodField()
     going_count = serializers.SerializerMethodField()
+    is_full = serializers.SerializerMethodField()
     my_rsvp = serializers.SerializerMethodField()
     my_request_status = serializers.SerializerMethodField()
     my_request_reason = serializers.SerializerMethodField()
@@ -123,6 +125,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "host_name",
             "cover_photo_url",
             "going_count",
+            "is_full",
             "my_rsvp",
             "my_request_status",
             "my_request_reason",
@@ -366,6 +369,9 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     def get_going_count(self, obj):
         return confirmed_people_count(obj)
+
+    def get_is_full(self, obj):
+        return is_full(obj)
 
     def get_my_rsvp(self, obj):
         request = self.context.get("request")

@@ -25,6 +25,7 @@ from .approval import (
     is_open_listing,
     notify_host_of_request,
 )
+from .capacity import FULL_ERROR, NOT_ENOUGH_SPOTS_MESSAGE, is_full
 from .eligibility import (
     age_band,
     age_on,
@@ -391,6 +392,10 @@ def _request_to_join(request, activity, existing, include_self, dependents):
         if not activity.allow_rerequest:
             return Response(DECLINED_ERROR, status=status.HTTP_400_BAD_REQUEST)
         new_request = True
+    if new_request and is_full(activity):
+        # Full means approved people fill the capacity. A request already pending can
+        # still be edited or withdrawn.
+        return Response(FULL_ERROR, status=status.HTTP_400_BAD_REQUEST)
     if existing is None:
         participant = ActivityParticipant.objects.create(
             activity=activity, user=user, status="pending", include_self=include_self
@@ -498,11 +503,14 @@ def rsvp_activity(request, pk):
         ):
             return _request_to_join(request, activity, existing, include_self, dependents)
 
+        if (existing is None or existing.status != "confirmed") and is_full(activity):
+            return Response(FULL_ERROR, status=status.HTTP_400_BAD_REQUEST)
         people = (1 if include_self else 0) + len(dependents)
         already = confirmed_people_count(activity, exclude_user_id=request.user.id)
         if activity.capacity is not None and already + people > activity.capacity:
+            # Not full yet, but this party is bigger than what is left.
             return Response(
-                {"detail": "This gathering is full.", "message": "Activity is full"},
+                {"detail": NOT_ENOUGH_SPOTS_MESSAGE, "message": FULL_ERROR["message"]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

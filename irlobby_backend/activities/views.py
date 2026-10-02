@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 from matches.models import Match
 from moderation.models import BlockedUser
 
+from .capacity import FULL_ERROR, exclude_full_for_strangers
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
 from .serializers import (
@@ -202,6 +203,10 @@ class ActivityListCreateView(generics.ListCreateAPIView):
             normalized_tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
             for tag in normalized_tags:
                 queryset = queryset.filter(tags__icontains=tag)
+
+        # Full gatherings drop out of the deck for people with no RSVP or request on them.
+        # Done last, on the final query, so a cached nearby id list never goes stale.
+        queryset = exclude_full_for_strangers(queryset, self.request.user)
 
         if ordered_by_distance:
             return queryset
@@ -581,12 +586,10 @@ def join_activity(request, pk):
             {"message": "Already requested to join"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    from .eligibility import confirmed_people_count
+    from .capacity import is_full
 
-    if activity.capacity is not None:
-        confirmed_count = confirmed_people_count(activity)
-        if confirmed_count >= activity.capacity:
-            return Response({"message": "Activity is full"}, status=status.HTTP_400_BAD_REQUEST)
+    if is_full(activity):
+        return Response(FULL_ERROR, status=status.HTTP_400_BAD_REQUEST)
 
     ActivityParticipant.objects.create(activity=activity, user=user, status="pending")
 

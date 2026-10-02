@@ -514,6 +514,17 @@ Approving locks the gathering row (`select_for_update`, the same lock RSVP takes
 - Requester: title "Your request to join <title> was approved" / "…was declined"; body "Your request to join <title> was approved." / "…declined. Reason: <reason>" (reason only when the host gave one); data `{ "type": "join_request_approved" | "join_request_declined", "activityId", "screen": "Activity" }`.
 - Cancelling the gathering also notifies pending requesters (same text as attendees); declined requesters are not notified.
 
+## Full gatherings
+
+A gathering with a capacity is **full** when confirmed people (the account holder if going, plus every spouse and child going) reach `capacity`. Pending requests never count. No capacity (`null`) is never full. Fullness is computed from the RSVPs each time, never stored, so a freed spot (cancelled RSVP, host removal, a smaller party) reopens the gathering by itself. A cancelled gathering uses the same rule.
+
+- **Payload:** every activity payload has `is_full` (bool). `GET /api/public/calendar` items also have `is_full`; full church events stay on the calendar JSON and `.ics`.
+- **Deck:** `GET /api/activities/` leaves out full gatherings for people with no RSVP or request row on them (any status) who are not the host or staff. Anyone with a confirmed, pending or declined row, the host, and staff still see it, and `GET /api/activities/<id>/` works for everyone with the link.
+- **Joining a full gathering** (new RSVP, a declined guest asking again with `allow_rerequest`, legacy `POST /join/`, a new request on a Require-approval gathering) → 400 `{ "detail": "This gathering is full.", "message": "Activity is full" }` (`message` is the older clients' text). Swipe-right (`POST /api/swipes/<id>/swipe/`, `POST /api/swipes/`) on a full gathering you have no row on → 400 `{ "error": "This gathering is full.", "detail": "This gathering is full." }` (the swipe-list endpoint puts it under `detail` and `activity`). Swipe-left is allowed. Host, staff and anyone with a row can still swipe.
+- **Existing participants keep working:** an already confirmed guest re-sending the same or a smaller party gets 200; growing it past capacity is 400. A pending request can still be edited or withdrawn.
+- **Party too big, event not yet full:** 400 `{ "detail": "Not enough spots for this party.", "message": "Activity is full" }` on RSVP (the same wording the host's approve uses). Approving on a full gathering stays 409 `Not enough spots for this party.`
+- Require-approval gatherings are full by approved (confirmed) people only.
+
 ## Photo downloads
 
 `GET /api/activities/<id>/photos/download/` → `{ "photos": [ { "id", "filename", "url", "expires_at" } ] }`. Allowed: any logged-in user for public-calendar events; otherwise host, staff, or a confirmed going attendee once the event has started; else 403. Each `url` is a signed original (about 1 hour, separate salt) that needs no auth header and responds with `Content-Disposition: attachment` and `Cache-Control: private`. Invalid or expired → 403. Every photo of the event is included (no per-photo opt-out).

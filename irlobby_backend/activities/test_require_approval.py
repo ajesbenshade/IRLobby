@@ -277,12 +277,18 @@ class RsvpRequestTests(ApprovalBase):
         self.assertFalse(participant.include_self)
         self.assertEqual(participant.dependents.count(), 2)
 
-    def test_no_capacity_check_at_request_time(self):
-        Activity.objects.filter(pk=self.activity.pk).update(capacity=1)
+    def test_no_party_size_check_at_request_time_on_a_not_full_event(self):
+        # Two seats, one taken: a party of two is bigger than what is left, but the host
+        # decides that at approval. (A completely full event refuses new requests.)
+        Activity.objects.filter(pk=self.activity.pk).update(capacity=2)
         self.request_from(self.other, "confirmed")
-        response = self.rsvp(self.guest)
+        spouse = HouseholdDependent.objects.create(
+            parent=self.guest, name="Spouse", relationship="spouse"
+        )
+        response = self.rsvp(self.guest, {"include_self": True, "dependent_ids": [spouse.id]})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], "pending")
+        self.assertEqual(response.data["people_count"], 2)
 
     def test_ineligible_people_are_still_rejected(self):
         Activity.objects.filter(pk=self.activity.pk).update(audience_gender="women")

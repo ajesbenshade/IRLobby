@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from moderation.models import AbuseReport, BlockedUser
+from moderation.reporting import notify_support_of_report, report_body
 from users.models import Friendship, User
 from users.social import blocked_user_ids, can_direct_message, is_blocked_either_way
 from utils.sanitize import strip_html
@@ -160,6 +161,7 @@ def direct_report(request, conversation_id):
     other = other_participant(conversation, request.user)
     description = strip_html(str(request.data.get("description") or ""))[:1800]
     message_id = request.data.get("message_id")
+    target_type, target_id, snapshot = "user", other.id, ""
     if message_id:
         message = Message.objects.filter(
             pk=message_id, conversation=conversation, sender=other
@@ -171,13 +173,18 @@ def direct_report(request, conversation_id):
         description = (
             f"{description}\n[Reported message #{message.id}: {message.text[:200]}]".strip()
         )
+        target_type, target_id, snapshot = "direct_message", message.id, message.text[:200]
     report = AbuseReport.objects.create(
         reporter=request.user,
         reported_user=other,
         reason=reason,
         description=f"[1:1 chat {conversation.id}] {description}".strip(),
+        target_type=target_type,
+        target_id=target_id,
+        target_snapshot=snapshot,
     )
-    return Response({"id": report.id, "status": report.status}, status=status.HTTP_201_CREATED)
+    notify_support_of_report(report)
+    return Response(report_body(report), status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])

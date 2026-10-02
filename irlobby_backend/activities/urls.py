@@ -1,5 +1,7 @@
 from django.urls import path
 
+from moderation import content_views
+
 from . import approval, foyer_views, views
 
 urlpatterns = [
@@ -21,6 +23,22 @@ urlpatterns = [
         "<int:pk>/requests/<int:participant_id>/decline/",
         approval.decline_request,
         name="activity-request-decline",
+    ),
+    path("<int:pk>/report/", content_views.report_activity, name="activity-report"),
+    path(
+        "<int:pk>/requests/<int:request_id>/report/",
+        content_views.report_join_request,
+        name="activity-request-report",
+    ),
+    path(
+        "<int:pk>/photos/<int:photo_id>/report/",
+        content_views.report_event_photo,
+        name="activity-photo-report",
+    ),
+    path(
+        "<int:pk>/chat/<int:message_id>/report/",
+        content_views.report_chat_message,
+        name="activity-chat-report",
     ),
     path("<int:pk>/attendees/", foyer_views.activity_attendees, name="activity-attendees"),
     path("<int:pk>/whos-coming/", foyer_views.whos_coming, name="activity-whos-coming"),

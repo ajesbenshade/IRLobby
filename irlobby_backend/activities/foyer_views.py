@@ -734,7 +734,7 @@ def upload_event_photo(request, pk):
         compressed = compress_uploaded_image(upload)
     except PhotoProcessingError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    photo = EventPhoto(activity=activity)
+    photo = EventPhoto(activity=activity, uploaded_by=request.user)
     photo.image.save(f"activity-{activity.id}.jpg", compressed, save=True)
     return Response(
         {"id": photo.id, "url": absolute_photo_url(photo, request)},

@@ -576,3 +576,23 @@ Setting `REQUIRE_TERMS_ON_REGISTER` (environment variable, default `false`): whe
 `terms_url`, `privacy_url` and `support_email` are strings (or `null` if configured blank). `church_admin` is `null` when no contact is configured; otherwise each of `name`, `email`, `phone` is a string or `null`. Environment: `FOYER_TERMS_URL`, `FOYER_PRIVACY_URL`, `FOYER_SUPPORT_EMAIL` (default `support@irlobby.com`), `FOYER_CHURCH_ADMIN_CONTACT_NAME`, `FOYER_CHURCH_ADMIN_CONTACT_EMAIL`, `FOYER_CHURCH_ADMIN_PHONE` (all default empty).
 
 The server also serves `GET /terms` and `/terms/` as HTML, exactly like `/privacy`, from `deploy/oracle/legal/terms.html` (and nginx serves the same file at `https://irlobby.com/terms`). The file in the repo is a marked placeholder until the approved terms replace it.
+
+## Report content
+
+Every report is stored as an `AbuseReport` with `target_type` (`user` | `chat_message` | `direct_message` | `event_photo` | `activity` | `join_request`, default `user`), `target_id` (id of what was reported, or `null` for old reports) and `target_snapshot` (a copy of the content, whitespace collapsed, up to 200 characters, so it can still be reviewed if the content is deleted). `reported_user` is the person responsible (the host for a photo or gathering) and may be `null` on very old data. New reports also email `FOYER_SUPPORT_EMAIL` (best effort; a mail failure never fails the request, and a duplicate sends nothing). Reports show in the Django admin under Moderation > Abuse reports, filterable by status and target type.
+
+All endpoints need auth (401 otherwise). Body for all: `{ "reason"?: string, "description"?: string }`. `reason` is one of `inappropriate`, `spam`, `harassment`, `fake_profile`, `threat`, `other` (default `other`; anything else → 400 `{ "reason": "Unknown reason." }`). `description` is HTML-stripped, up to 500 characters (longer → 400 `{ "description": … }`).
+
+| Endpoint | Who may report | Reported user | `target_id` | Snapshot |
+| --- | --- | --- | --- | --- |
+| `POST /api/activities/<id>/chat/<message_id>/report/` | host, staff, or going attendee (same access as the gathering chat) | the message's sender | message id | message text |
+| `POST /api/activities/<id>/photos/<photo_id>/report/` | anyone who can see the gathering | uploader (`EventPhoto.uploaded_by`), else the host | photo id | the photo's stored file path |
+| `POST /api/activities/<id>/report/` | anyone who can see the gathering | the host | activity id | "title: description" |
+| `POST /api/activities/<id>/requests/<request_id>/report/` | host, staff or church admin only (like the requests list) | the requester | the request (participant) id | "first name: bio" |
+
+Responses: **201** `{ "id", "status": "pending", "target_type", "target_id" }` for a new report. **200** with the same shape and the existing `id` if this reporter already reported this exact target (nothing new is created or emailed). **400** for reporting yourself (`{ "detail": "You cannot report yourself." }`), an unknown reason, or a long description. **401** anonymous. **403** a chat message report from someone outside the chat, or a request report from anyone but the host/staff. **404** the gathering is hidden from you (same visibility as the detail endpoint), the message/photo/request is not part of that gathering, or the person involved is blocked either way with you (a blocked person's messages are hidden from you, and a blocked requester is hidden from the host).
+
+Existing endpoints now fill the same fields and return `target_type` and `target_id` too: `POST /api/users/<id>/report/` and `POST /api/moderation/report/` record `target_type: "user"`; `POST /api/messages/direct/<conversation_id>/report/` records `direct_message` (with the message id and text snapshot) when `message_id` is sent, otherwise `user`. Those three do not de-duplicate and keep their previous responses plus the two new keys.
+
+New field on photos: `EventPhoto.uploaded_by` (set when the host uploads; not shown in any payload).
+

@@ -14,11 +14,33 @@ class BlockedUserAdmin(admin.ModelAdmin):
 
 @admin.register(AbuseReport)
 class AbuseReportAdmin(admin.ModelAdmin):
-    list_display = ("reporter", "reported_user", "reason", "status", "created_at")
-    search_fields = ("reporter__username", "reported_user__username", "description")
-    list_filter = ("status", "reason", "created_at")
+    list_display = (
+        "reporter",
+        "reported_user",
+        "target_type",
+        "target_id",
+        "reason",
+        "status",
+        "created_at",
+    )
+    search_fields = (
+        "reporter__username",
+        "reported_user__username",
+        "description",
+        "target_snapshot",
+    )
+    list_filter = ("status", "target_type", "reason", "created_at")
     raw_id_fields = ("reporter", "reported_user", "resolved_by")
-    readonly_fields = ("reporter", "reported_user", "reason", "description", "created_at")
+    readonly_fields = (
+        "reporter",
+        "reported_user",
+        "reason",
+        "description",
+        "target_type",
+        "target_id",
+        "target_snapshot",
+        "created_at",
+    )
     actions = ["mark_resolved", "mark_dismissed"]
 
     @admin.action(description="Mark selected reports as resolved")

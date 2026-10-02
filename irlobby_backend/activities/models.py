@@ -226,6 +226,13 @@ class HouseholdDependent(models.Model):
 class EventPhoto(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="event_photos/")
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_event_photos",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

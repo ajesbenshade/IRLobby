@@ -33,8 +33,29 @@ class AbuseReport(models.Model):
         ("dismissed", "Dismissed"),
     ]
 
+    TARGET_CHOICES = [
+        ("user", "User"),
+        ("chat_message", "Gathering chat message"),
+        ("direct_message", "1:1 message"),
+        ("event_photo", "Gathering photo"),
+        ("activity", "Gathering"),
+        ("join_request", "Request to join"),
+    ]
+
     reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="filed_reports")
-    reported_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="abuse_reports")
+    # The person responsible for the content (the host for a photo or a gathering).
+    reported_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="abuse_reports",
+    )
+    # What was reported. Existing reports are about a user.
+    target_type = models.CharField(max_length=20, choices=TARGET_CHOICES, default="user")
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    # Short copy of the content at report time, so it is still reviewable if it is deleted.
+    target_snapshot = models.CharField(max_length=200, blank=True, default="")
     reason = models.CharField(max_length=20, choices=REASON_CHOICES)
     description = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
@@ -53,4 +74,7 @@ class AbuseReport(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Report by {self.reporter} against {self.reported_user} ({self.reason})"
+        return (
+            f"Report by {self.reporter} against {self.reported_user} "
+            f"({self.reason}, {self.target_type})"
+        )

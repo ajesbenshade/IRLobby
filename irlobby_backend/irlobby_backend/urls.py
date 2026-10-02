@@ -255,5 +255,6 @@ urlpatterns = [
     path("api/messages/", include("chat.urls")),
     path("api/reviews/", include("reviews.urls")),
     path("api/moderation/", include("moderation.urls")),
+    path("api/friends/", include("users.friends_urls")),
     re_path(r"^(?!api|admin).*$", react_app),  # Serve React for non-API routes
 ]

@@ -159,6 +159,8 @@ REST_FRAMEWORK = {
         "auth_anon": "10/min",
         "auth_user": "30/min",
         "ticket_ops": "20/min",
+        "friend_requests": config("FRIEND_REQUEST_THROTTLE_RATE", default="30/hour"),
+        "direct_messages": config("DIRECT_MESSAGE_THROTTLE_RATE", default="120/hour"),
         "swipe_ops": config("SWIPE_THROTTLE_RATE", default="120/hour"),
         "review_create": config("REVIEW_CREATE_THROTTLE_RATE", default="30/hour"),
         "match_reads": config("MATCH_THROTTLE_RATE", default="240/hour"),

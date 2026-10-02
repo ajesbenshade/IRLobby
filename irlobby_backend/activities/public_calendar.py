@@ -62,9 +62,16 @@ def public_event_payload(activity, request=None) -> dict:
     }
 
 
-def event_ics_token(activity_id: int) -> str:
-    """Stable token for one activity. It does not change between requests."""
-    return _SIGNER.sign(str(activity_id))
+NO_LOCATION_SUFFIX = ":nl"
+
+
+def event_ics_token(activity_id: int, *, hide_location: bool = False) -> str:
+    """Stable token for one activity. It does not change between requests.
+
+    The ``hide_location`` variant goes to viewers who may not see the address of a
+    member-hosted gathering; the .ics it opens leaves LOCATION empty.
+    """
+    return _SIGNER.sign(f"{activity_id}{NO_LOCATION_SUFFIX if hide_location else ''}")
 
 
 def activity_id_from_ics_token(token: str) -> int | None:
@@ -72,9 +79,16 @@ def activity_id_from_ics_token(token: str) -> int | None:
         return None
     try:
         raw = _SIGNER.unsign(token)
-        return int(raw)
+        return int(raw.removesuffix(NO_LOCATION_SUFFIX))
     except (BadSignature, ValueError, TypeError):
         return None
+
+
+def ics_token_hides_location(token: str) -> bool:
+    try:
+        return _SIGNER.unsign(token or "").endswith(NO_LOCATION_SUFFIX)
+    except BadSignature:
+        return False
 
 
 def event_uid(activity) -> str:
@@ -187,7 +201,9 @@ def _calendar_header(*, name: str | None) -> list[str]:
     return lines
 
 
-def _vevent_lines(activity, *, description: str, dtstamp: str) -> list[str]:
+def _vevent_lines(
+    activity, *, description: str, dtstamp: str, hide_location: bool = False
+) -> list[str]:
     lines = [
         "BEGIN:VEVENT",
         f"UID:{event_uid(activity)}",
@@ -202,7 +218,7 @@ def _vevent_lines(activity, *, description: str, dtstamp: str) -> list[str]:
     lines.extend(
         [
             f"SUMMARY:{_ics_escape(activity.title)}",
-            f"LOCATION:{_ics_escape(activity.location or '')}",
+            f"LOCATION:{_ics_escape('' if hide_location else activity.location or '')}",
             f"DESCRIPTION:{_ics_escape(description)}",
             "END:VEVENT",
         ]
@@ -237,11 +253,18 @@ def public_calendar_ics(activities) -> str:
     return _render(lines)
 
 
-def event_ics(activity) -> str:
+def event_ics(activity, *, hide_location: bool = False) -> str:
     """One gathering. Title, start, end, location, description, and host name only."""
     dtstamp = _ics_stamp(timezone.now())
     lines = _calendar_header(name=None)
-    lines.extend(_vevent_lines(activity, description=event_description(activity), dtstamp=dtstamp))
+    lines.extend(
+        _vevent_lines(
+            activity,
+            description=event_description(activity),
+            dtstamp=dtstamp,
+            hide_location=hide_location,
+        )
+    )
     lines.append("END:VCALENDAR")
     return _render(lines)
 
@@ -250,8 +273,9 @@ def _query(params: dict[str, str]) -> str:
     return urlencode(params, quote_via=quote, safe="/")
 
 
-def private_event_ics_path(activity_id: int) -> str:
-    return "/api/public/event.ics?" + _query({"token": event_ics_token(activity_id)})
+def private_event_ics_path(activity_id: int, *, hide_location: bool = False) -> str:
+    token = event_ics_token(activity_id, hide_location=hide_location)
+    return "/api/public/event.ics?" + _query({"token": token})
 
 
 def to_webcal(url: str) -> str:
@@ -261,7 +285,7 @@ def to_webcal(url: str) -> str:
     return url
 
 
-def google_calendar_url(activity) -> str:
+def google_calendar_url(activity, *, hide_location: bool = False) -> str:
     start, end = _link_range(activity)
     query = _query(
         {
@@ -269,13 +293,13 @@ def google_calendar_url(activity) -> str:
             "text": activity.title or "",
             "dates": f"{_ics_stamp(start)}/{_ics_stamp(end)}",
             "details": event_description(activity),
-            "location": activity.location or "",
+            "location": "" if hide_location else activity.location or "",
         }
     )
     return f"https://calendar.google.com/calendar/render?{query}"
 
 
-def outlook_calendar_url(activity) -> str:
+def outlook_calendar_url(activity, *, hide_location: bool = False) -> str:
     start, end = _link_range(activity)
     query = _query(
         {
@@ -283,17 +307,17 @@ def outlook_calendar_url(activity) -> str:
             "body": event_description(activity),
             "startdt": _iso_z(start),
             "enddt": _iso_z(end),
-            "location": activity.location or "",
+            "location": "" if hide_location else activity.location or "",
         }
     )
     return f"https://outlook.live.com/calendar/0/deeplink/compose?{query}"
 
 
-def build_calendar_links(activity, request) -> dict[str, str]:
+def build_calendar_links(activity, request, *, hide_location: bool = False) -> dict[str, str]:
     if is_public_calendar_event(activity):
         path = f"/api/public/events/{activity.id}.ics"
     else:
-        path = private_event_ics_path(activity.id)
+        path = private_event_ics_path(activity.id, hide_location=hide_location)
     if request is not None:
         ics_url = request.build_absolute_uri(path)
     else:
@@ -301,6 +325,6 @@ def build_calendar_links(activity, request) -> dict[str, str]:
     return {
         "ics_url": ics_url,
         "webcal_url": to_webcal(ics_url),
-        "google_url": google_calendar_url(activity),
-        "outlook_url": outlook_calendar_url(activity),
+        "google_url": google_calendar_url(activity, hide_location=hide_location),
+        "outlook_url": outlook_calendar_url(activity, hide_location=hide_location),
     }

@@ -2,33 +2,49 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.db import transaction
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .access import is_activity_host, is_church_admin
+from users.social import full_name, short_name
+
+from .access import is_activity_host, is_church_admin, user_has_going_rsvp
 from .eligibility import (
+    age_band,
     age_on,
     confirmed_people_count,
     eligibility_for_person,
     event_local_date,
     ny_today,
 )
-from .household_rules import dependent_create_errors
+from .household_rules import (
+    dependent_create_errors,
+    member_age,
+    member_birth_date,
+    parse_birth_month_year,
+    spouse_create_errors,
+)
 from .models import Activity, ActivityParticipant, Church, EventPhoto, HouseholdDependent
 from .photos import (
+    PHOTO_DOWNLOAD_MAX_AGE_SECONDS,
     PhotoProcessingError,
+    absolute_photo_download_url,
     absolute_photo_url,
     compress_uploaded_image,
+    photo_download_token_valid,
     photo_token_valid,
 )
 from .public_calendar import (
     activity_id_from_ics_token,
     event_ics,
+    ics_token_hides_location,
     is_public_calendar_event,
     public_calendar_ics,
     public_calendar_queryset,
@@ -44,12 +60,14 @@ def _display_name(user) -> str:
     return full or user.username
 
 
-def _person_payload(*, name, sex, dob, on_date, activity, extra=None):
-    eligible, reason = eligibility_for_person(activity=activity, sex=sex, dob=dob, on_date=on_date)
+def _person_payload(*, name, sex, dob, on_date, activity, extra=None, spouse=False):
+    eligible, reason = eligibility_for_person(
+        activity=activity, sex=sex, dob=dob, on_date=on_date, assume_adult=spouse
+    )
     payload = {
         "name": name,
         "sex": sex or "",
-        "age": age_on(dob, on_date),
+        "age": None if spouse else age_on(dob, on_date),
         "eligible": eligible,
         "reason": reason,
     }
@@ -90,25 +108,61 @@ def church_list_create(request):
 
 
 def dependent_payload(dependent, *, today=None) -> dict:
+    """Legacy child shape (kept for builds 88/89), plus relationship and birth month/year."""
     today = today or ny_today()
+    dob = member_birth_date(dependent)
     return {
         "id": dependent.id,
         "name": dependent.name,
-        "date_of_birth": dependent.date_of_birth.isoformat(),
+        "date_of_birth": dob.isoformat() if dob else None,
         "sex": dependent.sex or "",
-        "age": age_on(dependent.date_of_birth, today),
+        "age": age_on(dob, today),
+        "relationship": dependent.relationship,
+        "birth_month": dob.month if dob else None,
+        "birth_year": dob.year if dob else None,
     }
+
+
+def member_payload(member, *, today=None) -> dict:
+    """Family member shape: no exact birth date, and no age for a spouse."""
+    today = today or ny_today()
+    dob = member_birth_date(member) if member.relationship == "child" else None
+    return {
+        "id": member.id,
+        "name": member.name,
+        "relationship": member.relationship,
+        "sex": member.sex or "",
+        "birth_month": dob.month if dob else None,
+        "birth_year": dob.year if dob else None,
+        "age": member_age(member, today),
+    }
+
+
+def _household_members(user):
+    return list(user.household_dependents.all())
+
+
+def _household_created(user, member):
+    body = dependent_payload(member)
+    body["members"] = [member_payload(m) for m in _household_members(user)]
+    return Response(body, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def household_list_create(request):
     if request.method == "GET":
-        children = request.user.household_dependents.all()
-        return Response({"children": [dependent_payload(child) for child in children]})
+        members = _household_members(request.user)
+        children = [dependent_payload(m) for m in members if m.relationship == "child"]
+        return Response({"children": children, "members": [member_payload(m) for m in members]})
 
     name = (request.data.get("name") or "").strip()
-    dob = request.data.get("date_of_birth") or request.data.get("birth_date")
+    relationship = (request.data.get("relationship") or "child").strip().lower()
+    if relationship not in {"child", "spouse"}:
+        return Response(
+            {"relationship": "Relationship must be spouse or child."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     sex = (request.data.get("sex") or "").strip().lower()
     if sex in {"m", "male"}:
         sex = "male"
@@ -117,21 +171,54 @@ def household_list_create(request):
     elif sex:
         return Response({"sex": "Sex must be male or female."}, status=status.HTTP_400_BAD_REQUEST)
     if not name:
-        return Response({"name": "Enter the child's name."}, status=status.HTTP_400_BAD_REQUEST)
+        who = "spouse" if relationship == "spouse" else "child"
+        return Response({"name": f"Enter the {who}'s name."}, status=status.HTTP_400_BAD_REQUEST)
+    if len(name) > 120:
+        return Response({"name": "Name is too long."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if relationship == "spouse":
+        # A spouse is an adult with no stored birth data; any that is sent is ignored.
+        errors = spouse_create_errors(parent=request.user)
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        member = HouseholdDependent.objects.create(
+            parent=request.user, name=name, sex=sex, relationship="spouse"
+        )
+        return _household_created(request.user, member)
+
     from django.utils.dateparse import parse_date
 
+    dob = request.data.get("date_of_birth") or request.data.get("birth_date")
     parsed = parse_date(dob) if isinstance(dob, str) else dob
-    if parsed is None:
-        return Response(
-            {"date_of_birth": "Enter a birth date."}, status=status.HTTP_400_BAD_REQUEST
+    if parsed is not None:
+        month, year, check_dob = parsed.month, parsed.year, parsed
+    else:
+        month, year, error = parse_birth_month_year(
+            request.data.get("birth_month"), request.data.get("birth_year")
         )
-    errors = dependent_create_errors(parent=request.user, name=name, date_of_birth=parsed)
+        if error or month is None:
+            return Response(
+                {"birth_month": error or "Enter a birth month and year."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        check_dob = member_birth_date(
+            HouseholdDependent(birth_month=month, birth_year=year, relationship="child")
+        )
+    errors = dependent_create_errors(
+        parent=request.user, name=name, date_of_birth=check_dob, month_year_only=parsed is None
+    )
     if errors:
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     child = HouseholdDependent.objects.create(
-        parent=request.user, name=name, date_of_birth=parsed, sex=sex
+        parent=request.user,
+        name=name,
+        date_of_birth=parsed,
+        birth_month=month,
+        birth_year=year,
+        sex=sex,
+        relationship="child",
     )
-    return Response(dependent_payload(child), status=status.HTTP_201_CREATED)
+    return _household_created(request.user, child)
 
 
 @api_view(["DELETE"])
@@ -139,7 +226,7 @@ def household_list_create(request):
 def household_delete(request, pk):
     deleted, _ = HouseholdDependent.objects.filter(parent=request.user, pk=pk).delete()
     if not deleted:
-        return Response({"detail": "Child not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "Family member not found."}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -156,26 +243,108 @@ def whos_coming(request, pk):
         on_date=on_date,
         activity=activity,
     )
-    dependents = [
-        _person_payload(
-            name=child.name,
-            sex=child.sex,
-            dob=child.date_of_birth,
-            on_date=on_date,
-            activity=activity,
-            extra={"id": child.id},
+    dependents = []
+    for member in _household_members(user):
+        shape = member_payload(member)
+        dependents.append(
+            _person_payload(
+                name=member.name,
+                sex=member.sex,
+                dob=member_birth_date(member),
+                on_date=on_date,
+                activity=activity,
+                spouse=member.relationship == "spouse",
+                extra={
+                    "id": member.id,
+                    "relationship": member.relationship,
+                    "birth_month": shape["birth_month"],
+                    "birth_year": shape["birth_year"],
+                },
+            )
         )
-        for child in user.household_dependents.all()
-    ]
     return Response(
         {
             "me": me,
             "dependents": dependents,
+            "members": dependents,
             "note": (
-                "Only children in your household are listed. "
+                "Only your spouse and children are listed. "
                 "Teens with their own account RSVP for themselves."
             ),
         }
+    )
+
+
+def _going_participants(activity):
+    return list(
+        ActivityParticipant.objects.filter(activity=activity, status="confirmed")
+        .select_related("user")
+        .prefetch_related("dependents")
+        .order_by("joined_at", "id")
+    )
+
+
+def _host_attendee_households(activity) -> list:
+    """Host view: one entry per going household. Names, relationship and age band only."""
+    on_date = event_local_date(activity)
+    households = []
+    for participant in _going_participants(activity):
+        user = participant.user
+        people = []
+        if participant.include_self:
+            people.append(
+                {
+                    "name": full_name(user),
+                    "relationship": "self",
+                    "age_band": age_band(age_on(user.date_of_birth, on_date)),
+                }
+            )
+        for member in participant.dependents.all():
+            people.append(
+                {
+                    "name": member.name,
+                    "relationship": member.relationship,
+                    "age_band": age_band(member_age(member, on_date)),
+                }
+            )
+        if people:
+            households.append({"name": full_name(user), "people": people})
+    return households
+
+
+def _past_attendee_names(activity, viewer) -> list:
+    """Attendee view: one entry per other going account; household members are never listed.
+
+    A minor's user_id is only given to accepted friends, so a stranger cannot open a minor's
+    profile from here. Blocked users (either way) are left out.
+    """
+    from users.social import blocked_user_ids, friend_ids, is_minor
+
+    excluded = blocked_user_ids(viewer) | {viewer.id}
+    friends = friend_ids(viewer)
+    attendees = []
+    for participant in _going_participants(activity):
+        user = participant.user
+        if user.id in excluded:
+            continue
+        linkable = user.id in friends or not is_minor(user)
+        attendees.append({"user_id": user.id if linkable else None, "name": short_name(user)})
+    return attendees
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def activity_attendees(request, pk):
+    """Host/staff get family detail; going attendees of a started event get names only."""
+    activity = get_object_or_404(Activity, pk=pk)
+    user = request.user
+    going = confirmed_people_count(activity)
+    if user.is_staff or is_activity_host(user, activity):
+        return Response({"going_count": going, "households": _host_attendee_households(activity)})
+    if activity.time <= timezone.now() and user_has_going_rsvp(user, activity):
+        return Response({"going_count": going, "attendees": _past_attendee_names(activity, user)})
+    return Response(
+        {"detail": "Only the host can see who is coming."}, status=status.HTTP_403_FORBIDDEN
     )
 
 
@@ -186,6 +355,7 @@ def _rsvp_body(participant, activity):
         "status": participant.status,
         "include_self": participant.include_self,
         "dependent_ids": dependent_ids,
+        "member_ids": dependent_ids,
         "people_count": people,
         "going_count": confirmed_people_count(activity),
     }
@@ -200,29 +370,29 @@ def rsvp_activity(request, pk):
     else:
         include_self = bool(include_self)
 
-    raw_ids = request.data.get("dependent_ids", request.data.get("dependentIds", []))
-    if raw_ids is None:
-        raw_ids = []
-    if not isinstance(raw_ids, list):
-        return Response(
-            {"dependent_ids": "Send a list of child ids."}, status=status.HTTP_400_BAD_REQUEST
-        )
-    try:
-        dependent_ids = [int(value) for value in raw_ids]
-    except (TypeError, ValueError):
-        return Response(
-            {"dependent_ids": "Send a list of child ids."}, status=status.HTTP_400_BAD_REQUEST
-        )
+    # `member_ids` is the new name for `dependent_ids`; if both are sent they are merged.
+    ids_error = {"dependent_ids": "Send a list of family member ids."}
+    dependent_ids = []
+    for key in ("dependent_ids", "dependentIds", "member_ids", "memberIds"):
+        raw_ids = request.data.get(key)
+        if raw_ids is None:
+            continue
+        if not isinstance(raw_ids, list):
+            return Response(ids_error, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            dependent_ids.extend(int(value) for value in raw_ids)
+        except (TypeError, ValueError):
+            return Response(ids_error, status=status.HTTP_400_BAD_REQUEST)
 
     dependents = list(HouseholdDependent.objects.filter(parent=request.user, id__in=dependent_ids))
     if len(dependents) != len(set(dependent_ids)):
         return Response(
-            {"dependent_ids": "One or more children are not in your household."},
+            {"dependent_ids": "One or more family members are not in your household."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if not include_self and not dependents:
         return Response(
-            {"detail": "Choose yourself or a child."}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Choose yourself or a family member."}, status=status.HTTP_400_BAD_REQUEST
         )
 
     with transaction.atomic():
@@ -240,7 +410,11 @@ def rsvp_activity(request, pk):
                 problems.append({"who": "self", "eligible": False, "reason": reason})
         for child in dependents:
             eligible, reason = eligibility_for_person(
-                activity=activity, sex=child.sex, dob=child.date_of_birth, on_date=on_date
+                activity=activity,
+                sex=child.sex,
+                dob=member_birth_date(child),
+                on_date=on_date,
+                assume_adult=child.relationship == "spouse",
             )
             if not eligible:
                 problems.append(
@@ -288,10 +462,28 @@ def rsvp_activity(request, pk):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def cancel_rsvp(request, pk):
+    from swipes.models import Swipe
+
     activity = get_object_or_404(Activity, pk=pk)
-    deleted, _ = ActivityParticipant.objects.filter(activity=activity, user=request.user).delete()
-    if not deleted:
-        return Response({"detail": "You do not have an RSVP."}, status=status.HTTP_400_BAD_REQUEST)
+    if is_activity_host(request.user, activity):
+        return Response(
+            {"detail": "Hosts cannot cancel their own gathering this way."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if activity.time <= timezone.now():
+        return Response(
+            {"detail": "This gathering has already started."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    with transaction.atomic():
+        deleted, _ = ActivityParticipant.objects.filter(
+            activity=activity, user=request.user
+        ).delete()
+        if not deleted:
+            return Response(
+                {"detail": "You do not have an RSVP."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        # The card goes back into the deck.
+        Swipe.objects.filter(user=request.user, activity=activity).delete()
     return Response({"detail": "RSVP cancelled.", "going_count": confirmed_people_count(activity)})
 
 
@@ -418,12 +610,70 @@ def event_photo_file(request, pk, photo_id):
     return response
 
 
+def _can_download_photos(user, activity) -> bool:
+    """Public-calendar events: any logged-in user. Others: host, staff, or a going attendee,
+    and only once the gathering has started."""
+    if is_public_calendar_event(activity):
+        return True
+    if user.is_staff or is_activity_host(user, activity):
+        return True
+    return activity.time <= timezone.now() and user_has_going_rsvp(user, activity)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def photo_downloads(request, pk):
+    activity = get_object_or_404(Activity, pk=pk)
+    if not _can_download_photos(request.user, activity):
+        return Response(
+            {"detail": "Photos can be downloaded by people who attended, after it starts."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    expires_at = timezone.now() + timedelta(seconds=PHOTO_DOWNLOAD_MAX_AGE_SECONDS)
+    photos = [
+        {
+            "id": photo.id,
+            "filename": f"foyer-{activity.id}-{photo.id}.jpg",
+            "url": absolute_photo_download_url(photo, request),
+            "expires_at": expires_at.isoformat(),
+        }
+        for photo in activity.photos.all()
+        if photo.image
+    ]
+    return Response({"photos": photos})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def event_photo_download_file(request, pk, photo_id):
+    """Signed (about one hour) original file, sent as an attachment."""
+    photo = get_object_or_404(EventPhoto, pk=photo_id, activity_id=pk)
+    token = request.query_params.get("t", "")
+    if not photo.image or not token or not photo_download_token_valid(token, int(pk), photo.id):
+        return Response(
+            {"detail": "This download link is invalid or has expired."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    response = FileResponse(
+        photo.image.open("rb"),
+        content_type="image/jpeg",
+        as_attachment=True,
+        filename=f"foyer-{pk}-{photo.id}.jpg",
+    )
+    response["Cache-Control"] = "private, max-age=300"
+    return response
+
+
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def public_calendar(request):
     events = [public_event_payload(activity, request) for activity in public_calendar_queryset()]
     return Response({"events": events})
+
+
+def _is_open_address(activity) -> bool:
+    return activity.host_kind == "church" or is_public_calendar_event(activity)
 
 
 def _calendar_ics_response(body: str, filename: str, *, private: bool) -> HttpResponse:
@@ -459,10 +709,12 @@ def public_event_ics_view(request, pk):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def private_event_ics_view(request):
-    activity_id = activity_id_from_ics_token(request.query_params.get("token") or "")
+    token = request.query_params.get("token") or ""
+    activity_id = activity_id_from_ics_token(token)
     if activity_id is None:
         return HttpResponse(status=404)
     activity = Activity.objects.filter(pk=activity_id).select_related("host", "host_church").first()
     if activity is None:
         return HttpResponse(status=404)
-    return _calendar_ics_response(event_ics(activity), "event.ics", private=True)
+    hide = ics_token_hides_location(token) and not _is_open_address(activity)
+    return _calendar_ics_response(event_ics(activity, hide_location=hide), "event.ics", private=True)

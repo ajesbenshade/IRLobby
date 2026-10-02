@@ -13,6 +13,7 @@ from activities.access import user_can_access_activity_chat
 from activities.models import Activity, ActivityParticipant
 from matches.models import Match
 
+from .access import can_read_conversation, can_send_in_conversation
 from .models import Conversation, Message
 
 
@@ -202,7 +203,6 @@ class ActivityChatConsumer(AsyncWebsocketConsumer):
                         "user": {
                             "id": saved_message.sender.id,
                             "firstName": saved_message.sender.first_name,
-                            "email": saved_message.sender.email,
                         },
                         "createdAt": saved_message.created_at.isoformat(),
                     },
@@ -419,6 +419,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         user = self.scope["user"]
 
+        # Friend/DM rules and blocks can change while the socket is open: check every send.
+        if not await self.check_can_send(user, self.conversation_id):
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "error", "message": "You cannot send messages in this conversation."}
+                )
+            )
+            return
+
         # Save message to database
         saved_message = await self.save_message(user, self.conversation_id, message)
 
@@ -436,7 +445,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "user": {
                         "id": saved_message.sender.id,
                         "firstName": saved_message.sender.first_name,
-                        "email": saved_message.sender.email,
                     },
                     "createdAt": saved_message.created_at.isoformat(),
                 },
@@ -532,13 +540,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         except Conversation.DoesNotExist:
             return False
-        match = conversation.match
-        if user.id not in (match.user_a_id, match.user_b_id):
+        return can_read_conversation(user, conversation)
+
+    @database_sync_to_async
+    def check_can_send(self, user, conversation_id):
+        try:
+            conversation = Conversation.objects.select_related("match__activity").get(
+                id=conversation_id
+            )
+        except Conversation.DoesNotExist:
             return False
-        activity = match.activity
-        if activity is not None and not user_can_access_activity_chat(user, activity):
-            return False
-        return True
+        return can_send_in_conversation(user, conversation)
 
     @database_sync_to_async
     def get_conversation_participant_ids(self, conversation_id):

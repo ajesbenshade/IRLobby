@@ -45,3 +45,21 @@ def user_can_access_activity_chat(user, activity) -> bool:
     if is_activity_host(user, activity):
         return True
     return user_has_going_rsvp(user, activity)
+
+
+def can_see_exact_location(user, activity) -> bool:
+    """Exact address of a member-hosted gathering: host, staff, going, or a ticket holder.
+
+    Church-hosted gatherings and gatherings on the public church calendar are never hidden.
+    """
+    from activities.public_calendar import is_public_calendar_event
+
+    if activity.host_kind == "church" or is_public_calendar_event(activity):
+        return True
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_staff or is_activity_host(user, activity):
+        return True
+    if user_has_going_rsvp(user, activity):
+        return True
+    return activity.tickets.filter(buyer=user, status__in=["paid", "used"]).exists()

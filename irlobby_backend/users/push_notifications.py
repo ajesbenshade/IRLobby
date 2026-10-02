@@ -2,6 +2,7 @@ import logging
 
 import requests
 from django.conf import settings
+from django.db.models import Q
 
 from .models import PushDeviceToken
 
@@ -116,6 +117,13 @@ def send_new_message_notification(message):
     conversation = message.conversation
     match = conversation.match
     recipient = match.user_b if message.sender_id == match.user_a_id else match.user_a
+
+    from chat.models import ConversationUserState
+
+    if ConversationUserState.objects.filter(
+        conversation=conversation, user=recipient
+    ).filter(Q(muted=True) | Q(left=True)).exists():
+        return
 
     sender_label = message.sender.first_name.strip() or message.sender.username
     payload = {

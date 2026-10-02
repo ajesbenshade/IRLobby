@@ -4,7 +4,7 @@ from utils.client_urls import is_allowed_client_return_url
 from utils.media import validate_image_reference_list
 from utils.sanitize import strip_html
 
-from .access import is_church_admin
+from .access import can_see_exact_location, is_church_admin
 from .eligibility import audience_label, confirmed_people_count, host_display_name
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
@@ -264,6 +264,24 @@ class ActivitySerializer(serializers.ModelSerializer):
     def validate_images(self, images):
         return validate_image_reference_list(images, max_items=5, field_name="images")
 
+    def _hides_location(self, obj) -> bool:
+        """Member-hosted gatherings hide the address from people who are not going/hosting.
+
+        Without a request (internal use) nothing is hidden.
+        """
+        request = self.context.get("request")
+        if request is None:
+            return False
+        return not can_see_exact_location(getattr(request, "user", None), obj)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self._hides_location(instance):
+            data["location"] = None
+            data["latitude"] = None
+            data["longitude"] = None
+        return data
+
     def get_ticketsAvailable(self, obj):
         return obj.tickets_available
 
@@ -300,6 +318,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "status": participant.status,
             "include_self": participant.include_self,
             "dependent_ids": dependent_ids,
+            "member_ids": dependent_ids,
             "people_count": people,
         }
 
@@ -312,7 +331,9 @@ class ActivitySerializer(serializers.ModelSerializer):
         ]
 
     def get_calendar_links(self, obj):
-        return build_calendar_links(obj, self.context.get("request"))
+        return build_calendar_links(
+            obj, self.context.get("request"), hide_location=self._hides_location(obj)
+        )
 
     def validate_description(self, value):
         return strip_html(value)

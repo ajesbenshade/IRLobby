@@ -2,12 +2,14 @@ from django.urls import path
 
 from activities import foyer_views
 
-from . import views
+from . import social_views, views
 
 urlpatterns = [
     path("profile/", views.UserProfileView.as_view(), name="user-profile"),
     path("household/", foyer_views.household_list_create, name="household"),
     path("household/<int:pk>/", foyer_views.household_delete, name="household-delete"),
+    path("<int:user_id>/profile/", social_views.user_profile_card, name="user-profile-card"),
+    path("<int:user_id>/report/", social_views.report_user, name="user-report"),
     path("onboarding/", views.user_onboarding, name="user-onboarding"),
     path("profile/delete/", views.delete_profile, name="delete-profile"),
     path("profile/export/", views.export_user_data, name="export-user-data"),

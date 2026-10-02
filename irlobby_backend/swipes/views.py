@@ -33,10 +33,19 @@ class SwipeListView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-@api_view(["POST"])
+def _clear_swipe(request, pk):
+    """Undo a pass (or like) so the card returns to the deck. Safe to repeat."""
+    get_object_or_404(Activity, pk=pk)
+    deleted, _ = Swipe.objects.filter(user=request.user, activity_id=pk).delete()
+    return Response({"deleted": bool(deleted)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 @throttle_classes([SwipeRateThrottle])
 def swipe_activity(request, pk):
+    if request.method == "DELETE":
+        return _clear_swipe(request, pk)
     activity = get_object_or_404(Activity, pk=pk)
     user = request.user
     direction = request.data.get("direction")

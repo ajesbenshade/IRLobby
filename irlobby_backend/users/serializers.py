@@ -52,6 +52,7 @@ class UserSerializer(serializers.ModelSerializer):
     )
     is_church_admin = serializers.SerializerMethodField()
     household_child_count = serializers.SerializerMethodField()
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=32)
 
     class Meta:
         model = User
@@ -94,6 +95,11 @@ class UserSerializer(serializers.ModelSerializer):
             "church_id",
             "is_church_admin",
             "household_child_count",
+            "profile_visibility",
+            "phone",
+            "show_email",
+            "show_phone",
+            "dm_from_shared_events",
         )
         read_only_fields = ("id",)
 
@@ -127,6 +133,14 @@ class UserSerializer(serializers.ModelSerializer):
         if normalized not in {"male", "female"}:
             raise serializers.ValidationError("Sex must be male or female.")
         return normalized
+
+    def validate_phone(self, value):
+        from .social import normalize_phone
+
+        try:
+            return normalize_phone(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
 
     def validate(self, attrs):
         dob = attrs.get("date_of_birth", getattr(self.instance, "date_of_birth", None))

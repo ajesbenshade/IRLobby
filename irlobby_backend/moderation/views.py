@@ -1,10 +1,11 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from users.models import User
+from users.models import Friendship, User
 
 from .models import BlockedUser
 from .serializers import AbuseReportSerializer, BlockedUserSerializer
@@ -27,6 +28,10 @@ def block_user(request, user_id):
             {"detail": "You cannot block yourself."}, status=status.HTTP_400_BAD_REQUEST
         )
     _, created = BlockedUser.objects.get_or_create(blocker=request.user, blocked=target)
+    # Blocking ends any friendship or pending request between the two.
+    Friendship.objects.filter(
+        Q(requester=request.user, recipient=target) | Q(requester=target, recipient=request.user)
+    ).delete()
     if not created:
         return Response({"detail": "User already blocked."}, status=status.HTTP_200_OK)
     return Response({"detail": "User blocked."}, status=status.HTTP_201_CREATED)

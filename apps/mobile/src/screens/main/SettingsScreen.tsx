@@ -85,7 +85,7 @@ const defaultSettings: UserSettings = {
   },
 };
 
-const toPayload = (settings: UserSettings) => ({
+export const toPayload = (settings: UserSettings) => ({
   preferences: {
     ...settings.preferences,
     notifications: settings.notifications,
@@ -93,7 +93,7 @@ const toPayload = (settings: UserSettings) => ({
   },
 });
 
-const loadSettings = async (): Promise<UserSettings> => {
+export const loadSettings = async (): Promise<UserSettings> => {
   const response = await api.get<UserProfileResponse>(API_ROUTES.USER_PROFILE);
   const preferences = response.data.preferences ?? {};
   const { notifications, privacy, ...preferenceOverrides } = preferences;

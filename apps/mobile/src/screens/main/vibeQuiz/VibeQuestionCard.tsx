@@ -2,11 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -24,6 +21,21 @@ interface VibeOptionCardProps {
   style?: ViewStyle;
 }
 
+/** Pill sizing from the design spec ("Vibe Quiz pills"). Exported so tests can assert the rules. */
+export const VIBE_PILL = {
+  minHeight: 52,
+  radius: 26,
+  gap: 12,
+  unselectedBorder: 'rgba(34, 34, 34, 0.2)',
+  selectedFill: '#a2033f',
+  selectedText: '#f6f1ee',
+  unselectedFill: '#f6f1ee',
+} as const;
+
+/**
+ * One answer pill. Full width of the card's inner content (alignSelf: 'stretch',
+ * no fixed width), wraps to two lines at large text, never offset left or right.
+ */
 export const VibeOptionCard = ({
   emoji,
   label,
@@ -33,76 +45,34 @@ export const VibeOptionCard = ({
   onPress,
   style,
 }: VibeOptionCardProps) => {
-  const scale = useSharedValue(1);
-  const glow = useSharedValue(selected ? 1 : 0);
-
-  useEffect(() => {
-    glow.value = withTiming(selected ? 1 : 0, { duration: 220, easing: Easing.out(Easing.quad) });
-  }, [glow, selected]);
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 14, stiffness: 220 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 14, stiffness: 220 });
-  };
-
   const handlePress = () => {
     if (disabled) return;
     void safeImpactHaptic(selected ? 'light' : 'medium');
-    scale.value = withSequence(
-      withTiming(1.04, { duration: 100, easing: Easing.out(Easing.quad) }),
-      withSpring(1, { damping: 14, stiffness: 220 }),
-    );
     onPress();
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    borderColor: interpolateColor(
-      glow.value,
-      [0, 1],
-      [appColors.line, appColors.primary],
-    ),
-    shadowOpacity: 0.05 + glow.value * 0.25,
-    shadowRadius: 6 + glow.value * 14,
-  }));
-
-  const innerHighlightStyle = useAnimatedStyle(() => ({
-    opacity: glow.value,
-  }));
-
   return (
-    <Animated.View style={[styles.card, animatedStyle, style]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ selected, disabled }}
-        accessibilityLabel={label}
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={disabled}
-        style={({ pressed }) => [styles.pressable, pressed ? styles.pressed : null]}
-      >
-        <Animated.View pointerEvents="none" style={[styles.glowOverlay, innerHighlightStyle]} />
-        <View style={styles.row}>
-          <NativeText style={styles.emoji}>{emoji}</NativeText>
-          <View style={styles.copy}>
-            <NativeText style={[styles.label, selected ? styles.labelSelected : null]}>
-              {label}
-            </NativeText>
-            {helper ? <NativeText style={styles.helper}>{helper}</NativeText> : null}
-          </View>
-          <View
-            style={[styles.checkDot, selected ? styles.checkDotSelected : null]}
-            accessibilityElementsHidden
-          >
-            {selected ? <NativeText style={styles.checkDotMark}>✓</NativeText> : null}
-          </View>
-        </View>
-      </Pressable>
-    </Animated.View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={label}
+      onPress={handlePress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.pill,
+        selected ? styles.pillSelected : styles.pillUnselected,
+        pressed ? styles.pressed : null,
+        style,
+      ]}
+    >
+      <NativeText style={styles.emoji}>{emoji}</NativeText>
+      <View style={styles.copy}>
+        <NativeText style={[styles.label, selected ? styles.labelSelected : null]}>{label}</NativeText>
+        {helper ? (
+          <NativeText style={[styles.helper, selected ? styles.helperSelected : null]}>{helper}</NativeText>
+        ) : null}
+      </View>
+    </Pressable>
   );
 };
 
@@ -136,71 +106,54 @@ export const VibeProgressBar = ({ current, total }: VibeProgressBarProps) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: radii.lg,
-    backgroundColor: appColors.card,
-    borderWidth: 2,
-    borderColor: appColors.line,
-    shadowColor: appColors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  pressable: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  pressed: {
-    opacity: 0.96,
-  },
-  glowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: appColors.primarySoft,
-  },
-  row: {
+  pill: {
+    alignSelf: 'stretch',
+    minHeight: VIBE_PILL.minHeight,
+    borderRadius: VIBE_PILL.radius,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  pillSelected: {
+    backgroundColor: VIBE_PILL.selectedFill,
+    borderColor: VIBE_PILL.selectedFill,
+  },
+  pillUnselected: {
+    backgroundColor: VIBE_PILL.unselectedFill,
+    borderColor: VIBE_PILL.unselectedBorder,
+  },
+  pressed: {
+    opacity: 0.9,
   },
   emoji: {
-    fontSize: 30,
+    fontSize: 24,
   },
   copy: {
     flex: 1,
+    flexShrink: 1,
     gap: 2,
   },
   label: {
     color: appColors.ink,
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '700',
+    flexShrink: 1,
   },
   labelSelected: {
-    color: appColors.primaryDeep,
+    color: VIBE_PILL.selectedText,
   },
   helper: {
     color: appColors.mutedInk,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '500',
   },
-  checkDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: appColors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkDotSelected: {
-    backgroundColor: appColors.primary,
-    borderColor: appColors.primary,
-  },
-  checkDotMark: {
-    color: appColors.white,
-    fontSize: 14,
-    fontWeight: '800',
+  helperSelected: {
+    color: VIBE_PILL.selectedText,
   },
   progressWrap: {
     flexDirection: 'row',

@@ -225,8 +225,16 @@ const normalizeUser = (
     churchId: asNumberOrNull(userRecord.churchId ?? userRecord.church_id),
     isChurchAdmin: Boolean(userRecord.isChurchAdmin ?? userRecord.is_church_admin),
     householdChildCount: asNumberOrNull(userRecord.householdChildCount ?? userRecord.household_child_count) ?? 0,
+    profileVisibility: normalizeVisibility(userRecord.profileVisibility ?? userRecord.profile_visibility),
+    phone: typeof userRecord.phone === 'string' ? userRecord.phone : null,
+    showEmail: Boolean(userRecord.showEmail ?? userRecord.show_email),
+    showPhone: Boolean(userRecord.showPhone ?? userRecord.show_phone),
+    dmFromSharedEvents: Boolean(userRecord.dmFromSharedEvents ?? userRecord.dm_from_shared_events),
   };
 };
+
+const normalizeVisibility = (value: unknown): NonNullable<AuthUser['profileVisibility']> =>
+  value === 'church' || value === 'friends' || value === 'public' ? value : 'only_me';
 
 const resolveAuthResponsePayload = (
   data: AuthResponse | Record<string, unknown> | null | undefined

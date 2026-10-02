@@ -2,18 +2,13 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
+import { AddFamilyMemberSheet } from '@components/foyer/AddFamilyMemberSheet';
+import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { SheetScaffold } from '@components/SheetScaffold';
-import { AppButton } from '@components/ui/Button';
-import {
-  WHOS_COMING_NOTE,
-  buildRsvpPayload,
-  childDisplayName,
-  confirmGoingLabel,
-  defaultRsvpSelection,
-  peopleCount,
-  type WhosComingResponse,
-} from '@foyer/logic';
+import { GOING_COPY } from '@constants/foyerCopy';
+import { buildRsvpPeople } from '@foyer/rsvp';
+import { buildRsvpPayload, defaultRsvpSelection, peopleCount, type WhosComingResponse } from '@foyer/logic';
 import { appColors, appTypography, fontSize, radii } from '@theme/index';
 
 type WhosComingSheetProps = {
@@ -22,91 +17,105 @@ type WhosComingSheetProps = {
   pending?: boolean;
   /** Inline error from the last Confirm attempt, shown inside the sheet. */
   error?: string | null;
-  onConfirm: (payload: { include_self: boolean; dependent_ids: number[] }) => void;
+  /** The event's age range, used to word `Not eligible: ages 13–17`. */
+  ageRange?: { age_min?: number | null; age_max?: number | null } | null;
+  hasSpouse?: boolean;
+  /** Called after a family member is added so the parent can refetch the list. */
+  onFamilyAdded?: () => void;
+  onConfirm: (payload: { include_self: boolean; dependent_ids: number[]; member_ids?: number[] }) => void;
 };
 
-export const WhosComingSheet = ({ response, subtitle, pending, error, onConfirm }: WhosComingSheetProps) => {
+export const WhosComingSheet = ({
+  response,
+  subtitle,
+  pending,
+  error,
+  ageRange = null,
+  hasSpouse,
+  onFamilyAdded,
+  onConfirm,
+}: WhosComingSheetProps) => {
   const initial = useMemo(() => defaultRsvpSelection(response), [response]);
+  const people = useMemo(() => buildRsvpPeople(response, ageRange), [response, ageRange]);
   const [includeSelf, setIncludeSelf] = useState(initial.includeSelf);
   const [dependentIds, setDependentIds] = useState<number[]>(initial.dependentIds);
+  const [adding, setAdding] = useState(false);
   const count = peopleCount(includeSelf, dependentIds);
 
-  const toggleChild = (id: number) => {
-    setDependentIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+  const toggle = (id: number | null) => {
+    if (id == null) {
+      setIncludeSelf((value) => !value);
+      return;
+    }
+    setDependentIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
   return (
     <SheetScaffold
       footer={
         <>
-        {error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {error}
-          </Text>
-        ) : null}
-        <AppButton
-          disabled={pending || count < 1}
-          loading={pending}
-          onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
-        >
-          {confirmGoingLabel(count)}
-        </AppButton>
+          {error ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {error}
+            </Text>
+          ) : null}
+          <PillButton
+            label={GOING_COPY.confirmRsvp}
+            disabled={pending || count < 1}
+            loading={pending}
+            onPress={() => onConfirm(buildRsvpPayload(includeSelf, dependentIds))}
+          />
         </>
       }
     >
-      <Text style={styles.title}>Who's coming?</Text>
+      <Text style={styles.title}>{GOING_COPY.whosComing}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: includeSelf, disabled: !response.me.eligible }}
-        disabled={!response.me.eligible}
-        onPress={() => setIncludeSelf((value) => !value)}
-        style={[styles.row, includeSelf ? styles.rowOn : null, !response.me.eligible ? styles.rowOff : null]}
-      >
-        <View style={[styles.box, includeSelf ? styles.boxOn : null]} />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>ME</Text>
-        </View>
-        <View style={styles.copy}>
-          <Text style={styles.name}>Me</Text>
-          <Text style={[styles.meta, !response.me.eligible ? styles.metaOff : null]}>
-            {response.me.eligible ? 'Your RSVP' : response.me.reason}
-          </Text>
-        </View>
-      </Pressable>
-
-      {response.dependents.map((child) => {
-        const selected = dependentIds.includes(child.id);
+      {people.map((person) => {
+        const selected = person.id == null ? includeSelf : dependentIds.includes(person.id);
         return (
           <Pressable
-            key={child.id}
+            key={person.key}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: selected, disabled: !child.eligible }}
-            accessibilityLabel={childDisplayName(child.name, child.age)}
-            disabled={!child.eligible}
-            onPress={() => toggleChild(child.id)}
-            style={[styles.row, selected ? styles.rowOn : null, !child.eligible ? styles.rowOff : null]}
+            accessibilityState={{ checked: selected, disabled: !person.eligible }}
+            accessibilityLabel={person.name}
+            disabled={!person.eligible}
+            onPress={() => toggle(person.id)}
+            style={[styles.row, selected ? styles.rowOn : null, !person.eligible ? styles.rowOff : null]}
           >
             <View style={[styles.box, selected ? styles.boxOn : null]} />
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{child.name.replace(/\s+/g, '').slice(0, 2).toUpperCase()}</Text>
+              <Text style={styles.avatarText}>{person.initials}</Text>
             </View>
             <View style={styles.copy}>
-              <Text style={[styles.name, !child.eligible ? styles.nameOff : null]}>
-                {childDisplayName(child.name, child.age)}
-              </Text>
-              <Text style={[styles.meta, !child.eligible ? styles.metaOff : null]}>
-                {child.eligible ? 'In your household' : child.reason || 'Outside this event\'s age range'}
+              <Text style={[styles.name, !person.eligible ? styles.nameOff : null]}>{person.name}</Text>
+              <Text style={[styles.meta, !person.eligible ? styles.metaOff : null]}>
+                {person.eligible ? person.subtitle : person.reason}
               </Text>
             </View>
           </Pressable>
         );
       })}
 
-      <Text style={styles.note}>{response.note || WHOS_COMING_NOTE}</Text>
+      <PillButton
+        label={GOING_COPY.addFamilyMember}
+        variant="outline"
+        icon="plus"
+        disabled={pending}
+        onPress={() => setAdding(true)}
+      />
+
+      <Text style={styles.note}>{GOING_COPY.underThirteenNote}</Text>
+
+      <AddFamilyMemberSheet
+        visible={adding}
+        hasSpouse={hasSpouse ?? people.some((person) => person.subtitle === 'Spouse')}
+        onCancel={() => setAdding(false)}
+        onAdded={() => {
+          setAdding(false);
+          onFamilyAdded?.();
+        }}
+      />
     </SheetScaffold>
   );
 };

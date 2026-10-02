@@ -14,9 +14,17 @@ import { GetPaidScreen } from '@screens/main/GetPaidScreen';
 import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
+import { isFoyerMode } from '@constants/appMode';
+import { GATHERING_CHAT_COPY } from '@constants/foyerCopy';
+import { DirectChatScreen } from '@screens/main/DirectChatScreen';
+import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
+import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
+import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
+import { MessagingScreen } from '@screens/main/MessagingScreen';
+import { PhotoGalleryScreen } from '@screens/main/PhotoGalleryScreen';
 import { GatheringDetailScreen } from '@screens/main/GatheringDetailScreen';
-import { HouseholdScreen } from '@screens/main/HouseholdScreen';
+import { MyFamilyScreen } from '@screens/main/MyFamilyScreen';
 import { MyEventsScreen } from '@screens/main/MyEventsScreen';
 import { NotificationsScreen } from '@screens/main/NotificationsScreen';
 import { ProfileScreen } from '@screens/main/ProfileScreen';
@@ -196,7 +204,11 @@ export const MainNavigator = () => (
     <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
     <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
-    <Stack.Screen name="Friends" component={FriendsScreen} options={{ title: 'Connections' }} />
+    <Stack.Screen
+      name="Friends"
+      component={isFoyerMode() ? FoyerFriendsScreen : FriendsScreen}
+      options={isFoyerMode() ? { headerShown: false, title: 'Friends' } : { title: 'Connections' }}
+    />
     <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ title: 'Reviews' }} />
     <Stack.Screen
       name="Notifications"
@@ -265,11 +277,20 @@ export const MainNavigator = () => (
       component={EditActivityScreen}
       options={{ title: 'Edit event' }}
     />
-    <Stack.Screen name="Household" component={HouseholdScreen} options={{ headerShown: false, title: 'Household' }} />
+    <Stack.Screen name="Household" component={MyFamilyScreen} options={{ headerShown: false, title: 'My family' }} />
+    <Stack.Screen name="PhotoGallery" component={PhotoGalleryScreen} options={{ headerShown: false, title: 'Photos' }} />
+    <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ headerShown: false, title: 'Profile' }} />
+    <Stack.Screen name="DirectChat" component={DirectChatScreen} options={{ headerShown: false, title: 'Chat' }} />
+    <Stack.Screen name="Messaging" component={MessagingScreen} options={{ headerShown: false, title: 'Messaging' }} />
     <Stack.Screen
       name="GatheringDetail"
       component={GatheringDetailScreen}
       options={{ title: 'Gathering' }}
+    />
+    <Stack.Screen
+      name="GatheringChat"
+      component={GatheringChatScreen}
+      options={{ title: GATHERING_CHAT_COPY.title }}
     />
   </Stack.Navigator>
 );

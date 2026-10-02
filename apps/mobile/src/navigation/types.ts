@@ -77,4 +77,13 @@ export type MainStackParamList = {
   GatheringDetail: {
     activityId: number | string;
   };
+  /**
+   * Per-gathering chat (host + people going). `conversationId` is optional and only carried from
+   * push notifications; messages are always loaded by `activityId`.
+   */
+  GatheringChat: { activityId: number | string; conversationId?: number | string; title?: string };
+  PhotoGallery: { activityId: number | string };
+  MemberProfile: { userId: number | string };
+  DirectChat: { conversationId: number | string; name?: string };
+  Messaging: undefined;
 };

@@ -50,6 +50,9 @@ export const API_ROUTE_BUILDERS = {
     `${API_ROUTES.SWIPES}${activityId}/swipe/`,
   activityRemoveParticipant: (activityId: number | string, userId: number | string) =>
     `${API_ROUTES.ACTIVITIES}${activityId}/participants/${userId}/`,
+  /** Per-gathering chat (host + people going). Creates the gathering's conversation on first use. */
+  activityChat: (activityId: number | string) =>
+    `${API_ROUTES.ACTIVITIES}${activityId}/chat/`,
   conversationMessages: (conversationId: number | string) =>
     `${API_ROUTES.MESSAGES_CONVERSATIONS}${conversationId}/messages/`,
   moderationBlock: (userId: number | string) =>

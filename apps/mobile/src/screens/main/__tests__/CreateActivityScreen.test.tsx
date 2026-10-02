@@ -96,6 +96,16 @@ jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn(async (uri: string) => ({ uri })),
 }));
 
+const chooseHostDateAndTime = async () => {
+  const now = new Date();
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  fireEvent.press(screen.getByTestId('host-date-field'));
+  fireEvent.press(await screen.findByLabelText(`${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`));
+  fireEvent.press(screen.getByLabelText('Done'));
+  fireEvent.press(screen.getByTestId('host-start-field'));
+  fireEvent.press(await screen.findByLabelText('Done'));
+};
+
 describe('CreateActivityScreen in foyer mode', () => {
   beforeEach(() => {
     process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
@@ -124,7 +134,7 @@ describe('CreateActivityScreen in foyer mode', () => {
 
     fireEvent.changeText(await screen.findByLabelText('Title'), 'Harvest Supper');
     fireEvent.changeText(screen.getByLabelText('Place'), 'Fellowship Hall');
-    fireEvent.changeText(screen.getByLabelText('Date & time'), '2026-11-07T17:30:00');
+    await chooseHostDateAndTime();
     fireEvent.changeText(screen.getByLabelText('Capacity'), '501');
     fireEvent.press(screen.getByText('Post gathering'));
     expect(await screen.findByText('Capacity must be a whole number from 1 to 500.')).toBeTruthy();
@@ -237,7 +247,8 @@ describe('CreateActivityScreen photos (Frame A2)', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Remove photo 1')).toBeTruthy();
     });
-    expect(screen.getAllByLabelText('Add photo')).toHaveLength(4);
+    // 50 photos are allowed, but only five empty slots are ever drawn.
+    expect(screen.getAllByLabelText('Add photo')).toHaveLength(5);
 
     fireEvent.press(screen.getByLabelText('Remove photo 1'));
     expect(screen.getAllByLabelText('Add photo')).toHaveLength(5);

@@ -18,6 +18,8 @@ import {
 import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchHostedActivities } from '@services/activityService';
 import { fetchGoingActivities } from '@services/foyerService';
+import { openGatheringChat, type StackNavigate } from '@foyer/gatheringChat';
+import { canSeeChat, isGoingRsvp } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
 
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -51,6 +53,8 @@ export const FoyerGatherings = () => {
       NativeStackNavigationProp<MainStackParamList>
     >
   >();
+  // The Gatherings tab lives inside the main stack; chat and detail are stack screens.
+  const stackNavigation = () => (navigation.getParent() ?? navigation) as unknown as StackNavigate;
   const [segment, setSegment] = useState<'upcoming' | 'past'>('upcoming');
   const hostedQuery = useQuery({
     queryKey: ['foyer-hosted'],
@@ -102,15 +106,17 @@ export const FoyerGatherings = () => {
         label="HOSTING"
         rows={hosting}
         summary={(row) => goingCountLabel(row.going_count ?? row.participant_count ?? 0)}
-        onChat={() => navigation.navigate('Chat')}
-        onOpen={(row) => navigation.getParent()?.navigate('GatheringDetail', { activityId: row.id })}
+        showChat={() => true}
+        onChat={(row) => openGatheringChat(stackNavigation(), { activityId: row.id, title: row.title })}
+        onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
       />
       <Section
         label="GOING"
         rows={going}
         summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
-        onChat={() => navigation.navigate('Chat')}
-        onOpen={(row) => navigation.getParent()?.navigate('GatheringDetail', { activityId: row.id })}
+        showChat={(row) => canSeeChat({ isHost: false, isGoing: isGoingRsvp(row.my_rsvp) })}
+        onChat={(row) => openGatheringChat(stackNavigation(), { activityId: row.id, title: row.title })}
+        onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
       />
     </AppScrollView>
   );
@@ -120,13 +126,17 @@ const Section = ({
   label,
   rows,
   summary,
+  showChat,
   onChat,
   onOpen,
 }: {
   label: string;
   rows: Row[];
   summary: (row: Row) => string;
-  onChat: () => void;
+  /** Chat is only for the host and people who are going. */
+  showChat: (row: Row) => boolean;
+  /** Opens that gathering's chat (with the gathering underneath, so Back returns to it). */
+  onChat: (row: Row) => void;
   onOpen: (row: Row) => void;
 }) => (
   <View style={styles.section}>
@@ -151,9 +161,11 @@ const Section = ({
             <Text style={styles.meta}>{formatWhen(row.time)}</Text>
             <Text style={styles.meta}>{summary(row)}</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={onChat} style={styles.chat}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
-          </Pressable>
+          {showChat(row) ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Chat about ${row.title}`} onPress={() => onChat(row)} style={styles.chat}>
+              <Text maxFontSizeMultiplier={1.4} style={styles.chatText}>Chat</Text>
+            </Pressable>
+          ) : null}
         </Pressable>
       );
     })}

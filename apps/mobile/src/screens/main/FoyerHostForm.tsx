@@ -7,6 +7,8 @@ import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FoyerHeader } from '@components/FoyerHeader';
+import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { TimePickerSheet } from '@components/foyer/TimePickerSheet';
 import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import {
@@ -15,7 +17,18 @@ import {
   type AudienceGender,
   type HostKind,
 } from '@foyer/logic';
+import {
+  DEFAULT_START_MINUTES,
+  endTimeSlots,
+  formatDayLong,
+  formatTimeOfDay,
+  hostDayLimits,
+  startTimeSlots,
+  toIsoDateTime,
+  type DayValue,
+} from '@foyer/dates';
 import { compressGatheringPhoto } from '@foyer/photos';
+import { PICKER_COPY } from '@constants/foyerCopy';
 import { useAuth } from '@hooks/useAuth';
 import { useTabScreenBottomPadding } from '@navigation/tabBarLayout';
 import type { MainStackParamList } from '@navigation/types';
@@ -37,8 +50,11 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [place, setPlace] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [day, setDay] = useState<DayValue | null>(null);
+  const [startMinutes, setStartMinutes] = useState<number | null>(null);
+  const [endMinutes, setEndMinutes] = useState<number | null>(null);
+  const [picker, setPicker] = useState<'date' | 'start' | 'end' | null>(null);
+  const [attemptedPost, setAttemptedPost] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [audience, setAudience] = useState<AudienceGender>('everyone');
   const [ageMin, setAgeMin] = useState('');
@@ -60,8 +76,8 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         location: place.trim(),
         latitude: 0,
         longitude: 0,
-        time: start.trim(),
-        end_time: end.trim() || undefined,
+        time: day && startMinutes != null ? toIsoDateTime(day, startMinutes) : '',
+        end_time: day && endMinutes != null ? toIsoDateTime(day, endMinutes) : undefined,
         capacity: capacityResult.capacity,
         audience_gender: audience,
         age_min: ageMin.trim() ? Number(ageMin) : null,
@@ -107,8 +123,12 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       setError(capacityResult.message);
       return;
     }
-    if (!title.trim() || !place.trim() || !start.trim()) {
-      setError('Add a title, place, and start time.');
+    setAttemptedPost(true);
+    if (!day || startMinutes == null) {
+      return;
+    }
+    if (!title.trim() || !place.trim()) {
+      setError('Add a title and place.');
       return;
     }
     setError(null);
@@ -139,8 +159,68 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         <Field label="Title" value={title} onChange={setTitle} placeholder="Women's Fall Brunch" />
         <Field label="Description" value={description} onChange={setDescription} multiline placeholder="Egg casseroles, apple crisp, and good conversation." />
         <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship Hall, Franconia Mennonite Church" />
-        <Field label="Date & time" value={start} onChange={setStart} placeholder="Sat, Oct 17, 2026 9:30 AM" />
-        <Field label="Ends" value={end} onChange={setEnd} placeholder="11:00 AM" />
+        <Text style={styles.sectionLabel}>{PICKER_COPY.when}</Text>
+        <PickerField
+          label={PICKER_COPY.date}
+          value={day ? formatDayLong(day) : null}
+          placeholder="Choose a date"
+          icon="calendar-month-outline"
+          error={attemptedPost && !day ? PICKER_COPY.chooseDate : null}
+          onPress={() => setPicker('date')}
+          testID="host-date-field"
+        />
+        <PickerField
+          label={PICKER_COPY.startTime}
+          value={startMinutes != null ? formatTimeOfDay(startMinutes) : null}
+          placeholder="Choose a start time"
+          icon="clock-outline"
+          error={attemptedPost && startMinutes == null ? PICKER_COPY.chooseStart : null}
+          onPress={() => setPicker('start')}
+          testID="host-start-field"
+        />
+        <PickerField
+          label={PICKER_COPY.ends}
+          value={endMinutes != null ? formatTimeOfDay(endMinutes) : PICKER_COPY.noEndTime}
+          icon="clock-end"
+          onPress={() => setPicker('end')}
+          testID="host-end-field"
+        />
+        <DatePickerSheet
+          mode="day"
+          visible={picker === 'date'}
+          title={PICKER_COPY.dayTitle}
+          value={day}
+          limits={hostDayLimits()}
+          onCancel={() => setPicker(null)}
+          onDone={(value) => {
+            setDay(value);
+            setPicker(null);
+          }}
+        />
+        <TimePickerSheet
+          visible={picker === 'start'}
+          title={PICKER_COPY.startTimeTitle}
+          slots={startTimeSlots(endMinutes)}
+          value={startMinutes}
+          defaultValue={endMinutes != null && endMinutes <= DEFAULT_START_MINUTES ? undefined : DEFAULT_START_MINUTES}
+          onCancel={() => setPicker(null)}
+          onDone={(value) => {
+            setStartMinutes(value);
+            setPicker(null);
+          }}
+        />
+        <TimePickerSheet
+          visible={picker === 'end'}
+          title={PICKER_COPY.endTimeTitle}
+          slots={endTimeSlots(startMinutes)}
+          value={endMinutes}
+          allowNone
+          onCancel={() => setPicker(null)}
+          onDone={(value) => {
+            setEndMinutes(value);
+            setPicker(null);
+          }}
+        />
         <Field
           label="Capacity"
           value={capacity}
@@ -197,7 +277,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
               value={hostAsChurch}
               onChange={setHostAsChurch}
             />
-            <Text style={styles.helper}>The church is shown as host.</Text>
+            <Text style={styles.helper}>The church is shown as the host of this gathering.</Text>
           </View>
         ) : null}
 
@@ -292,6 +372,7 @@ const styles = StyleSheet.create({
   coverTitle: { fontFamily: appTypography.bodySemibold, color: appColors.primary, fontSize: 16, textAlign: 'center' },
   field: { gap: 6 },
   label: { fontFamily: appTypography.bodySemibold, fontSize: 13, color: appColors.ink },
+  sectionLabel: { fontFamily: appTypography.bodySemibold, fontSize: 11.5, letterSpacing: 0.6, color: appColors.mutedInk },
   input: {
     minHeight: 48,
     borderRadius: radii.input,

@@ -1,4 +1,9 @@
-import { DefaultTheme, NavigationContainer, type LinkingOptions } from '@react-navigation/native';
+import {
+  DefaultTheme,
+  NavigationContainer,
+  getStateFromPath,
+  type LinkingOptions,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import { ActivityIndicator } from 'react-native';
@@ -6,6 +11,7 @@ import { ActivityIndicator } from 'react-native';
 import { View } from '@components/RNCompat';
 import { isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
+import { withGatheringBelowChat } from '@foyer/gatheringChat';
 import { useAuth } from '@hooks/useAuth';
 import { AccountDeletedScreen } from '@screens/auth/AccountDeletedScreen';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
@@ -28,6 +34,8 @@ const linking: LinkingOptions<RootStackParamList> = {
     'https://www.irlobby.com',
     'https://api.irlobby.com',
   ],
+  // A link straight to a gathering chat still gets the gathering underneath, so Back returns to it.
+  getStateFromPath: (path, options) => withGatheringBelowChat(getStateFromPath(path, options)),
   config: {
     screens: {
       Auth: {
@@ -47,6 +55,8 @@ const linking: LinkingOptions<RootStackParamList> = {
             },
           },
           Notifications: 'notifications',
+          GatheringDetail: 'gatherings/:activityId',
+          GatheringChat: 'gatherings/:activityId/chat',
           ...(isTicketingUiEnabled(config.ticketingEnabled)
             ? {
                 BuyTicket: 'tickets/buy/:activityId',

@@ -5,6 +5,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 
+import { isFoyerMode } from '@constants/appMode';
 import type { RootStackParamList } from '@navigation/types';
 
 Notifications.setNotificationHandler({
@@ -20,9 +21,26 @@ Notifications.setNotificationHandler({
 type PushData = {
   type?: string;
   screen?: string;
-  conversationId?: number | string;
-  matchId?: number | string;
-  activityId?: number | string;
+  conversationId?: number | string | null;
+  matchId?: number | string | null;
+  activityId?: number | string | null;
+};
+
+/** Gathering chat -> that gathering's chat; friend (1:1) chat -> DirectChat; null when no ids to open. */
+export const messagePushTarget = (data: PushData) => {
+  if (data.activityId != null) {
+    return {
+      screen: 'GatheringChat' as const,
+      params: {
+        activityId: data.activityId,
+        ...(data.conversationId != null ? { conversationId: data.conversationId } : {}),
+      },
+    };
+  }
+  if (data.conversationId != null) {
+    return { screen: 'DirectChat' as const, params: { conversationId: data.conversationId } };
+  }
+  return null;
 };
 
 const navigateFromPushData = (
@@ -34,6 +52,22 @@ const navigateFromPushData = (
   }
 
   const screen = data.screen || data.type;
+  // The Foyer has no Chat tab: message pushes open that gathering's (or friend's) chat.
+  if (isFoyerMode() && (screen === 'Chat' || screen === 'new_message')) {
+    const target = messagePushTarget(data);
+    if (target) {
+      if (target.screen === 'GatheringChat') {
+        // Gathering underneath, so Back returns to it.
+        navigation.navigate('Main', {
+          screen: 'GatheringDetail',
+          params: { activityId: target.params.activityId },
+        });
+      }
+      navigation.navigate('Main', target as never);
+      return;
+    }
+  }
+
   if (screen === 'Chat' || screen === 'new_message' || screen === 'new_match') {
     navigation.navigate('Main', {
       screen: 'Tabs',

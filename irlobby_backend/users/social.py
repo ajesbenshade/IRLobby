@@ -109,25 +109,34 @@ def same_church(user_a, user_b) -> bool:
     return user_a.church_id is not None and user_a.church_id == user_b.church_id
 
 
+def level_allows(viewer, owner) -> bool:
+    """Does the owner's chosen visibility level include this viewer?
+
+    only_me = nobody else, friends = accepted friends, church = same church (friends
+    included, since each level contains the one below it), public = any logged-in user.
+    """
+    if viewer.id == owner.id:
+        return True
+    level = owner.profile_visibility
+    if level == "public":
+        return True
+    if level == "church":
+        return same_church(viewer, owner) or are_friends(viewer, owner)
+    if level == "friends":
+        return are_friends(viewer, owner)
+    return False
+
+
 def can_view_profile(viewer, owner) -> bool:
     """Visibility gate for GET /api/users/<id>/profile/ (block check is the caller's job).
 
-    Minors are visible only to accepted friends, whatever their setting says. Adults:
-    only_me = nobody, friends = accepted friends, church = same church, public = any
-    logged-in user.
+    Minors are visible only to accepted friends, whatever their setting says.
     """
     if viewer.id == owner.id:
         return True
     if is_minor(owner):
         return are_friends(viewer, owner)
-    level = owner.profile_visibility
-    if level == "public":
-        return True
-    if level == "church":
-        return same_church(viewer, owner)
-    if level == "friends":
-        return are_friends(viewer, owner)
-    return False
+    return level_allows(viewer, owner)
 
 
 def can_send_friend_request(sender, target) -> bool:

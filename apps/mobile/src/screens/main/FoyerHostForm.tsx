@@ -450,7 +450,7 @@ const Field = ({
   </View>
 );
 
-/** A real checkbox (not a switch): 48pt+ target, shared Checkbox square, label first. */
+/** A real checkbox (not a switch): 48pt+ target, shared Checkbox square, checkbox left, label right, hairline rules above and below (host-form-v2). */
 export const CheckboxRow = ({
   label,
   value,
@@ -470,8 +470,8 @@ export const CheckboxRow = ({
     style={styles.checkboxRow}
     testID={testID}
   >
-    <Text style={styles.checkLabel}>{label}</Text>
     <Checkbox checked={value} />
+    <Text style={styles.checkLabel}>{label}</Text>
   </Pressable>
 );
 
@@ -542,7 +542,15 @@ const styles = StyleSheet.create({
   ageRow: { flexDirection: 'row', gap: 12 },
   ageCell: { flex: 1 },
   checkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 56 },
-  checkboxRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 48 },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 60, // frame row is ~60pt; never below the 48pt target
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+  },
   checkLabel: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   warn: { backgroundColor: appColors.warnBg, borderRadius: radii.list, padding: 12 },
   warnText: { color: appColors.warnText, fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18 },

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
-import { Switch as NativeSwitch } from 'react-native';
+import { StyleSheet, Switch as NativeSwitch } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { CheckRow, CheckboxRow } from '../FoyerHostForm';
@@ -28,6 +28,23 @@ describe('host form: calendar is a checkbox, approval and church stay switches',
     expect(flat(box?.props.style)).toMatchObject({ borderColor: '#857f7a', borderWidth: 2, backgroundColor: '#ffffff' });
     fireEvent.press(row);
     expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('matches host-form-v2: checkbox left of the label, gap 12, no space-between, hairlines above and below', () => {
+    const view = render(<CheckboxRow label="Post to the church website calendar" value={false} onChange={jest.fn()} testID="cal" />);
+    const row = view.getByTestId('cal');
+    const style = flat(row.props.style);
+    expect(style.flexDirection).toBe('row');
+    expect(style.justifyContent).toBeUndefined();
+    expect(style.gap).toBe(12);
+    expect(style.minHeight).toBeGreaterThanOrEqual(48);
+    expect(style.borderTopWidth).toBe(StyleSheet.hairlineWidth);
+    expect(style.borderBottomWidth).toBe(StyleSheet.hairlineWidth);
+    expect(style.borderColor).toBe('#e1dbd7');
+    const kids = row.children as Array<{ props?: { children?: unknown } }>;
+    const labelIndex = kids.findIndex((child) => JSON.stringify(child?.props ?? {}).includes('Post to the church'));
+    const boxIndex = kids.findIndex((child) => child !== kids[labelIndex]);
+    expect(boxIndex).toBeLessThan(labelIndex);
   });
 
   it('checked state fills burgundy with a tick and toggles back off', () => {

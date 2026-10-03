@@ -677,8 +677,19 @@ The same checks run again: real date, not in the future, under 18, and a 13-17 c
 `GET/PATCH /api/users/profile/` has a new field `show_birthday` (bool, default `false`), readable and writable on your own profile.
 
 - `show_birthday: true` is rejected with 400 `{"show_birthday": ["Birthdays can only be shared by accounts 18 and older."]}` when the account is under 18, or `["Add your birth date before sharing your birthday."]` when no birth date is on file. If a birth-date change makes the account a minor, `show_birthday` is switched off.
-- Other people can see only your **month and day, never the year**, and only when all of these hold: `show_birthday` is on; you are 18 or older; the viewer is inside your `profile_visibility` level (`only_me` = nobody, `friends` = accepted friends, `church` = same church or friends, `public` = any logged-in user, same rules as email/phone); and nobody blocked the other.
+- Other people can see only your **month and day, never the year**, and only when all of these hold: `show_birthday` is on; you are 18 or older; the viewer is inside **both** your `birthday_audience` and your `profile_visibility` levels (see below; `only_me` = nobody, `friends` = accepted friends, `church` = same church or friends, `public` = any logged-in user, same rules as email/phone); and nobody blocked the other.
 - `GET /api/users/<id>/profile/` adds `"birthday": {"month": 8, "day": 17}` to the full card when those hold, otherwise the key is absent. Feb 29 birthdays show as 2/29.
+
+### `birthday_audience` (adults only, own profile)
+
+`GET/PATCH /api/users/profile/` also has `birthday_audience`, returned on your own profile next to `show_birthday` and writable with PATCH.
+
+- Values: `only_me` (nobody else), `friends` (accepted friends), `church` (same church, or friends), `public` (any logged-in user). Same values and labels as `profile_visibility`. **Default `friends`** for everyone, including existing accounts (additive migration, no backfill).
+- **Narrower wins.** A viewer sees your birthday only if they are inside BOTH `birthday_audience` and `profile_visibility`, on top of the rules above (`show_birthday` on, 18+, not blocked). Examples: `birthday_audience: public` with `profile_visibility: only_me` → hidden from everyone; `birthday_audience: only_me` with `profile_visibility: public` → hidden even from friends; `friends` + `friends` → visible to friends.
+- Errors: an unknown value → 400 with the standard choice error under `birthday_audience` (`"\"x\" is not a valid choice."`). An account under 18 that sends `birthday_audience` → 400 `{"birthday_audience": ["Birthdays can only be shared by accounts 18 and older."]}`. An account with no birth date **may** set it (it is only a preference; `show_birthday: true` still needs a birth date). A birth-date change that makes the account a minor leaves `birthday_audience` as is (only `show_birthday` is switched off).
+- Privacy: only your own profile returns `birthday_audience`. Profile cards, friend lists and `/api/friends/birthdays/` never include it. Household members/children have no such field.
+- One helper (`users.social.birthday_visible_to`) enforces this for the profile card `birthday`, `GET /api/friends/birthdays/` and the daily push. The friends list stays friends-only: non-friends never appear in it whatever the audience.
+- Database change: `users.User.birthday_audience` (varchar(10), default `friends`), migration `users/0017_user_birthday_audience`.
 
 ## `GET /api/friends/birthdays/` (auth)
 
@@ -688,7 +699,7 @@ Your accepted friends whose birthday is today or in the next 7 days, sorted by `
 { "birthdays": [ { "user_id": 12, "name": "Anna", "month": 10, "day": 5, "days_until": 3 } ] }
 ```
 
-- Same rules as above for each friend: `show_birthday` on, 18+, your level allowed by their `profile_visibility` (friends with `only_me` are left out), not blocked either way, active account. Your own birthday is not listed. No year, ever.
+- Same rules as above for each friend: `show_birthday` on, 18+, you are inside both their `birthday_audience` and `profile_visibility` levels (friends with `only_me` in either are left out), not blocked either way, active account. Your own birthday is not listed. No year, ever.
 - `name` is the first name (`"Guest"` if empty). `month`/`day` are the upcoming celebration date, so a Feb 29 birthday shows `2`/`28` in a non-leap year and `2`/`29` in a leap year. The window wraps the year end (Dec 28 sees Jan 3). "Today" is the New York date.
 - Empty list: `{"birthdays": []}`. Unauthenticated → 401.
 
@@ -696,7 +707,7 @@ Your accepted friends whose birthday is today or in the next 7 days, sorted by `
 
 **Off by default (not yet approved).** The push is gated by the env var / Django setting `BIRTHDAY_PUSH_ENABLED` (default `False`). While it is off, the beat entry `friend-birthday-notifications` is not registered and `users.tasks.send_birthday_notifications` is a no-op (returns `{"celebrants": 0, "sent": 0, "disabled": true}`, sends nothing). Set `BIRTHDAY_PUSH_ENABLED=true` and restart `celery_beat` and `celery_worker` to turn it on. The endpoint `GET /api/friends/birthdays/` is not affected by this flag.
 
-When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
+When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, including `birthday_audience`, so blocked users and `only_me` in either setting get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
 
 Database change: `users.User.show_birthday` (bool, default false), migration `users/0016_user_show_birthday`. No change to `HouseholdDependent`.
 

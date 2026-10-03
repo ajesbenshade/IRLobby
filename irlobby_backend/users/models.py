@@ -62,6 +62,11 @@ class User(AbstractUser):
     # Adults only: let people inside profile_visibility see your birthday (month and day,
     # never the year). Always False for children; household members have no such setting.
     show_birthday = models.BooleanField(default=False)
+    # Who may see the birthday (same levels as profile_visibility). The narrower of this and
+    # profile_visibility wins. Only a preference: the date itself is still adults-only.
+    birthday_audience = models.CharField(
+        max_length=10, choices=PROFILE_VISIBILITY_CHOICES, default="friends"
+    )
 
     class Meta:
         # Add unique constraint on email to prevent duplicates

@@ -104,6 +104,7 @@ class UserSerializer(serializers.ModelSerializer):
             "show_phone",
             "dm_from_shared_events",
             "show_birthday",
+            "birthday_audience",
         )
         read_only_fields = ("id",)
 
@@ -157,7 +158,17 @@ class UserSerializer(serializers.ModelSerializer):
             ):
                 raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
         self._validate_show_birthday(attrs, dob)
+        self._validate_birthday_audience(attrs, dob)
         return attrs
+
+    def _validate_birthday_audience(self, attrs, dob):
+        """Accounts under 18 cannot change who sees a birthday. No birth date is fine: it is
+        only a preference until show_birthday is turned on."""
+        if "birthday_audience" not in attrs or dob is None:
+            return
+        age = age_on(dob, ny_today())
+        if age is None or age < 18:
+            raise serializers.ValidationError({"birthday_audience": BIRTHDAY_MINOR_ERROR})
 
     def _validate_show_birthday(self, attrs, dob):
         """Only accounts that are 18 or older, with a birth date, can share a birthday."""

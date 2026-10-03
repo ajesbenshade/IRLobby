@@ -2,7 +2,7 @@ import * as Location from 'expo-location';
 import { isFoyerMode } from '@constants/appMode';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -26,7 +26,9 @@ import {
 } from '@services/pushNotificationService';
 import { appColors, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import { Checkbox } from '@components/foyer/Choice';
 import { LegalConsentText } from '@components/foyer/LegalConsentText';
+import { Switch } from '@components/foyer/Switch';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { LEGAL_CONSENT_COPY } from '@constants/foyerCopy';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
@@ -335,7 +337,7 @@ export const OnboardingScreen = () => {
         title="Enable push notifications"
         subtitle="Get notified about joins, matches, and messages without keeping the app open."
         accessory={
-          <Switch value={enableNotifications} onValueChange={setEnableNotifications} />
+          <Switch accessibilityLabel="Enable push notifications" value={enableNotifications} onValueChange={setEnableNotifications} />
         }
       />
       <Text style={styles.helperCopy}>
@@ -351,9 +353,7 @@ export const OnboardingScreen = () => {
           onPress={() => setAcceptedLegal((previous) => !previous)}
           style={styles.legalRow}
         >
-          <View style={[styles.checkBox, acceptedLegal ? styles.checkBoxOn : null]}>
-            {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
-          </View>
+          <Checkbox checked={acceptedLegal} />
           <LegalConsentText
             variant="checkbox"
             termsUrl={legalLinks.termsUrl}
@@ -478,25 +478,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     minHeight: 48,
-  },
-  checkBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: appColors.lineStrong,
-    backgroundColor: appColors.cardStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkBoxOn: {
-    backgroundColor: appColors.primary,
-    borderColor: appColors.primary,
-  },
-  checkMark: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: '700',
   },
   legalText: {
     flex: 1,

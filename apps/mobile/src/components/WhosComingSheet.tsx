@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { AddFamilyMemberSheet } from '@components/foyer/AddFamilyMemberSheet';
+import { Checkbox } from '@components/foyer/Choice';
 import { PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { SheetScaffold } from '@components/SheetScaffold';
@@ -99,7 +100,7 @@ export const WhosComingSheet = ({
             onPress={() => toggle(person.id)}
             style={[styles.row, selected ? styles.rowOn : null, !person.eligible ? styles.rowOff : null]}
           >
-            <View style={[styles.box, selected ? styles.boxOn : null]} />
+            <Checkbox checked={selected} />
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{person.initials}</Text>
             </View>
@@ -163,18 +164,6 @@ const styles = StyleSheet.create({
   },
   rowOff: {
     backgroundColor: '#efe9e5',
-  },
-  box: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: appColors.line,
-    backgroundColor: appColors.white,
-  },
-  boxOn: {
-    backgroundColor: appColors.primary,
-    borderColor: appColors.primary,
   },
   avatar: {
     width: 36,

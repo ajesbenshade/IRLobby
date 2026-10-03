@@ -10,6 +10,7 @@ import { GoogleSignInButton } from '@components/GoogleSignInButton';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { Checkbox } from '@components/foyer/Choice';
 import { Field } from '@components/ui/Field';
 import { isFoyerMode } from '@constants/appMode';
 import { auth as authCopy } from '@constants/copy';
@@ -274,9 +275,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
           onPress={() => setAcceptedLegal((prev) => !prev)}
           style={styles.legalRow}
         >
-          <View style={[styles.checkBox, acceptedLegal ? styles.checkBoxOn : null]}>
-            {acceptedLegal ? <Text style={styles.checkMark}>✓</Text> : null}
-          </View>
+          <Checkbox checked={acceptedLegal} />
           <LegalConsentText
             variant="checkbox"
             termsUrl={legal.termsUrl}
@@ -355,25 +354,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 4,
     minHeight: 48,
-  },
-  checkBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: appColors.lineStrong,
-    backgroundColor: appColors.cardStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkBoxOn: {
-    backgroundColor: appColors.primary,
-    borderColor: appColors.primary,
-  },
-  checkMark: {
-    color: appColors.white,
-    fontSize: 13,
-    fontWeight: '700',
   },
   legalText: {
     flex: 1,

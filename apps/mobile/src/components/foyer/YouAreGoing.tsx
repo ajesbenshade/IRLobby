@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AddFamilyMemberSheet } from '@components/foyer/AddFamilyMemberSheet';
+import { Checkbox } from '@components/foyer/Choice';
 import { InlineError, PillButton } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { SheetScaffold } from '@components/SheetScaffold';
@@ -116,9 +117,7 @@ export const YouAreGoing = ({
             onPress={() => toggle(person.id)}
             style={[styles.row, checked ? styles.rowOn : null, !person.eligible ? styles.rowOff : null]}
           >
-            <View style={[styles.box, checked ? styles.boxOn : null]}>
-              {checked ? <MaterialCommunityIcons name="check" size={16} color="#f6f1ee" /> : null}
-            </View>
+            <Checkbox checked={checked} />
             <View style={styles.copy}>
               <Text style={[styles.name, !person.eligible ? styles.nameOff : null]}>{person.name}</Text>
               <Text style={[styles.sub, !person.eligible ? styles.subOff : null]}>
@@ -160,8 +159,6 @@ const styles = StyleSheet.create({
   },
   rowOn: { backgroundColor: appColors.primaryWash },
   rowOff: { backgroundColor: '#efe9e5' },
-  box: { width: 24, height: 24, borderRadius: 6, borderWidth: 1.5, borderColor: appColors.line, backgroundColor: appColors.white, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: appColors.primary, borderColor: appColors.primary },
   copy: { flex: 1, flexShrink: 1 },
   name: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink },
   nameOff: { color: appColors.mutedInk },

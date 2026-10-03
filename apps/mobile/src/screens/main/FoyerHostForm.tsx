@@ -3,11 +3,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FoyerHeader } from '@components/FoyerHeader';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { Switch } from '@components/foyer/Switch';
 import { TimePickerSheet } from '@components/foyer/TimePickerSheet';
 import { ScrollView, View } from '@components/RNCompat';
 import { MapPickerSheet } from '@components/foyer/MapPickerSheet';
@@ -462,8 +463,6 @@ const CheckRow = ({
       accessibilityLabel={label}
       value={value}
       onValueChange={onChange}
-      trackColor={{ false: appColors.line, true: appColors.primary }}
-      thumbColor={appColors.white}
     />
   </View>
 );

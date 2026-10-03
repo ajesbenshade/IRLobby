@@ -66,6 +66,8 @@ export interface AuthUser {
   showEmail?: boolean;
   showPhone?: boolean;
   dmFromSharedEvents?: boolean;
+  /** Own `Show my birthday` (adult opt-in). Undefined when the profile payload does not carry `show_birthday`. */
+  showBirthday?: boolean;
 }
 
 export interface LoginPayload {

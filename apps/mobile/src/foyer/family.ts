@@ -56,7 +56,8 @@ export const normalizeFamilyMembers = (data: HouseholdResponse | null | undefine
     member: NonNullable<HouseholdResponse['members']>[number] | (ChildRow & { relationship?: string }),
     relationship: FamilyRelationship,
   ): FamilyMember => {
-    const birth = relationship === 'child' ? resolveBirth(member as never, children.get(member.id)) : { month: null, year: null, day: null };
+    // Adults (spouse rows) keep whatever birth data the payload carries; when every field is null they simply read `Adult`.
+    const birth = resolveBirth(member as never, children.get(member.id));
     const hasDay = birth.day != null && birth.month != null && birth.year != null;
     return {
       id: member.id,
@@ -79,18 +80,28 @@ export const normalizeFamilyMembers = (data: HouseholdResponse | null | undefine
 /** The saved full birth date, or null when only a month and year (or nothing, for an adult) is stored. */
 export const memberBirthDay = (member: FamilyMember): DayValue | null => parseIsoDate(member.date_of_birth ?? null);
 
+/**
+ * Adults (a spouse row) may or may not carry birth data. They read `Born <date>` when the payload has it and `Adult` when
+ * every birth field is null, but are never edited as a child (no birthday editing, never sent a birth date). A row with no
+ * birth data at all is treated as an adult for editing, whatever its relationship says.
+ */
+export const isAdultMember = (member: FamilyMember): boolean =>
+  member.relationship === 'spouse' || (memberBirthDay(member) == null && member.birth_month == null && member.birth_year == null);
+
 /** A child saved before full birth dates: month and year, no day. */
 export const isMonthYearOnly = (member: FamilyMember): boolean =>
   member.relationship === 'child' && memberBirthDay(member) == null && member.birth_month != null && member.birth_year != null;
 
-/** `Born March 4, 2016`, `Born March 2016` (legacy), or `Adult` (legacy spouse row / no birth data). */
+/** `Born March 4, 2016`, `Born March 2016` (month only), or `Adult` only when every birth field is null (children and adults alike). */
 export const memberBirthLine = (member: FamilyMember): string => {
   const day = memberBirthDay(member);
   if (day) {
     return FAMILY_COPY.born(formatBirthdayLong(day));
   }
-  if (isMonthYearOnly(member)) {
-    return FAMILY_COPY.born(`${MONTH_NAMES[(member.birth_month as number) - 1]} ${member.birth_year}`);
+  // Month and year only (legacy child, or an adult whose payload has no day): never a made-up day.
+  const month = member.birth_month;
+  if (month != null && month >= 1 && month <= 12 && member.birth_year != null) {
+    return FAMILY_COPY.born(`${MONTH_NAMES[month - 1]} ${member.birth_year}`);
   }
   return FAMILY_COPY.adult;
 };
@@ -109,7 +120,7 @@ export const ageBandForAge = (age: number | null | undefined): string | null => 
   return null;
 };
 
-export const memberInitials = (name: string) => name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
+export const memberInitials = (name: string | null | undefined) => (name ?? '').replace(/\s+/g, '').slice(0, 2).toUpperCase();
 
 /** Add needs a name, a sex and a birthday that is inside the last 18 years. No relationship. */
 export const canAddFamilyMember = (input: {

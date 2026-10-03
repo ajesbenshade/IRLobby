@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Share, StyleSheet } from 'react-native';
-import { HelperText, Switch, Text } from 'react-native-paper';
+import { HelperText, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import {
@@ -15,6 +15,7 @@ import {
   PanelCard,
   SectionIntro,
 } from '@components/AppChrome';
+import { Switch } from '@components/foyer/Switch';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { account as accountCopy } from '@constants/copy';
@@ -36,12 +37,12 @@ interface NotificationSettings {
   messages: boolean;
 }
 
-interface PrivacySettings {
-  profileVisibility: 'public' | 'friends' | 'private';
-  locationSharing: boolean;
-  showAge: boolean;
-  showEmail: boolean;
-}
+/**
+ * Whatever is stored under `preferences.privacy` on the server. Settings no longer shows or edits it (the Privacy and
+ * Location cards were removed), but PATCH /profile/ replaces the whole `preferences` object, so it is carried through
+ * untouched (unknown keys included) whenever another setting is saved.
+ */
+type StoredPrivacy = Record<string, unknown>;
 
 interface PreferenceSettings {
   theme: 'light' | 'dark' | 'system';
@@ -52,14 +53,15 @@ interface PreferenceSettings {
 
 interface UserSettings {
   notifications: NotificationSettings;
-  privacy: PrivacySettings;
+  /** Opaque pass-through of the stored `preferences.privacy` blob; undefined when the account has none. */
+  privacy?: StoredPrivacy;
   preferences: PreferenceSettings;
 }
 
 interface UserProfileResponse {
   preferences?: Partial<PreferenceSettings> & {
     notifications?: NotificationSettings;
-    privacy?: PrivacySettings;
+    privacy?: StoredPrivacy;
   };
 }
 
@@ -70,12 +72,6 @@ const defaultSettings: UserSettings = {
     activityReminders: true,
     newMatches: true,
     messages: true,
-  },
-  privacy: {
-    profileVisibility: 'public',
-    locationSharing: true,
-    showAge: true,
-    showEmail: false,
   },
   preferences: {
     theme: 'system',
@@ -89,7 +85,8 @@ export const toPayload = (settings: UserSettings) => ({
   preferences: {
     ...settings.preferences,
     notifications: settings.notifications,
-    privacy: settings.privacy,
+    // Preserve the stored privacy blob exactly as loaded; never synthesize defaults into it.
+    ...(settings.privacy ? { privacy: settings.privacy } : {}),
   },
 });
 
@@ -103,20 +100,13 @@ export const loadSettings = async (): Promise<UserSettings> => {
       ...defaultSettings.notifications,
       ...(notifications ?? {}),
     },
-    privacy: {
-      ...defaultSettings.privacy,
-      ...(privacy ?? {}),
-    },
+    ...(privacy && typeof privacy === 'object' ? { privacy } : {}),
     preferences: {
       ...defaultSettings.preferences,
       ...preferenceOverrides,
     },
   };
 };
-
-/** Location lives in its own section: it is a device preference, not something other people see. */
-export const LOCATION_TOGGLE_LABEL = 'Use my location to find nearby gatherings';
-export const LOCATION_TOGGLE_HELPER = 'Never shown to other people.';
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -155,25 +145,14 @@ export const SettingsScreen = () => {
     exportDataMutation.error ? getErrorMessage(exportDataMutation.error, 'Unable to export your data.') : null,
   ].filter((value): value is string => Boolean(value));
 
-  const toggleSetting = (
-    section: 'notifications' | 'privacy',
-    key: keyof NotificationSettings | keyof PrivacySettings,
-  ) => {
-    const currentValue =
-      section === 'notifications'
-        ? settings.notifications[key as keyof NotificationSettings]
-        : settings.privacy[key as keyof PrivacySettings];
-
-    const next = {
+  const toggleNotification = (key: keyof NotificationSettings) => {
+    const nextValue = !settings.notifications[key];
+    const next: UserSettings = {
       ...settings,
-      [section]: {
-        ...settings[section],
-        [key]: !currentValue,
-      },
-    } as UserSettings;
+      notifications: { ...settings.notifications, [key]: nextValue },
+    };
 
-    if (section === 'notifications' && key === 'pushNotifications') {
-      const nextValue = !currentValue;
+    if (key === 'pushNotifications') {
       if (nextValue) {
         void registerCurrentDevicePushToken();
       } else {
@@ -196,20 +175,6 @@ export const SettingsScreen = () => {
       },
     };
 
-    updateMutation.mutate(next);
-  };
-
-  const cycleProfileVisibility = () => {
-    const sequence: PrivacySettings['profileVisibility'][] = ['public', 'friends', 'private'];
-    const currentIndex = sequence.indexOf(settings.privacy.profileVisibility);
-    const nextVisibility = sequence[(currentIndex + 1) % sequence.length];
-    const next = {
-      ...settings,
-      privacy: {
-        ...settings.privacy,
-        profileVisibility: nextVisibility,
-      },
-    };
     updateMutation.mutate(next);
   };
 
@@ -238,7 +203,7 @@ export const SettingsScreen = () => {
       <PageHeader
         eyebrow="Account settings"
         title="Settings"
-        subtitle="Control how the app reaches you, what other people can see, and how your account behaves day to day."
+        subtitle="Control how the app reaches you and how your account behaves day to day."
         rightContent={
           <AccentPill tone="neutral">
             {exportDataMutation.isPending
@@ -256,7 +221,7 @@ export const SettingsScreen = () => {
           Keep the account private where it matters and active where it helps.
         </Text>
         <Text style={styles.heroSubtitle}>
-          Notification delivery, profile visibility, and distance preferences all update here without changing the rest of your profile flow.
+          Notification delivery and distance preferences update here without changing the rest of your profile flow.
         </Text>
       </PanelCard>
 
@@ -310,112 +275,67 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="Push notifications"
+          dimmed={isBusy}
           subtitle="Allow timely nudges for live activity around your account."
           accessory={
             <Switch
+              accessibilityLabel="Push notifications"
               value={settings.notifications.pushNotifications}
-              onValueChange={() => toggleSetting('notifications', 'pushNotifications')}
+              onValueChange={() => toggleNotification('pushNotifications')}
               disabled={isBusy}
             />
           }
         />
         <DetailRow
           title="Email notifications"
+          dimmed={isBusy}
           subtitle="Receive recap-style updates when you are away from the app."
           accessory={
             <Switch
+              accessibilityLabel="Email notifications"
               value={settings.notifications.emailNotifications}
-              onValueChange={() => toggleSetting('notifications', 'emailNotifications')}
+              onValueChange={() => toggleNotification('emailNotifications')}
               disabled={isBusy}
             />
           }
         />
         <DetailRow
           title="New matches"
+          dimmed={isBusy}
           subtitle="Get alerted when discovery turns into a connection."
           accessory={
             <Switch
+              accessibilityLabel="New matches"
               value={settings.notifications.newMatches}
-              onValueChange={() => toggleSetting('notifications', 'newMatches')}
+              onValueChange={() => toggleNotification('newMatches')}
               disabled={isBusy}
             />
           }
         />
         <DetailRow
           title="Activity reminders"
+          dimmed={isBusy}
           subtitle="Stay on top of events you hosted, joined, or committed to attend."
           accessory={
             <Switch
+              accessibilityLabel="Activity reminders"
               value={settings.notifications.activityReminders}
-              onValueChange={() => toggleSetting('notifications', 'activityReminders')}
+              onValueChange={() => toggleNotification('activityReminders')}
               disabled={isBusy}
             />
           }
         />
         <DetailRow
           title="Messages"
+          dimmed={isBusy}
           subtitle="Receive alerts when a conversation picks up again."
           accessory={
             <Switch
+              accessibilityLabel="Messages"
               value={settings.notifications.messages}
-              onValueChange={() => toggleSetting('notifications', 'messages')}
+              onValueChange={() => toggleNotification('messages')}
               disabled={isBusy}
             />
-          }
-        />
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro title="Location" />
-        <DetailRow
-          title={LOCATION_TOGGLE_LABEL}
-          subtitle={LOCATION_TOGGLE_HELPER}
-          accessory={
-            <Switch
-              accessibilityLabel={LOCATION_TOGGLE_LABEL}
-              value={settings.privacy.locationSharing}
-              onValueChange={() => toggleSetting('privacy', 'locationSharing')}
-              disabled={isBusy}
-            />
-          }
-        />
-      </PanelCard>
-
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Privacy"
-          title="Control what people can see"
-          subtitle="These settings shape how visible your profile is and how much personal context you expose to others."
-        />
-        <DetailRow
-          title="Show age"
-          subtitle="Let other people see your age information on your profile."
-          accessory={
-            <Switch
-              value={settings.privacy.showAge}
-              onValueChange={() => toggleSetting('privacy', 'showAge')}
-              disabled={isBusy}
-            />
-          }
-        />
-        <DetailRow
-          title="Show email"
-          subtitle="Reveal email as part of your visible profile details."
-          accessory={
-            <Switch
-              value={settings.privacy.showEmail}
-              onValueChange={() => toggleSetting('privacy', 'showEmail')}
-              disabled={isBusy}
-            />
-          }
-        />
-        <DetailRow
-          title="Profile visibility"
-          subtitle="Cycle between public, friends-only, and private profile visibility."
-          accessory={
-            <AppButton variant="outline" compact onPress={cycleProfileVisibility} disabled={isBusy}>
-              {titleCase(settings.privacy.profileVisibility)}
-            </AppButton>
           }
         />
       </PanelCard>

@@ -90,7 +90,7 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [visible, center.latitude, center.longitude, isDefault]);
+  }, [visible, center.latitude, center.longitude, isDefault, defaultLabel]);
 
   // Only a real drag moves the pin and re-labels it. The initial region and the animateToRegion on open also fire
   // onRegionChangeComplete; those must not geocode and overwrite the fixed "Franconia, PA" / church label.

@@ -1,20 +1,24 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Switch, TextInput } from 'react-native';
+import { Linking, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { Radio } from '@components/foyer/Choice';
+import { Switch } from '@components/foyer/Switch';
 import { InlineError, PillButton, SectionLabel } from '@components/foyer/ui';
+import { BirthdayCard } from '@components/foyer/BirthdayCard';
 import { MapLocationSettingRow } from '@components/foyer/MapLocationSettingRow';
 import { Image, View } from '@components/RNCompat';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { useAppConfig } from '@services/appConfig';
 import {
+  BIRTHDAY_COPY,
   COMMON_COPY,
   FAMILY_COPY,
   FRIEND_COPY,
@@ -27,6 +31,7 @@ import {
   type VisibilityLevel,
 } from '@constants/foyerCopy';
 import { birthDayLimits, defaultBirthMonth, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
+import { TOGGLE_DISABLED_LABEL_OPACITY } from '@foyer/buttonTokens';
 import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
 import {
   ageFromIso,
@@ -42,7 +47,6 @@ import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
 import { createChurch, fetchChurches, fetchFamilyMembers, fetchFriends, type ChurchRecord } from '@services/foyerService';
-import { loadSettings, toPayload } from '@screens/main/SettingsScreen';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
@@ -62,14 +66,11 @@ const emptyDraft: ProfileDraft = {
 
 export const FoyerProfileCard = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const queryClient = useQueryClient();
   const { user, refreshProfile } = useAuth();
   const appConfig = useAppConfig();
   const legalSheet = useLegalSheet();
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [baseline, setBaseline] = useState<ProfileDraft>(emptyDraft);
-  const [locationOn, setLocationOn] = useState(false);
-  const [locationBaseline, setLocationBaseline] = useState(false);
   const [churchQuery, setChurchQuery] = useState('');
   const [churchName, setChurchName] = useState('');
   const [open, setOpen] = useState(false);
@@ -89,7 +90,6 @@ export const FoyerProfileCard = () => {
     [],
   );
 
-  const settingsQuery = useQuery({ queryKey: ['mobile-settings'], queryFn: loadSettings });
   const friendsQuery = useQuery({ queryKey: ['foyer-friends'], queryFn: fetchFriends, retry: false });
   const familyQuery = useQuery({ queryKey: ['foyer-household'], queryFn: fetchFamilyMembers, retry: false });
 
@@ -112,12 +112,6 @@ export const FoyerProfileCard = () => {
     setChurchQuery(user?.church?.name ?? '');
   }, [user]);
 
-  useEffect(() => {
-    const value = settingsQuery.data?.privacy.locationSharing ?? false;
-    setLocationOn(value);
-    setLocationBaseline(value);
-  }, [settingsQuery.data]);
-
   const churches = useQuery({
     queryKey: ['foyer-churches', churchQuery],
     queryFn: () => fetchChurches(churchQuery),
@@ -129,7 +123,7 @@ export const FoyerProfileCard = () => {
     return age != null && age < 18;
   })();
   const phoneProblem = phoneError(draft.phone);
-  const dirty = isDraftDirty(draft, baseline) || locationOn !== locationBaseline;
+  const dirty = isDraftDirty(draft, baseline);
   const canSave = dirty && !phoneProblem;
 
   const update = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
@@ -143,13 +137,6 @@ export const FoyerProfileCard = () => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await api.patch(API_ROUTES.USER_PROFILE, buildProfilePatch(draft, { isMinor }));
-      if (locationOn !== locationBaseline && settingsQuery.data) {
-        await api.patch(
-          API_ROUTES.USER_PROFILE,
-          toPayload({ ...settingsQuery.data, privacy: { ...settingsQuery.data.privacy, locationSharing: locationOn } }),
-        );
-        await queryClient.invalidateQueries({ queryKey: ['mobile-settings'] });
-      }
       await refreshProfile();
     },
     onSuccess: () => {
@@ -319,9 +306,7 @@ export const FoyerProfileCard = () => {
               onPress={() => update('visibility', option.value as VisibilityLevel)}
               style={[styles.radioRow, index < VISIBILITY_OPTIONS.length - 1 ? styles.rowDivider : null]}
             >
-              <View style={[styles.radio, selected ? styles.radioOn : null]}>
-                {selected ? <View style={styles.radioDot} /> : null}
-              </View>
+              <Radio selected={selected} style={styles.radio} />
               <View style={styles.radioCopy}>
                 <View style={styles.radioTitleRow}>
                   <Text style={styles.radioLabel}>{option.label}</Text>
@@ -338,9 +323,6 @@ export const FoyerProfileCard = () => {
         })}
       </View>
       <Text style={styles.helper}>{PROFILE_COPY.visibilityFooter}</Text>
-
-      <SectionLabel>{MAP_COPY.settingSection}</SectionLabel>
-      <MapLocationSettingRow />
 
       <SectionLabel>{PROFILE_COPY.contactInfo}</SectionLabel>
       <View style={styles.rowsCard}>
@@ -412,19 +394,15 @@ export const FoyerProfileCard = () => {
         />
       </View>
 
-      <SectionLabel>{PROFILE_COPY.location}</SectionLabel>
-      <View style={styles.rowsCard}>
-        <ToggleRow
-          label="Use my location to find nearby gatherings"
-          helper="Never shown to other people."
-          accessibilityLabel="Use my location to find nearby gatherings"
-          value={locationOn}
-          onChange={(value) => {
-            setSaved(false);
-            setLocationOn(value);
-          }}
-        />
-      </View>
+      {typeof user?.showBirthday === 'boolean' ? (
+        <>
+          <SectionLabel>{BIRTHDAY_COPY.section}</SectionLabel>
+          <BirthdayCard dateOfBirth={user.dateOfBirth} value={user.showBirthday} onOpenBirthdate={() => setBirthOpen(true)} />
+        </>
+      ) : null}
+
+      <SectionLabel>{MAP_COPY.settingSection}</SectionLabel>
+      <MapLocationSettingRow />
 
       <InlineError message={phoneProblem && dirty ? PROFILE_COPY.phoneHint : error} />
       <PillButton label={COMMON_COPY.save} disabled={!canSave} loading={saveMutation.isPending} onPress={() => saveMutation.mutate()} />
@@ -575,7 +553,7 @@ const ToggleRow = ({
   accessibilityLabel: string;
 }) => (
   <View style={styles.toggleRow}>
-    <View style={styles.toggleCopy}>
+    <View style={[styles.toggleCopy, disabled ? styles.toggleCopyDisabled : null]}>
       <Text style={styles.radioLabel}>{label}</Text>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>
@@ -584,8 +562,6 @@ const ToggleRow = ({
       value={value}
       disabled={disabled}
       onValueChange={onChange}
-      trackColor={{ false: '#e1dbd7', true: appColors.primary }}
-      thumbColor={disabled ? '#f6f1ee' : '#ffffff'}
     />
   </View>
 );
@@ -657,9 +633,7 @@ const styles = StyleSheet.create({
   navCount: { flexShrink: 1, color: appColors.mutedInk, textAlign: 'right', fontFamily: appTypography.bodyRegular },
   serifHeading: { fontFamily: appTypography.heading, fontSize: 20, lineHeight: 28, color: appColors.ink },
   radioRow: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cec8c4', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  radioOn: { borderColor: appColors.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: appColors.primary },
+  radio: { marginTop: 2 },
   radioCopy: { flex: 1, flexShrink: 1, gap: 2 },
   radioTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   radioLabel: { fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink, flexShrink: 1 },
@@ -679,6 +653,7 @@ const styles = StyleSheet.create({
   readOnlyText: { flex: 1, color: appColors.mutedInk, fontFamily: appTypography.bodyRegular },
   toggleRow: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: appColors.line },
   toggleCopy: { flex: 1, flexShrink: 1, gap: 2 },
+  toggleCopyDisabled: { opacity: TOGGLE_DISABLED_LABEL_OPACITY },
   savedText: { textAlign: 'center', color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 14 },
   pull: { textAlign: 'center', color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 13 },
   calendarSection: {

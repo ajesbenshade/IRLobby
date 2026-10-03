@@ -3,11 +3,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FoyerHeader } from '@components/FoyerHeader';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
+import { Checkbox } from '@components/foyer/Choice';
+import { Switch } from '@components/foyer/Switch';
 import { TimePickerSheet } from '@components/foyer/TimePickerSheet';
 import { ScrollView, View } from '@components/RNCompat';
 import { MapPickerSheet } from '@components/foyer/MapPickerSheet';
@@ -361,10 +363,11 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         </View>
         <Text style={styles.helper}>Leave max blank for no upper limit. Children in a household can be added if they fit the range.</Text>
 
-        <CheckRow
+        <CheckboxRow
           label="Post to the church website calendar"
           value={listOnCalendar}
           onChange={setListOnCalendar}
+          testID="host-calendar-checkbox"
         />
         <View style={styles.warn}>
           <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
@@ -447,7 +450,32 @@ const Field = ({
   </View>
 );
 
-const CheckRow = ({
+/** A real checkbox (not a switch): 48pt+ target, shared Checkbox square, checkbox left, label right, hairline rules above and below (host-form-v2). */
+export const CheckboxRow = ({
+  label,
+  value,
+  onChange,
+  testID,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  testID?: string;
+}) => (
+  <Pressable
+    accessibilityRole="checkbox"
+    accessibilityLabel={label}
+    accessibilityState={{ checked: value }}
+    onPress={() => onChange(!value)}
+    style={styles.checkboxRow}
+    testID={testID}
+  >
+    <Checkbox checked={value} />
+    <Text style={styles.checkLabel}>{label}</Text>
+  </Pressable>
+);
+
+export const CheckRow = ({
   label,
   value,
   onChange,
@@ -462,8 +490,6 @@ const CheckRow = ({
       accessibilityLabel={label}
       value={value}
       onValueChange={onChange}
-      trackColor={{ false: appColors.line, true: appColors.primary }}
-      thumbColor={appColors.white}
     />
   </View>
 );
@@ -516,6 +542,15 @@ const styles = StyleSheet.create({
   ageRow: { flexDirection: 'row', gap: 12 },
   ageCell: { flex: 1 },
   checkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 56 },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 60, // frame row is ~60pt; never below the 48pt target
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+  },
   checkLabel: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 15, color: appColors.ink },
   warn: { backgroundColor: appColors.warnBg, borderRadius: radii.list, padding: 12 },
   warnText: { color: appColors.warnText, fontFamily: appTypography.bodyRegular, fontSize: 13, lineHeight: 18 },

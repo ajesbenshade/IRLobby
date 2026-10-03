@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { ConfirmSheet } from '@components/foyer/ConfirmSheet';
+import { Radio } from '@components/foyer/Choice';
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
 import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
@@ -174,9 +175,7 @@ export const ReportSheet = ({ visible, name, onClose, onSubmit, onSent, lead, ti
               onPress={() => setReason(option.value)}
               style={styles.reasonRow}
             >
-              <View style={[styles.radio, selected ? styles.radioOn : null]}>
-                {selected ? <View style={styles.radioDot} /> : null}
-              </View>
+              <Radio selected={selected} />
               <Text style={[styles.body, styles.bulletText]}>{option.label}</Text>
             </Pressable>
           );
@@ -242,9 +241,6 @@ const styles = StyleSheet.create({
   bulletText: { flex: 1, flexShrink: 1 },
   reasons: { gap: 2 },
   reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cec8c4', alignItems: 'center', justifyContent: 'center' },
-  radioOn: { borderColor: appColors.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: appColors.primary },
   details: {
     minHeight: 84,
     borderRadius: radii.input,

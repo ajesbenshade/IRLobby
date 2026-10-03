@@ -50,7 +50,40 @@ describe('birthday privacy (Aaron, Oct 2)', () => {
       return walk(path.join(__dirname, '..', '..', dir));
     });
     const using = users.filter((file) => /FAMILY_COPY\.born|memberBirthLine|personSubtitle/.test(fs.readFileSync(file, 'utf8'))).map((file) => path.basename(file));
-    expect(using.sort()).toEqual(['FamilyMemberSheets.tsx', 'MyFamilyScreen.tsx', 'family.ts', 'rsvp.ts']);
+    expect(using.sort()).toEqual(['AddFamilyMemberSheet.tsx', 'FamilyMemberSheets.tsx', 'MyFamilyScreen.tsx', 'family.ts', 'rsvp.ts']);
+  });
+
+  it("no other member's surface reads birth data: only the owner's own screens, sign-up and profile touch it", () => {
+    const root = path.join(__dirname, '..', '..');
+    const walk = (target: string): string[] =>
+      fs.readdirSync(target, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(target, entry.name);
+        return entry.isDirectory() ? (entry.name === '__tests__' ? [] : walk(full)) : [full];
+      });
+    const readers = walk(root)
+      .filter((file) => /\.(ts|tsx)$/.test(file))
+      .filter((file) => /birth_(month|year|day)|date_of_birth|dateOfBirth|memberBirthLine|personSubtitle|FAMILY_COPY\.born|formatBornLine/.test(fs.readFileSync(file, 'utf8')))
+      .map((file) => path.relative(root, file));
+    expect(readers.sort()).toEqual(
+      [
+        'components/FoyerProfileCard.tsx', // the owner's own birth date and Birthday card
+        'components/foyer/AddFamilyMemberSheet.tsx', // owner's Add/Edit family member
+        'components/foyer/BirthdayCard.tsx',
+        'components/foyer/FamilyMemberSheets.tsx', // owner's My family action sheet
+        'foyer/birthdays.ts',
+        'foyer/family.ts',
+        'foyer/logic.ts', // sign-up date_of_birth field error
+        'foyer/profileForm.ts',
+        'foyer/rsvp.ts', // owner's own RSVP party picker + age check
+        'providers/AuthProvider.tsx',
+        'screens/auth/BirthDateGateScreen.tsx',
+        'screens/auth/RegisterScreen.tsx',
+        'screens/main/MyFamilyScreen.tsx',
+        'services/authService.ts',
+        'services/foyerService.ts',
+        'types/auth.ts',
+      ].sort(),
+    );
   });
 
   it('a server age-range rejection reads as a clear, neutral message', () => {

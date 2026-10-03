@@ -20,6 +20,12 @@ const has = (value: Rec, key: string) => Boolean(value) && typeof value === 'obj
 /** Own `Show my birthday` row: flag on AND the profile payload carries `show_birthday`. */
 export const ownBirthdaySwitchSupported = (profile: Rec): boolean => birthdaysEnabled() && has(profile, 'show_birthday');
 
+/**
+ * Profile > BIRTHDAY card (frame 239, build 93). Shown whenever the profile payload carries `show_birthday` (Backend has it
+ * live), so it needs no env flag; the friends card and Wish pill keep their own flag.
+ */
+export const ownBirthdayCardSupported = (profile: Rec): boolean => has(profile, 'show_birthday') || has(profile, 'showBirthday');
+
 /** `Birthdays this week` card: flag on AND the friends endpoint answered (a 404 means not deployed). */
 export const friendBirthdaysSupported = (status: number | null | undefined): boolean => birthdaysEnabled() && status === 200;
 

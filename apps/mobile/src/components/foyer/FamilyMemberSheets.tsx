@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { DatePickerSheet } from '@components/foyer/DatePickerSheet';
@@ -16,14 +16,18 @@ export const FamilyMemberActionSheet = ({
   onEdit,
   onRemove,
   onCancel,
+  onClosed,
 }: {
   member: FamilyMember | null;
   onEdit: (member: FamilyMember) => void;
   onRemove: (member: FamilyMember) => void;
   onCancel: () => void;
+  /** The sheet has finished closing: the parent opens the next sheet (Edit / Remove) now, never in the same render. */
+  onClosed?: () => void;
 }) => (
   <FoyerSheet
     visible={member != null}
+    onClosed={onClosed}
     onDismiss={onCancel}
     footer={
       member ? (
@@ -51,10 +55,12 @@ export const RemoveFamilyMemberSheet = ({
   member,
   onRemoved,
   onKeep,
+  onClosed,
 }: {
   member: FamilyMember | null;
   onRemoved: () => void;
   onKeep: () => void;
+  onClosed?: () => void;
 }) => {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +84,7 @@ export const RemoveFamilyMemberSheet = ({
   return (
     <FoyerSheet
       visible={member != null}
+      onClosed={onClosed}
       onDismiss={() => {
         if (!pending) {
           setError(null);
@@ -117,16 +124,25 @@ export const AddDaySheet = ({
   member,
   onSaved,
   onCancel,
+  onClosed,
 }: {
   member: FamilyMember | null;
   onSaved: () => void;
   onCancel: () => void;
+  onClosed?: () => void;
 }) => {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const month = member?.birth_month != null && member.birth_year != null ? { year: member.birth_year, month: member.birth_month } : null;
+  // Keep the last member while the picker slides away, so the Modal closes with its content instead of unmounting mid-animation
+  // (an unmounted Modal never reports onDismiss, which the sequential handoff relies on).
+  const lastMember = useRef<FamilyMember | null>(null);
+  if (member) {
+    lastMember.current = member;
+  }
+  const shown = member ?? lastMember.current;
+  const month = shown?.birth_month != null && shown.birth_year != null ? { year: shown.birth_year, month: shown.birth_month } : null;
 
-  if (!member || !month) {
+  if (!shown || !month) {
     return null;
   }
 
@@ -134,7 +150,7 @@ export const AddDaySheet = ({
     setPending(true);
     setError(null);
     try {
-      await updateFamilyMember(member.id, { birth_day: day.day });
+      await updateFamilyMember(shown.id, { birth_day: day.day });
       onSaved();
     } catch {
       setError(FAMILY_COPY.addDayFailed);
@@ -145,10 +161,11 @@ export const AddDaySheet = ({
 
   return (
     <DatePickerSheet
-      visible
+      visible={member != null}
+      onClosed={onClosed}
       mode="birthdate"
       fixedMonth
-      title={FAMILY_COPY.addDayTitle(member.name)}
+      title={FAMILY_COPY.addDayTitle(shown.name)}
       value={null}
       limits={dayLimitsWithinMonth(month)}
       minAge={0}

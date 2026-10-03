@@ -5,11 +5,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccentPill, PanelCard, SectionIntro } from '@components/AppChrome';
 import { EventPhotoSlots } from '@components/EventPhotoSlots';
+import { Switch } from '@components/foyer/Switch';
 import { FoyerHeader } from '@components/FoyerHeader';
 import { ScrollView, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
@@ -529,8 +530,6 @@ const CreateActivityScreenLegacy = ({ activityId }: CreateActivityScreenProps = 
                       value && !current.maxTickets.trim() ? current.capacity || '40' : current.maxTickets,
                   }));
                 }}
-                trackColor={{ false: appColors.line, true: appColors.primary }}
-                thumbColor={appColors.white}
               />
             </View>
 
@@ -573,8 +572,6 @@ const CreateActivityScreenLegacy = ({ activityId }: CreateActivityScreenProps = 
                     accessibilityLabel="Require QR check-in"
                     value={requireQrCheckIn}
                     onValueChange={updateToggleField('requireQrCheckIn')}
-                    trackColor={{ false: appColors.line, true: appColors.primary }}
-                    thumbColor={appColors.white}
                   />
                 </View>
               </>

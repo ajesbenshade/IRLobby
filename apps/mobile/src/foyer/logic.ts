@@ -175,19 +175,6 @@ export const registrationFieldError = (data: unknown): string | null => {
   return null;
 };
 
-export const formatBornLine = (isoDate: string, age: number) => {
-  const date = new Date(`${isoDate}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return `Born ${isoDate} · age ${age}`;
-  }
-  const formatted = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  return `Born ${formatted} · age ${age}`;
-};
-
 export const householdCountLabel = (count: number) =>
   count === 1 ? '1 child' : `${count} children`;
 

@@ -349,6 +349,15 @@ export const MAP_COPY = {
   settingError: "Couldn't update your location setting. Try again.",
 } as const;
 
+export const BIRTHDAY_COPY = {
+  section: 'BIRTHDAY',
+  rowTitle: 'Birthday',
+  showTitle: 'Show my birthday',
+  caption: 'Others see month and day, never the year.',
+  underEighteen: 'Birthdays are hidden for members under 18.',
+  error: "Couldn't update your birthday setting. Try again.",
+} as const;
+
 export const PROFILE_COPY = {
   title: 'Profile',
   changePhoto: 'Change photo',
@@ -378,7 +387,6 @@ export const PROFILE_COPY = {
   showOnProfile: 'Show on my profile',
   contactHelper: 'Only people allowed by the visibility setting above can see these. Hidden by default.',
   emailReadOnly: 'Read-only. This is the email you signed in with.',
-  location: 'LOCATION',
   pullToRefresh: 'Pull down to refresh your profile.',
   friendsRow: 'Friends',
   myFamilyRow: 'My family',

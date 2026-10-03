@@ -231,6 +231,9 @@ const normalizeUser = (
     showEmail: Boolean(userRecord.showEmail ?? userRecord.show_email),
     showPhone: Boolean(userRecord.showPhone ?? userRecord.show_phone),
     dmFromSharedEvents: Boolean(userRecord.dmFromSharedEvents ?? userRecord.dm_from_shared_events),
+    ...(typeof (userRecord.showBirthday ?? userRecord.show_birthday) === 'boolean'
+      ? { showBirthday: (userRecord.showBirthday ?? userRecord.show_birthday) as boolean }
+      : {}),
   };
 };
 

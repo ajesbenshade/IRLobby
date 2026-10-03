@@ -11,6 +11,7 @@ import { Avatar, EmptyState, PillButton, SectionLabel } from '@components/foyer/
 import { View } from '@components/RNCompat';
 import { FAMILY_COPY } from '@constants/foyerCopy';
 import { isMonthYearOnly, memberBirthLine, memberInitials } from '@foyer/family';
+import { useSheetHandoff } from '@hooks/useSheetHandoff';
 import { fetchFamilyMembers, type FamilyMember } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -27,6 +28,9 @@ export const MyFamilyScreen = () => {
   const [addingDay, setAddingDay] = useState<FamilyMember | null>(null);
   const membersQuery = useQuery({ queryKey: FAMILY_QUERY_KEY, queryFn: fetchFamilyMembers });
   const members = membersQuery.data ?? [];
+
+  // One sheet at a time: a row sheet closes completely before Edit / Remove opens (iOS freezes if both change in one render).
+  const handoff = useSheetHandoff();
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: FAMILY_QUERY_KEY });
 
@@ -57,9 +61,9 @@ export const MyFamilyScreen = () => {
               const monthOnly = isMonthYearOnly(member);
               return (
                 <View key={member.id} style={styles.row}>
-                  <Avatar initials={memberInitials(member.name)} size={40} />
+                  <Avatar initials={memberInitials(member.name ?? '')} size={40} />
                   <View style={styles.copy}>
-                    <Text style={styles.name}>{member.name}</Text>
+                    <Text style={styles.name}>{member.name ?? ''}</Text>
                     <Text style={styles.meta}>{memberBirthLine(member)}</Text>
                   </View>
                   {monthOnly ? (
@@ -100,21 +104,23 @@ export const MyFamilyScreen = () => {
       <FamilyMemberActionSheet
         member={selected}
         onCancel={() => setSelected(null)}
+        onClosed={handoff.flush}
         onEdit={(member) => {
+          handoff.after(() => setEditing(member));
           setSelected(null);
-          setEditing(member);
         }}
         onRemove={(member) => {
+          handoff.after(() => setRemoving(member));
           setSelected(null);
-          setRemoving(member);
         }}
       />
       <AddFamilyMemberSheet
         visible={editing != null}
         member={editing}
+        onClosed={handoff.flush}
         onRemove={(member) => {
+          handoff.after(() => setRemoving(member));
           setEditing(null);
-          setRemoving(member);
         }}
         onCancel={() => setEditing(null)}
         onAdded={() => {

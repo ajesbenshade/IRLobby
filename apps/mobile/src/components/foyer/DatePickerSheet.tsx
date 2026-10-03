@@ -46,6 +46,8 @@ type CommonProps = {
   visible: boolean;
   title: string;
   onCancel: () => void;
+  /** Fires once the sheet has finished closing (iOS Modal `onDismiss`); used to hand off to the next sheet in sequence. */
+  onClosed?: () => void;
   /** Test seam: "today" for the age check and the future-month rule. Defaults to the device clock. */
   now?: Date;
 };
@@ -173,7 +175,7 @@ export const DatePickerSheet = (props: DatePickerSheetProps) => {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} onDismiss={props.onClosed}>
       <Pressable accessibilityLabel={COMMON_COPY.cancel} style={styles.scrim} onPress={onCancel}>
         <Pressable
           style={[styles.sheet, { maxHeight: Math.round(height * 0.92), paddingBottom: bottomPadding }]}

@@ -79,6 +79,14 @@ export const normalizeFamilyMembers = (data: HouseholdResponse | null | undefine
 /** The saved full birth date, or null when only a month and year (or nothing, for an adult) is stored. */
 export const memberBirthDay = (member: FamilyMember): DayValue | null => parseIsoDate(member.date_of_birth ?? null);
 
+/**
+ * Adults (a spouse row) carry no birth data: relationship `spouse`, null birth fields, no `date_of_birth` key. They are shown as
+ * `Adult` and are never edited as a child (no birthday editing, never sent a birth date). A row with no birth data at all is
+ * treated the same way, whatever its relationship says.
+ */
+export const isAdultMember = (member: FamilyMember): boolean =>
+  member.relationship === 'spouse' || (memberBirthDay(member) == null && member.birth_month == null && member.birth_year == null);
+
 /** A child saved before full birth dates: month and year, no day. */
 export const isMonthYearOnly = (member: FamilyMember): boolean =>
   member.relationship === 'child' && memberBirthDay(member) == null && member.birth_month != null && member.birth_year != null;
@@ -109,7 +117,7 @@ export const ageBandForAge = (age: number | null | undefined): string | null => 
   return null;
 };
 
-export const memberInitials = (name: string) => name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
+export const memberInitials = (name: string | null | undefined) => (name ?? '').replace(/\s+/g, '').slice(0, 2).toUpperCase();
 
 /** Add needs a name, a sex and a birthday that is inside the last 18 years. No relationship. */
 export const canAddFamilyMember = (input: {

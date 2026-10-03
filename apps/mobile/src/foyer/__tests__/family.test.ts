@@ -7,7 +7,9 @@ import {
   familyEditChanged,
   isAdultBirthdayError,
   isMonthYearOnly,
+  isAdultMember,
   memberBirthLine,
+  memberInitials,
   normalizeFamilyMembers,
 } from '../family';
 
@@ -115,5 +117,58 @@ describe('family members', () => {
     expect(normalizeFamilyMembers({ members: [{ id: 1, name: 'X', relationship: 'child', date_of_birth: null }] } as never)[0]).toMatchObject({ birth_month: null, date_of_birth: null });
     expect(memberBirthLine(normalizeFamilyMembers({ members: [{ id: 1, name: 'X', relationship: 'child', date_of_birth: null }] } as never)[0])).toBe('Adult');
     expect(normalizeFamilyMembers(null)).toEqual([]);
+  });
+});
+
+describe('adult / spouse payloads', () => {
+  const spousePayload = {
+    members: [
+      // Exactly what the server sends for a spouse: no date_of_birth key at all, sex may be an empty string.
+      { id: 1, name: 'Rachel', relationship: 'spouse', sex: '', birth_month: null, birth_year: null, birth_day: null, age: null },
+      { id: 2, name: 'Noah', relationship: 'child', sex: 'male', birth_month: 3, birth_year: 2016, birth_day: null, birth_precision: 'month', age: 10 },
+    ],
+  };
+
+  it('normalizeFamilyMembers keeps a spouse as an Adult with null birth fields and never throws', () => {
+    expect(() => normalizeFamilyMembers(spousePayload as never)).not.toThrow();
+    const [spouse, child] = normalizeFamilyMembers(spousePayload as never);
+    expect(spouse).toEqual({
+      id: 1,
+      name: 'Rachel',
+      relationship: 'spouse',
+      sex: null,
+      birth_month: null,
+      birth_year: null,
+      birth_day: null,
+      date_of_birth: null,
+      age: null,
+    });
+    expect(memberBirthLine(spouse)).toBe('Adult');
+    expect(memberBirthLine(spouse)).not.toMatch(/null|undefined/);
+    expect(isAdultMember(spouse)).toBe(true);
+    expect(isAdultMember(child)).toBe(false);
+    expect(memberBirthLine(child)).toBe('Born March 2016');
+  });
+
+  it('a spouse with stray birth fields still reads Adult and never exposes a birthday', () => {
+    const [spouse] = normalizeFamilyMembers({
+      members: [{ id: 1, name: 'Rachel', relationship: 'spouse', birth_month: 5, birth_year: 1985, birth_day: 3, age: 41 }],
+    } as never);
+    expect(spouse.birth_month).toBeNull();
+    expect(memberBirthLine(spouse)).toBe('Adult');
+  });
+
+  it('empty or missing members and nameless rows do not throw', () => {
+    expect(normalizeFamilyMembers(null)).toEqual([]);
+    expect(normalizeFamilyMembers({} as never)).toEqual([]);
+    expect(memberInitials(undefined)).toBe('');
+    expect(memberInitials('Rachel B')).toBe('RA');
+    const [row] = normalizeFamilyMembers({ members: [{ id: 9, relationship: 'spouse' }] } as never);
+    expect(memberBirthLine(row)).toBe('Adult');
+  });
+
+  it('a row with no birth data at all is treated as an adult whatever its relationship says', () => {
+    const [row] = normalizeFamilyMembers({ members: [{ id: 3, name: 'Pat', birth_month: null, birth_year: null }] } as never);
+    expect(isAdultMember(row)).toBe(true);
   });
 });

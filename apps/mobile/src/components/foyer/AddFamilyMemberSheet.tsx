@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
@@ -7,7 +7,8 @@ import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, FAMILY_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { familyBirthDayLimits, formatBirthdayLong, toIsoDate, type DayValue } from '@foyer/dates';
-import { canAddFamilyMember, familyEditChanged, isAdultBirthdayError, memberBirthDay, sexOf } from '@foyer/family';
+import { canAddFamilyMember, familyEditChanged, isAdultBirthdayError, isAdultMember, memberBirthDay, sexOf } from '@foyer/family';
+import { useSheetHandoff } from '@hooks/useSheetHandoff';
 import { addFamilyMember, updateFamilyMember, type FamilyMember, type FamilySex } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 
@@ -19,6 +20,8 @@ type Props = {
   onRemove?: (member: FamilyMember) => void;
   onCancel: () => void;
   onAdded: () => void;
+  /** Fires when the whole sheet has finished closing (not when it only steps aside for the birthday picker). */
+  onClosed?: () => void;
 };
 
 /** Two-segment control (Male | Female). A radio group: 48pt+ targets, selected = burgundy label on white. */
@@ -47,12 +50,19 @@ export const SexSegments = ({ value, onChange, disabled }: { value: FamilySex | 
  * Add / Edit family member: Name, Sex (Male | Female), and a Birthday row that opens the same two-step day-grid picker as
  * the account birth date (last 18 years, no future dates). No relationship is chosen or sent.
  */
-export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCancel, onAdded }: Props) => {
+export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCancel, onAdded, onClosed }: Props) => {
   const editing = member != null;
+  // Adults (a spouse row) cannot be saved as a child: no birthday editing, and only the name and sex are PATCHed.
+  const adult = member != null && isAdultMember(member);
   const [name, setName] = useState('');
   const [sex, setSex] = useState<FamilySex | null>(null);
   const [birthday, setBirthday] = useState<DayValue | null>(null);
+  // Sequential handoff form -> picker -> form. iOS cannot present the picker Modal while this sheet's Modal is presented, so the
+  // form steps aside (visible=false, typed values kept in state) and the picker opens once the form has finished closing.
+  const [formHidden, setFormHidden] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const steppingAside = useRef(false);
+  const handoff = useSheetHandoff();
   const [pending, setPending] = useState(false);
   const [birthdayError, setBirthdayError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +76,20 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
       setBirthdayError(null);
       setError(null);
       setPending(false);
+    } else {
+      steppingAside.current = false;
+      setFormHidden(false);
+      setPickerOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, member?.id]);
 
-  const complete = canAddFamilyMember({ name, sex, birthday });
+  const complete = adult ? Boolean(name.trim()) : canAddFamilyMember({ name, sex, birthday });
   const changed = member ? familyEditChanged(member, { name, sex, birthday }) : true;
   const canSubmit = complete && changed;
 
   const submit = async () => {
-    if (!canSubmit || !sex || !birthday) {
+    if (!canSubmit || (!adult && (!sex || !birthday))) {
       return;
     }
     const trimmed = name.trim();
@@ -83,9 +97,11 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
     setError(null);
     setBirthdayError(null);
     try {
-      if (member) {
+      if (member && adult) {
+        await updateFamilyMember(member.id, { name: trimmed, ...(sex ? { sex } : {}) });
+      } else if (member && sex && birthday) {
         await updateFamilyMember(member.id, { name: trimmed, sex, date_of_birth: toIsoDate(birthday) });
-      } else {
+      } else if (sex && birthday) {
         await addFamilyMember({ name: trimmed, sex, date_of_birth: toIsoDate(birthday) });
       }
       onAdded();
@@ -100,10 +116,37 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
     }
   };
 
+  const openPicker = () => {
+    if (pending) {
+      return;
+    }
+    // Hide the form first; open the picker only after the form has finished closing.
+    steppingAside.current = true;
+    handoff.after(() => setPickerOpen(true));
+    setFormHidden(true);
+  };
+
+  const closePicker = (apply?: () => void) => {
+    apply?.();
+    // Close the picker first; bring the form back only after the picker has finished closing.
+    handoff.after(() => {
+      steppingAside.current = false;
+      setFormHidden(false);
+    });
+    setPickerOpen(false);
+  };
+
   return (
     <>
       <FoyerSheet
-        visible={visible}
+        visible={visible && !formHidden}
+        onClosed={() => {
+          if (steppingAside.current) {
+            handoff.flush();
+          } else {
+            onClosed?.();
+          }
+        }}
         onDismiss={() => {
           if (!pending) {
             onCancel();
@@ -155,18 +198,24 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
             <Text style={styles.label}>{FAMILY_COPY.sex}</Text>
             <SexSegments value={sex} onChange={setSex} disabled={pending} />
           </View>
-          <View style={styles.group}>
-            <PickerField
-              label={FAMILY_COPY.birthday}
-              value={birthday ? formatBirthdayLong(birthday) : ''}
-              placeholder={FAMILY_COPY.birthdayPlaceholder}
-              error={birthdayError}
-              errorStrong={Boolean(birthdayError)}
-              onPress={() => setPickerOpen(true)}
-              testID="family-birthday-row"
-            />
-            {birthdayError ? null : <Text style={styles.helper}>{FAMILY_COPY.birthdayHelper}</Text>}
-          </View>
+          {adult ? (
+            <Text style={styles.helper} testID="family-adult-note">
+              {FAMILY_COPY.adult}
+            </Text>
+          ) : (
+            <View style={styles.group}>
+              <PickerField
+                label={FAMILY_COPY.birthday}
+                value={birthday ? formatBirthdayLong(birthday) : ''}
+                placeholder={FAMILY_COPY.birthdayPlaceholder}
+                error={birthdayError}
+                errorStrong={Boolean(birthdayError)}
+                onPress={openPicker}
+                testID="family-birthday-row"
+              />
+              {birthdayError ? null : <Text style={styles.helper}>{FAMILY_COPY.birthdayHelper}</Text>}
+            </View>
+          )}
           {editing ? null : (
             <Text style={styles.note} testID="family-under13-note">
               {GOING_COPY.underThirteenNote}
@@ -175,7 +224,8 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
         </View>
       </FoyerSheet>
       <DatePickerSheet
-        visible={pickerOpen}
+        visible={visible && pickerOpen}
+        onClosed={handoff.flush}
         mode="birthdate"
         title={FAMILY_COPY.birthday}
         value={birthday}
@@ -184,12 +234,13 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
         defaultYearsBack={10}
         wheelHelper={FAMILY_COPY.birthdayWheelHelper}
         caption={FAMILY_COPY.birthdayHelper}
-        onCancel={() => setPickerOpen(false)}
-        onDone={(value) => {
-          setBirthday(value);
-          setBirthdayError(null);
-          setPickerOpen(false);
-        }}
+        onCancel={() => closePicker()}
+        onDone={(value) =>
+          closePicker(() => {
+            setBirthday(value);
+            setBirthdayError(null);
+          })
+        }
       />
     </>
   );

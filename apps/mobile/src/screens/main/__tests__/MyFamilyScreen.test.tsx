@@ -154,3 +154,35 @@ describe('My family: adult / spouse rows and sequential sheet handoff', () => {
     expect(await view.findByText('Remove Pat?')).toBeTruthy();
   });
 });
+
+describe('My family: adults with birth data', () => {
+  const dan = { id: 6, name: 'Dan', relationship: 'spouse', sex: 'male', birth_month: 3, birth_year: 1984, birth_day: 9, date_of_birth: '1984-03-09', age: 42 };
+  const lee = { id: 7, name: 'Lee', relationship: 'spouse', sex: '', birth_month: 11, birth_year: 1980, birth_day: null, date_of_birth: null, age: null };
+  const pat = { id: 8, name: 'Pat', relationship: 'spouse', sex: '', birth_month: null, birth_year: null, birth_day: null, date_of_birth: null, age: null };
+
+  beforeEach(() => {
+    Object.values(service).forEach((fn) => fn.mockReset());
+    service.fetchFamilyMembers.mockResolvedValue([dan, lee, pat]);
+  });
+
+  it('list: Born <date> for adults with birth data (month-only reads Born November 1980), Adult only when all null, no Add day for adults', async () => {
+    const view = renderScreen();
+    expect(await view.findByText('Born March 9, 1984')).toBeTruthy();
+    expect(view.getByText('Born November 1980')).toBeTruthy();
+    expect(view.getByText('Adult')).toBeTruthy();
+    expect(view.queryByText(/null|undefined/i)).toBeNull();
+    expect(view.queryByLabelText('Add day Lee')).toBeNull();
+  });
+
+  it('action sheet shows the same line, and Edit on an adult with birth data does not crash or offer birthday editing', async () => {
+    const view = renderScreen();
+    fireEvent.press(await view.findByTestId('family-row-6'));
+    await waitFor(() => expect(view.getAllByText('Born March 9, 1984')).toHaveLength(2));
+    fireEvent.press(view.getByLabelText('Edit details'));
+    expect(await view.findByText('Edit family member')).toBeTruthy();
+    expect(view.getByDisplayValue('Dan')).toBeTruthy();
+    expect(view.getByTestId('family-adult-note').props.children).toBe('Born March 9, 1984');
+    expect(view.queryByTestId('family-birthday-row')).toBeNull();
+    expect(view.queryByText(/null|undefined/i)).toBeNull();
+  });
+});

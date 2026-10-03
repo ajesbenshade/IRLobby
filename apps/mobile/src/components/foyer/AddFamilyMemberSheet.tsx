@@ -7,7 +7,7 @@ import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { COMMON_COPY, FAMILY_COPY, GOING_COPY } from '@constants/foyerCopy';
 import { familyBirthDayLimits, formatBirthdayLong, toIsoDate, type DayValue } from '@foyer/dates';
-import { canAddFamilyMember, familyEditChanged, isAdultBirthdayError, isAdultMember, memberBirthDay, sexOf } from '@foyer/family';
+import { canAddFamilyMember, familyEditChanged, isAdultBirthdayError, isAdultMember, memberBirthDay, memberBirthLine, sexOf } from '@foyer/family';
 import { useSheetHandoff } from '@hooks/useSheetHandoff';
 import { addFamilyMember, updateFamilyMember, type FamilyMember, type FamilySex } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
@@ -200,7 +200,7 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
           </View>
           {adult ? (
             <Text style={styles.helper} testID="family-adult-note">
-              {FAMILY_COPY.adult}
+              {memberBirthLine(member as FamilyMember)}
             </Text>
           ) : (
             <View style={styles.group}>

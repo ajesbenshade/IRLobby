@@ -39,18 +39,18 @@ export const notEligibleReason = (reason: string | null | undefined, range: AgeR
 };
 
 /**
- * Under each person on the RSVP screens: `Adult` for a legacy spouse row, else `Born March 4, 2016 · age 10`
- * (or `Born March 2016 · age 10` for a legacy month/year row). Only the account owner sees this; hosts never do.
+ * Under each person on the RSVP screens: `Born March 4, 2016 · age 10` (or `Born March 2016 · age 10` for month-only), for
+ * children and adults alike whenever the payload has birth data. Only when every birth field is null it reads `Adult`.
+ * Never prints `null`. Only the account owner sees this; hosts never do.
  */
 export const personSubtitle = (member: WhosComingDependent): string => {
-  const isChild = (member.relationship ?? 'child') === 'child';
   const dob = parseIsoDate(member.date_of_birth ?? null);
   const month = member.birth_month ?? dob?.month ?? null;
   const year = member.birth_year ?? dob?.year ?? null;
-  if (!isChild || month == null || year == null) {
+  if (month == null || year == null || month < 1 || month > 12) {
     return FAMILY_COPY.adult;
   }
-  // Backend: a real day is `birth_day` / a non-null `date_of_birth`; month-only children have neither (no made-up last day).
+  // Backend: a real day is `birth_day` / a non-null `date_of_birth`; month-only rows have neither (no made-up last day).
   const dayKnown = member.birth_precision !== 'month' && (member.birth_day != null || dob != null);
   const day = member.birth_day ?? dob?.day ?? null;
   const born = dayKnown && day != null ? formatBirthdayLong({ year, month, day }) : `${MONTH_NAMES[month - 1]} ${year}`;

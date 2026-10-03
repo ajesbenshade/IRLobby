@@ -150,12 +150,36 @@ describe('adult / spouse payloads', () => {
     expect(memberBirthLine(child)).toBe('Born March 2016');
   });
 
-  it('a spouse with stray birth fields still reads Adult and never exposes a birthday', () => {
-    const [spouse] = normalizeFamilyMembers({
-      members: [{ id: 1, name: 'Rachel', relationship: 'spouse', birth_month: 5, birth_year: 1985, birth_day: 3, age: 41 }],
+  it('a spouse whose payload has birth data reads Born <date> like a child (day known, month-only), never Adult', () => {
+    const [full, monthOnly, dayPrecision] = normalizeFamilyMembers({
+      members: [
+        { id: 1, name: 'Rachel', relationship: 'spouse', birth_month: 5, birth_year: 1985, birth_day: 3, birth_precision: 'day', age: 41 },
+        { id: 2, name: 'Dan', relationship: 'spouse', birth_month: 3, birth_year: 1984, birth_day: null, birth_precision: 'month', age: 42 },
+        { id: 3, name: 'Lee', relationship: 'spouse', date_of_birth: '1980-11-30', age: 45 },
+      ],
     } as never);
-    expect(spouse.birth_month).toBeNull();
-    expect(memberBirthLine(spouse)).toBe('Adult');
+    expect(full).toMatchObject({ birth_month: 5, birth_year: 1985, birth_day: 3, date_of_birth: '1985-05-03' });
+    expect(memberBirthLine(full)).toBe('Born May 3, 1985');
+    expect(memberBirthLine(monthOnly)).toBe('Born March 1984');
+    expect(monthOnly.date_of_birth).toBeNull();
+    expect(memberBirthLine(dayPrecision)).toBe('Born November 30, 1980');
+    // Adults are still edited as adults (no birthday editing), and "Add day" is for children only.
+    expect(isAdultMember(full)).toBe(true);
+    expect(isMonthYearOnly(monthOnly)).toBe(false);
+    for (const member of [full, monthOnly, dayPrecision]) {
+      expect(memberBirthLine(member)).not.toMatch(/null|undefined/);
+    }
+  });
+
+  it('only when every birth field is null does an adult read Adult', () => {
+    const [none, partial] = normalizeFamilyMembers({
+      members: [
+        { id: 1, name: 'Rachel', relationship: 'spouse', birth_month: null, birth_year: null, birth_day: null, birth_precision: null, age: null },
+        { id: 2, name: 'Dan', relationship: 'spouse', birth_month: 3, birth_year: null, birth_day: null },
+      ],
+    } as never);
+    expect(memberBirthLine(none)).toBe('Adult');
+    expect(memberBirthLine(partial)).toBe('Adult');
   });
 
   it('empty or missing members and nameless rows do not throw', () => {

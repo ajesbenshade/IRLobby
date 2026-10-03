@@ -17,6 +17,8 @@ const members = [
   { id: 11, name: 'Noah', relationship: 'child', sex: 'male', eligible: true, reason: null, age: 10, birth_month: 3, birth_year: 2016, birth_day: 4, birth_precision: 'day' },
   { id: 12, name: 'Ella', relationship: 'child', sex: 'female', eligible: true, reason: null, age: 10, birth_month: 3, birth_year: 2016, birth_day: null, birth_precision: 'month' },
 ];
+const adultWithBirth = { id: 13, name: 'Dan', relationship: 'spouse', sex: 'male', eligible: true, reason: null, age: 42, birth_month: 3, birth_year: 1984, birth_day: 9, birth_precision: 'day' };
+const adultMonthOnly = { id: 14, name: 'Lee', relationship: 'spouse', sex: 'female', eligible: true, reason: null, age: null, birth_month: 11, birth_year: 1980, birth_day: null, birth_precision: 'month' };
 const response = { me: { name: 'Anna', eligible: true, reason: null }, dependents: members, members };
 
 describe('RSVP party picker birth lines from the live whos-coming fields', () => {
@@ -24,6 +26,17 @@ describe('RSVP party picker birth lines from the live whos-coming fields', () =>
     expect(personSubtitle(members[1] as never)).toBe('Born March 4, 2016 · age 10');
     expect(personSubtitle(members[2] as never)).toBe('Born March 2016 · age 10');
     expect(personSubtitle(members[0] as never)).toBe('Adult');
+  });
+
+  it('adults with birth data read Born <date> in the same style; month-only reads Born March 2016; all-null reads Adult', () => {
+    expect(personSubtitle(adultWithBirth as never)).toBe('Born March 9, 1984 · age 42');
+    expect(personSubtitle(adultMonthOnly as never)).toBe('Born November 1980');
+    expect(personSubtitle(members[0] as never)).toBe('Adult');
+    render(<WhosComingSheet response={{ ...response, dependents: [...members, adultWithBirth, adultMonthOnly], members: [...members, adultWithBirth, adultMonthOnly] }} onConfirm={jest.fn()} />);
+    expect(screen.getByText('Born March 9, 1984 · age 42')).toBeTruthy();
+    expect(screen.getByText('Born November 1980')).toBeTruthy();
+    expect(screen.getByText('Adult')).toBeTruthy();
+    expect(screen.queryByText(/null|undefined/i)).toBeNull();
   });
 
   it('never prints null / undefined for adults or null fields, whatever else is missing', () => {

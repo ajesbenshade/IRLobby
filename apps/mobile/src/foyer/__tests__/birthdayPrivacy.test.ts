@@ -50,7 +50,7 @@ describe('birthday privacy (Aaron, Oct 2)', () => {
       return walk(path.join(__dirname, '..', '..', dir));
     });
     const using = users.filter((file) => /FAMILY_COPY\.born|memberBirthLine|personSubtitle/.test(fs.readFileSync(file, 'utf8'))).map((file) => path.basename(file));
-    expect(using.sort()).toEqual(['FamilyMemberSheets.tsx', 'MyFamilyScreen.tsx', 'family.ts', 'rsvp.ts']);
+    expect(using.sort()).toEqual(['AddFamilyMemberSheet.tsx', 'FamilyMemberSheets.tsx', 'MyFamilyScreen.tsx', 'family.ts', 'rsvp.ts']);
   });
 
   it('a server age-range rejection reads as a clear, neutral message', () => {

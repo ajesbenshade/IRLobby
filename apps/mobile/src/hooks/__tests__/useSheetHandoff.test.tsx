@@ -51,4 +51,16 @@ describe('useSheetHandoff', () => {
     jest.advanceTimersByTime(SHEET_HANDOFF_FALLBACK_MS * 2);
     expect(late).not.toHaveBeenCalled();
   });
+
+  it('cancel drops the queued step so it cannot fire later (neither by flush nor by the timer)', () => {
+    const { result } = renderHook(() => useSheetHandoff());
+    const step = jest.fn();
+    act(() => result.current.after(step));
+    act(() => result.current.cancel());
+    act(() => {
+      result.current.flush();
+      jest.advanceTimersByTime(SHEET_HANDOFF_FALLBACK_MS * 2);
+    });
+    expect(step).not.toHaveBeenCalled();
+  });
 });

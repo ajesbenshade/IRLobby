@@ -80,6 +80,8 @@ type DetailRowProps = {
   subtitle?: string;
   accessory?: ReactNode;
   danger?: boolean;
+  /** Disabled control on the right: the labels fade to 50% with it. */
+  dimmed?: boolean;
   onPress?: () => void;
 };
 
@@ -178,11 +180,12 @@ export const DetailRow = ({
   subtitle,
   accessory,
   danger = false,
+  dimmed = false,
   onPress,
 }: DetailRowProps) => {
   const row = (
     <View style={[styles.detailRow, danger ? styles.detailRowDanger : null]}>
-      <View style={styles.detailTextBlock}>
+      <View style={[styles.detailTextBlock, dimmed ? { opacity: 0.5 } : null]}>
         <Text style={[styles.detailTitle, danger ? styles.detailTitleDanger : null]}>{title}</Text>
         {subtitle ? <Text style={styles.detailSubtitle}>{subtitle}</Text> : null}
       </View>

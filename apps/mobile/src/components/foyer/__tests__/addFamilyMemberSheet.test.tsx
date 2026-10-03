@@ -231,6 +231,19 @@ describe('Add family member: Birthday picker handoff (iOS cannot present a secon
     expect(view.getByLabelText('Female').props.accessibilityState.selected).toBe(true);
   });
 
+  it('closing the sheet inside the handoff window cancels the pending picker so it cannot reopen next time', async () => {
+    const view = render(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
+    fireEvent.press(view.getByTestId('family-birthday-row'));
+    expect(modalStates(view).map((m) => m.visible)).toEqual([false, false]);
+    // Closed (parent hides the sheet) before the form finished closing and before the 450ms fallback.
+    view.rerender(<AddFamilyMemberSheet visible={false} onCancel={jest.fn()} onAdded={jest.fn()} />);
+    // Reopened right away, then wait past the fallback window: the old pending step must not open the picker.
+    view.rerender(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    expect(modalStates(view).map((m) => m.visible)).toEqual([true, false]);
+    expect(view.getByTestId('family-birthday-row')).toBeTruthy();
+  });
+
   it('Cancel from an empty Birthday leaves the placeholder', async () => {
     const view = render(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
     await openBirthdayPicker(view);

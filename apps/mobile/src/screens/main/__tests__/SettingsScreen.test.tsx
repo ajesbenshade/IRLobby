@@ -143,4 +143,40 @@ describe('SettingsScreen consolidation (option A)', () => {
     const loaded = await loadSettings();
     expect(toPayload(loaded).preferences.privacy).toEqual(storedPrivacy);
   });
+
+  it('every notification switch has an accessibility label, and while a save is running they are disabled and their labels dim to 50%', async () => {
+    let finish: () => void = () => undefined;
+    (api.patch as jest.Mock).mockReturnValue(new Promise<void>((resolve) => (finish = () => resolve())));
+    renderScreen();
+    await screen.findByText('Notifications');
+    const titles = ['Push notifications', 'Email notifications', 'New matches', 'Activity reminders', 'Messages'];
+    for (const title of titles) {
+      expect(screen.getByLabelText(title).props.disabled).toBeFalsy();
+    }
+    const opacityOf = (title: string) => {
+      // The row's text block is the nearest ancestor that carries the fade.
+      let node = screen.getByText(title).parent;
+      for (let depth = 0; node && depth < 4; depth += 1, node = node.parent) {
+        const opacity = Object.assign({}, ...[node.props?.style].flat(4).filter(Boolean)).opacity;
+        if (opacity !== undefined) {
+          return opacity;
+        }
+      }
+      return undefined;
+    };
+    expect(opacityOf('Messages')).toBeUndefined();
+    await act(async () => {
+      fireEvent(screen.getByLabelText('Messages'), 'valueChange', false);
+    });
+    await waitFor(() => expect(screen.getByLabelText('Messages').props.disabled).toBe(true));
+    for (const title of titles) {
+      expect(screen.getByLabelText(title).props.disabled).toBe(true);
+      expect(opacityOf(title)).toBe(0.5);
+    }
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(screen.getByLabelText('Messages').props.disabled).toBeFalsy());
+    expect(opacityOf('Messages')).toBeUndefined();
+  });
 });

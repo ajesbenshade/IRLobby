@@ -275,9 +275,11 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="Push notifications"
+          dimmed={isBusy}
           subtitle="Allow timely nudges for live activity around your account."
           accessory={
             <Switch
+              accessibilityLabel="Push notifications"
               value={settings.notifications.pushNotifications}
               onValueChange={() => toggleNotification('pushNotifications')}
               disabled={isBusy}
@@ -286,9 +288,11 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="Email notifications"
+          dimmed={isBusy}
           subtitle="Receive recap-style updates when you are away from the app."
           accessory={
             <Switch
+              accessibilityLabel="Email notifications"
               value={settings.notifications.emailNotifications}
               onValueChange={() => toggleNotification('emailNotifications')}
               disabled={isBusy}
@@ -297,9 +301,11 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="New matches"
+          dimmed={isBusy}
           subtitle="Get alerted when discovery turns into a connection."
           accessory={
             <Switch
+              accessibilityLabel="New matches"
               value={settings.notifications.newMatches}
               onValueChange={() => toggleNotification('newMatches')}
               disabled={isBusy}
@@ -308,9 +314,11 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="Activity reminders"
+          dimmed={isBusy}
           subtitle="Stay on top of events you hosted, joined, or committed to attend."
           accessory={
             <Switch
+              accessibilityLabel="Activity reminders"
               value={settings.notifications.activityReminders}
               onValueChange={() => toggleNotification('activityReminders')}
               disabled={isBusy}
@@ -319,9 +327,11 @@ export const SettingsScreen = () => {
         />
         <DetailRow
           title="Messages"
+          dimmed={isBusy}
           subtitle="Receive alerts when a conversation picks up again."
           accessory={
             <Switch
+              accessibilityLabel="Messages"
               value={settings.notifications.messages}
               onValueChange={() => toggleNotification('messages')}
               disabled={isBusy}

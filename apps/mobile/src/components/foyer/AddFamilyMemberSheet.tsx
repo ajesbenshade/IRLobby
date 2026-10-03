@@ -69,6 +69,8 @@ export const AddFamilyMemberSheet = ({ visible, member = null, onRemove, onCance
 
   // Prefill when the sheet opens (Edit) or start blank (Add).
   useEffect(() => {
+    // A step queued for the previous open (picker open / form restore) must never fire into this one.
+    handoff.cancel();
     if (visible) {
       setName(member?.name ?? '');
       setSex(sexOf(member?.sex));

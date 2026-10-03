@@ -85,8 +85,9 @@ const ageOnDay = (born: DayValue, on: DayValue): number => {
 };
 
 /**
- * Birth day used for the age check. A saved day is used as is. A legacy month/year-only row counts as the LAST day of that
- * month (Backend's rule, so a child never looks older than they are). A spouse row has no birth data.
+ * Birth day used for the local age check. A saved day is used as is. A month/year-only row counts as the LAST day of that
+ * month (Backend's rule, so a child never looks older than they are). Adults (non-child rows) are not age-checked locally:
+ * this returns null for them even when their payload carries birth data for display.
  */
 export const birthDayForAgeCheck = (member: WhosComingDependent): DayValue | null => {
   if ((member.relationship ?? 'child') !== 'child') {
@@ -109,9 +110,9 @@ export const birthDayForAgeCheck = (member: WhosComingDependent): DayValue | nul
 
 /**
  * Age on the event day. The server's `age` in the whos-coming list is the age ON THE EVENT DAY in New York time (Backend
- * confirmed). The app also works it out locally from the birthdate it has, and takes the LARGER of the two: the check never
- * blocks a child the server would let in, and it still catches a wrong `eligible` flag. Month-only rows have no day, so
- * they lean on the server's age.
+ * confirmed). The app also works it out locally from the birthdate it has (a month-only row counts as the last day of its
+ * month) and takes the LARGER of the two: the check never blocks a child the server would let in, and it still catches a
+ * wrong `eligible` flag.
  */
 export const memberAgeOnEvent = (member: WhosComingDependent, range: AgeRange | null): number | null => {
   const eventDay = eventLocalDay(range?.time);

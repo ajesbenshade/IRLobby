@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { API_ROUTES } from '@shared/schema';
 
 import { Switch } from '@components/foyer/Switch';
+import { ErrorNotice } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { BIRTHDAY_COPY } from '@constants/foyerCopy';
 import { birthdayMonthDay, isUnder18 } from '@foyer/birthdays';
@@ -67,13 +68,7 @@ export const BirthdayCard = ({ dateOfBirth, value, onOpenBirthdate }: Props) => 
           )}
         </View>
       </View>
-      {mutation.isError ? (
-        <View style={styles.errorBox} testID="birthday-error">
-          <Text accessibilityRole="alert" style={styles.errorText}>
-            {BIRTHDAY_COPY.error}
-          </Text>
-        </View>
-      ) : null}
+      {mutation.isError ? <ErrorNotice message={BIRTHDAY_COPY.error} testID="birthday-error" /> : null}
       <Text style={styles.caption}>{minor ? BIRTHDAY_COPY.underEighteen : BIRTHDAY_COPY.caption}</Text>
     </View>
   );
@@ -88,6 +83,4 @@ const styles = StyleSheet.create({
   value: { fontFamily: appTypography.bodyRegular, fontSize: 15.5, color: appColors.mutedInk },
   spinnerSlot: { width: 51, height: 31, alignItems: 'center', justifyContent: 'center' },
   caption: { marginTop: 8, paddingLeft: 20, fontFamily: appTypography.bodyRegular, fontSize: 12.5, lineHeight: 17, color: appColors.mutedInk },
-  errorBox: { marginTop: 8, borderRadius: 10, backgroundColor: appColors.warnBg, paddingHorizontal: 12, paddingVertical: 8 },
-  errorText: { fontFamily: appTypography.bodyMedium, fontSize: 13, color: '#8a0a1f' },
 });

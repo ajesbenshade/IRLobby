@@ -74,4 +74,15 @@ describe('Use my location for maps row (frame 144)', () => {
     expect(text.indexOf('location-row-card')).toBeLessThan(text.indexOf('location-row-error'));
     expect(text.indexOf('location-row-error')).toBeLessThan(text.indexOf(MAP_COPY.settingCaption));
   });
+
+  it('error box matches frame 147: pink #fbe8ea, #ebc0c6 border, alert icon, bold dark-red #8a0a1f text', () => {
+    useUseMyLocationSetting.mockReturnValue({ value: false, saving: false, error: true, update: jest.fn() });
+    const view = render(<MapLocationSettingRow />);
+    const box = flat(view.getByTestId('location-row-error').props.style);
+    expect(box).toMatchObject({ backgroundColor: '#fbe8ea', borderColor: '#ebc0c6', borderWidth: 1, flexDirection: 'row' });
+    expect(view.UNSAFE_getByType('MaterialCommunityIcons' as never).props).toMatchObject({ name: 'alert-circle-outline', color: '#8a0a1f' });
+    const text = flat(view.getByText(MAP_COPY.settingError).props.style);
+    expect(text.color).toBe('#8a0a1f');
+    expect(String(text.fontWeight)).toBe('700');
+  });
 });

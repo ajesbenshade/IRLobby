@@ -184,6 +184,24 @@ export const InlineError = ({ message }: { message?: string | null }) =>
     </Text>
   ) : null;
 
+/**
+ * Frame 147 inline error box: pink #fbe8ea fill, #ebc0c6 border, alert icon and bold dark-red (#8a0a1f) text. Shared by the
+ * Profile rows that save on their own (location, birthday).
+ */
+export const ERROR_NOTICE_FILL = '#fbe8ea';
+export const ERROR_NOTICE_BORDER = '#ebc0c6';
+export const ERROR_NOTICE_TEXT = '#8a0a1f';
+
+export const ErrorNotice = ({ message, testID }: { message?: string | null; testID?: string }) =>
+  message ? (
+    <View style={styles.notice} testID={testID}>
+      <MaterialCommunityIcons name="alert-circle-outline" size={18} color={ERROR_NOTICE_TEXT} />
+      <Text accessibilityRole="alert" style={styles.noticeText}>
+        {message}
+      </Text>
+    </View>
+  ) : null;
+
 type EmptyStateProps = {
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
@@ -260,6 +278,19 @@ const styles = StyleSheet.create({
   pillLabel: { fontFamily: appTypography.bodySemibold, fontSize: 16, lineHeight: 22, textAlign: 'center', flexShrink: 1 },
   sheetButtons: { gap: 10 },
   error: { color: PILL_DESTRUCTIVE, fontFamily: appTypography.bodyMedium, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  notice: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ERROR_NOTICE_BORDER,
+    backgroundColor: ERROR_NOTICE_FILL,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  noticeText: { flex: 1, color: ERROR_NOTICE_TEXT, fontFamily: appTypography.bodySemibold, fontWeight: '700', fontSize: 13, lineHeight: 18 },
   empty: { alignItems: 'center', gap: 12, paddingVertical: 40, paddingHorizontal: 24 },
   emptyCircle: {
     width: 72,

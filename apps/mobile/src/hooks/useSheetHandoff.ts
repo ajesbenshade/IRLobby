@@ -40,6 +40,12 @@ export const useSheetHandoff = (fallbackMs = SHEET_HANDOFF_FALLBACK_MS) => {
     [fallbackMs, flush],
   );
 
+  /** Drop a queued step (the owning sheet closed or reset inside the handoff window) so it cannot fire later. */
+  const cancel = useCallback(() => {
+    clear();
+    pending.current = null;
+  }, []);
+
   useEffect(
     () => () => {
       clear();
@@ -48,5 +54,5 @@ export const useSheetHandoff = (fallbackMs = SHEET_HANDOFF_FALLBACK_MS) => {
     [],
   );
 
-  return { after, flush };
+  return { after, flush, cancel };
 };

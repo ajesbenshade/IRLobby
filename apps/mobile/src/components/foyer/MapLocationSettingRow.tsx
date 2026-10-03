@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 import { Switch } from '@components/foyer/Switch';
+import { ErrorNotice } from '@components/foyer/ui';
 import { View } from '@components/RNCompat';
 import { MAP_COPY } from '@constants/foyerCopy';
 import { useUseMyLocationSetting } from '@foyer/mapLocation';
@@ -36,13 +37,7 @@ export const MapLocationSettingRow = () => {
           />
         )}
       </View>
-      {setting.error ? (
-        <View style={styles.errorBox} testID="location-row-error">
-          <Text accessibilityRole="alert" style={styles.errorText}>
-            {MAP_COPY.settingError}
-          </Text>
-        </View>
-      ) : null}
+      {setting.error ? <ErrorNotice message={MAP_COPY.settingError} testID="location-row-error" /> : null}
       <Text style={styles.caption}>{MAP_COPY.settingCaption}</Text>
     </View>
   );
@@ -75,6 +70,4 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: appColors.mutedInk,
   },
-  errorBox: { marginTop: 8, borderRadius: 10, backgroundColor: appColors.warnBg, paddingHorizontal: 12, paddingVertical: 8 },
-  errorText: { fontFamily: appTypography.bodyMedium, fontSize: 13, color: '#8a0a1f' },
 });

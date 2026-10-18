@@ -1,272 +1,183 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy Policy — IRLobby</title>
-    <meta
-      name="description"
-      content="IRLobby privacy policy: accounts, location, chat, third-party services, and how to export or delete your data."
-    />
-    <meta name="theme-color" content="#5B4BFF" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="canonical" href="https://irlobby.com/privacy" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: { brand: { DEFAULT: '#5B4BFF', dark: '#C026D3' }, ink: '#0B0B14' },
-            fontFamily: { display: ['Outfit', 'system-ui', 'sans-serif'] },
-          },
-        },
-      };
-    </script>
-    <style>
-      html,
-      body {
-        font-family: 'Outfit', system-ui, sans-serif;
-      }
-      .glass {
-        background: rgba(255, 255, 255, 0.04);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .prose h2 {
-        font-weight: 700;
-        font-size: 1.5rem;
-        margin-top: 2rem;
-        margin-bottom: 0.75rem;
-        color: #fff;
-      }
-      .prose h3 {
-        font-weight: 600;
-        font-size: 1.125rem;
-        margin-top: 1.25rem;
-        margin-bottom: 0.5rem;
-        color: #fff;
-      }
-      .prose p,
-      .prose li {
-        color: rgba(255, 255, 255, 0.7);
-        line-height: 1.7;
-      }
-      .prose ul {
-        list-style: disc;
-        padding-left: 1.25rem;
-        margin: 0.5rem 0;
-      }
-      .prose a {
-        color: #ff6b9a;
-      }
-      .prose a:hover {
-        text-decoration: underline;
-      }
-      .page-bg {
-        background: radial-gradient(
-            ellipse 80% 50% at 50% 0%,
-            rgba(91, 75, 255, 0.18) 0%,
-            transparent 50%
-          ),
-          #0b0b14;
-      }
-    </style>
-  </head>
-  <body class="bg-ink text-white antialiased min-h-screen flex flex-col">
-    <nav class="fixed top-0 inset-x-0 z-50 glass">
-      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/" class="flex items-center gap-2 font-display font-bold text-xl">
-          <span
-            class="w-8 h-8 rounded-xl bg-brand grid place-items-center text-white shadow-lg shadow-brand/40"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor">
-              <path
-                d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"
-              />
-            </svg>
-          </span>
-          IRLobby
-        </a>
-        <div class="hidden sm:flex items-center gap-8 text-sm font-medium text-white/80">
-          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
-          <a href="/features" class="hover:text-white transition">Features</a>
-          <a href="/download" class="hover:text-white transition">Download</a>
-          <a href="/support" class="hover:text-white transition">Support</a>
-        </div>
-        <a
-          href="/download"
-          class="px-4 py-2 rounded-full bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg shadow-brand/30"
-          >Get the app</a
-        >
-      </div>
-    </nav>
-
-    <section class="page-bg pt-32 pb-12">
-      <div class="max-w-3xl mx-auto px-6">
-        <p class="text-brand font-semibold uppercase tracking-wider text-sm">Legal</p>
-        <h1 class="font-display font-black text-5xl mt-3">Privacy Policy</h1>
-        <p class="mt-3 text-white/50 text-sm">Last updated: September 2, 2026</p>
-        <p class="mt-4 text-white/70 max-w-2xl">
-          This policy describes how IRLobby handles information in the iOS app (bundle
-          <code class="text-white/80">com.irlobby.app</code>), the website, and the
-          <code class="text-white/80">api.irlobby.com</code> backend.
-        </p>
-      </div>
-    </section>
-
-    <section class="pb-20 flex-1">
-      <article class="max-w-3xl mx-auto px-6 prose">
-        <p>
-          IRLobby ("we", "us", "our") is an activity-first social matching product. Users create
-          accounts, discover nearby activities, match with other people who want the same plan, and
-          chat to coordinate. This policy explains what we collect to run those features, how we
-          use it, who else may process it, and the controls in the app.
-        </p>
-
-        <h2>Information we collect</h2>
-        <h3>Account and profile</h3>
-        <ul>
-          <li>Email address, password (stored hashed), display name, and username.</li>
-          <li>Profile photo and optional activity photos you upload (camera or photo library, only when you choose to upload).</li>
-          <li>Vibe-quiz answers and activity preferences used to rank nearby plans.</li>
-          <li>Legal acceptance timestamps when you accept the terms and this policy during onboarding.</li>
-        </ul>
-
-        <h3>Location</h3>
-        <p>
-          With permission, the mobile app reads coarse/fine location while it is in use so we can
-          show activities near you. iOS requests location with a "while using" prompt. We do not
-          request always-on / background location in the current app. You can deny or later disable
-          location in system settings; discovery quality drops because nearby ranking is core to
-          the product. Location sharing on your profile is a separate in-app privacy toggle.
-        </p>
-
-        <h3>Activity, matching, and chat</h3>
-        <ul>
-          <li>Activities you host or join (title, description, time, place text, coordinates when provided, tags, capacity, images).</li>
-          <li>Swipes, matches, and reviews (ratings and comments).</li>
-          <li>Chat messages between matched users. Messages are stored on the IRLobby backend so conversation history works across devices. We do not send message bodies to a third-party chat vendor.</li>
-          <li>Block and report submissions used for moderation.</li>
-        </ul>
-
-        <h3>Optional sign-in providers</h3>
-        <p>
-          If you choose Sign in with Apple, Google, or X (Twitter), we receive the identifiers and
-          profile fields that provider returns (for example a stable user id, username, and email
-          when you grant it). Those connections are optional; email and password also work.
-        </p>
-
-        <h3>Payments (paid activities only)</h3>
-        <p>
-          If a host enables ticketing, Stripe processes the payment. IRLobby stores Stripe
-          identifiers needed to operate checkout, Connect onboarding, and ticket redemption. We do
-          not store full card numbers on IRLobby servers.
-        </p>
-
-        <h3>Diagnostics, notifications, and the website</h3>
-        <ul>
-          <li>Crash and performance diagnostics via Sentry when a Sentry project is configured. The store privacy questionnaire treats this as diagnostics / product interaction, not advertising tracking.</li>
-          <li>Expo push tokens so we can send notifications you enable. You can disable notifications in the app or the OS.</li>
-          <li>On the website, session cookies used for authentication (including a refresh cookie) and similar storage needed to keep you signed in.</li>
-        </ul>
-
-        <h2>How we use it</h2>
-        <ul>
-          <li>Create and authenticate your account, and keep you signed in.</li>
-          <li>Operate discovery, matching, chat, reviews, and activity hosting.</li>
-          <li>Show maps/tiles for nearby activities (Mapbox).</li>
-          <li>Prevent abuse, review reports, and keep the community usable.</li>
-          <li>Send transactional email such as password reset when SMTP is configured.</li>
-          <li>Debug crashes and improve reliability.</li>
-          <li>Process paid-activity payments through Stripe when that feature is used.</li>
-        </ul>
-        <p>
-          We do not use your data to run third-party advertising networks, and we do not sell
-          personal information. The App Store privacy questionnaire for this app lists no data used
-          to track you.
-        </p>
-
-        <h2>Sharing</h2>
-        <p>We share information only as needed to run the product:</p>
-        <ul>
-          <li><strong class="text-white">Other users:</strong> profile and activity details required to swipe, match, coordinate, and review. Chat is visible to the people in that thread.</li>
-          <li><strong class="text-white">Hosting:</strong> the production API runs on our backend host (currently the Hetzner VPS that serves <code class="text-white/80">api.irlobby.com</code>) with PostgreSQL/PostGIS and Redis.</li>
-          <li><strong class="text-white">Sentry:</strong> crash and performance diagnostics.</li>
-          <li><strong class="text-white">Mapbox:</strong> map tiles when maps are shown.</li>
-          <li><strong class="text-white">Stripe:</strong> payments for paid activities.</li>
-          <li><strong class="text-white">Apple, Google, or X:</strong> only if you use that sign-in.</li>
-          <li><strong class="text-white">Email delivery:</strong> SMTP provider used for password reset and similar mail.</li>
-          <li>When required by law, or to protect people from abuse or fraud.</li>
-        </ul>
-
-        <h2>Your choices</h2>
-        <ul>
-          <li><strong class="text-white">Export:</strong> Settings includes an export that returns a JSON copy of profile, hosted activities, participations, swipes, matches, and reviews.</li>
-          <li><strong class="text-white">Delete account:</strong> Settings → Delete account permanently removes the user record and associated data the backend is configured to cascade. This cannot be undone.</li>
-          <li><strong class="text-white">Location:</strong> iOS Settings → Privacy → Location Services → IRLobby, or the in-app location-sharing toggle for profile visibility.</li>
-          <li><strong class="text-white">Notifications:</strong> disable in the app settings and/or iOS notification settings.</li>
-          <li>Questions or a deletion/export request if you cannot use the in-app controls: email the addresses below.</li>
-        </ul>
-
-        <h2>Children</h2>
-        <p>
-          IRLobby is a social networking product rated 17+ on the App Store. It is not directed at
-          children under 17, and we do not knowingly collect personal information from them. If you
-          believe a person under 17 has an account, email us and we will delete it.
-        </p>
-
-        <h2>Retention</h2>
-        <p>
-          We keep account, activity, match, and message data while the account exists so the
-          product can function. Deleted accounts are removed from the live database. Backups and
-          diagnostic logs may persist for a limited operational period after deletion.
-        </p>
-
-        <h2>Changes</h2>
-        <p>
-          We will update the date at the top when this policy changes. Material changes will also
-          be posted on this page.
-        </p>
-
-        <h2>Contact</h2>
-        <p>
-          Privacy and support requests:
-          <a href="mailto:support@irlobby.com">support@irlobby.com</a>.
-          You can also reach the operator at
-          <a href="mailto:ajesbenshade@gmail.com">ajesbenshade@gmail.com</a>.
-        </p>
-        <p>See also the <a href="/support">Support</a> page.</p>
-      </article>
-    </section>
-
-    <footer class="border-t border-white/5 py-12">
-      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="flex items-center gap-2 font-display font-bold">
-          <span class="w-7 h-7 rounded-lg bg-brand grid place-items-center">
-            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white">
-              <path
-                d="M12 21s-7-4.5-9.5-9C.5 8 3 4 6.5 4c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 4 23.5 8 21.5 12 19 16.5 12 21 12 21z"
-              />
-            </svg>
-          </span>
-          IRLobby
-          <span class="text-white/40 font-normal text-sm ml-2">© 2026</span>
-        </div>
-        <div class="flex items-center gap-6 text-sm text-white/60">
-          <a href="/how-it-works" class="hover:text-white transition">How it works</a>
-          <a href="/features" class="hover:text-white transition">Features</a>
-          <a href="/download" class="hover:text-white transition">Download</a>
-          <a href="/privacy" class="hover:text-white transition">Privacy</a>
-          <a href="/support" class="hover:text-white transition">Support</a>
-        </div>
-      </div>
-    </footer>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy – The Foyer</title>
+<style>
+:root{color-scheme:light dark}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:18px;line-height:1.6;max-width:42rem;margin:0 auto;padding:1rem 1.1rem 3rem;color:#222;background:#fff}
+h1{font-size:1.7rem;line-height:1.25;margin:1rem 0 .5rem}
+h2{font-size:1.25rem;margin:2rem 0 .4rem;border-bottom:1px solid #e3ddd2;padding-bottom:.2rem}
+ul,ol{padding-left:1.4rem}li{margin:.3rem 0}
+a{color:#7a3b12;overflow-wrap:anywhere}
+mark{background:#fff176;color:#000;padding:0 .15em;border-radius:3px}
+blockquote.draft-note{margin:0 0 1rem;padding:.4rem .7rem;font-size:.8rem;background:#fff3cd;border-left:4px solid #e0a800;color:#533f03}
+blockquote.draft-note p{margin:0}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem;min-width:30rem}
+th,td{border:1px solid #d8d2c6;padding:.4rem .5rem;text-align:left;vertical-align:top}
+th{background:#f5f1e8}
+@media (prefers-color-scheme:dark){body{background:#181716;color:#eee}a{color:#f0b27a}h2{border-color:#444}th{background:#2a2825}th,td{border-color:#555}mark{background:#fff176;color:#000}}
+</style>
+</head>
+<body>
+<h1>The Foyer: Privacy Policy</h1>
+<p><strong>Last updated: October 18, 2026</strong></p>
+<p>The Foyer is a free app for members and friends of local Mennonite churches to find and host small gatherings. It is run by Aaron Esbenshade. This page explains, in plain words, what we collect and why.</p>
+<p><strong>The short version:</strong> We collect only what the app needs to work. We do not sell your data. We do not show ads. We do not use advertising or cross-app tracking.</p>
+<p>Questions? Write to support@irlobby.com.</p>
+<h2>What we collect</h2>
+<ul>
+<li><strong>Account basics:</strong> your first name and account email. Phone number is optional. You can sign in with Apple or Google.</li>
+<li><strong>Birth date (accounts):</strong> used to check age ranges on events and, if you opt in, for birthday greetings. See "Your birthday" below.</li>
+<li><strong>Profile:</strong> a short bio and profile photo(s). You can add up to 50 photos.</li>
+<li><strong>Family members:</strong> name and full birth date. Only you (the parent who added them) can see this. We use the birth date only to check event age ranges. It is never shared with hosts, guests, friends, or the public. Family members do not get accounts. Children under 13 are only added this way, by a parent. Help text in the app: "Only you can see this. We use it to check event age ranges."</li>
+<li><strong>Location:</strong> where a gathering is held, and a city or town you enter on your profile, if you add one. The app does not send your phone's location to us.</li>
+<li><strong>Gatherings and activity:</strong> gatherings you host or RSVP to, your gathering requests, swipes, tickets, and reviews.</li>
+<li><strong>Invites:</strong> contact details on invites you send.</li>
+<li><strong>Messages:</strong> gathering chats, and 1:1 chats between friends or people who chose to allow messages.</li>
+<li><strong>Friends list.</strong></li>
+<li><strong>Reports and blocks</strong> you make.</li>
+<li><strong>Push notification token:</strong> so we can send you notifications, such as a cancelled gathering.</li>
+<li><strong>Contact info you choose to show:</strong> your phone or email is shown to others only if you turn on the contact toggles.</li>
+</ul>
+<h2>Why we use it</h2>
+<p>Only to make the app work: to run your account, show gatherings, handle RSVPs and chats, keep people safe, and send notifications.</p>
+<p>We do not use your data for ads. We do not track you across other apps or websites. We do not sell or share your data for advertising.</p>
+<h2>Who can see what</h2>
+<p><strong>Profile visibility.</strong> You choose who sees your profile. The levels are:</p>
+<ol>
+<li>Only me (the default)</li>
+<li>Friends</li>
+<li>Church</li>
+<li>Public</li>
+</ol>
+<p><strong>Your birthday.</strong> Your birth date is used to check age ranges on events. It is not shown by default.</p>
+<ul>
+<li>If you are 18 or older, you can opt in to show your <strong>month and day</strong> (never the year). This is off by default.</li>
+<li>If you opt in, it is shown to the audience you chose for your profile visibility (see above).</li>
+<li>It is used for age checks and for birthday greetings.</li>
+<li>It is never shown for anyone under 18, and never to people you have blocked (or who have blocked you).</li>
+<li>Birthday greetings are sent as text-only chat messages inside the app. Only the sender and the person receiving it can see them, under the chat's normal rules.</li>
+</ul>
+<p><strong>Messages.</strong></p>
+<ul>
+<li>Direct messages are friends-only by default.</li>
+<li>You can turn on a toggle to let people from shared events message you.</li>
+<li>Accounts under 18 are always friends-only.</li>
+<li>Blocks work both ways.</li>
+</ul>
+<p><strong>When a host requires approval.</strong> If you ask to join a gathering that needs approval, the host always sees:</p>
+<ul>
+<li>your first name, photo, and short bio;</li>
+<li>your party size;</li>
+<li>your family members' names and age bands (an age-band chip, not birth dates).</li>
+</ul>
+<p>If you are under 18, the host sees only your first name and age band. A host never sees your email or phone this way.</p>
+<p><strong>Addresses.</strong> Private addresses on member-hosted gatherings are visible only to approved or going guests.</p>
+<p><strong>Photos.</strong> People who attended the same gathering can download photos from it, using signed temporary links. Once someone saves a photo, we can't remove it from their device.</p>
+<p><strong>Church administrators.</strong> Church administrators can review reports and remove content or accounts to keep people safe.</p>
+<h2>Safety reports</h2>
+<p>You can report and block people, messages, and photos. While your account exists, a report you make is linked to you. If you delete your account, that link is cut. The same is true for a person who was reported: if they delete their account, their link to the report is cut.</p>
+<p>What stays on a report: the reason, a description, the date, the status, the type and ID of what was reported, and a short snapshot of the content. It holds no names or emails.</p>
+<p>We keep a minimal record of safety reports for up to 12 months so we can protect other members.</p>
+<h2>Where your data lives and how it is protected</h2>
+<ul>
+<li>Your data and our database are hosted on a cloud server in Europe (Hetzner), and encrypted backups are kept on a private server in the United States. By using the app you understand your data is processed in both places.</li>
+<li>Data is encrypted while it travels between the app and our server.</li>
+<li>No system is perfect. Please use a strong password and keep it private.</li>
+</ul>
+<h2>Who we share with</h2>
+<ul>
+<li>Other people in the app, as described above and as you choose.</li>
+<li>Church administrators, for safety and moderation.</li>
+<li><strong>Hetzner (Europe)</strong>, which hosts our server and database.</li>
+<li><strong>Expo's push notification service</strong>, a third-party service that delivers your push notifications through Apple. It gets your push token and the notification text.</li>
+<li><strong>Apple or Google</strong>, if you choose to sign in with them.</li>
+<li>Account emails, such as password resets, are sent through an email provider.</li>
+<li>Anyone the law requires us to tell, if we get a valid legal request.</li>
+</ul>
+<p>We do not sell your data.</p>
+<h2>Your choices and deleting your account</h2>
+<ul>
+<li>Edit your profile, photos, bio, family members, and contact toggles in the app any time.</li>
+<li>Choose your profile visibility.</li>
+<li><strong>Delete your account in the app: Settings &gt; Account &gt; Delete my account.</strong> This removes:<ul>
+<li>your profile and all contact info (email, phone, birth date, bio, profile photo);</li>
+<li>your login and push tokens;</li>
+<li>your friends, friend requests, and blocks;</li>
+<li>your family members;</li>
+<li>your RSVPs, gathering requests, swipes, tickets, and reviews;</li>
+<li>your one-to-one chats, <strong>including the other person's messages in those chats</strong>;</li>
+<li>your own messages in gathering chats;</li>
+<li>every photo you uploaded (the records and the files);</li>
+<li>contact details on invites you sent;</li>
+<li>your Sign in with Apple connection (we revoke the token at Apple).</li>
+</ul>
+</li>
+<li><strong>Gatherings you host:</strong> upcoming ones are cancelled first. Attendees and people with pending requests are told ("The host deleted their account"). Then the gatherings are deleted. Past gatherings you hosted are deleted.</li>
+<li>Other people's gathering chats stay, minus your messages.</li>
+<li><strong>What we keep:</strong> safety reports, in the minimal form described in "Safety reports" above. We keep a minimal record of safety reports for up to 12 months so we can protect other members.</li>
+<li>When a host deletes a gathering, its photos (the records and the files) are deleted right away.</li>
+<li>Deleted data and photos may remain in encrypted backups for <strong>up to 30 days</strong>, then they are removed automatically.</li>
+<li>To ask about your data, write to support@irlobby.com.</li>
+</ul>
+<h2>Children</h2>
+<p>You must be 13 or older to have an account. We do not knowingly make accounts for children under 13. A parent may add a child under 13 as a family member (name and full birth date, visible only to the parent). If you think a child under 13 has an account, tell us at support@irlobby.com and we will remove it.</p>
+<h2>Changes</h2>
+<p>If we change this policy in a big way, we will tell you in the app or by email. The date at the top shows when it was last updated.</p>
+<h2>Contact</h2>
+<p>support@irlobby.com</p>
+<h2>Apple App Privacy summary</h2>
+<p>All of the data below is linked to you and used for <strong>App Functionality</strong> only. None of it is used for tracking.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>What it includes</th>
+<th>Linked to you</th>
+<th>Used for tracking</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contact info</td>
+<td>Name, email, phone</td>
+<td>Yes</td>
+<td>No</td>
+<td>App Functionality</td>
+</tr>
+<tr>
+<td>User content</td>
+<td>Photos, messages, bio</td>
+<td>Yes</td>
+<td>No</td>
+<td>App Functionality</td>
+</tr>
+<tr>
+<td>Location</td>
+<td>City you enter (optional) and gathering locations</td>
+<td>Yes</td>
+<td>No</td>
+<td>App Functionality</td>
+</tr>
+<tr>
+<td>Identifiers</td>
+<td>User ID</td>
+<td>Yes</td>
+<td>No</td>
+<td>App Functionality</td>
+</tr>
+<tr>
+<td>Other data</td>
+<td>Birth date (accounts), family members' full birth dates, optional birthday (month and day)</td>
+<td>Yes</td>
+<td>No</td>
+<td>App Functionality</td>
+</tr>
+</tbody>
+</table></div>
+</body>
 </html>

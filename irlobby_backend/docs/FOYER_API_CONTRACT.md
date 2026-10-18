@@ -35,6 +35,8 @@ New fields:
 | `next_host_available_at` | ISO datetime when the member may create their next gathering, or `null` if they can now or are exempt | no |
 | `household_child_count` | int | no |
 
+Member coordinates: `latitude` and `longitude` sent to `PATCH`/`PUT /api/users/profile/`, `PATCH /api/users/onboarding/` or registration are silently ignored (no error, not saved). Every user payload (profile, login, auth status, data export) still has both keys, always `null`. The typed town text is kept as before: `location` on the profile, `city` on onboarding (`city` in the profile response mirrors `location`). Gathering coordinates are unchanged. `python manage.py clear_user_coordinates` clears coordinates already stored. It only prints a count unless you pass `--apply`, and it is run by hand, never by a migration or deploy.
+
 Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aesbenshade@dock.org`.
 
 ## Churches

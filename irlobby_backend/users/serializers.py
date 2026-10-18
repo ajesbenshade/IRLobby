@@ -53,6 +53,10 @@ class UserSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    # The member's own coordinates are no longer stored from the app: the keys stay in the
+    # response for older builds but are always null, and client values are ignored.
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
     is_church_admin = serializers.SerializerMethodField()
     event_limit_exempt = serializers.SerializerMethodField()
     next_host_available_at = serializers.SerializerMethodField()
@@ -181,6 +185,12 @@ class UserSerializer(serializers.ModelSerializer):
         if church is None:
             return None
         return {"id": church.id, "name": church.name, "is_verified": church.is_verified}
+
+    def get_latitude(self, obj):
+        return None
+
+    def get_longitude(self, obj):
+        return None
 
     def get_is_church_admin(self, obj):
         from activities.access import is_church_admin

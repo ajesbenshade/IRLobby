@@ -170,8 +170,15 @@ REST_FRAMEWORK = {
         "swipe_ops": config("SWIPE_THROTTLE_RATE", default="120/hour"),
         "review_create": config("REVIEW_CREATE_THROTTLE_RATE", default="30/hour"),
         "match_reads": config("MATCH_THROTTLE_RATE", default="240/hour"),
+        # Anonymous church-website calendar JSON and .ics files, per client IP.
+        "public_calendar": config("PUBLIC_CALENDAR_THROTTLE_RATE", default="60/min"),
     },
 }
+
+# Absolute bases used in public calendar output (.ics photo links and the
+# per-event web link in GET /api/public/calendar).
+PUBLIC_API_BASE_URL = config("PUBLIC_API_BASE_URL", default="https://api.irlobby.com").rstrip("/")
+PUBLIC_WEB_BASE_URL = config("PUBLIC_WEB_BASE_URL", default="https://irlobby.com").rstrip("/")
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",

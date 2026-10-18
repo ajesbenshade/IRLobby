@@ -231,12 +231,14 @@ Allowed only for a confirmed going RSVP (yourself or at least one household chil
 
 `GET /api/public/calendar`
 
-Only gatherings with `list_on_church_calendar: true` and `calendar_approved: true`.
+Only gatherings with `list_on_church_calendar: true` and `calendar_approved: true`, not cancelled, oldest first.
 
 ```json
 {
   "events": [
     {
+      "id": 12,
+      "url": "https://irlobby.com/gatherings/12",
       "title": "Harvest Supper",
       "start": "2026-10-06T18:00:00+00:00",
       "end": null,
@@ -244,15 +246,25 @@ Only gatherings with `list_on_church_calendar: true` and `calendar_approved: tru
       "host_name": "Sarah Host",
       "audience": "Everyone · Ages 6+",
       "description": "Bring a dish.",
-      "cover_photo_url": null
+      "cover_photo_url": null,
+      "is_full": false
     }
   ]
 }
 ```
 
-Those eight keys are the only event fields. No birth dates, emails, children, chat, or RSVP lists.
+Those eleven keys are the only event fields. No birth dates, emails, children, chat, or RSVP lists.
 
-`GET /api/public/calendar.ics` → `text/calendar; charset=utf-8`. `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. Same events only. Subscribe in Apple Calendar by swapping the scheme: `webcal://<host>/api/public/calendar.ics` (same path, no Authorization header).
+| Field | Meaning |
+|---|---|
+| `id` | gathering id (same id as `/api/public/events/<id>.ics` and the app) |
+| `url` | web link to the gathering, `PUBLIC_WEB_BASE_URL` + `/gatherings/<id>` (default `https://irlobby.com/gatherings/<id>`) |
+
+**Past gatherings are hidden by default.** A gathering is returned when its end (or its start, if it has no end) is no more than one day ago, i.e. `start >= now - 1 day OR end >= now - 1 day`.
+
+Optional `?from=YYYY-MM-DD` replaces that lower bound with midnight `America/New_York` on that date (use it to show older gatherings, or to start later). A blank `from` uses the default. Any other value (not exactly `YYYY-MM-DD`, or not a real date) returns **400** `{"detail": "from must be a date in the form YYYY-MM-DD."}`.
+
+`GET /api/public/calendar.ics` → `text/calendar; charset=utf-8`. `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. Same events only, with the same past-event default and `?from=` (400 on a bad value). Subscribe in Apple Calendar by swapping the scheme: `webcal://<host>/api/public/calendar.ics` (same path, no Authorization header).
 
 Feed properties:
 
@@ -267,6 +279,12 @@ Feed properties:
 | `Cache-Control` | `public, max-age=300` |
 
 Timed instants are UTC (`...Z`), which match the `America/New_York` wall time stored on the gathering. Deleted gatherings and gatherings that are not both listed and approved are omitted from the next feed (there is no tombstone, so they are not sent as `CANCELLED`).
+
+Photo links in `.ics` files (`calendar.ics`, `events/<id>.ics`, and the signed `event.ics`) are absolute on `PUBLIC_API_BASE_URL` (default `https://api.irlobby.com`), on a `Photo: <url>` line at the end of `DESCRIPTION`, e.g. `Photo: https://api.irlobby.com/api/activities/12/photos/3/`. Uploaded photos are only linked for gatherings on the public calendar (that file needs no token); other gatherings only link an external `https://` image if they have one, otherwise no `Photo:` line. The single-event files (`events/<id>.ics` and `event.ics`) keep working for past gatherings.
+
+**Rate limit:** `GET /api/public/calendar`, `/api/public/calendar.ics`, `/api/public/events/<id>.ics` and `/api/public/event.ics` share the anonymous DRF throttle scope `public_calendar`, default `60/min` per client (env `PUBLIC_CALENDAR_THROTTLE_RATE`). The client is identified like the other anonymous throttles (`X-Forwarded-For` from nginx, else `REMOTE_ADDR`). Over the limit → **429** with `Retry-After`.
+
+**Caching:** unchanged. The `.ics` responses send `Cache-Control: public, max-age=300` (`event.ics`: `private, max-age=300`). The JSON feed sends no `Cache-Control` header.
 
 CORS allows `https://franconiamennonite.org`.
 

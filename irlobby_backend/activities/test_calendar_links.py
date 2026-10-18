@@ -226,13 +226,14 @@ class CalendarLinkTests(APITestCase):
         self.assertEqual(gone.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_unapproved_events_stay_off_the_public_feed(self):
-        feed = self.client.get(reverse("public-calendar"))
+        # These fixtures are in March 2026; ?from= brings past gatherings back.
+        feed = self.client.get(reverse("public-calendar"), {"from": "2026-03-01"})
         titles = [event["title"] for event in feed.data["events"]]
         self.assertIn("Soup & Hymns", titles)
         self.assertNotIn("Unapproved Picnic", titles)
         self.assertNotIn("Backyard Hymns", titles)
 
-        ics = self.client.get(reverse("public-calendar-ics"))
+        ics = self.client.get(reverse("public-calendar-ics"), {"from": "2026-03-01"})
         self.assertEqual(ics.status_code, status.HTTP_200_OK)
         self.assertEqual(ics["Cache-Control"], "public, max-age=300")
         text = _unfold(ics.content.decode())

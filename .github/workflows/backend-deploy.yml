@@ -275,6 +275,7 @@ jobs:
             docker exec "${web_cid}" mkdir -p /app/deploy/oracle/legal
             docker cp ./deploy/oracle/legal/privacy.html "${web_cid}:/app/deploy/oracle/legal/privacy.html"
             docker cp ./deploy/oracle/legal/support.html "${web_cid}:/app/deploy/oracle/legal/support.html"
+            docker cp ./deploy/oracle/legal/terms.html "${web_cid}:/app/deploy/oracle/legal/terms.html"
             if [ -n "${ws_cid}" ]; then
               docker cp ./users/oauth_views.py "${ws_cid}:/app/users/oauth_views.py"
               docker cp ./users/social_auth.py "${ws_cid}:/app/users/social_auth.py"

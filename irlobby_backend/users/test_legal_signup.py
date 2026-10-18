@@ -242,10 +242,17 @@ class TermsPageTests(APITestCase):
         privacy = self.client.get(reverse("privacy-policy"))
         self.assertEqual(privacy["Cache-Control"], "public, max-age=300")
 
-    def test_placeholder_is_clearly_marked(self):
+    def test_final_terms_are_served(self):
         body = self.client.get("/terms").content.decode()
-        self.assertIn("PLACEHOLDER", body)
+        self.assertNotIn("PLACEHOLDER", body.upper())
         self.assertIn("Terms of Use", body)
+        self.assertIn("Last updated: October 18, 2026", body)
+
+    def test_final_privacy_is_served(self):
+        body = self.client.get(reverse("privacy-policy")).content.decode()
+        self.assertIn("Last updated: October 18, 2026", body)
+        self.assertNotIn("our own mail server", body)
+        self.assertIn("are sent through an email provider.", body)
 
     def test_urls_are_not_swallowed_by_the_spa_catch_all(self):
         self.assertEqual(reverse("terms-of-use"), "/terms")

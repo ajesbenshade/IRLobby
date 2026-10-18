@@ -61,7 +61,15 @@ import {
   type ActivityFetchFilters,
 } from '@services/activityService';
 import { fetchWhosComing, postRsvp } from '@services/foyerService';
-import { APPROVAL_COPY, COMMON_COPY, FULL_COPY, GOING_COPY } from '@constants/foyerCopy';
+import { PickChurchCard } from '@components/foyer/PickChurchCard';
+import {
+  APPROVAL_COPY,
+  COMMON_COPY,
+  DISCOVER_FILTER_COPY,
+  FULL_COPY,
+  GOING_COPY,
+  discoverCountLabel,
+} from '@constants/foyerCopy';
 import { useMapCenter } from '@foyer/mapLocation';
 import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
@@ -497,7 +505,8 @@ export const DiscoverScreen = () => {
   const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
 
   useEffect(() => {
-    if (vibeSeededRef.current) {
+    if (vibeSeededRef.current || foyerMode) {
+      // Foyer has no vibe-tag filter, so never seed a hidden tag filter there.
       return;
     }
     if (!hasVibeProfile || vibeDiscoverTags.length === 0) {
@@ -510,7 +519,7 @@ export const DiscoverScreen = () => {
     vibeSeededRef.current = true;
     setTagFilter(vibeDiscoverTags.join(', '));
     setVibeToastVisible(true);
-  }, [hasVibeProfile, vibeDiscoverTags, tagFilter]);
+  }, [foyerMode, hasVibeProfile, vibeDiscoverTags, tagFilter]);
 
   const currentTag = currentActivity?.tags?.[0] || currentActivity?.category || 'Activity';
   const currentHostName =
@@ -552,13 +561,18 @@ export const DiscoverScreen = () => {
             : 'Swipe to pass, or say you’re going.'
         }
         rightContent={
-          <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
-            Pings
-          </AppButton>
+          // Foyer has no notifications inbox yet; the legacy Pings screen is matchmaking, so it stays legacy-only.
+          foyerMode ? undefined : (
+            <AppButton compact variant="ghost" onPress={() => navigation.navigate('Notifications')}>
+              Pings
+            </AppButton>
+          )
         }
       />
 
-      {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
+      {foyerMode ? <PickChurchCard surface="discover" /> : null}
+
+      {!foyerMode && vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
         <PanelCard style={styles.vibeReminderCard}>
           <Text variant="titleMedium" style={styles.vibeReminderTitle}>
             Want a feed that actually fits?
@@ -598,7 +612,9 @@ export const DiscoverScreen = () => {
                 }}
               />
             )}
-            <AccentPill tone="neutral">{activities.length} nearby</AccentPill>
+            <AccentPill tone="neutral">
+              {foyerMode ? discoverCountLabel(activities.length) : `${activities.length} nearby`}
+            </AccentPill>
           </View>
 
           {showFilters ? (
@@ -606,69 +622,77 @@ export const DiscoverScreen = () => {
               <View style={styles.filterHeader}>
                 <View style={styles.filterHeaderCopy}>
                   <Text variant="titleMedium" style={styles.filterTitle}>
-                    Tune the deck
+                    {foyerMode ? DISCOVER_FILTER_COPY.title : 'Tune the deck'}
                   </Text>
-                  <Text style={styles.filterSubtitle}>Keep it simple. The feed should stay scannable.</Text>
+                  <Text style={styles.filterSubtitle}>
+                    {foyerMode ? DISCOVER_FILTER_COPY.subtitle : 'Keep it simple. The feed should stay scannable.'}
+                  </Text>
                 </View>
                 <AppButton compact variant="ghost" onPress={resetFilters}>
                   Clear
                 </AppButton>
               </View>
-              <View style={styles.chipRow}>
-                {[
-                  { label: 'Nearby', value: '5' },
-                  { label: '10 km', value: '10' },
-                  { label: '25 km', value: '25' },
-                ].map((option) => (
-                  <Chip
-                    key={option.value}
-                    label={option.label}
-                    selected={distanceFilter === option.value}
-                    onPress={() => {
-                      setDistanceFilter((current) =>
-                        current === option.value ? '' : option.value,
-                      );
-                      setCurrentIndex(0);
-                    }}
+              {/* Legacy deck filters: distance in km, Everyone/Friends visibility, free-text category/tags.
+                  Foyer hosts can't set visibility and gatherings are church-wide, so Foyer filters by date only. */}
+              {foyerMode ? null : (
+                <>
+                  <View style={styles.chipRow}>
+                    {[
+                      { label: 'Nearby', value: '5' },
+                      { label: '10 km', value: '10' },
+                      { label: '25 km', value: '25' },
+                    ].map((option) => (
+                      <Chip
+                        key={option.value}
+                        label={option.label}
+                        selected={distanceFilter === option.value}
+                        onPress={() => {
+                          setDistanceFilter((current) =>
+                            current === option.value ? '' : option.value,
+                          );
+                          setCurrentIndex(0);
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.chipRow}>
+                    {[
+                      { label: 'Everyone', value: 'everyone' },
+                      { label: 'Friends', value: 'friends' },
+                    ].map((option) => (
+                      <Chip
+                        key={option.value}
+                        label={option.label}
+                        selected={visibilityFilter === option.value}
+                        onPress={() => {
+                          setVisibilityFilter((current) =>
+                            current === option.value ? '' : option.value,
+                          );
+                          setCurrentIndex(0);
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <Field
+                    label="Category"
+                    value={categoryFilter}
+                    onChangeText={setCategoryFilter}
+                    placeholder="Music, food, outdoors…"
                   />
-                ))}
-              </View>
-              <View style={styles.chipRow}>
-                {[
-                  { label: 'Everyone', value: 'everyone' },
-                  { label: 'Friends', value: 'friends' },
-                ].map((option) => (
-                  <Chip
-                    key={option.value}
-                    label={option.label}
-                    selected={visibilityFilter === option.value}
-                    onPress={() => {
-                      setVisibilityFilter((current) =>
-                        current === option.value ? '' : option.value,
-                      );
-                      setCurrentIndex(0);
-                    }}
+                  <Field
+                    label="Neighborhood"
+                    value={locationFilter}
+                    onChangeText={setLocationFilter}
+                    placeholder="City or area"
                   />
-                ))}
-              </View>
-              <Field
-                label="Category"
-                value={categoryFilter}
-                onChangeText={setCategoryFilter}
-                placeholder="Music, food, outdoors…"
-              />
-              <Field
-                label="Neighborhood"
-                value={locationFilter}
-                onChangeText={setLocationFilter}
-                placeholder="City or area"
-              />
-              <Field
-                label="Tags"
-                value={tagFilter}
-                onChangeText={setTagFilter}
-                placeholder="Low-key, rooftop, hike"
-              />
+                  <Field
+                    label="Tags"
+                    value={tagFilter}
+                    onChangeText={setTagFilter}
+                    placeholder="Low-key, rooftop, hike"
+                  />
+                </>
+              )}
               {foyerMode || !tonightOnly ? (
                 <>
                   <PickerField
@@ -719,9 +743,11 @@ export const DiscoverScreen = () => {
           {showMap && activities.length > 0 ? (
             <PanelCard style={styles.mapCard}>
               <Text variant="titleMedium" style={styles.mapTitle}>
-                Nearby right now
+                {foyerMode ? DISCOVER_FILTER_COPY.mapTitle : 'Nearby right now'}
               </Text>
-              <Text style={styles.mapSubtitle}>Tap a pin to jump straight into that plan.</Text>
+              <Text style={styles.mapSubtitle}>
+                {foyerMode ? DISCOVER_FILTER_COPY.mapSubtitle : 'Tap a pin to jump straight into that plan.'}
+              </Text>
               <MapView
                 style={styles.map}
                 initialRegion={{

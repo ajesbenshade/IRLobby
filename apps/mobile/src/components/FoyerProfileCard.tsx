@@ -32,6 +32,7 @@ import {
 } from '@constants/foyerCopy';
 import { birthDayLimits, defaultBirthMonth, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { TOGGLE_DISABLED_LABEL_OPACITY } from '@foyer/buttonTokens';
+import { endFoyerWelcome } from '@foyer/firstRun';
 import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
 import {
   ageFromIso,
@@ -137,6 +138,8 @@ export const FoyerProfileCard = () => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await api.patch(API_ROUTES.USER_PROFILE, buildProfilePatch(draft, { isMinor }));
+      // The first-run welcome note on Profile goes away once the basics are saved.
+      endFoyerWelcome();
       await refreshProfile();
     },
     onSuccess: () => {

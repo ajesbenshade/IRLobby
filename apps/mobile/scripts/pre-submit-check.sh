@@ -48,18 +48,9 @@ for f in support-info.txt privacy-questionnaire.md reviewer-demo-account.md; do
 done
 
 step "Required App Store screenshots"
-for f in \
-  01-vibe-quiz.png \
-  02-discover-swipe.png \
-  03-match-celebration.png \
-  04-chat.png \
-  05-profile-or-results.png; do
-  if [ -s "$MOBILE/store/screenshots/$f" ]; then
-    ok "$f"
-  else
-    bad "missing $f"
-  fi
-done
+# The IRLobby set was removed for The Foyer; Webmaster supplies the Foyer set (see store/screenshots/README.md).
+shots=$(find "$MOBILE/store/screenshots" -maxdepth 1 -name '*.png' -size +0 | wc -l | xargs)
+if [ "$shots" -ge 3 ]; then ok "$shots screenshots"; else bad "only $shots screenshots (need at least 3 Foyer shots)"; fi
 
 step "Keywords ≤ 100 chars"
 kw=$(tr -d '\n' < "$MOBILE/store/metadata/keywords.txt" | wc -c | xargs)

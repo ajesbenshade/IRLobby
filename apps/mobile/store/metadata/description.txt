@@ -1,13 +1,12 @@
-IRLobby helps you meet people IRL.
+The Foyer is where your church family plans time together outside Sunday morning.
 
-Swipe on activities near you — rooftop hangs, game nights, hikes, or conversations. When another person also swipes right, you match and can chat to make plans.
+See the gatherings coming up at your church, say you're going, and bring your family along. Host a potluck, a game night, a work day or a walk, and choose who it's for.
 
-• 5-question vibe quiz that finds activities that match your energy
-• Match celebrations with confetti
-• Real-time chat to coordinate
-• Host your own events or join others
-• Works offline and syncs when you are online again
+• Upcoming gatherings from your church, with the place and time
+• RSVP for yourself and the people in your family
+• Host a gathering in a few taps, and approve guests if you want to
+• Chat with the people going to a gathering
+• Share photos from a gathering with everyone who was there
+• Friends, and simple privacy controls for what others can see
 
-For users who want real connections.
-
-Download IRLobby and turn swipes into plans.
+The Foyer is being tested with a few Mennonite churches right now.

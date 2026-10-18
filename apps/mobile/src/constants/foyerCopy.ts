@@ -681,7 +681,9 @@ export const DELETE_ACCOUNT_COPY = {
   deleteButton: 'Delete my account',
   keepButton: 'Keep my account',
   alertTitle: 'Delete your account?',
-  alertBody: "This can't be undone.",
+  /** Build 94: photos a member added to other people's gatherings go with the account. */
+  photosLine: 'Photos you added to gatherings will be deleted too.',
+  alertBody: "Photos you added to gatherings will be deleted too. This can't be undone.",
   alertCancel: 'Cancel',
   alertDelete: 'Delete',
   working: 'Deleting your account…',
@@ -691,4 +693,94 @@ export const DELETE_ACCOUNT_COPY = {
   doneTitle: 'Your account was deleted',
   doneBody: "Your data has been removed. You're welcome back any time.",
   close: 'Close',
+} as const;
+
+/** Discover filters and map in Foyer mode (beta readiness items 9 and 13). */
+export const DISCOVER_FILTER_COPY = {
+  title: 'Filter gatherings',
+  subtitle: 'Show gatherings between two dates.',
+  mapTitle: 'On the map',
+  mapSubtitle: 'Tap a pin to see that gathering.',
+} as const;
+
+export const discoverCountLabel = (count: number) => (count === 1 ? '1 gathering' : `${count} gatherings`);
+
+/** First run in Foyer mode: no legacy onboarding. Church step, then Profile basics with a welcome note. */
+export const WELCOME_COPY = {
+  title: 'Welcome to The Foyer',
+  body: 'Add your name, city and a photo so people at your church know who you are, then tap Save.',
+} as const;
+
+/** Church step (first run) and the shared church picker. */
+export const CHURCH_STEP_COPY = {
+  title: 'Which church do you attend?',
+  body: "We'll show you gatherings and people from your church. You can change this later in Profile.",
+  searchPlaceholder: 'Search churches',
+  notListed: "My church isn't listed",
+  notListedBody:
+    "The Foyer is being tested with a few Mennonite churches right now. Email support@irlobby.com and we'll look at adding yours.",
+  ok: 'OK',
+  continue: 'Continue',
+  skip: 'Skip for now',
+  noResults: 'No churches match that search.',
+  loadFailed: "Couldn't load churches. Check your connection and try again.",
+  saveFailed: "Couldn't save your church. Please try again.",
+} as const;
+
+/** `Pick your church` card for members with no church (Discover and Profile). */
+export const PICK_CHURCH_COPY = {
+  title: 'Pick your church',
+  body: 'See gatherings from your congregation.',
+  choose: 'Choose church',
+  notNow: 'Not now',
+  sheetTitle: 'Which church do you attend?',
+  save: 'Save',
+  cancel: 'Cancel',
+} as const;
+
+/** Help, feedback and crash copy for the build 94 beta. */
+export const SUPPORT_COPY = {
+  email: 'support@irlobby.com',
+  helpSubject: 'The Foyer help',
+  feedbackSubject: 'The Foyer beta feedback',
+  feedbackRow: 'Send feedback',
+  feedbackRowSub: 'Email the team at support@irlobby.com',
+  helpCardTitle: 'Help',
+  mailUnavailable: "Couldn't open your email app. Write to support@irlobby.com.",
+  crashTitle: 'Something went wrong',
+  crashBody: 'Close and reopen The Foyer. If it keeps happening, tap Send feedback in Settings.',
+  crashRetry: 'Try again',
+  settingsHeroSubtitle: 'Notifications, feedback and account actions live here, separate from your profile.',
+  settingsSaveError: "Something didn't save. Try again.",
+} as const;
+
+/** Weekly host limit (frames 246-247; Backend PR #49). Dates are local time with the time of day. */
+export const HOST_LIMIT_COPY = {
+  banner: (when: string) => `You can host one gathering a week. Your next one opens ${when}.`,
+  sheetTitle: 'One gathering a week',
+  sheetBody: (when: string) =>
+    `Members can host one gathering each week. You can start your next one on ${when}, or ask a church admin to post it for you.`,
+  sheetBodyNoDate:
+    'Members can host one gathering each week. You can start your next one next week, or ask a church admin to post it for you.',
+  ok: 'OK',
+} as const;
+
+/** Photo upload limits (frames 248-249; Backend PR #49: 429 `throttled`, 400 `event_photo_limit_reached`). */
+export const PHOTO_LIMIT_COPY = {
+  throttledTitle: 'Too many photos at once',
+  throttled: (perHour: number, minutes: number) =>
+    `You can add up to ${perHour} photos an hour. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+  throttledNoTime: (perHour: number) => `You can add up to ${perHour} photos an hour. Try again later.`,
+  fullTitle: 'This gathering is full of photos',
+  full: (limit: number) => `Each gathering can hold ${limit} photos. Remove one to add another.`,
+  ok: 'OK',
+} as const;
+
+/** Delete gathering confirmation (frames 250 and delete-gathering-sheet-limited). Delete only, never cancel. */
+export const DELETE_GATHERING_COPY = {
+  title: 'Delete this gathering?',
+  body: "This deletes the gathering and every photo in it, including photos guests added. This can't be undone. If you want to keep any photos, save them first.",
+  limitedLine: "Deleting it won't let you host another gathering this week.",
+  confirm: 'Delete gathering',
+  keep: 'Keep gathering',
 } as const;

@@ -46,6 +46,8 @@ export const auth = {
     eyebrow: brand.name,
     title: "Let's get you in.",
     subtitle: 'Two minutes. Then you’re out the door.',
+    /** Foyer mode (beta readiness item 12). */
+    foyerSubtitle: 'Join your church on The Foyer.',
     primaryCta: 'Create account',
     twitterCta: 'Continue with X',
     googleCta: 'Continue with Google',

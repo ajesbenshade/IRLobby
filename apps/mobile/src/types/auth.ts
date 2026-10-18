@@ -60,6 +60,10 @@ export interface AuthUser {
   church?: { id: number; name: string; is_verified?: boolean; latitude?: number | string | null; longitude?: number | string | null } | null;
   churchId?: number | null;
   isChurchAdmin?: boolean;
+  /** Not subject to the weekly host limit (server decides; e.g. church admins). Missing = false. */
+  eventLimitExempt?: boolean;
+  /** ISO time the member can host again; null = can host now (or the server doesn't send it yet). */
+  nextHostAvailableAt?: string | null;
   householdChildCount?: number;
   profileVisibility?: 'only_me' | 'church' | 'friends' | 'public';
   phone?: string | null;

@@ -31,6 +31,7 @@ jest.mock('../AuthNavigator', () => ({ AuthNavigator: () => require('react').cre
 jest.mock('../MainNavigator', () => ({ MainNavigator: () => require('react').createElement(require('react-native').Text, null, 'MAIN') }));
 jest.mock('@screens/main/OnboardingScreen', () => ({ OnboardingScreen: () => require('react').createElement(require('react-native').Text, null, 'ONBOARDING') }));
 jest.mock('@screens/auth/AccountDeletedScreen', () => ({ AccountDeletedScreen: () => require('react').createElement(require('react-native').Text, null, 'DELETED') }));
+jest.mock('@screens/auth/FoyerChurchStepScreen', () => ({ FoyerChurchStepScreen: () => require('react').createElement(require('react-native').Text, null, 'CHURCH STEP') }));
 jest.mock('@screens/auth/BirthDateGateScreen', () => ({ BirthDateGateScreen: () => require('react').createElement(require('react-native').Text, null, 'BIRTH GATE') }));
 
 const signedIn = (extra: Record<string, unknown> = {}) => ({

@@ -51,6 +51,8 @@ import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { fetchActivity } from '@services/activityService';
 import { fetchAttendees, fetchWhosComing, postRsvp, uploadGatheringPhoto } from '@services/foyerService';
+import { photoLimitNotice, type PhotoLimitNotice } from '@foyer/hostLimit';
+import { NoticeSheet } from '@components/foyer/NoticeSheet';
 import { submitReport } from '@services/reportAdapter';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -85,6 +87,7 @@ export const GatheringDetailScreen = () => {
     queryFn: () => fetchActivity(activityId),
   });
 
+  const [photoNotice, setPhotoNotice] = useState<PhotoLimitNotice | null>(null);
   const uploadMutation = useMutation({
     mutationFn: async (uris: string[]) => {
       // One at a time so a failure keeps the photos already added.
@@ -98,7 +101,17 @@ export const GatheringDetailScreen = () => {
       setPickedUris([]);
       await queryClient.invalidateQueries({ queryKey: ['foyer-gathering', activityId] });
     },
-    onError: (uploadError) => setError(getErrorMessage(uploadError, COMMON_COPY.photosAddFailed)),
+    onError: async (uploadError) => {
+      // Throttle (429) and 50-photo cap (400) get plain copy; the photos added before it stay.
+      const notice = photoLimitNotice(uploadError);
+      if (notice) {
+        setError(null);
+        setPhotoNotice(notice);
+      } else {
+        setError(getErrorMessage(uploadError, COMMON_COPY.photosAddFailed));
+      }
+      await queryClient.invalidateQueries({ queryKey: ['foyer-gathering', activityId] });
+    },
   });
 
   const activity = activityQuery.data;
@@ -543,6 +556,13 @@ export const GatheringDetailScreen = () => {
             setCancelledToast(true);
           }
         }}
+      />
+      <NoticeSheet
+        visible={photoNotice != null}
+        title={photoNotice?.title ?? ''}
+        body={photoNotice?.body ?? ''}
+        onClose={() => setPhotoNotice(null)}
+        testID="photo-limit"
       />
       <CancelGatheringSheet
         visible={cancelGatheringOpen}

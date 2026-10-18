@@ -9,6 +9,9 @@
 
 let sentryInitialized = false;
 
+/** True once Sentry.init ran here, so analytics doesn't initialize the SDK a second time. */
+export const isMonitoringInitialized = () => sentryInitialized;
+
 type SentryModule = {
   init: (options: Record<string, unknown>) => void;
   captureException: (error: unknown, context?: Record<string, unknown>) => void;

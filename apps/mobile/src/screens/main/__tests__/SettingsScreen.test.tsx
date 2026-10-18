@@ -90,22 +90,40 @@ describe('SettingsScreen consolidation (option A)', () => {
     expect('LOCATION_TOGGLE_HELPER' in SettingsModule).toBe(false);
   });
 
-  it('keeps header+hero, Account, Notifications, Preferences, Account actions in that order with the reworded subtitles', async () => {
+  it('Foyer (settings-v3): header+hero, Account, Notifications, Help (Send feedback), Account actions in that order; no Preferences card', async () => {
     renderScreen();
     await screen.findByText('Notifications');
 
     expect(screen.getByText('Control how the app reaches you and how your account behaves day to day.')).toBeTruthy();
-    expect(
-      screen.getByText('Notification delivery and distance preferences update here without changing the rest of your profile flow.'),
-    ).toBeTruthy();
+    expect(screen.getByText('Notifications, feedback and account actions live here, separate from your profile.')).toBeTruthy();
+    expect(screen.getByText('Email the team at support@irlobby.com')).toBeTruthy();
 
     const text = JSON.stringify(screen.toJSON());
-    const order = ['Account controls', 'Your account on The Foyer', 'Decide what earns your attention', 'Tune the app to your defaults', 'Export or sign out'];
+    const order = ['Account controls', 'Your account on The Foyer', 'Decide what earns your attention', 'Send feedback', 'Export or sign out'];
     const positions = order.map((label) => text.indexOf(label));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
-    for (const row of ['Theme', 'Distance unit', 'Maximum distance', 'Retake vibe quiz', 'Export my data', 'Sign out']) {
+    for (const row of ['Send feedback', 'Export my data', 'Sign out']) {
       expect(screen.getByText(row)).toBeTruthy();
+    }
+    for (const gone of ['New matches', 'Theme', 'Distance unit', 'Maximum distance', 'Retake vibe quiz', 'Tune the app to your defaults']) {
+      expect(screen.queryByText(gone)).toBeNull();
+    }
+    expect(text).not.toMatch(/vibe|matches|distance|Preferences/i);
+  });
+
+  it('legacy irlobby mode keeps its Preferences rows and New matches', async () => {
+    const previous = process.env.EXPO_PUBLIC_APP_MODE;
+    process.env.EXPO_PUBLIC_APP_MODE = 'irlobby';
+    try {
+      renderScreen();
+      await screen.findByText('Notifications');
+      for (const row of ['New matches', 'Theme', 'Distance unit', 'Maximum distance', 'Retake vibe quiz']) {
+        expect(screen.getByText(row)).toBeTruthy();
+      }
+      expect(screen.queryByText('Send feedback')).toBeNull();
+    } finally {
+      process.env.EXPO_PUBLIC_APP_MODE = previous;
     }
   });
 
@@ -113,13 +131,11 @@ describe('SettingsScreen consolidation (option A)', () => {
     renderScreen();
     await screen.findByText('Notifications');
     await waitFor(() => expect(api.get).toHaveBeenCalled());
+    // Wait for the stored settings to load (the pill goes from Syncing to Live).
+    await screen.findByText('Live');
 
     await act(async () => {
-      fireEvent.press(screen.getByText('Retake vibe quiz'));
-    });
-    // Theme cycles light -> dark.
-    await act(async () => {
-      fireEvent.press(screen.getByText('Light'));
+      fireEvent(screen.getByLabelText('Messages'), 'valueChange', false);
     });
 
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
@@ -127,7 +143,9 @@ describe('SettingsScreen consolidation (option A)', () => {
     expect(body.preferences.privacy).toEqual(storedPrivacy);
     expect(body.preferences.privacy.showAge).toBe(false);
     expect(body.preferences.interests).toEqual(['hiking']);
-    expect(body.preferences.theme).toBe('dark');
+    // Hidden preferences are still carried through untouched.
+    expect(body.preferences.theme).toBe('light');
+    expect(body.preferences.notifications.messages).toBe(false);
   });
 
   it('never writes privacy defaults: an account with no stored privacy blob gets none', async () => {
@@ -149,7 +167,7 @@ describe('SettingsScreen consolidation (option A)', () => {
     (api.patch as jest.Mock).mockReturnValue(new Promise<void>((resolve) => (finish = () => resolve())));
     renderScreen();
     await screen.findByText('Notifications');
-    const titles = ['Push notifications', 'Email notifications', 'New matches', 'Activity reminders', 'Messages'];
+    const titles = ['Push notifications', 'Email notifications', 'Activity reminders', 'Messages'];
     for (const title of titles) {
       expect(screen.getByLabelText(title).props.disabled).toBeFalsy();
     }
@@ -178,5 +196,42 @@ describe('SettingsScreen consolidation (option A)', () => {
     });
     await waitFor(() => expect(screen.getByLabelText('Messages').props.disabled).toBeFalsy());
     expect(opacityOf('Messages')).toBeUndefined();
+  });
+});
+
+describe('SettingsScreen beta: Send feedback and plain error copy', () => {
+  beforeEach(() => {
+    (api.get as jest.Mock).mockResolvedValue({ data: { preferences: {} } });
+    (api.patch as jest.Mock).mockReset();
+  });
+
+  it('Send feedback opens a mailto to support@irlobby.com with the beta subject and version lines', async () => {
+    const { Linking } = require('react-native');
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    renderScreen();
+    await screen.findByText('Notifications');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('settings-send-feedback'));
+    });
+    expect(openURL).toHaveBeenCalledTimes(1);
+    const url = openURL.mock.calls[0][0] as string;
+    expect(url.startsWith('mailto:support@irlobby.com?subject=The%20Foyer%20beta%20feedback&body=')).toBe(true);
+    const body = decodeURIComponent(url.split('body=')[1]);
+    expect(body).toMatch(/The Foyer \S+/);
+    expect(body).toMatch(/(iOS|Android|ios|android)/);
+    expect(body).not.toMatch(/null|undefined/);
+    openURL.mockRestore();
+  });
+
+  it('a failed save shows only "Something didn\'t save. Try again." (no raw error, no dev-speak)', async () => {
+    (api.patch as jest.Mock).mockRejectedValue(new Error('Request failed with status code 500'));
+    renderScreen();
+    await screen.findByText('Notifications');
+    await act(async () => {
+      fireEvent(screen.getByLabelText('Messages'), 'valueChange', false);
+    });
+    expect(await screen.findByText("Something didn't save. Try again.")).toBeTruthy();
+    const text = JSON.stringify(screen.toJSON());
+    expect(text).not.toMatch(/status code 500|need another pass|underlying settings logic/);
   });
 });

@@ -101,6 +101,10 @@ const navigateFromPushData = (
   }
 
   if (screen === 'Chat' || screen === 'new_message' || screen === 'new_match') {
+    if (isFoyerMode()) {
+      // No legacy matches chat in Foyer mode; a push without a gathering or friend chat just opens the app.
+      return;
+    }
     navigation.navigate('Main', {
       screen: 'Tabs',
       params: { screen: 'Chat' },

@@ -225,6 +225,12 @@ const normalizeUser = (
         : null,
     churchId: asNumberOrNull(userRecord.churchId ?? userRecord.church_id),
     isChurchAdmin: Boolean(userRecord.isChurchAdmin ?? userRecord.is_church_admin),
+    // Weekly host limit (Backend PR #49 "Beta limits"). Older servers omit these: no limit.
+    eventLimitExempt: Boolean(userRecord.eventLimitExempt ?? userRecord.event_limit_exempt),
+    nextHostAvailableAt: (() => {
+      const raw = userRecord.nextHostAvailableAt ?? userRecord.next_host_available_at;
+      return typeof raw === 'string' && raw.trim() ? raw : null;
+    })(),
     householdChildCount: asNumberOrNull(userRecord.householdChildCount ?? userRecord.household_child_count) ?? 0,
     profileVisibility: normalizeVisibility(userRecord.profileVisibility ?? userRecord.profile_visibility),
     phone: typeof userRecord.phone === 'string' ? userRecord.phone : null,

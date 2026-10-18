@@ -1,9 +1,11 @@
-Support URL: https://irlobby.com/support
-Marketing URL: https://irlobby.com
-Privacy Policy URL: https://irlobby.com/privacy
-Age Rating: 17+
-Primary Category: Social Networking
-Secondary Category: Lifestyle
+# Draft for the build 94 beta. Webmaster owns the final store text and URLs.
+Support email: support@irlobby.com
+Support URL: TBD (Webmaster: a working Foyer support page)
+Marketing URL: TBD (Webmaster)
+Privacy Policy URL: TBD (Webmaster: the published Foyer privacy policy)
+Age Rating: 13+ (sign-up requires age 13 or older)
+Primary Category: Lifestyle
+Secondary Category: Social Networking
 Primary Language: English (US)
 Bundle ID: com.irlobby.app
 ASC App ID: 6759202702

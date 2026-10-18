@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -15,6 +15,9 @@ import { BuyTicketScreen } from '@screens/main/tickets/BuyTicketScreen';
 import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { isFoyerMode } from '@constants/appMode';
+import { isFoyerWelcomeActive } from '@foyer/firstRun';
+import { useHostLimit } from '@foyer/useHostLimit';
+import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { APPROVAL_COPY, GATHERING_CHAT_COPY } from '@constants/foyerCopy';
 import { DirectChatScreen } from '@screens/main/DirectChatScreen';
 import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
@@ -48,6 +51,9 @@ import {
 import type { MainStackParamList, MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+/** Host tab icon and label while the weekly limit is in effect (frame 246). */
+export const HOST_TAB_DISABLED_COLOR = '#c9c3bf';
 const Stack = createNativeStackNavigator<MainStackParamList>();
 const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
@@ -117,9 +123,19 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
 
 const MainTabs = () => {
   const tabBar = useTabBarLayout();
+  // Right after the Foyer church step the app opens on Profile for the basics. Read once on mount.
+  const [initialTab] = useState<keyof MainTabParamList>(() => (isFoyerWelcomeActive() ? 'Profile' : 'Discover'));
+  // Weekly host limit (frames 246-247): Host tab drawn disabled; tapping it opens the sheet instead of the form.
+  const hostLimit = useHostLimit();
+  const hostLocked = isFoyerMode() && hostLimit.blocked;
+  const [limitSheetOpen, setLimitSheetOpen] = useState(false);
+  const tintFor = (routeName: string, color: string) =>
+    hostLocked && routeName === 'Create' ? HOST_TAB_DISABLED_COLOR : color;
 
   return (
+  <>
   <Tab.Navigator
+    initialRouteName={initialTab}
     screenOptions={({ route }) => ({
       headerShown: false,
       sceneStyle: { backgroundColor: appColors.background },
@@ -156,7 +172,7 @@ const MainTabs = () => {
       },
       tabBarIcon: ({ color, focused }) => (
         <TabIcon
-          color={color}
+          color={tintFor(route.name, color)}
           size={TAB_ICON_SIZE}
           focused={focused}
           routeName={route.name as keyof MainTabParamList}
@@ -166,7 +182,7 @@ const MainTabs = () => {
       tabBarLabel: ({ color, children }) => (
         <Text
           maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE}
-          style={[styles.tabLabel, { color }]}
+          style={[styles.tabLabel, { color: tintFor(route.name, color) }]}
         >
           {children}
         </Text>
@@ -177,7 +193,24 @@ const MainTabs = () => {
   >
     <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
-    <Tab.Screen name="Create" component={CreateActivityScreen} options={{ title: 'Host' }} listeners={{ tabPress: () => { void safeImpactHaptic('medium'); } }} />
+    <Tab.Screen
+      name="Create"
+      component={CreateActivityScreen}
+      options={{
+        title: 'Host',
+        tabBarAccessibilityLabel: hostLocked ? 'Host, unavailable until your next gathering opens' : 'Host',
+      }}
+      listeners={{
+        tabPress: (event) => {
+          if (hostLocked) {
+            event.preventDefault();
+            setLimitSheetOpen(true);
+            return;
+          }
+          void safeImpactHaptic('medium');
+        },
+      }}
+    />
     <Tab.Screen
       name="Chat"
       component={ChatScreen}
@@ -189,6 +222,12 @@ const MainTabs = () => {
     />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
+  <EventLimitSheet
+    visible={limitSheetOpen && hostLocked}
+    nextAllowedAt={hostLimit.blocked ? hostLimit.opensAt : null}
+    onClose={() => setLimitSheetOpen(false)}
+  />
+  </>
   );
 };
 

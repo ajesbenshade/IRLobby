@@ -137,6 +137,27 @@ describe('Discover swipe card (Foyer)', () => {
     expect(screen.queryByText(/ticket|wallet|stripe|gift|giving|fee/i)).toBeNull();
   });
 
+  it('Foyer: no Pings button, no vibe-quiz card, no legacy deck filters (km, Everyone/Friends, tags) and a plain count', async () => {
+    renderScreen();
+    expect(await screen.findByText(youthBonfire.title)).toBeTruthy();
+    expect(screen.queryByText('Pings')).toBeNull();
+    expect(screen.queryByText(/vibe quiz|Want a feed that actually fits/i)).toBeNull();
+    expect(screen.getByText('2 gatherings')).toBeTruthy();
+    expect(screen.queryByText(/nearby/)).toBeNull();
+    fireEvent.press(screen.getByText('Filters'));
+    expect(screen.getByText('Filter gatherings')).toBeTruthy();
+    for (const legacy of ['Tune the deck', 'Nearby', '10 km', '25 km', 'Everyone', 'Friends', 'Category', 'Neighborhood', 'Tags']) {
+      expect(screen.queryByText(legacy)).toBeNull();
+    }
+    expect(screen.queryByPlaceholderText('Low-key, rooftop, hike')).toBeNull();
+    expect(screen.getByText('Starts after')).toBeTruthy();
+  });
+
+  it('Foyer: Pick your church card shows above the deck when the member has no church', async () => {
+    renderScreen();
+    expect(await screen.findByText('Pick your church')).toBeTruthy();
+  });
+
   it('Pass moves to the next gathering and records nothing', async () => {
     renderScreen();
     await screen.findByText(youthBonfire.title);

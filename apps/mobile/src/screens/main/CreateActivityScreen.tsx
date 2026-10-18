@@ -40,7 +40,7 @@ import { appColors, appTypography, radii, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 import { imageAssetToUploadDataUrl } from '@utils/profileImages';
 
-import { FoyerHostForm } from './FoyerHostForm';
+import { FoyerHostEntry } from './FoyerHostLimit';
 
 import {
   createEventImagePayload,
@@ -133,7 +133,8 @@ type CreateActivityScreenProps = {
 
 export const CreateActivityScreen = (props: CreateActivityScreenProps = {}) => {
   if (isFoyerMode()) {
-    return <FoyerHostForm activityId={props.activityId} />;
+    // Weekly host limit gate in front of the Foyer host form (editing is never gated).
+    return <FoyerHostEntry activityId={props.activityId} />;
   }
   return <CreateActivityScreenLegacy {...props} />;
 };

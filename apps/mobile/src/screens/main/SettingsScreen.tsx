@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import { Share, StyleSheet } from 'react-native';
+import { Alert, Share, StyleSheet } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
 import { API_ROUTES } from '@shared/schema';
 
@@ -18,7 +18,10 @@ import {
 import { Switch } from '@components/foyer/Switch';
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
+import { isFoyerMode } from '@constants/appMode';
 import { account as accountCopy } from '@constants/copy';
+import { SUPPORT_COPY } from '@constants/foyerCopy';
+import { feedbackMailto, openSupportEmail } from '@foyer/support';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
 import { api } from '@services/apiClient';
@@ -112,6 +115,7 @@ const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice
 
 export const SettingsScreen = () => {
   const { signOut } = useAuth();
+  const foyerMode = isFoyerMode();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
@@ -178,6 +182,12 @@ export const SettingsScreen = () => {
     updateMutation.mutate(next);
   };
 
+  const sendFeedback = async () => {
+    if (!(await openSupportEmail(feedbackMailto()))) {
+      Alert.alert(SUPPORT_COPY.mailUnavailable);
+    }
+  };
+
   const handleExportData = async () => {
     try {
       const payload = await exportDataMutation.mutateAsync();
@@ -221,7 +231,9 @@ export const SettingsScreen = () => {
           Keep the account private where it matters and active where it helps.
         </Text>
         <Text style={styles.heroSubtitle}>
-          Notification delivery and distance preferences update here without changing the rest of your profile flow.
+          {foyerMode
+            ? SUPPORT_COPY.settingsHeroSubtitle
+            : 'Notification delivery and distance preferences update here without changing the rest of your profile flow.'}
         </Text>
       </PanelCard>
 
@@ -243,16 +255,25 @@ export const SettingsScreen = () => {
 
       {messages.length > 0 ? (
         <PanelCard tone="warm" style={styles.feedbackCard}>
-          <SectionIntro
-            eyebrow="Attention"
-            title="Some account actions need another pass"
-            subtitle="The underlying settings logic is still intact; use retry or repeat the action after the current request settles."
-          />
-          {messages.map((message) => (
-            <HelperText key={message} type="error" visible>
-              {message}
-            </HelperText>
-          ))}
+          {foyerMode ? (
+            // Plain copy for members; the raw server/network messages stay out of the Foyer UI.
+            <Text accessibilityRole="alert" style={styles.plainError} testID="settings-save-error">
+              {SUPPORT_COPY.settingsSaveError}
+            </Text>
+          ) : (
+            <>
+              <SectionIntro
+                eyebrow="Attention"
+                title="Some account actions need another pass"
+                subtitle="The underlying settings logic is still intact; use retry or repeat the action after the current request settles."
+              />
+              {messages.map((message) => (
+                <HelperText key={message} type="error" visible>
+                  {message}
+                </HelperText>
+              ))}
+            </>
+          )}
           <AppButton variant="outline" onPress={() => void refetch()} loading={isRefetching} disabled={isBusy}>
             {isRefetching ? 'Retrying...' : 'Try again'}
           </AppButton>
@@ -299,19 +320,22 @@ export const SettingsScreen = () => {
             />
           }
         />
-        <DetailRow
-          title="New matches"
-          dimmed={isBusy}
-          subtitle="Get alerted when discovery turns into a connection."
-          accessory={
-            <Switch
-              accessibilityLabel="New matches"
-              value={settings.notifications.newMatches}
-              onValueChange={() => toggleNotification('newMatches')}
-              disabled={isBusy}
-            />
-          }
-        />
+        {/* Matchmaking alerts are legacy-only; Foyer has no matches. The stored value is kept as is. */}
+        {foyerMode ? null : (
+          <DetailRow
+            title="New matches"
+            dimmed={isBusy}
+            subtitle="Get alerted when discovery turns into a connection."
+            accessory={
+              <Switch
+                accessibilityLabel="New matches"
+                value={settings.notifications.newMatches}
+                onValueChange={() => toggleNotification('newMatches')}
+                disabled={isBusy}
+              />
+            }
+          />
+        )}
         <DetailRow
           title="Activity reminders"
           dimmed={isBusy}
@@ -340,80 +364,95 @@ export const SettingsScreen = () => {
         />
       </PanelCard>
 
-      <PanelCard>
-        <SectionIntro
-          eyebrow="Preferences"
-          title="Tune the app to your defaults"
-          subtitle="These values affect how the app feels in regular use without changing your public profile."
-        />
-        <DetailRow
-          title="Theme"
-          subtitle="Switch between light, dark, and system-following display behavior."
-          accessory={
-            <AppButton
-              variant="outline"
-              compact
-              onPress={() => {
-                const sequence: PreferenceSettings['theme'][] = ['light', 'dark', 'system'];
-                const currentIndex = sequence.indexOf(settings.preferences.theme);
-                const nextTheme = sequence[(currentIndex + 1) % sequence.length];
-                updatePreference('theme', nextTheme);
-              }}
-              disabled={isBusy}
-            >
-              {titleCase(settings.preferences.theme)}
-            </AppButton>
-          }
-        />
-        <DetailRow
-          title="Distance unit"
-          subtitle="Choose whether location radius values show in miles or kilometers."
-          accessory={
-            <AppButton
-              variant="outline"
-              compact
-              onPress={() => {
-                const nextDistanceUnit =
-                  settings.preferences.distanceUnit === 'miles' ? 'kilometers' : 'miles';
-                updatePreference('distanceUnit', nextDistanceUnit);
-              }}
-              disabled={isBusy}
-            >
-              {titleCase(settings.preferences.distanceUnit)}
-            </AppButton>
-          }
-        />
-        <DetailRow
-          title="Maximum distance"
-          subtitle="Increase the discovery radius in 5-mile increments up to 100."
-          accessory={
-            <AppButton
-              variant="outline"
-              compact
-              onPress={() => {
-                const nextDistance = Math.min(100, settings.preferences.maxDistance + 5);
-                updatePreference('maxDistance', nextDistance);
-              }}
-              disabled={isBusy}
-            >
-              {settings.preferences.maxDistance} {settings.preferences.distanceUnit}
-            </AppButton>
-          }
-        />
-        <DetailRow
-          title="Retake vibe quiz"
-          subtitle="Refresh your personalized feed with a quick 60-second vibe check."
-          accessory={
-            <AppButton
-              variant="outline"
-              compact
-              onPress={() => navigation.navigate('VibeQuizModal')}
-            >
-              Retake
-            </AppButton>
-          }
-        />
-      </PanelCard>
+      {foyerMode ? (
+        // Foyer: no Theme (the app is light only), no distance rows (no nearby discovery), no vibe quiz.
+        // Stored preference values are still carried through untouched by toPayload.
+        <PanelCard>
+          <SectionIntro eyebrow={SUPPORT_COPY.helpCardTitle} />
+          <DetailRow
+            title={SUPPORT_COPY.feedbackRow}
+            subtitle={SUPPORT_COPY.feedbackRowSub}
+            onPress={() => void sendFeedback()}
+            testID="settings-send-feedback"
+            accessory={<MaterialCommunityIcons name="chevron-right" size={22} color={appColors.softInk} />}
+          />
+        </PanelCard>
+      ) : (
+        <PanelCard>
+          <SectionIntro
+            eyebrow="Preferences"
+            title="Tune the app to your defaults"
+            subtitle="These values affect how the app feels in regular use without changing your public profile."
+          />
+          <DetailRow
+            title="Theme"
+            subtitle="Switch between light, dark, and system-following display behavior."
+            accessory={
+              <AppButton
+                variant="outline"
+                compact
+                onPress={() => {
+                  const sequence: PreferenceSettings['theme'][] = ['light', 'dark', 'system'];
+                  const currentIndex = sequence.indexOf(settings.preferences.theme);
+                  const nextTheme = sequence[(currentIndex + 1) % sequence.length];
+                  updatePreference('theme', nextTheme);
+                }}
+                disabled={isBusy}
+              >
+                {titleCase(settings.preferences.theme)}
+              </AppButton>
+            }
+          />
+          <DetailRow
+            title="Distance unit"
+            subtitle="Choose whether location radius values show in miles or kilometers."
+            accessory={
+              <AppButton
+                variant="outline"
+                compact
+                onPress={() => {
+                  const nextDistanceUnit =
+                    settings.preferences.distanceUnit === 'miles' ? 'kilometers' : 'miles';
+                  updatePreference('distanceUnit', nextDistanceUnit);
+                }}
+                disabled={isBusy}
+              >
+                {titleCase(settings.preferences.distanceUnit)}
+              </AppButton>
+            }
+          />
+          <DetailRow
+            title="Maximum distance"
+            subtitle="Increase the discovery radius in 5-mile increments up to 100."
+            accessory={
+              <AppButton
+                variant="outline"
+                compact
+                onPress={() => {
+                  const nextDistance = Math.min(100, settings.preferences.maxDistance + 5);
+                  updatePreference('maxDistance', nextDistance);
+                }}
+                disabled={isBusy}
+              >
+                {settings.preferences.maxDistance} {settings.preferences.distanceUnit}
+              </AppButton>
+            }
+          />
+          <DetailRow
+            title="Retake vibe quiz"
+            subtitle="Refresh your personalized feed with a quick 60-second vibe check."
+            accessory={
+              <AppButton
+                variant="outline"
+                compact
+                onPress={() => navigation.navigate('VibeQuizModal')}
+              >
+                Retake
+              </AppButton>
+            }
+          />
+        </PanelCard>
+      )}
 
       <PanelCard tone="dark" style={styles.actionsCard}>
         <SectionIntro
@@ -456,6 +495,12 @@ const styles = StyleSheet.create({
   },
   feedbackCard: {
     gap: spacing.sm,
+  },
+  plainError: {
+    color: '#8a0a1f',
+    fontWeight: '700',
+    fontSize: 15,
+    lineHeight: 22,
   },
   loadingText: {
     color: appColors.mutedInk,

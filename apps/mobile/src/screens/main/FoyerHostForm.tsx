@@ -32,7 +32,9 @@ import {
 } from '@foyer/dates';
 import { churchCenterOf } from '@foyer/mapLocation';
 import { compressGatheringPhoto } from '@foyer/photos';
-import { APPROVAL_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, COMMON_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { parseEventLimitError, photoLimitNotice, type PhotoLimitNotice } from '@foyer/hostLimit';
+import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { parseTurnOffFallback } from '@foyer/approval';
 import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
 import {
@@ -56,7 +58,8 @@ type FoyerHostFormProps = {
 
 export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const [limitSheet, setLimitSheet] = useState<{ nextAllowedAt: Date | null } | null>(null);
   // Host is a tab (the floating bar covers the bottom); Edit is a stack screen with no bar.
   const tabBottomPadding = useTabScreenBottomPadding();
   const isEditing = Boolean(activityId);
@@ -175,16 +178,38 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       const saved = isEditing && activityId
         ? await updateActivity(activityId, payload as never)
         : await createActivity(payload as never);
+      let photoProblem: PhotoLimitNotice | null = null;
       if (photoUri) {
-        const compressed = await compressGatheringPhoto(photoUri);
-        await uploadGatheringPhoto(saved.id, compressed);
+        try {
+          const compressed = await compressGatheringPhoto(photoUri);
+          await uploadGatheringPhoto(saved.id, compressed);
+        } catch (photoError) {
+          // The gathering is already saved: never leave the form up (a second Post would make a duplicate).
+          const notice = photoLimitNotice(photoError);
+          photoProblem = notice ?? { title: COMMON_COPY.photosAddFailed, body: '' };
+        }
       }
-      return saved;
+      return { saved, photoProblem };
     },
-    onSuccess: () => {
+    onSuccess: ({ photoProblem }) => {
+      if (!isEditing) {
+        // Picks up the new next_host_available_at so the Host tab shows the weekly limit.
+        void refreshProfile();
+      }
       navigation.navigate('Tabs', { screen: 'Activity' });
+      if (photoProblem) {
+        // The form is closing, so a system alert carries the photo-limit copy.
+        Alert.alert(photoProblem.title, photoProblem.body || undefined);
+      }
     },
     onError: (saveError) => {
+      const limit = parseEventLimitError(saveError);
+      if (limit) {
+        setError(null);
+        setLimitSheet({ nextAllowedAt: limit.nextAllowedAt });
+        void refreshProfile();
+        return;
+      }
       const message = getErrorMessage(saveError, HOST_FORM_COPY.postFailed);
       // Server fallback for "turn off with waiting requests": same alert as the client check.
       const waiting = parseTurnOffFallback(message);
@@ -228,6 +253,11 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
 
   return (
     <View style={styles.root}>
+      <EventLimitSheet
+        visible={limitSheet != null}
+        nextAllowedAt={limitSheet?.nextAllowedAt ?? null}
+        onClose={() => setLimitSheet(null)}
+      />
       <SafeAreaView edges={['top']} style={styles.topBar}>
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.topButton}>
           <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Cancel</Text>

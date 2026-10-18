@@ -1,7 +1,6 @@
-Welcome to IRLobby.
+Welcome to The Foyer beta.
 
-• Vibe quiz onboarding — find your activity match in 60 seconds
-• Swipe on activities near you
-• Match celebrations with confetti when interest is mutual
-• Real-time chat to coordinate plans
-• Offline support — your last results stay available without a connection
+• Pick your church when you sign up
+• See upcoming gatherings and RSVP for your family
+• Host a gathering (members can host one a week)
+• Send feedback from Settings any time

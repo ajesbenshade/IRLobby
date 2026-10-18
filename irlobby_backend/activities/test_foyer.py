@@ -44,6 +44,17 @@ def _jpeg_upload(name="photo.jpg"):
     return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
+def _join_website_calendar_church(*users):
+    """Give members Franconia, whose website shows The Foyer calendar, as their church.
+
+    Members can list gatherings on the church calendar only for such a church.
+    """
+    church = Church.objects.get(name=FRANCONIA_CHURCH_NAME)
+    for user in users:
+        user.church = church
+        user.save(update_fields=["church"])
+
+
 def _activity(host, **overrides):
     payload = dict(
         host=host,
@@ -419,6 +430,7 @@ class FoyerCalendarTests(APITestCase):
             date_of_birth=_safe_birthdate(42),
             sex="female",
         )
+        _join_website_calendar_church(self.host)
         self.child = HouseholdDependent.objects.create(
             parent=self.host,
             name="SecretChild",
@@ -496,6 +508,7 @@ class FoyerChurchAndPhotoTests(APITestCase):
             date_of_birth=_safe_birthdate(40),
             sex="male",
         )
+        _join_website_calendar_church(self.member)
 
     def test_seeded_churches_and_unverified_create(self):
         self.assertTrue(
@@ -506,7 +519,7 @@ class FoyerChurchAndPhotoTests(APITestCase):
         found = self.client.get(reverse("church-list"), {"q": "blooming"})
         self.assertEqual(found.status_code, status.HTTP_200_OK)
         self.assertEqual(found.data[0]["name"], "Blooming Glen Mennonite Church")
-        self.assertEqual(set(found.data[0]), {"id", "name", "is_verified"})
+        self.assertEqual(set(found.data[0]), {"id", "name", "is_verified", "has_website_calendar"})
 
         created = self.client.post(reverse("church-list"), {"name": "Typed Chapel"}, format="json")
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)

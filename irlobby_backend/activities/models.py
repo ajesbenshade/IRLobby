@@ -25,6 +25,9 @@ SEEDED_CHURCH_NAMES = (
 class Church(models.Model):
     name = models.CharField(max_length=255)
     is_verified = models.BooleanField(default=False)
+    # True only when this church's website shows The Foyer public calendar feed. Members can
+    # list gatherings on the church calendar only for a church with this on.
+    has_website_calendar = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

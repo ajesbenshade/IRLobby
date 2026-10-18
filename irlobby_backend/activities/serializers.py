@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 
 from utils.client_urls import is_allowed_client_return_url
 from utils.media import validate_image_reference_list
@@ -17,6 +18,36 @@ from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church
 from .photos import absolute_photo_url, cover_photo_url
 from .public_calendar import build_calendar_links
 from .ticketing import ticketing_enabled
+
+
+class ChurchCalendarUnavailable(APIException):
+    """400 with a flat body: {"code": "church_calendar_unavailable", "detail": "..."}."""
+
+    status_code = 400
+    default_code = "church_calendar_unavailable"
+
+    def __init__(self):
+        super().__init__(
+            detail={
+                "code": "church_calendar_unavailable",
+                "detail": "Your church's website doesn't show The Foyer calendar yet.",
+            }
+        )
+
+
+def calendar_church(host_kind, host_church, host):
+    """The church whose website calendar would show the gathering.
+
+    ``host_church`` when set; a church-hosted gathering without one defaults to Franconia
+    (same as ``_apply_hosting_rules``); otherwise the host's own church from their profile.
+    """
+    if host_church is not None:
+        return host_church
+    if host_kind == "church":
+        return Church.objects.filter(name=FRANCONIA_CHURCH_NAME).first()
+    if host is None or not getattr(host, "is_authenticated", False):
+        return None
+    return host.church
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -199,6 +230,15 @@ class ActivitySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"host_kind": "Only church admins can host as the church."}
             )
+        if attrs.get("list_on_church_calendar") is True:
+            host = self.instance.host if self.instance is not None else user
+            church = calendar_church(
+                host_kind,
+                attrs.get("host_church", getattr(self.instance, "host_church", None)),
+                host,
+            )
+            if church is None or not church.has_website_calendar:
+                raise ChurchCalendarUnavailable()
 
         turning_off_approval = (
             self.instance is not None

@@ -19,7 +19,12 @@ from activities.public_calendar import (
     parse_from_param,
     public_calendar_queryset,
 )
-from activities.test_foyer import _activity, _jpeg_upload, _safe_birthdate
+from activities.test_foyer import (
+    _activity,
+    _join_website_calendar_church,
+    _jpeg_upload,
+    _safe_birthdate,
+)
 from users.models import User
 
 NY = ZoneInfo("America/New_York")
@@ -62,6 +67,7 @@ class PublicCalendarFeedTests(APITestCase):
             date_of_birth=_safe_birthdate(40),
             sex="female",
         )
+        _join_website_calendar_church(self.host)
         now = timezone.now()
         listed = dict(list_on_church_calendar=True, calendar_approved=True)
         self.upcoming = _activity(

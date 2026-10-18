@@ -76,6 +76,17 @@ def parse_from_param(value):
     return datetime.combine(day, time.min, tzinfo=ZoneInfo(CHURCH_TIMEZONE))
 
 
+def church_has_website_calendar_q() -> Q:
+    """The gathering's church shows The Foyer calendar on its website.
+
+    The church is ``host_church`` when set (church-hosted gatherings), otherwise the host's
+    own church from their profile.
+    """
+    return Q(host_church__has_website_calendar=True) | Q(
+        host_church__isnull=True, host__church__has_website_calendar=True
+    )
+
+
 def public_calendar_queryset(since=None):
     """Approved, listed, not-cancelled gatherings, oldest first.
 
@@ -83,7 +94,7 @@ def public_calendar_queryset(since=None):
     """
     qs = Activity.objects.filter(
         list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
-    )
+    ).filter(church_has_website_calendar_q())
     if since is not None:
         qs = qs.filter(Q(time__gte=since) | Q(end_time__gte=since))
     return (

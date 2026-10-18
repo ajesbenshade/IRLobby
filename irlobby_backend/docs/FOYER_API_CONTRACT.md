@@ -28,7 +28,7 @@ New fields:
 |---|---|---|
 | `date_of_birth` | yes | yes, aliases `birthDate`, `birth_date` |
 | `sex` | yes | `male` or `female` |
-| `church` | `{ "id", "name", "is_verified" }` or `null` | no |
+| `church` | `{ "id", "name", "is_verified", "has_website_calendar" }` or `null` | no |
 | `church_id` | id or `null` | yes, aliases `churchId`; `null` clears it |
 | `is_church_admin` | bool | no |
 | `event_limit_exempt` | bool: true for church admins, staff and the exempt list (see "Beta limits") | no |
@@ -44,7 +44,7 @@ Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aes
 `GET /api/churches/?q=` (auth) → JSON array, verified churches first, max 20.
 
 ```json
-{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true }
+{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true, "has_website_calendar": true }
 ```
 
 Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Perkasie, Deep Run East, and Finland Mennonite Church.
@@ -55,7 +55,7 @@ Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Per
 { "name": "Typed Chapel" }
 ```
 
-201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The response is only `id`, `name`, and `is_verified`.
+201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The response is only `id`, `name`, `is_verified`, and `has_website_calendar` (false for new churches).
 
 ## Household
 
@@ -97,6 +97,14 @@ New request fields (snake_case; camelCase aliases accepted):
 | `list_on_church_calendar` | bool, default false |
 | `host_kind` | `person` (default) or `church` |
 | `host_church_id` | optional; church events default to Franconia Mennonite Church |
+
+**Website calendar gate.** Each church has `has_website_calendar` (bool), which is true only when that church's website shows The Foyer calendar. At launch only Franconia Mennonite Church has it: a migration matches churches by a name containing "Franconia". Sending `list_on_church_calendar: true` on create or update is rejected unless the gathering's church has the flag. The gathering's church is `host_church` when set. Church-hosted gatherings without one default to Franconia. Otherwise it is the host's own profile church. The rejection is **400** with a flat body:
+
+```json
+{ "code": "church_calendar_unavailable", "detail": "Your church's website doesn't show The Foyer calendar yet." }
+```
+
+Edits that don't send `list_on_church_calendar: true` are not checked. The public calendar feed (`/api/public/calendar` and the `.ics`) shows only gatherings whose church (same rule) has `has_website_calendar`. `has_website_calendar` is on every church object: `GET/POST /api/churches/` and the `church` object nested in the profile, login and auth-status user payloads.
 
 `host_kind: "church"` is rejected unless the caller is a church admin. Church-hosted events set `calendar_approved: true` immediately. A member event with `list_on_church_calendar: true` stays `calendar_approved: false` until an admin approves it. Clients cannot set `calendar_approved` directly. `platform_fee_percent` sent by the client is ignored and stored as `0`.
 

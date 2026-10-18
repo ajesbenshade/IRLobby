@@ -184,7 +184,12 @@ class UserSerializer(serializers.ModelSerializer):
         church = obj.church
         if church is None:
             return None
-        return {"id": church.id, "name": church.name, "is_verified": church.is_verified}
+        return {
+            "id": church.id,
+            "name": church.name,
+            "is_verified": church.is_verified,
+            "has_website_calendar": church.has_website_calendar,
+        }
 
     def get_latitude(self, obj):
         return None

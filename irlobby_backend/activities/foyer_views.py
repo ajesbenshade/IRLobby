@@ -113,6 +113,7 @@ def church_payload(church) -> dict:
         "id": church.id,
         "name": church.name,
         "is_verified": church.is_verified,
+        "has_website_calendar": church.has_website_calendar,
     }
 
 

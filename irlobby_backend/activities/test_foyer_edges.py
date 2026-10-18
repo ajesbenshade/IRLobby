@@ -46,7 +46,12 @@ from activities.public_calendar import _fold, _ics_escape, _ics_stamp, public_ca
 from chat.consumers import _query_activity_id
 from users.models import User
 
-from .test_foyer import _activity, _jpeg_upload, _safe_birthdate
+from .test_foyer import (
+    _activity,
+    _join_website_calendar_church,
+    _jpeg_upload,
+    _safe_birthdate,
+)
 
 
 def _png_upload(mode="RGBA"):
@@ -457,6 +462,7 @@ class FoyerEndpointEdgeTests(APITestCase):
         self.assertEqual(cancelled.data["going_count"], 0)
 
     def test_hosting_rules_and_calendar_approval(self):
+        _join_website_calendar_church(self.parent)
         self.client.force_authenticate(self.parent)
         bad_ages = self.client.post(
             reverse("activity-list"),
@@ -533,6 +539,7 @@ class FoyerEndpointEdgeTests(APITestCase):
         approved = self.client.post(reverse("activity-calendar-approve", args=[created.data["id"]]))
         self.assertTrue(approved.data["calendar_approved"])
 
+        _join_website_calendar_church(self.admin)
         admin_event = self.client.post(
             reverse("activity-list"),
             {

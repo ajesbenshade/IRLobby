@@ -99,6 +99,8 @@ class ApprovalBase(APITestCase):
         return self.client.get(reverse("activity-detail", args=[(activity or self.activity).id]))
 
 
+# These tests create several gatherings for one member; the weekly limit has its own tests.
+@override_settings(FOYER_EVENT_CREATE_LIMIT=100)
 class HostSettingTests(ApprovalBase):
     def test_host_can_create_with_require_approval(self):
         self.client.force_authenticate(self.host)

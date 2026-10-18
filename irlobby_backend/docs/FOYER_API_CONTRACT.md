@@ -31,6 +31,8 @@ New fields:
 | `church` | `{ "id", "name", "is_verified" }` or `null` | no |
 | `church_id` | id or `null` | yes, aliases `churchId`; `null` clears it |
 | `is_church_admin` | bool | no |
+| `event_limit_exempt` | bool: true for church admins, staff and the exempt list (see "Beta limits") | no |
+| `next_host_available_at` | ISO datetime when the member may create their next gathering, or `null` if they can now or are exempt | no |
 | `household_child_count` | int | no |
 
 Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aesbenshade@dock.org`.
@@ -194,7 +196,7 @@ Age is the age on the gathering's start date in `America/New_York`. Birth dates 
 
 ## Photos
 
-`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 50.
+`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 50 per event, and 30 uploads per hour per user (see "Beta limits").
 
 ```json
 { "id": 4, "url": "https://<host>/api/activities/12/photos/4/" }
@@ -717,4 +719,79 @@ Your accepted friends whose birthday is today or in the next 7 days, sorted by `
 When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
 
 Database change: `users.User.show_birthday` (bool, default false), migration `users/0016_user_show_birthday`. No change to `HouseholdDependent`.
+
+# Beta limits (additive)
+
+## One new gathering per week for members
+
+`POST /api/activities/` (the only gathering-create endpoint) is limited for members to
+`FOYER_EVENT_CREATE_LIMIT` (default **1**) new gatherings per rolling
+`FOYER_EVENT_CREATE_WINDOW_DAYS` (default **7**) days.
+
+- Counts every gathering the user created in the window, **including cancelled and deleted
+  ones**. Each create writes an `EventCreationLog` row (user, activity id, created time) that is
+  kept when the gathering is cancelled or deleted; it goes only with the account. Gatherings created in the 30 days
+  before the deploy were backfilled from `Activity.created_at`.
+- Exempt: church admins (`FOYER_CHURCH_ADMIN_EMAILS`), `is_staff`, `is_superuser`, and
+  `FOYER_EVENT_LIMIT_EXEMPT_EMAILS` (default `["app-review@irlobby.com"]`). The exempt list does
+  **not** grant church-admin powers.
+- Editing (`PATCH`/`PUT /api/activities/<id>/`), cancelling and RSVPs are not limited.
+- The check runs before validation, so a limited member gets 429 even for an invalid body.
+
+Blocked create → **429** with a `Retry-After` header (seconds, same value as `retry_after`):
+
+```json
+{
+  "code": "event_limit_reached",
+  "limit": 1,
+  "period": "week",
+  "retry_after": 482113,
+  "next_allowed_at": "2026-10-25T14:22:05.123456+00:00",
+  "detail": "You can create 1 event a week. You can create your next one on Sunday, October 25 at 10:22 AM."
+}
+```
+
+`period` is `"week"` for a 7-day window, otherwise `"<n> days"`. `next_allowed_at` is when the
+oldest counted gathering leaves the window. The same time is on the profile as
+`next_host_available_at`, so the app can show it before the member fills in the form.
+
+## Photo upload throttle
+
+`POST /api/activities/<id>/photos/`: at most **30 uploads per hour per user**
+(`EVENT_PHOTO_UPLOAD_THROTTLE_RATE`, default `30/hour`). Requests rejected as not-the-host (403)
+or over the 50-photo cap (400) do not count. Over the limit → **429** with `Retry-After`:
+
+```json
+{ "code": "throttled", "detail": "You're uploading photos too quickly. Try again in 1795 seconds.", "retry_after": 1795 }
+```
+
+This is the only photo upload endpoint. Profile pictures and the profile photo album are URL
+fields on the profile, not uploads, so they are not throttled here.
+
+## 50-photo cap per event (unchanged status, new fields)
+
+Still **400** with the same `detail`; `code` and `limit` were added:
+
+```json
+{ "detail": "An event can have at most 50 photos.", "code": "event_photo_limit_reached", "limit": 50 }
+```
+
+There is no lifetime per-user photo cap.
+
+## Error shape
+
+Every limit error has `code` and `detail`. Every 429 also has `retry_after` (integer seconds,
+at least 1) and a matching `Retry-After` header.
+
+## Photos are removed with their gathering
+
+Deleting a gathering (`DELETE /api/activities/<id>/`, or account deletion, which deletes
+every gathering the user hosted) deletes its photo rows, and a `post_delete` signal removes
+each image file from storage once the transaction commits. A file that is already missing is
+skipped. Photos are stored as a single compressed JPEG; there are no thumbnail or cover files,
+and `Activity.images` holds URL references, not stored files. Cancelling a gathering keeps its
+photos.
+
+`python manage.py find_orphan_photos` lists files under `media/event_photos/` with no
+`EventPhoto` row. It is a dry run unless `--delete` is passed.
 

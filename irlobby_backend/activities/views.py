@@ -24,6 +24,7 @@ from matches.models import Match
 from moderation.models import BlockedUser
 
 from .capacity import FULL_ERROR, exclude_full_for_strangers
+from .limits import event_limit_response, is_event_limit_exempt, next_host_available_at
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
 from .serializers import (
@@ -212,6 +213,18 @@ class ActivityListCreateView(generics.ListCreateAPIView):
             return queryset
 
         return queryset.order_by("-created_at")
+
+    def create(self, request, *args, **kwargs):
+        # Weekly hosting limit for members (church admins, staff and exempt accounts skip it).
+        # The user row is locked so two simultaneous creates cannot both slip under the limit.
+        with transaction.atomic():
+            if not is_event_limit_exempt(request.user):
+                type(request.user).objects.select_for_update().filter(pk=request.user.pk).first()
+                now = timezone.now()
+                next_allowed = next_host_available_at(request.user, now=now)
+                if next_allowed is not None:
+                    return event_limit_response(next_allowed, now=now)
+            return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)

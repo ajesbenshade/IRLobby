@@ -1,4 +1,4 @@
-from utils.throttles import DynamicAnonRateThrottle
+from utils.throttles import DynamicAnonRateThrottle, DynamicUserRateThrottle
 
 
 class PublicCalendarThrottle(DynamicAnonRateThrottle):
@@ -9,3 +9,9 @@ class PublicCalendarThrottle(DynamicAnonRateThrottle):
     """
 
     scope = "public_calendar"
+
+
+class EventPhotoUploadThrottle(DynamicUserRateThrottle):
+    """Per-user limit on gathering photo uploads (default 30 an hour)."""
+
+    scope = "event_photo_upload"

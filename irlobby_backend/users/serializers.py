@@ -54,6 +54,8 @@ class UserSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     is_church_admin = serializers.SerializerMethodField()
+    event_limit_exempt = serializers.SerializerMethodField()
+    next_host_available_at = serializers.SerializerMethodField()
     household_child_count = serializers.SerializerMethodField()
     phone = serializers.CharField(required=False, allow_blank=True, max_length=32)
 
@@ -97,6 +99,8 @@ class UserSerializer(serializers.ModelSerializer):
             "church",
             "church_id",
             "is_church_admin",
+            "event_limit_exempt",
+            "next_host_available_at",
             "household_child_count",
             "profile_visibility",
             "phone",
@@ -182,6 +186,19 @@ class UserSerializer(serializers.ModelSerializer):
         from activities.access import is_church_admin
 
         return is_church_admin(obj)
+
+    def get_event_limit_exempt(self, obj):
+        from activities.limits import is_event_limit_exempt
+
+        return is_event_limit_exempt(obj)
+
+    def get_next_host_available_at(self, obj):
+        from activities.limits import next_host_available_at
+
+        if not getattr(obj, "pk", None):
+            return None
+        when = next_host_available_at(obj)
+        return when.isoformat() if when else None
 
     def get_household_child_count(self, obj):
         return obj.household_dependents.count()

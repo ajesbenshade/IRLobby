@@ -242,6 +242,27 @@ class EventPhoto(models.Model):
         return f"Photo {self.pk} for {self.activity_id}"
 
 
+class EventCreationLog(models.Model):
+    """One row per gathering created, kept when the gathering is cancelled or deleted.
+
+    The weekly hosting limit counts these rows, so deleting an event never frees up a slot.
+    ``activity_id`` is a plain integer (no foreign key) so the row outlives the gathering.
+    The row goes with the account when the account itself is deleted.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="event_creation_logs")
+    activity_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "created_at"], name="eventcreationlog_user_time_idx"),
+        ]
+
+    def __str__(self):
+        return f"User {self.user_id} created activity {self.activity_id} at {self.created_at}"
+
+
 class Ticket(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),

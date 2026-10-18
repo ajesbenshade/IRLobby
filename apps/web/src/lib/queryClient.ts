@@ -124,7 +124,11 @@ async function readResponseBody(res: Response) {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const body = await readResponseBody(res);
-    throw new Error(`${res.status}: ${extractApiErrorMessage(body, res.statusText)}`);
+    // Same message as before; `status` and `body` let callers read error codes (e.g. church_calendar_unavailable).
+    throw Object.assign(new Error(`${res.status}: ${extractApiErrorMessage(body, res.statusText)}`), {
+      status: res.status,
+      body,
+    });
   }
 }
 

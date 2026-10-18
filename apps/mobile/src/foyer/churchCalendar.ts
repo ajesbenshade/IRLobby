@@ -1,14 +1,13 @@
 import axios from 'axios';
 
-/** Server flags for "this church has a website calendar". Final name is `has_website_calendar`; `website_calendar` is also accepted. */
+/** Server flag on every church object (Backend #49, live on prod): "this church has a website calendar". */
 export type WebsiteCalendarFlags = {
   has_website_calendar?: boolean | null;
-  website_calendar?: boolean | null;
 };
 
-/** True only when either flag is exactly `true`. Missing, null or false hides "Post to the church website calendar". */
+/** True only when `has_website_calendar` is exactly `true`. Missing, null or false hides "Post to the church website calendar". */
 export const churchHasWebsiteCalendar = (church: WebsiteCalendarFlags | null | undefined): boolean =>
-  church?.has_website_calendar === true || church?.website_calendar === true;
+  church?.has_website_calendar === true;
 
 /** Design copy for a 400 `{code: 'church_calendar_unavailable'}` on create/edit. */
 /** The server rejects the whole save, so the form stays open with this message. */

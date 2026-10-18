@@ -277,10 +277,11 @@ describe('Post to the church website calendar (only when the church has one)', (
     await chooseHostDateAndTime();
   };
 
-  it('shows for a church with website_calendar true', async () => {
+  it('hides for the old website_calendar name alone (only has_website_calendar counts)', async () => {
     mockUser = { church: { id: 1, name: 'Franconia Mennonite Church', website_calendar: true }, churchId: 1 };
     renderScreen();
-    expect(await screen.findByText(CALENDAR_LABEL)).toBeTruthy();
+    expect(await screen.findByLabelText('Title')).toBeTruthy();
+    expect(screen.queryByText(CALENDAR_LABEL)).toBeNull();
   });
 
   it('shows for a church with has_website_calendar true', async () => {

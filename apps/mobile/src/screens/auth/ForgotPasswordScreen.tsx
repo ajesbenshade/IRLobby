@@ -48,7 +48,7 @@ export const ForgotPasswordScreen = ({ navigation }: Props) => {
             onPress={() => navigation.navigate('ResetPassword')}
             disabled={isPending}
           >
-            I have a token
+            I have a code
           </AppButton>
         </View>
       }

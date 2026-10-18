@@ -65,8 +65,6 @@ export interface AuthUser {
     longitude?: number | string | null;
     /** Church has a website calendar (final server name). Missing = no calendar. */
     has_website_calendar?: boolean | null;
-    /** Older/alternate name for has_website_calendar; either one true counts. */
-    website_calendar?: boolean | null;
   } | null;
   churchId?: number | null;
   isChurchAdmin?: boolean;

@@ -42,7 +42,7 @@ interface User {
   householdChildCount?: number | null;
   dateOfBirth?: string | null;
   sex?: 'male' | 'female' | '';
-  church?: { id?: number; name: string } | null;
+  church?: { id?: number; name: string; has_website_calendar?: boolean } | null;
   swipesRemainingToday?: number | null;
 }
 
@@ -147,6 +147,7 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
       return {
         id: typeof church.id === 'number' ? church.id : undefined,
         name: church.name.trim(),
+        has_website_calendar: church.has_website_calendar === true,
       };
     })(),
   };

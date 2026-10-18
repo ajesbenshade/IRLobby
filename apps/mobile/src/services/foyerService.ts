@@ -15,8 +15,6 @@ export type ChurchRecord = {
   longitude?: number | string | null;
   /** Church has a website calendar (final server name). */
   has_website_calendar?: boolean | null;
-  /** Alternate name; either one true counts. */
-  website_calendar?: boolean | null;
 };
 
 export type HouseholdChild = {

@@ -10,7 +10,7 @@ import { IrlobbyLoginMark } from '@components/IrlobbyLoginMark';
 import { PICK_CHURCH_BUTTON_HEIGHT, PickChurchCard } from '@components/foyer/PickChurchCard';
 import { ChurchPicker } from '@components/foyer/ChurchPicker';
 import * as foyerCopy from '@constants/foyerCopy';
-import { memberChurchName, resetChurchNameCache } from '@foyer/churchName';
+import { memberChurchHasWebsiteCalendar, memberChurchName, resetChurchNameCache } from '@foyer/churchName';
 import { fetchChurches } from '@services/foyerService';
 
 let mockUser: Record<string, unknown> | null = null;
@@ -84,6 +84,16 @@ describe("M1: the member's own church under The Foyer", () => {
     expect(src('screens/main/FoyerHostForm.tsx')).not.toMatch(/Host as Franconia/);
     expect(src('components/FoyerProfileCard.tsx')).not.toMatch(/every Franconia gathering/);
   });
+});
+
+describe('church website calendar flag', () => {
+  it('reads the profile church, or the churches-list entry for church_id', () => {
+    expect(memberChurchHasWebsiteCalendar({ church: { id: 1, name: 'A', has_website_calendar: true }, churchId: 1 }, null)).toBe(true);
+    expect(memberChurchHasWebsiteCalendar({ church: null, churchId: 5 }, [{ id: 5, name: 'B', website_calendar: true }])).toBe(true);
+    expect(memberChurchHasWebsiteCalendar({ church: null, churchId: 5 }, [{ id: 5, name: 'B' }])).toBe(false);
+    expect(memberChurchHasWebsiteCalendar({ church: null, churchId: null }, [{ id: 5, name: 'B', website_calendar: true }])).toBe(false);
+  });
+
 });
 
 describe('nits', () => {

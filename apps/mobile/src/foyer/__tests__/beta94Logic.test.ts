@@ -183,3 +183,28 @@ describe('delete gathering body', () => {
     expect(deleteGatheringBody(undefined)).toBe(`${base} Deleting it won't let you host another gathering this week.`);
   });
 });
+
+describe('churchHasWebsiteCalendar', () => {
+  const { churchHasWebsiteCalendar, isChurchCalendarUnavailable } = require('@foyer/churchCalendar') as typeof import('@foyer/churchCalendar');
+
+  it('is true when either field is true', () => {
+    expect(churchHasWebsiteCalendar({ has_website_calendar: true })).toBe(true);
+    expect(churchHasWebsiteCalendar({ website_calendar: true })).toBe(true);
+    expect(churchHasWebsiteCalendar({ has_website_calendar: false, website_calendar: true })).toBe(true);
+  });
+
+  it('is false when both are missing, false or null, or there is no church', () => {
+    expect(churchHasWebsiteCalendar({})).toBe(false);
+    expect(churchHasWebsiteCalendar({ has_website_calendar: false, website_calendar: false })).toBe(false);
+    expect(churchHasWebsiteCalendar({ has_website_calendar: null })).toBe(false);
+    expect(churchHasWebsiteCalendar(null)).toBe(false);
+    expect(churchHasWebsiteCalendar(undefined)).toBe(false);
+  });
+
+  it('maps only a 400 church_calendar_unavailable', () => {
+    expect(isChurchCalendarUnavailable(axiosError(400, { code: 'church_calendar_unavailable' }))).toBe(true);
+    expect(isChurchCalendarUnavailable(axiosError(500, { code: 'church_calendar_unavailable' }))).toBe(false);
+    expect(isChurchCalendarUnavailable(axiosError(400, { code: 'other' }))).toBe(false);
+    expect(isChurchCalendarUnavailable(new Error('x'))).toBe(false);
+  });
+});

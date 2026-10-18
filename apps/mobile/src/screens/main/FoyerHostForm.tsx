@@ -51,7 +51,8 @@ import { createActivity, fetchActivity, updateActivity } from '@services/activit
 import { uploadGatheringPhoto } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
-import { memberChurchName } from '@foyer/churchName';
+import { memberChurchName, useMemberChurchHasWebsiteCalendar } from '@foyer/churchName';
+import { CHURCH_CALENDAR_UNAVAILABLE_MESSAGE, isChurchCalendarUnavailable } from '@foyer/churchCalendar';
 
 type FoyerHostFormProps = {
   activityId?: number | string;
@@ -78,7 +79,10 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [audience, setAudience] = useState<AudienceGender>('everyone');
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
-  const [listOnCalendar, setListOnCalendar] = useState(false);
+  const [listOnCalendarChoice, setListOnCalendar] = useState(false);
+  // "Post to the church website calendar" exists only when the member's church has one; otherwise it is never sent as true.
+  const churchHasCalendar = useMemberChurchHasWebsiteCalendar();
+  const listOnCalendar = churchHasCalendar && listOnCalendarChoice;
   const [hostAsChurch, setHostAsChurch] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +214,10 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         setError(null);
         setLimitSheet({ nextAllowedAt: limit.nextAllowedAt });
         void refreshProfile();
+        return;
+      }
+      if (isChurchCalendarUnavailable(saveError)) {
+        setError(CHURCH_CALENDAR_UNAVAILABLE_MESSAGE);
         return;
       }
       const message = getErrorMessage(saveError, HOST_FORM_COPY.postFailed);
@@ -395,15 +403,19 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         </View>
         <Text style={styles.helper}>Leave max blank for no upper limit. Children in a household can be added if they fit the range.</Text>
 
-        <CheckboxRow
-          label="Post to the church website calendar"
-          value={listOnCalendar}
-          onChange={setListOnCalendar}
-          testID="host-calendar-checkbox"
-        />
-        <View style={styles.warn}>
-          <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
-        </View>
+        {churchHasCalendar ? (
+          <>
+            <CheckboxRow
+              label="Post to the church website calendar"
+              value={listOnCalendar}
+              onChange={setListOnCalendar}
+              testID="host-calendar-checkbox"
+            />
+            <View style={styles.warn}>
+              <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
+            </View>
+          </>
+        ) : null}
 
         {showApprovalCard ? (
           <View style={styles.approvalCard}>

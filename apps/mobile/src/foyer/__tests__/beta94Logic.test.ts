@@ -146,6 +146,11 @@ describe('photo upload limits (frames 248-249)', () => {
     });
   });
 
+  it('event_photo_limit_reached is only the 50-photo cap on a 400', () => {
+    expect(photoLimitNotice(axiosError(500, { code: 'event_photo_limit_reached', limit: 50 }), NOW)).toBeNull();
+    expect(photoLimitNotice(axiosError(403, { code: 'event_photo_limit_reached' }), NOW)).toBeNull();
+  });
+
   it('other errors are left to the generic message', () => {
     expect(photoLimitNotice(axiosError(500, {}), NOW)).toBeNull();
     expect(photoLimitNotice(new Error('x'), NOW)).toBeNull();

@@ -122,7 +122,7 @@ describe('CreateActivityScreen in foyer mode', () => {
     expect(screen.queryByText('Set up payouts')).toBeNull();
     expect(screen.getByText('Post gathering')).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
-    expect(screen.getByText(/Don't list a home address/)).toBeTruthy();
+    expect(screen.getByText(/appear on your church's website calendar, with their location, after a church admin approves them/)).toBeTruthy();
   });
 
   it('rejects a capacity outside 1–500 and accepts a blank unlimited capacity', async () => {

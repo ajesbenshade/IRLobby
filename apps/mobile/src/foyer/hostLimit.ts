@@ -125,7 +125,7 @@ export const photoLimitNotice = (error: unknown, now: Date = new Date()): PhotoL
   if (!parts) {
     return null;
   }
-  if (parts.data.code === 'event_photo_limit_reached') {
+  if (parts.status === 400 && parts.data.code === 'event_photo_limit_reached') {
     const limit = Number(parts.data.limit);
     return { title: PHOTO_LIMIT_COPY.fullTitle, body: PHOTO_LIMIT_COPY.full(Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_PHOTO_CAP) };
   }

@@ -112,6 +112,14 @@ describe('nits', () => {
     expect(form).not.toMatch(/Alert\.alert\(photoProblem\.title/);
   });
 
+  it('M1b: the public-calendar note names no church site', () => {
+    const { CALENDAR_ADDRESS_WARNING } = require('@foyer/logic') as typeof import('@foyer/logic');
+    expect(CALENDAR_ADDRESS_WARNING).toBe(
+      "Public gatherings appear on your church's website calendar, with their location, after a church admin approves them.",
+    );
+    expect(src('screens/main/FoyerHostForm.tsx')).toMatch(/\{CALENDAR_ADDRESS_WARNING\}/);
+  });
+
   it("host form Place placeholder is Design's final wording", () => {
     const form = src('screens/main/FoyerHostForm.tsx');
     expect(form).toContain(`placeholder="Fellowship hall, a park, or someone's home."`);

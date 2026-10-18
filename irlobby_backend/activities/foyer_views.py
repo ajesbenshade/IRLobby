@@ -68,6 +68,7 @@ from .photos import (
 from .public_calendar import (
     InvalidFromDate,
     activity_id_from_ics_token,
+    church_has_website_calendar_q,
     default_feed_since,
     event_ics,
     ics_token_hides_location,
@@ -1080,6 +1081,7 @@ def public_event_ics_view(request, pk):
         Activity.objects.filter(
             pk=pk, list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
         )
+        .filter(church_has_website_calendar_q())
         .select_related("host", "host_church")
         .first()
     )

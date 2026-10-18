@@ -16,7 +16,7 @@ from .capacity import is_full
 from .eligibility import audience_label, confirmed_people_count, host_display_name
 from .models import FRANCONIA_CHURCH_NAME, Activity, ActivityParticipant, Church, Ticket
 from .photos import absolute_photo_url, cover_photo_url
-from .public_calendar import build_calendar_links
+from .public_calendar import build_calendar_links, resolve_calendar_church
 from .ticketing import ticketing_enabled
 
 
@@ -35,19 +35,9 @@ class ChurchCalendarUnavailable(APIException):
         )
 
 
-def calendar_church(host_kind, host_church, host):
-    """The church whose website calendar would show the gathering.
-
-    ``host_church`` when set; a church-hosted gathering without one defaults to Franconia
-    (same as ``_apply_hosting_rules``); otherwise the host's own church from their profile.
-    """
-    if host_church is not None:
-        return host_church
-    if host_kind == "church":
-        return Church.objects.filter(name=FRANCONIA_CHURCH_NAME).first()
-    if host is None or not getattr(host, "is_authenticated", False):
-        return None
-    return host.church
+def _host_kwargs(user) -> dict:
+    """``host=user`` for an unsaved Activity, skipped when there is no saved user."""
+    return {"host": user} if getattr(user, "pk", None) else {}
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -232,7 +222,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             )
         if attrs.get("list_on_church_calendar") is True:
             host = self.instance.host if self.instance is not None else user
-            church = calendar_church(
+            church = resolve_calendar_church(
                 host_kind,
                 attrs.get("host_church", getattr(self.instance, "host_church", None)),
                 host,
@@ -335,6 +325,10 @@ class ActivitySerializer(serializers.ModelSerializer):
         )
         if requires_approval and is_open_listing(
             Activity(
+                **_host_kwargs(instance.host if instance is not None else user),
+                host_church=validated_data.get(
+                    "host_church", instance.host_church if instance else None
+                ),
                 host_kind=host_kind,
                 list_on_church_calendar=list_on,
                 calendar_approved=validated_data.get(

@@ -171,6 +171,7 @@ class HostSettingTests(ApprovalBase):
     @override_settings(FOYER_CHURCH_ADMIN_EMAILS=[CHURCH_ADMIN_EMAIL])
     def test_public_calendar_event_rejects_require_approval(self):
         admin = _user("admin")
+        _join_website_calendar_church(admin, self.host)
         # A church admin listing their own event makes it public straight away.
         self.client.force_authenticate(admin)
         response = self.client.post(

@@ -145,3 +145,99 @@ class WebsiteCalendarTests(APITestCase):
         ics = self.client.get(reverse("public-calendar-ics")).content.decode()
         self.assertIn("Franconia member event", ics)
         self.assertNotIn("Souderton member event", ics)
+
+
+class PublicAccessFollowsWebsiteCalendarTests(APITestCase):
+    """Open address, token-free photos and the public .ics need a website-calendar church."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        cache.clear()
+        self.media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media, True)
+        override = override_settings(MEDIA_ROOT=self.media)
+        override.enable()
+        self.addCleanup(override.disable)
+        franconia = Church.objects.get(name=FRANCONIA_CHURCH_NAME)
+        souderton = Church.objects.get(name="Souderton Mennonite Church")
+        listed = dict(list_on_church_calendar=True, calendar_approved=True)
+        self.flagged_host = _user("flagged", church=franconia)
+        self.other_host = _user("other", church=souderton)
+        self.stranger = _user("stranger")
+        self.flagged = _activity(self.flagged_host, location="1 Open Rd", **listed)
+        self.unflagged = _activity(self.other_host, location="2 Hidden Ln", **listed)
+
+    def upload_photo(self, activity):
+        from activities.test_foyer import _jpeg_upload
+
+        self.client.force_authenticate(activity.host)
+        response = self.client.post(
+            reverse("activity-photo-upload", args=[activity.id]),
+            {"image": _jpeg_upload()},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        return response.data
+
+    def detail(self, user, activity):
+        self.client.force_authenticate(user)
+        return self.client.get(reverse("activity-detail", args=[activity.id])).data
+
+    def test_helper_agrees_with_feed(self):
+        from activities.public_calendar import is_public_calendar_event, public_calendar_queryset
+
+        self.assertTrue(is_public_calendar_event(self.flagged))
+        self.assertFalse(is_public_calendar_event(self.unflagged))
+        ids = set(public_calendar_queryset().values_list("id", flat=True))
+        for activity in Activity.objects.all():
+            self.assertEqual(activity.id in ids, is_public_calendar_event(activity), activity.title)
+
+    def test_church_hosted_without_host_church_resolves_to_franconia(self):
+        from activities.public_calendar import is_public_calendar_event, public_calendar_queryset
+
+        church_event = _activity(
+            _user("pastor2"),
+            host_kind="church",
+            list_on_church_calendar=True,
+            calendar_approved=True,
+        )
+        self.assertIsNone(church_event.host_church_id)
+        self.assertTrue(is_public_calendar_event(church_event))
+        self.assertIn(church_event, list(public_calendar_queryset()))
+
+    def test_flagged_church_listed_event_is_public(self):
+        photo = self.upload_photo(self.flagged)
+        data = self.detail(self.stranger, self.flagged)
+        self.assertEqual(data["location"], "1 Open Rd")
+        self.assertEqual(data["latitude"], 40.31)
+        self.assertIn(
+            f"/api/public/events/{self.flagged.id}.ics", data["calendar_links"]["ics_url"]
+        )
+        self.assertNotIn("?t=", photo["url"])
+        self.client.force_authenticate(None)
+        path = reverse("activity-photo-file", args=[self.flagged.id, photo["id"]])
+        self.assertEqual(self.client.get(path).status_code, status.HTTP_200_OK)
+        ics = self.client.get(reverse("public-event-ics", args=[self.flagged.id]))
+        self.assertEqual(ics.status_code, status.HTTP_200_OK)
+
+    def test_unflagged_church_listed_event_is_not_public(self):
+        photo = self.upload_photo(self.unflagged)
+        data = self.detail(self.stranger, self.unflagged)
+        for field in ("location", "latitude", "longitude"):
+            self.assertIsNone(data[field])
+        self.assertNotIn("Hidden", str(data))
+        self.assertNotIn("/api/public/events/", data["calendar_links"]["ics_url"])
+        self.assertIn("?t=", photo["url"])
+
+        self.client.force_authenticate(None)
+        path = reverse("activity-photo-file", args=[self.unflagged.id, photo["id"]])
+        self.assertIn(self.client.get(path).status_code, (401, 403))
+        token = photo["url"].split("?t=", 1)[1]
+        self.assertEqual(self.client.get(f"{path}?t={token}").status_code, status.HTTP_200_OK)
+        ics = self.client.get(reverse("public-event-ics", args=[self.unflagged.id]))
+        self.assertEqual(ics.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Normal rules still apply: the host sees the address.
+        self.assertEqual(self.detail(self.other_host, self.unflagged)["location"], "2 Hidden Ln")

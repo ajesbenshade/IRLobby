@@ -104,6 +104,8 @@ New request fields (snake_case; camelCase aliases accepted):
 { "code": "church_calendar_unavailable", "detail": "Your church's website doesn't show The Foyer calendar yet." }
 ```
 
+**"Public calendar event" also needs the flag.** Everywhere the backend treats a gathering as public, the gathering must be listed and approved and its church (resolved as above) must have `has_website_calendar`. That covers the feed, the open address, photo URLs and files without a signed token, `GET /api/activities/<id>/photos/download/` for any signed-in user, the `/api/public/events/<id>.ics` link (404 otherwise), and the Require-approval restriction. A listed and approved gathering whose church lacks the flag follows the normal member rules instead: hidden address, signed photo links, private `.ics` link. One shared helper in `activities/public_calendar.py` drives both the feed and the per-gathering check.
+
 Edits that don't send `list_on_church_calendar: true` are not checked. The public calendar feed (`/api/public/calendar` and the `.ics`) shows only gatherings whose church (same rule) has `has_website_calendar`. `has_website_calendar` is on every church object: `GET/POST /api/churches/` and the `church` object nested in the profile, login and auth-status user payloads.
 
 `host_kind: "church"` is rejected unless the caller is a church admin. Church-hosted events set `calendar_approved: true` immediately. A member event with `list_on_church_calendar: true` stays `calendar_approved: false` until an admin approves it. Clients cannot set `calendar_approved` directly. `platform_fee_percent` sent by the client is ignored and stored as `0`.
@@ -563,7 +565,7 @@ A gathering with a capacity is **full** when confirmed people (the account holde
 
 ## Hidden addresses
 
-For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
+For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. A public-calendar event here means listed, approved, and its church has `has_website_calendar`. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
 
 # Apple App Store compliance pack
 

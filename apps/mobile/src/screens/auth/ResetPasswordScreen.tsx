@@ -44,7 +44,7 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
     <AuthShell
       eyebrow="Secure access"
       title="Choose a fresh password."
-      subtitle="Paste the reset token from email and set a new password for your account."
+      subtitle="Paste the reset code from email and set a new password for your account."
       footer={
         <AppButton
           variant="ghost"
@@ -56,11 +56,11 @@ export const ResetPasswordScreen = ({ navigation, route }: Props) => {
         </AppButton>
       }
     >
-      <AccentPill tone="secondary">Token-based reset</AccentPill>
+      <AccentPill tone="secondary">Code-based reset</AccentPill>
 
       <View style={styles.form}>
         <Field
-          label="Reset token"
+          label="Reset code"
           value={token}
           onChangeText={setToken}
           autoCapitalize="none"

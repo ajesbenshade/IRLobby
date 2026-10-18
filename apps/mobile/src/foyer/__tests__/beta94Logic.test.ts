@@ -187,15 +187,17 @@ describe('delete gathering body', () => {
 describe('churchHasWebsiteCalendar', () => {
   const { churchHasWebsiteCalendar, isChurchCalendarUnavailable } = require('@foyer/churchCalendar') as typeof import('@foyer/churchCalendar');
 
-  it('is true when either field is true', () => {
+  it('is true when has_website_calendar is true', () => {
     expect(churchHasWebsiteCalendar({ has_website_calendar: true })).toBe(true);
-    expect(churchHasWebsiteCalendar({ website_calendar: true })).toBe(true);
-    expect(churchHasWebsiteCalendar({ has_website_calendar: false, website_calendar: true })).toBe(true);
+  });
+
+  it('no longer accepts the old website_calendar name', () => {
+    expect(churchHasWebsiteCalendar({ website_calendar: true } as never)).toBe(false);
   });
 
   it('is false when both are missing, false or null, or there is no church', () => {
     expect(churchHasWebsiteCalendar({})).toBe(false);
-    expect(churchHasWebsiteCalendar({ has_website_calendar: false, website_calendar: false })).toBe(false);
+    expect(churchHasWebsiteCalendar({ has_website_calendar: false })).toBe(false);
     expect(churchHasWebsiteCalendar({ has_website_calendar: null })).toBe(false);
     expect(churchHasWebsiteCalendar(null)).toBe(false);
     expect(churchHasWebsiteCalendar(undefined)).toBe(false);

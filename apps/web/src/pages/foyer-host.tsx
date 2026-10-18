@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  CHURCH_CALENDAR_UNAVAILABLE_MESSAGE,
+  churchHasWebsiteCalendar,
+  isChurchCalendarUnavailable,
+  listOnChurchCalendarValue,
+} from '@/lib/churchCalendar';
 import { CALENDAR_ADDRESS_WARNING, compressImageFile, parseCapacity } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -10,6 +16,8 @@ export default function FoyerHostPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const admin = Boolean(user?.isChurchAdmin);
+  // "Post to the church website calendar" only when the host's church has one (has_website_calendar).
+  const churchHasCalendar = churchHasWebsiteCalendar(user?.church);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [place, setPlace] = useState('');
@@ -46,7 +54,7 @@ export default function FoyerHostPage() {
         audience_gender: audience,
         age_min: ageMin.trim() ? Number(ageMin) : null,
         age_max: ageMax.trim() ? Number(ageMax) : null,
-        list_on_church_calendar: calendar,
+        list_on_church_calendar: listOnChurchCalendarValue(churchHasCalendar, calendar),
         host_kind: hostAsChurch ? 'church' : 'person',
       });
       const saved = (await response.json()) as { id: number | string };
@@ -62,6 +70,11 @@ export default function FoyerHostPage() {
       }
       navigate('/app/gatherings');
     } catch (submitError) {
+      if (isChurchCalendarUnavailable(submitError)) {
+        // The whole save was rejected: keep the form open.
+        setError(CHURCH_CALENDAR_UNAVAILABLE_MESSAGE);
+        return;
+      }
       setError(submitError instanceof Error ? submitError.message : 'Unable to post this gathering.');
     } finally {
       setPending(false);
@@ -117,11 +130,15 @@ export default function FoyerHostPage() {
         <input aria-label="Max" placeholder="Any" className="w-full rounded-xl border border-[#e1dbd7] px-3 py-3" value={ageMax} onChange={(event) => setAgeMax(event.target.value)} />
       </div>
       <p className="mb-4 text-xs text-[#6e6a68]">Leave max blank for no upper limit. Children in a household can be added if they fit the range.</p>
-      <label className="mb-2 flex items-center gap-2 font-semibold">
-        <input type="checkbox" checked={calendar} onChange={(event) => setCalendar(event.target.checked)} />
-        Post to the church website calendar
-      </label>
-      <p className="mb-4 rounded-xl bg-[#fdf3e6] p-3 text-sm text-[#8a540a]">{CALENDAR_ADDRESS_WARNING}</p>
+      {churchHasCalendar ? (
+        <>
+          <label className="mb-2 flex items-center gap-2 font-semibold">
+            <input type="checkbox" checked={calendar} onChange={(event) => setCalendar(event.target.checked)} />
+            Post to the church website calendar
+          </label>
+          <p className="mb-4 rounded-xl bg-[#fdf3e6] p-3 text-sm text-[#8a540a]">{CALENDAR_ADDRESS_WARNING}</p>
+        </>
+      ) : null}
       {admin ? (
         <div className="mb-4 rounded-2xl border border-[#e1dbd7] bg-white p-4">
           <p className="text-xs font-bold text-[#6e6a68]">Admin only</p>

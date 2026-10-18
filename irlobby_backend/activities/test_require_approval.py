@@ -13,7 +13,7 @@ from rest_framework.test import APITestCase
 
 from activities.models import Activity, ActivityParticipant, Church, HouseholdDependent
 from activities.tasks import notify_upcoming_activities
-from activities.test_foyer import _activity, _safe_birthdate
+from activities.test_foyer import _activity, _join_website_calendar_church, _safe_birthdate
 from moderation.models import BlockedUser
 from users.models import User
 
@@ -99,6 +99,8 @@ class ApprovalBase(APITestCase):
         return self.client.get(reverse("activity-detail", args=[(activity or self.activity).id]))
 
 
+# These tests create several gatherings for one member; the weekly limit has its own tests.
+@override_settings(FOYER_EVENT_CREATE_LIMIT=100)
 class HostSettingTests(ApprovalBase):
     def test_host_can_create_with_require_approval(self):
         self.client.force_authenticate(self.host)
@@ -169,6 +171,7 @@ class HostSettingTests(ApprovalBase):
     @override_settings(FOYER_CHURCH_ADMIN_EMAILS=[CHURCH_ADMIN_EMAIL])
     def test_public_calendar_event_rejects_require_approval(self):
         admin = _user("admin")
+        _join_website_calendar_church(admin, self.host)
         # A church admin listing their own event makes it public straight away.
         self.client.force_authenticate(admin)
         response = self.client.post(
@@ -189,6 +192,7 @@ class HostSettingTests(ApprovalBase):
         self.assertFalse(public.requires_approval)
 
     def test_listing_a_require_approval_event_publicly_is_blocked_at_approval(self):
+        _join_website_calendar_church(self.host)
         self.client.force_authenticate(self.host)
         patched = self.client.patch(
             reverse("activity-detail", args=[self.activity.id]),

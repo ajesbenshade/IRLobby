@@ -44,6 +44,17 @@ def _jpeg_upload(name="photo.jpg"):
     return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
+def _join_website_calendar_church(*users):
+    """Give members Franconia, whose website shows The Foyer calendar, as their church.
+
+    Members can list gatherings on the church calendar only for such a church.
+    """
+    church = Church.objects.get(name=FRANCONIA_CHURCH_NAME)
+    for user in users:
+        user.church = church
+        user.save(update_fields=["church"])
+
+
 def _activity(host, **overrides):
     payload = dict(
         host=host,
@@ -264,7 +275,8 @@ class FoyerAccountAndRsvpTests(APITestCase):
         self.assertIn("18", response.data["parent"])
 
 
-@override_settings(STRIPE_PLATFORM_FEE_PERCENT=15)
+# These tests create several gatherings for one member; the weekly limit has its own tests.
+@override_settings(STRIPE_PLATFORM_FEE_PERCENT=15, FOYER_EVENT_CREATE_LIMIT=100)
 class FoyerFeeTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(
@@ -418,6 +430,7 @@ class FoyerCalendarTests(APITestCase):
             date_of_birth=_safe_birthdate(42),
             sex="female",
         )
+        _join_website_calendar_church(self.host)
         self.child = HouseholdDependent.objects.create(
             parent=self.host,
             name="SecretChild",
@@ -495,6 +508,7 @@ class FoyerChurchAndPhotoTests(APITestCase):
             date_of_birth=_safe_birthdate(40),
             sex="male",
         )
+        _join_website_calendar_church(self.member)
 
     def test_seeded_churches_and_unverified_create(self):
         self.assertTrue(
@@ -505,7 +519,7 @@ class FoyerChurchAndPhotoTests(APITestCase):
         found = self.client.get(reverse("church-list"), {"q": "blooming"})
         self.assertEqual(found.status_code, status.HTTP_200_OK)
         self.assertEqual(found.data[0]["name"], "Blooming Glen Mennonite Church")
-        self.assertEqual(set(found.data[0]), {"id", "name", "is_verified"})
+        self.assertEqual(set(found.data[0]), {"id", "name", "is_verified", "has_website_calendar"})
 
         created = self.client.post(reverse("church-list"), {"name": "Typed Chapel"}, format="json")
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
@@ -595,7 +609,6 @@ class FoyerChurchAndPhotoTests(APITestCase):
         body = b"".join(fetched.streaming_content)
         self.assertTrue(body.startswith(b"\xff\xd8"))
 
-
     def test_non_public_event_photos_need_login_or_a_signed_link(self):
         from urllib.parse import urlparse
 
@@ -619,8 +632,6 @@ class FoyerChurchAndPhotoTests(APITestCase):
         )
         signed = anonymous.get(f"{parsed.path}?{parsed.query}")
         self.assertEqual(signed.status_code, status.HTTP_200_OK)
-        other = anonymous.get(
-            f"/api/activities/{activity.id}/photos/999/?{parsed.query}"
-        )
+        other = anonymous.get(f"/api/activities/{activity.id}/photos/999/?{parsed.query}")
         self.assertEqual(other.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.client.get(parsed.path).status_code, status.HTTP_200_OK)

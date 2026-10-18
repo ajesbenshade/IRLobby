@@ -54,6 +54,7 @@ from .household_rules import (
     parse_birth_month_year,
     spouse_create_errors,
 )
+from .limits import throttled_response
 from .models import Activity, ActivityParticipant, Church, EventPhoto, HouseholdDependent
 from .photos import (
     PHOTO_DOWNLOAD_MAX_AGE_SECONDS,
@@ -67,6 +68,7 @@ from .photos import (
 from .public_calendar import (
     InvalidFromDate,
     activity_id_from_ics_token,
+    church_has_website_calendar_q,
     default_feed_since,
     event_ics,
     ics_token_hides_location,
@@ -77,7 +79,7 @@ from .public_calendar import (
     public_event_payload,
 )
 from .serializers import ActivitySerializer
-from .throttles import PublicCalendarThrottle
+from .throttles import EventPhotoUploadThrottle, PublicCalendarThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,7 @@ def church_payload(church) -> dict:
         "id": church.id,
         "name": church.name,
         "is_verified": church.is_verified,
+        "has_website_calendar": church.has_website_calendar,
     }
 
 
@@ -516,7 +519,9 @@ def activity_attendees(request, pk):
     user = request.user
     going = confirmed_people_count(activity)
     if user.is_staff or is_activity_host(user, activity):
-        return Response({"going_count": going, "households": _host_attendee_households(activity, user)})
+        return Response(
+            {"going_count": going, "households": _host_attendee_households(activity, user)}
+        )
     if activity.time <= timezone.now() and user_has_going_rsvp(user, activity):
         return Response({"going_count": going, "attendees": _past_attendee_names(activity, user)})
     return Response(
@@ -812,7 +817,7 @@ def cancel_event(request, pk):
             transaction.on_commit(lambda: _notify_cancelled_attendees(activity.id, user.id, reason))
 
     activity = (
-        Activity.objects.select_related("host", "host_church")
+        Activity.objects.select_related("host", "host__church", "host_church")
         .prefetch_related("participants__dependents", "photos")
         .get(pk=pk)
     )
@@ -866,7 +871,7 @@ class GoingActivitiesView(generics.ListAPIView):
                 participants__user=self.request.user,
                 participants__status__in=statuses,
             )
-            .select_related("host", "host_church")
+            .select_related("host", "host__church", "host_church")
             .prefetch_related("participants__dependents", "photos")
             .distinct()
             .order_by("time", "id")
@@ -883,9 +888,16 @@ def upload_event_photo(request, pk):
         )
     if activity.photos.count() >= MAX_EVENT_PHOTOS:
         return Response(
-            {"detail": "An event can have at most 50 photos."},
+            {
+                "detail": f"An event can have at most {MAX_EVENT_PHOTOS} photos.",
+                "code": "event_photo_limit_reached",
+                "limit": MAX_EVENT_PHOTOS,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
+    throttle = EventPhotoUploadThrottle()
+    if not throttle.allow_request(request, None):
+        return throttled_response(throttle.wait())
     upload = request.FILES.get("image") or request.FILES.get("photo") or request.FILES.get("file")
     if upload is None:
         return Response(
@@ -932,7 +944,13 @@ def event_photo_file(request, pk, photo_id):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return _delete_event_photo(request, pk, photo_id)
-    photo = get_object_or_404(EventPhoto.objects.select_related("activity"), pk=photo_id, activity_id=pk)
+    photo = get_object_or_404(
+        EventPhoto.objects.select_related(
+            "activity", "activity__host__church", "activity__host_church"
+        ),
+        pk=photo_id,
+        activity_id=pk,
+    )
     if not photo.image:
         return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
     activity = photo.activity
@@ -950,7 +968,9 @@ def event_photo_file(request, pk, photo_id):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
     response = FileResponse(photo.image.open("rb"), content_type="image/jpeg")
-    response["Cache-Control"] = "public, max-age=300" if is_public_calendar_event(activity) else "private, max-age=300"
+    response["Cache-Control"] = (
+        "public, max-age=300" if is_public_calendar_event(activity) else "private, max-age=300"
+    )
     return response
 
 
@@ -1065,7 +1085,8 @@ def public_event_ics_view(request, pk):
         Activity.objects.filter(
             pk=pk, list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
         )
-        .select_related("host", "host_church")
+        .filter(church_has_website_calendar_q())
+        .select_related("host", "host__church", "host_church")
         .first()
     )
     if activity is None:
@@ -1082,8 +1103,14 @@ def private_event_ics_view(request):
     activity_id = activity_id_from_ics_token(token)
     if activity_id is None:
         return HttpResponse(status=404)
-    activity = Activity.objects.filter(pk=activity_id).select_related("host", "host_church").first()
+    activity = (
+        Activity.objects.filter(pk=activity_id)
+        .select_related("host", "host__church", "host_church")
+        .first()
+    )
     if activity is None:
         return HttpResponse(status=404)
     hide = ics_token_hides_location(token) and not _is_open_address(activity)
-    return _calendar_ics_response(event_ics(activity, hide_location=hide), "event.ics", private=True)
+    return _calendar_ics_response(
+        event_ics(activity, hide_location=hide), "event.ics", private=True
+    )

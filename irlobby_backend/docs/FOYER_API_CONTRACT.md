@@ -28,10 +28,14 @@ New fields:
 |---|---|---|
 | `date_of_birth` | yes | yes, aliases `birthDate`, `birth_date` |
 | `sex` | yes | `male` or `female` |
-| `church` | `{ "id", "name", "is_verified" }` or `null` | no |
+| `church` | `{ "id", "name", "is_verified", "has_website_calendar" }` or `null` | no |
 | `church_id` | id or `null` | yes, aliases `churchId`; `null` clears it |
 | `is_church_admin` | bool | no |
+| `event_limit_exempt` | bool: true for church admins, staff and the exempt list (see "Beta limits") | no |
+| `next_host_available_at` | ISO datetime when the member may create their next gathering, or `null` if they can now or are exempt | no |
 | `household_child_count` | int | no |
+
+Member coordinates: `latitude` and `longitude` sent to `PATCH`/`PUT /api/users/profile/`, `PATCH /api/users/onboarding/` or registration are silently ignored (no error, not saved). Every user payload (profile, login, auth status, data export) still has both keys, always `null`. The typed town text is kept as before: `location` on the profile, `city` on onboarding (`city` in the profile response mirrors `location`). Gathering coordinates are unchanged. `python manage.py clear_user_coordinates` clears coordinates already stored. It only prints a count unless you pass `--apply`, and it is run by hand, never by a migration or deploy.
 
 Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aesbenshade@dock.org`.
 
@@ -40,7 +44,7 @@ Church admins are `ajesbenshade@gmail.com`, `ajesbenshade@outlook.com`, and `aes
 `GET /api/churches/?q=` (auth) → JSON array, verified churches first, max 20.
 
 ```json
-{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true }
+{ "id": 1, "name": "Franconia Mennonite Church", "is_verified": true, "has_website_calendar": true }
 ```
 
 Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Perkasie, Deep Run East, and Finland Mennonite Church.
@@ -51,7 +55,7 @@ Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Per
 { "name": "Typed Chapel" }
 ```
 
-201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The response is only `id`, `name`, and `is_verified`.
+201 if created (always `is_verified: false`). 200 if that name already exists (case-insensitive). The response is only `id`, `name`, `is_verified`, and `has_website_calendar` (false for new churches).
 
 ## Household
 
@@ -93,6 +97,16 @@ New request fields (snake_case; camelCase aliases accepted):
 | `list_on_church_calendar` | bool, default false |
 | `host_kind` | `person` (default) or `church` |
 | `host_church_id` | optional; church events default to Franconia Mennonite Church |
+
+**Website calendar gate.** Each church has `has_website_calendar` (bool), which is true only when that church's website shows The Foyer calendar. At launch only Franconia Mennonite Church has it: a migration matches the church named exactly "Franconia Mennonite Church" (case-insensitive). Sending `list_on_church_calendar: true` on create or update is rejected unless the gathering's church has the flag. The gathering's church is `host_church` when set. Church-hosted gatherings without one default to Franconia. Otherwise it is the host's own profile church. The rejection is **400** with a flat body:
+
+```json
+{ "code": "church_calendar_unavailable", "detail": "Your church's website doesn't show The Foyer calendar yet." }
+```
+
+**"Public calendar event" also needs the flag.** Everywhere the backend treats a gathering as public, the gathering must be listed and approved and its church (resolved as above) must have `has_website_calendar`. That covers the feed, the open address, photo URLs and files without a signed token, `GET /api/activities/<id>/photos/download/` for any signed-in user, the `/api/public/events/<id>.ics` link (404 otherwise), and the Require-approval restriction. A listed and approved gathering whose church lacks the flag follows the normal member rules instead: hidden address, signed photo links, private `.ics` link. One shared helper in `activities/public_calendar.py` drives both the feed and the per-gathering check.
+
+Edits that don't send `list_on_church_calendar: true` are not checked. The public calendar feed (`/api/public/calendar` and the `.ics`) shows only gatherings whose church (same rule) has `has_website_calendar`. `has_website_calendar` is on every church object: `GET/POST /api/churches/` and the `church` object nested in the profile, login and auth-status user payloads.
 
 `host_kind: "church"` is rejected unless the caller is a church admin. Church-hosted events set `calendar_approved: true` immediately. A member event with `list_on_church_calendar: true` stays `calendar_approved: false` until an admin approves it. Clients cannot set `calendar_approved` directly. `platform_fee_percent` sent by the client is ignored and stored as `0`.
 
@@ -194,7 +208,7 @@ Age is the age on the gathering's start date in `America/New_York`. Birth dates 
 
 ## Photos
 
-`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 50.
+`POST /api/activities/<id>/photos/` (auth, host or church admin on a church event). Multipart file field `image` (also accepts `photo` or `file`). JPEG, PNG, or WebP. Stored as a compressed JPEG. At most 50 per event, and 30 uploads per hour per user (see "Beta limits").
 
 ```json
 { "id": 4, "url": "https://<host>/api/activities/12/photos/4/" }
@@ -551,7 +565,7 @@ A gathering with a capacity is **full** when confirmed people (the account holde
 
 ## Hidden addresses
 
-For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
+For member-hosted events (`host_kind` `person`, not on the public church calendar), `location`, `latitude` and `longitude` are `null` in activity responses unless the viewer is the host, staff, has a going RSVP, or holds a paid ticket. Church-hosted and public-calendar events are unchanged. A public-calendar event here means listed, approved, and its church has `has_website_calendar`. `calendar_links` for a viewer who cannot see the address use an `ics_url` whose file has an empty `LOCATION`, and Google/Outlook links with no location.
 
 # Apple App Store compliance pack
 
@@ -717,4 +731,79 @@ Your accepted friends whose birthday is today or in the next 7 days, sorted by `
 When enabled, Celery beat task `users.tasks.send_birthday_notifications` runs daily at 13:00 UTC (9am Eastern in summer, 8am in winter). For each adult with `show_birthday` on whose birthday is today (Feb 29 → Feb 28 in non-leap years) it sends one push to each friend allowed to see it (same rules as the endpoint, so blocked users and `only_me` get nothing), using the existing Expo push setup. A recipient who turned off push notifications (`preferences.notifications.pushNotifications = false`) gets nothing. Payload: `{"type": "friend_birthday", "userId": <id>, "screen": "Profile"}`; the text never contains a year. Requires the existing Celery beat process to be running.
 
 Database change: `users.User.show_birthday` (bool, default false), migration `users/0016_user_show_birthday`. No change to `HouseholdDependent`.
+
+# Beta limits (additive)
+
+## One new gathering per week for members
+
+`POST /api/activities/` (the only gathering-create endpoint) is limited for members to
+`FOYER_EVENT_CREATE_LIMIT` (default **1**) new gatherings per rolling
+`FOYER_EVENT_CREATE_WINDOW_DAYS` (default **7**) days.
+
+- Counts every gathering the user created in the window, **including cancelled and deleted
+  ones**. Each create writes an `EventCreationLog` row (user, activity id, created time) that is
+  kept when the gathering is cancelled or deleted; it goes only with the account. Gatherings created in the 30 days
+  before the deploy were backfilled from `Activity.created_at`.
+- Exempt: church admins (`FOYER_CHURCH_ADMIN_EMAILS`), `is_staff`, `is_superuser`, and
+  `FOYER_EVENT_LIMIT_EXEMPT_EMAILS` (default `["app-review@irlobby.com"]`). The exempt list does
+  **not** grant church-admin powers.
+- Editing (`PATCH`/`PUT /api/activities/<id>/`), cancelling and RSVPs are not limited.
+- The check runs before validation, so a limited member gets 429 even for an invalid body.
+
+Blocked create → **429** with a `Retry-After` header (seconds, same value as `retry_after`):
+
+```json
+{
+  "code": "event_limit_reached",
+  "limit": 1,
+  "period": "week",
+  "retry_after": 482113,
+  "next_allowed_at": "2026-10-25T14:22:05.123456+00:00",
+  "detail": "You can create 1 event a week. You can create your next one on Sunday, October 25 at 10:22 AM."
+}
+```
+
+`period` is `"week"` for a 7-day window, otherwise `"<n> days"`. `next_allowed_at` is when the
+oldest counted gathering leaves the window. The same time is on the profile as
+`next_host_available_at`, so the app can show it before the member fills in the form.
+
+## Photo upload throttle
+
+`POST /api/activities/<id>/photos/`: at most **30 uploads per hour per user**
+(`EVENT_PHOTO_UPLOAD_THROTTLE_RATE`, default `30/hour`). Requests rejected as not-the-host (403)
+or over the 50-photo cap (400) do not count. Over the limit → **429** with `Retry-After`:
+
+```json
+{ "code": "throttled", "detail": "You're uploading photos too quickly. Try again in 1795 seconds.", "retry_after": 1795 }
+```
+
+This is the only photo upload endpoint. Profile pictures and the profile photo album are URL
+fields on the profile, not uploads, so they are not throttled here.
+
+## 50-photo cap per event (unchanged status, new fields)
+
+Still **400** with the same `detail`; `code` and `limit` were added:
+
+```json
+{ "detail": "An event can have at most 50 photos.", "code": "event_photo_limit_reached", "limit": 50 }
+```
+
+There is no lifetime per-user photo cap.
+
+## Error shape
+
+Every limit error has `code` and `detail`. Every 429 also has `retry_after` (integer seconds,
+at least 1) and a matching `Retry-After` header.
+
+## Photos are removed with their gathering
+
+Deleting a gathering (`DELETE /api/activities/<id>/`, or account deletion, which deletes
+every gathering the user hosted) deletes its photo rows, and a `post_delete` signal removes
+each image file from storage once the transaction commits. A file that is already missing is
+skipped. Photos are stored as a single compressed JPEG; there are no thumbnail or cover files,
+and `Activity.images` holds URL references, not stored files. Cancelling a gathering keeps its
+photos.
+
+`python manage.py find_orphan_photos` lists files under `media/event_photos/` with no
+`EventPhoto` row. It is a dry run unless `--delete` is passed.
 

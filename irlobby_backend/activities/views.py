@@ -24,6 +24,7 @@ from matches.models import Match
 from moderation.models import BlockedUser
 
 from .capacity import FULL_ERROR, exclude_full_for_strangers
+from .limits import event_limit_response, is_event_limit_exempt, next_host_available_at
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
 from .serializers import (
@@ -54,11 +55,12 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         queryset = (
             Activity.objects.filter(Q(is_approved=True) | Q(host=self.request.user))
             .exclude(host_id__in=exclude_ids)
+            .select_related("host", "host__church", "host_church")
             .distinct()
         )
 
         if self.request.user.is_staff:
-            queryset = Activity.objects.all()
+            queryset = Activity.objects.select_related("host", "host__church", "host_church")
 
         # Cancelled gatherings never show in the browse/swipe deck (detail, hosted and going
         # lists still return them).
@@ -213,6 +215,18 @@ class ActivityListCreateView(generics.ListCreateAPIView):
 
         return queryset.order_by("-created_at")
 
+    def create(self, request, *args, **kwargs):
+        # Weekly hosting limit for members (church admins, staff and exempt accounts skip it).
+        # The user row is locked so two simultaneous creates cannot both slip under the limit.
+        with transaction.atomic():
+            if not is_event_limit_exempt(request.user):
+                type(request.user).objects.select_for_update().filter(pk=request.user.pk).first()
+                now = timezone.now()
+                next_allowed = next_host_available_at(request.user, now=now)
+                if next_allowed is not None:
+                    return event_limit_response(next_allowed, now=now)
+            return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
 
@@ -222,12 +236,14 @@ class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsHostOrReadOnly]
 
     def get_queryset(self):
-        queryset = Activity.objects.filter(
-            Q(is_approved=True) | Q(host=self.request.user)
-        ).distinct()
+        queryset = (
+            Activity.objects.filter(Q(is_approved=True) | Q(host=self.request.user))
+            .select_related("host", "host__church", "host_church")
+            .distinct()
+        )
 
         if self.request.user.is_staff:
-            return Activity.objects.all()
+            return Activity.objects.select_related("host", "host__church", "host_church")
 
         return queryset
 
@@ -237,7 +253,9 @@ class HostedActivitiesView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Activity.objects.filter(host=self.request.user)
+        return Activity.objects.filter(host=self.request.user).select_related(
+            "host", "host__church", "host_church"
+        )
 
 
 class TicketThrottle(UserRateThrottle):

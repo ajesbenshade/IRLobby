@@ -17,7 +17,12 @@ from activities.models import (
     HouseholdDependent,
 )
 from activities.tasks import notify_upcoming_activities
-from activities.test_foyer import _activity, _jpeg_upload, _safe_birthdate
+from activities.test_foyer import (
+    _activity,
+    _join_website_calendar_church,
+    _jpeg_upload,
+    _safe_birthdate,
+)
 from chat.models import Conversation, Message
 from matches.models import Match
 from swipes.models import Swipe
@@ -321,6 +326,7 @@ class CancelEventChatTests(CancelEventBase):
 class CancelledEventVisibilityTests(CancelEventBase):
     def setUp(self):
         super().setUp()
+        _join_website_calendar_church(self.host)
         Activity.objects.filter(pk=self.activity.pk).update(
             list_on_church_calendar=True, calendar_approved=True
         )

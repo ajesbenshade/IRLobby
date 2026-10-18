@@ -1,12 +1,14 @@
-"""Remove an EventPhoto's file from storage whenever its row is deleted."""
+"""Remove an EventPhoto's file from storage whenever its row is deleted, and log every
+gathering created (the weekly hosting limit counts the log, which outlives the gathering)."""
 
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
-from .models import EventPhoto
+from .models import Activity, EventCreationLog, EventPhoto
 
 logger = logging.getLogger(__name__)
 
@@ -27,3 +29,15 @@ def remove_event_photo_file(sender, instance, **kwargs):
         return
     storage = instance.image.storage
     transaction.on_commit(lambda: _delete_stored_file(storage, name))
+
+
+@receiver(post_save, sender=Activity, dispatch_uid="log_event_creation")
+def log_event_creation(sender, instance, created, raw=False, **kwargs):
+    """Every creation path (API, admin, seed commands) leaves a durable row."""
+    if not created or raw:
+        return
+    EventCreationLog.objects.create(
+        user_id=instance.host_id,
+        activity_id=instance.id,
+        created_at=instance.created_at or timezone.now(),
+    )

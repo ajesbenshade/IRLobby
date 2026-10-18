@@ -656,7 +656,8 @@ class TicketingTests(APITestCase):
         self.assertEqual(ticket.status, "pending")
 
 
-@override_settings(ENABLE_TICKETING=False)
+# These tests create several gatherings for one member; the weekly limit has its own tests.
+@override_settings(ENABLE_TICKETING=False, FOYER_EVENT_CREATE_LIMIT=100)
 class TicketingDisabledTests(APITestCase):
     def setUp(self):
         self.host = User.objects.create_user(

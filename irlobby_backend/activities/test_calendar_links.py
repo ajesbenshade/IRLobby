@@ -25,7 +25,7 @@ from activities.public_calendar import (
     public_calendar_ics,
     to_webcal,
 )
-from activities.test_foyer import _activity, _safe_birthdate
+from activities.test_foyer import _activity, _join_website_calendar_church, _safe_birthdate
 from users.models import User
 
 NY = ZoneInfo("America/New_York")
@@ -46,6 +46,7 @@ class CalendarLinkTests(APITestCase):
             date_of_birth=_safe_birthdate(42),
             sex="female",
         )
+        _join_website_calendar_church(self.host)
         self.child = HouseholdDependent.objects.create(
             parent=self.host,
             name="SecretChild",

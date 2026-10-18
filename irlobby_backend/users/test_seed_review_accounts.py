@@ -16,11 +16,27 @@ from users.models import Friendship, User
 PW = "Review-pass-123"
 
 
+def isolate_review_password_env(test_case):
+    """Hide REVIEW_ACCOUNT_PASSWORD(2) from the process environment for one test.
+
+    The command falls back to these variables, so a value exported in the shell that runs the
+    tests (a dev box or CI secret) would otherwise change what the tests see.
+    """
+    patcher = patch.dict(os.environ)
+    patcher.start()
+    test_case.addCleanup(patcher.stop)
+    for name in ("REVIEW_ACCOUNT_PASSWORD", "REVIEW_ACCOUNT_PASSWORD2"):
+        os.environ.pop(name, None)
+
+
 def seed(**options):
     call_command("seed_review_account", password=PW, **options)
 
 
 class SeedSecondReviewAccountTests(APITestCase):
+    def setUp(self):
+        isolate_review_password_env(self)
+
     def accounts(self):
         return (
             User.objects.get(email="app-review@irlobby.com"),

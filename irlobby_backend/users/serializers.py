@@ -53,7 +53,13 @@ class UserSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    # The member's own coordinates are no longer stored from the app: the keys stay in the
+    # response for older builds but are always null, and client values are ignored.
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
     is_church_admin = serializers.SerializerMethodField()
+    event_limit_exempt = serializers.SerializerMethodField()
+    next_host_available_at = serializers.SerializerMethodField()
     household_child_count = serializers.SerializerMethodField()
     phone = serializers.CharField(required=False, allow_blank=True, max_length=32)
 
@@ -97,6 +103,8 @@ class UserSerializer(serializers.ModelSerializer):
             "church",
             "church_id",
             "is_church_admin",
+            "event_limit_exempt",
+            "next_host_available_at",
             "household_child_count",
             "profile_visibility",
             "phone",
@@ -176,12 +184,36 @@ class UserSerializer(serializers.ModelSerializer):
         church = obj.church
         if church is None:
             return None
-        return {"id": church.id, "name": church.name, "is_verified": church.is_verified}
+        return {
+            "id": church.id,
+            "name": church.name,
+            "is_verified": church.is_verified,
+            "has_website_calendar": church.has_website_calendar,
+        }
+
+    def get_latitude(self, obj):
+        return None
+
+    def get_longitude(self, obj):
+        return None
 
     def get_is_church_admin(self, obj):
         from activities.access import is_church_admin
 
         return is_church_admin(obj)
+
+    def get_event_limit_exempt(self, obj):
+        from activities.limits import is_event_limit_exempt
+
+        return is_event_limit_exempt(obj)
+
+    def get_next_host_available_at(self, obj):
+        from activities.limits import next_host_available_at
+
+        if not getattr(obj, "pk", None):
+            return None
+        when = next_host_available_at(obj)
+        return when.isoformat() if when else None
 
     def get_household_child_count(self, obj):
         return obj.household_dependents.count()

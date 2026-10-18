@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from activities.capacity import is_full
 from activities.eligibility import audience_label, host_display_name
-from activities.models import Activity
+from activities.models import FRANCONIA_CHURCH_NAME, Activity, Church
 from activities.photos import cover_photo_url
 
 PUBLIC_EVENT_FIELDS = (
@@ -76,6 +76,46 @@ def parse_from_param(value):
     return datetime.combine(day, time.min, tzinfo=ZoneInfo(CHURCH_TIMEZONE))
 
 
+# One rule for "which church's website would show this gathering", shared by the public feed
+# (a queryset filter) and every per-gathering public check (open address, token-free photos,
+# public .ics). Keep ``resolve_calendar_church`` and ``church_has_website_calendar_q`` in step.
+
+
+def _franconia():
+    return Church.objects.filter(name=FRANCONIA_CHURCH_NAME).first()
+
+
+def resolve_calendar_church(host_kind, host_church, host):
+    """``host_church`` when set; else Franconia for a church-hosted gathering (the default
+    ``ActivitySerializer`` applies); else the host's own profile church. May be None."""
+    if host_church is not None:
+        return host_church
+    if host_kind == "church":
+        return _franconia()
+    if host is None or getattr(host, "pk", None) is None:
+        return None
+    return getattr(host, "church", None)
+
+
+def activity_calendar_church(activity):
+    host = activity.host if getattr(activity, "host_id", None) else None
+    host_church = activity.host_church if getattr(activity, "host_church_id", None) else None
+    return resolve_calendar_church(activity.host_kind, host_church, host)
+
+
+def church_has_website_calendar_q() -> Q:
+    """Queryset form of ``activity_calendar_church(...).has_website_calendar``."""
+    q = Q(host_church__has_website_calendar=True) | Q(
+        host_church__isnull=True,
+        host_kind="person",
+        host__church__has_website_calendar=True,
+    )
+    franconia = _franconia()
+    if franconia is not None and franconia.has_website_calendar:
+        q |= Q(host_church__isnull=True, host_kind="church")
+    return q
+
+
 def public_calendar_queryset(since=None):
     """Approved, listed, not-cancelled gatherings, oldest first.
 
@@ -83,18 +123,23 @@ def public_calendar_queryset(since=None):
     """
     qs = Activity.objects.filter(
         list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
-    )
+    ).filter(church_has_website_calendar_q())
     if since is not None:
         qs = qs.filter(Q(time__gte=since) | Q(end_time__gte=since))
     return (
-        qs.select_related("host", "host_church")
+        qs.select_related("host", "host__church", "host_church")
         .prefetch_related("photos", "participants__dependents")
         .order_by("time", "id")
     )
 
 
 def is_public_calendar_event(activity) -> bool:
-    return bool(activity.list_on_church_calendar and activity.calendar_approved)
+    """Listed, approved, and its church's website shows The Foyer calendar (same rule as the
+    feed). Drives open addresses, token-free photo URLs and the public .ics link."""
+    if not (activity.list_on_church_calendar and activity.calendar_approved):
+        return False
+    church = activity_calendar_church(activity)
+    return bool(church is not None and church.has_website_calendar)
 
 
 def gathering_web_url(activity) -> str:

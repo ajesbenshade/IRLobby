@@ -19,7 +19,7 @@ from moderation.models import BlockedUser
 from swipes.models import Swipe
 from users.models import Friendship, User
 
-from .test_foyer import _activity, _safe_birthdate
+from .test_foyer import _activity, _join_website_calendar_church, _safe_birthdate
 
 
 def _user(name, age=40, **extra):
@@ -555,6 +555,7 @@ class PhotoDownloadTests(APITestCase):
         self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_public_calendar_event_open_to_any_logged_in_user(self):
+        _join_website_calendar_church(self.host)
         activity, _ = self._event(list_on_church_calendar=True, calendar_approved=True)
         self.client.force_authenticate(self.stranger)
         resp = self.client.get(reverse("activity-photo-downloads", args=[activity.id]))
@@ -621,6 +622,7 @@ class HiddenAddressTests(APITestCase):
         self.assertIsNone(row["location"])
 
     def test_church_hosted_and_public_calendar_unaffected(self):
+        _join_website_calendar_church(self.host)
         church = _activity(self.host, host_kind="church", location="Church Hall")
         public = _activity(
             self.host, list_on_church_calendar=True, calendar_approved=True, location="Public Hall"

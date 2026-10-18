@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from activities.models import Activity, ActivityParticipant, HouseholdDependent
-from activities.test_foyer import _activity, _safe_birthdate
+from activities.test_foyer import _activity, _join_website_calendar_church, _safe_birthdate
 from swipes.models import Swipe
 from users.models import User
 
@@ -32,6 +32,7 @@ def _ids(response):
 class FullBase(APITestCase):
     def setUp(self):
         self.host = _user("host")
+        _join_website_calendar_church(self.host)
         self.confirmed = _user("confirmed")
         self.pending = _user("pending")
         self.declined = _user("declined")

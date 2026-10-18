@@ -57,7 +57,10 @@ class TicketFixture:
         self.scan_payload = {"ticketToken": self.ticket.get_qr_token()}
 
 
-@override_settings(ENABLE_TICKETING=True, STRIPE_WEBHOOK_SECRET="whsec_integrity")
+# These tests create several gatherings for one member; the weekly limit has its own tests.
+@override_settings(
+    ENABLE_TICKETING=True, STRIPE_WEBHOOK_SECRET="whsec_integrity", FOYER_EVENT_CREATE_LIMIT=100
+)
 class TicketIntegrityTests(TicketFixture, APITestCase):
     def deliver_payment(self, event_type="checkout.session.completed", session_id="cs_integrity"):
         with patch("activities.views.stripe.Webhook.construct_event") as construct_event:

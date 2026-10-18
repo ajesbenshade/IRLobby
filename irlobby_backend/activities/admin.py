@@ -39,9 +39,9 @@ class ActivityAdmin(admin.ModelAdmin):
 
 @admin.register(Church)
 class ChurchAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_verified", "created_at")
+    list_display = ("name", "is_verified", "has_website_calendar", "created_at")
     search_fields = ("name",)
-    list_filter = ("is_verified",)
+    list_filter = ("is_verified", "has_website_calendar")
     raw_id_fields = ("created_by",)
 
 

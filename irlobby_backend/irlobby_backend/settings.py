@@ -172,6 +172,8 @@ REST_FRAMEWORK = {
         "match_reads": config("MATCH_THROTTLE_RATE", default="240/hour"),
         # Anonymous church-website calendar JSON and .ics files, per client IP.
         "public_calendar": config("PUBLIC_CALENDAR_THROTTLE_RATE", default="60/min"),
+        # Gathering photo uploads, per signed-in user.
+        "event_photo_upload": config("EVENT_PHOTO_UPLOAD_THROTTLE_RATE", default="30/hour"),
     },
 }
 
@@ -322,6 +324,13 @@ FOYER_CHURCH_ADMIN_EMAILS = [
     "ajesbenshade@outlook.com",
     "aesbenshade@dock.org",
 ]
+# Beta hosting limit: members (not church admins, staff or the exempt list below) may create
+# FOYER_EVENT_CREATE_LIMIT gatherings per rolling FOYER_EVENT_CREATE_WINDOW_DAYS days.
+# Cancelled and deleted gatherings still count.
+FOYER_EVENT_CREATE_LIMIT = config("FOYER_EVENT_CREATE_LIMIT", default=1, cast=int)
+FOYER_EVENT_CREATE_WINDOW_DAYS = config("FOYER_EVENT_CREATE_WINDOW_DAYS", default=7, cast=int)
+# Skip the hosting limit without church-admin powers (Apple's review account).
+FOYER_EVENT_LIMIT_EXEMPT_EMAILS = ["app-review@irlobby.com"]
 
 # Sign-up terms: when True, POST /api/users/register/ rejects a missing acceptance.
 REQUIRE_TERMS_ON_REGISTER = config("REQUIRE_TERMS_ON_REGISTER", default=False, cast=bool)

@@ -25,6 +25,9 @@ SEEDED_CHURCH_NAMES = (
 class Church(models.Model):
     name = models.CharField(max_length=255)
     is_verified = models.BooleanField(default=False)
+    # True only when this church's website shows The Foyer public calendar feed. Members can
+    # list gatherings on the church calendar only for a church with this on.
+    has_website_calendar = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -240,6 +243,27 @@ class EventPhoto(models.Model):
 
     def __str__(self):
         return f"Photo {self.pk} for {self.activity_id}"
+
+
+class EventCreationLog(models.Model):
+    """One row per gathering created, kept when the gathering is cancelled or deleted.
+
+    The weekly hosting limit counts these rows, so deleting an event never frees up a slot.
+    ``activity_id`` is a plain integer (no foreign key) so the row outlives the gathering.
+    The row goes with the account when the account itself is deleted.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="event_creation_logs")
+    activity_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "created_at"], name="eventcreationlog_user_time_idx"),
+        ]
+
+    def __str__(self):
+        return f"User {self.user_id} created activity {self.activity_id} at {self.created_at}"
 
 
 class Ticket(models.Model):

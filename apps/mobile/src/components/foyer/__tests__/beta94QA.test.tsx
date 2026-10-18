@@ -112,6 +112,12 @@ describe('nits', () => {
     expect(form).not.toMatch(/Alert\.alert\(photoProblem\.title/);
   });
 
+  it("host form Place placeholder is Design's final wording", () => {
+    const form = src('screens/main/FoyerHostForm.tsx');
+    expect(form).toContain(`placeholder="Fellowship hall, a park, or someone's home."`);
+    expect(form).not.toMatch(/Franconia Mennonite Church"/);
+  });
+
   it('N5: the unspecced Profile welcome note is gone', () => {
     expect((foyerCopy as Record<string, unknown>).WELCOME_COPY).toBeUndefined();
     expect(src('screens/main/ProfileScreen.tsx')).not.toMatch(/foyer-welcome/);

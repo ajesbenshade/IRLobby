@@ -280,7 +280,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
 
         <Field label="Title" value={title} onChange={setTitle} placeholder="Women's Fall Brunch" />
         <Field label="Description" value={description} onChange={setDescription} multiline placeholder="Egg casseroles, apple crisp, and good conversation." />
-        <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship Hall, Franconia Mennonite Church" />
+        <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship hall, a park, or someone's home." />
         <PillButton label={MAP_COPY.chooseOnMap} variant="outline" icon="map-marker-outline" onPress={() => setMapOpen(true)} />
         <MapPickerSheet
           visible={mapOpen}

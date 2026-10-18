@@ -17,7 +17,7 @@ class Command(BaseCommand):
             "--subject",
             "-s",
             help="Subject line for the test message",
-            default="IRLobby test email",
+            default="The Foyer test email",
         )
 
     def handle(self, *args, **options):

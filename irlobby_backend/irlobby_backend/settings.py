@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 import sys
 from datetime import timedelta
+from email.utils import formataddr
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -497,9 +498,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Email settings
 # Email configuration
 # In development we default to the console backend so that password reset emails
-# are printed to the terminal rather than requiring a real SMTP server.  The
-# frontend will still receive a usable reset URL because `FRONTEND_BASE_URL` is
-# set to the local web dev server by default.
+# are printed to the terminal rather than requiring a real SMTP server.
 if DEBUG:
     EMAIL_BACKEND = config(
         "EMAIL_BACKEND",
@@ -517,7 +516,22 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@irlobby.local")
+# Sender for account email (password resets). Set DEFAULT_FROM_EMAIL to the sending
+# account's address (or "Name <address>"); when unset, EMAIL_HOST_USER is used, so a
+# Gmail SMTP login sends as itself. A bare address gets the FOYER_EMAIL_FROM_NAME
+# display name ("The Foyer"). Replies go to FOYER_SUPPORT_EMAIL via Reply-To.
+FOYER_EMAIL_FROM_NAME = config("FOYER_EMAIL_FROM_NAME", default="The Foyer")
+_from_address = (
+    config("DEFAULT_FROM_EMAIL", default="").strip()
+    or EMAIL_HOST_USER.strip()
+    or "no-reply@irlobby.local"
+)
+if FOYER_EMAIL_FROM_NAME and "<" not in _from_address:
+    DEFAULT_FROM_EMAIL = formataddr((FOYER_EMAIL_FROM_NAME, _from_address))
+else:
+    DEFAULT_FROM_EMAIL = _from_address
+# Custom URL scheme for app deep links in email (irlobby://reset-password/<token>).
+FOYER_APP_LINK_SCHEME = config("FOYER_APP_LINK_SCHEME", default="irlobby")
 
 EXPO_PUSH_API_URL = config("EXPO_PUSH_API_URL", default="https://exp.host/--/api/v2/push/send")
 EXPO_PUSH_ACCESS_TOKEN = config("EXPO_PUSH_ACCESS_TOKEN", default="")

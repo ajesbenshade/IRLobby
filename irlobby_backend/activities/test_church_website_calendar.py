@@ -241,3 +241,39 @@ class PublicAccessFollowsWebsiteCalendarTests(APITestCase):
 
         # Normal rules still apply: the host sees the address.
         self.assertEqual(self.detail(self.other_host, self.unflagged)["location"], "2 Hidden Ln")
+
+
+class WebsiteCalendarMigrationAndQueryTests(APITestCase):
+    def test_migration_uses_the_seeded_franconia_name(self):
+        import importlib
+
+        migration = importlib.import_module(
+            "activities.migrations.0018_church_has_website_calendar"
+        )
+        self.assertEqual(migration.FRANCONIA_CHURCH_NAME, FRANCONIA_CHURCH_NAME)
+        self.assertEqual(FRANCONIA_CHURCH_NAME, "Franconia Mennonite Church")
+        self.assertEqual(Church.objects.filter(name__iexact=FRANCONIA_CHURCH_NAME).count(), 1)
+
+    def test_public_check_adds_no_query_per_event(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from activities.public_calendar import is_public_calendar_event, public_calendar_queryset
+
+        franconia = Church.objects.get(name=FRANCONIA_CHURCH_NAME)
+        listed = dict(list_on_church_calendar=True, calendar_approved=True)
+
+        def count_queries():
+            with CaptureQueriesContext(connection) as ctx:
+                events = list(public_calendar_queryset())
+                flags = [is_public_calendar_event(event) for event in events]
+            self.assertTrue(all(flags))
+            return len(events), len(ctx.captured_queries)
+
+        _activity(_user("h1", church=franconia), **listed)
+        one = count_queries()
+        for name in ("h2", "h3", "h4"):
+            _activity(_user(name, church=franconia), **listed)
+        four = count_queries()
+        self.assertEqual((one[0], four[0]), (1, 4))
+        self.assertEqual(one[1], four[1])

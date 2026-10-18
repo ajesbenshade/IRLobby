@@ -98,7 +98,7 @@ New request fields (snake_case; camelCase aliases accepted):
 | `host_kind` | `person` (default) or `church` |
 | `host_church_id` | optional; church events default to Franconia Mennonite Church |
 
-**Website calendar gate.** Each church has `has_website_calendar` (bool), which is true only when that church's website shows The Foyer calendar. At launch only Franconia Mennonite Church has it: a migration matches churches by a name containing "Franconia". Sending `list_on_church_calendar: true` on create or update is rejected unless the gathering's church has the flag. The gathering's church is `host_church` when set. Church-hosted gatherings without one default to Franconia. Otherwise it is the host's own profile church. The rejection is **400** with a flat body:
+**Website calendar gate.** Each church has `has_website_calendar` (bool), which is true only when that church's website shows The Foyer calendar. At launch only Franconia Mennonite Church has it: a migration matches the church named exactly "Franconia Mennonite Church" (case-insensitive). Sending `list_on_church_calendar: true` on create or update is rejected unless the gathering's church has the flag. The gathering's church is `host_church` when set. Church-hosted gatherings without one default to Franconia. Otherwise it is the host's own profile church. The rejection is **400** with a flat body:
 
 ```json
 { "code": "church_calendar_unavailable", "detail": "Your church's website doesn't show The Foyer calendar yet." }

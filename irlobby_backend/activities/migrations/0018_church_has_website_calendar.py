@@ -2,11 +2,14 @@
 
 from django.db import migrations, models
 
+# Frozen copy of activities.models.FRANCONIA_CHURCH_NAME (the seeded name; prod row id 1).
+FRANCONIA_CHURCH_NAME = "Franconia Mennonite Church"
+
 
 def enable_franconia(apps, schema_editor):
-    """Franconia's website shows The Foyer calendar. Matched by name, not id."""
+    """Franconia's website shows The Foyer calendar. Matched by exact name (any case), not id."""
     Church = apps.get_model("activities", "Church")
-    Church.objects.filter(name__icontains="Franconia").update(has_website_calendar=True)
+    Church.objects.filter(name__iexact=FRANCONIA_CHURCH_NAME).update(has_website_calendar=True)
 
 
 class Migration(migrations.Migration):

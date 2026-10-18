@@ -55,11 +55,12 @@ class ActivityListCreateView(generics.ListCreateAPIView):
         queryset = (
             Activity.objects.filter(Q(is_approved=True) | Q(host=self.request.user))
             .exclude(host_id__in=exclude_ids)
+            .select_related("host", "host__church", "host_church")
             .distinct()
         )
 
         if self.request.user.is_staff:
-            queryset = Activity.objects.all()
+            queryset = Activity.objects.select_related("host", "host__church", "host_church")
 
         # Cancelled gatherings never show in the browse/swipe deck (detail, hosted and going
         # lists still return them).
@@ -235,12 +236,14 @@ class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsHostOrReadOnly]
 
     def get_queryset(self):
-        queryset = Activity.objects.filter(
-            Q(is_approved=True) | Q(host=self.request.user)
-        ).distinct()
+        queryset = (
+            Activity.objects.filter(Q(is_approved=True) | Q(host=self.request.user))
+            .select_related("host", "host__church", "host_church")
+            .distinct()
+        )
 
         if self.request.user.is_staff:
-            return Activity.objects.all()
+            return Activity.objects.select_related("host", "host__church", "host_church")
 
         return queryset
 
@@ -250,7 +253,9 @@ class HostedActivitiesView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Activity.objects.filter(host=self.request.user)
+        return Activity.objects.filter(host=self.request.user).select_related(
+            "host", "host__church", "host_church"
+        )
 
 
 class TicketThrottle(UserRateThrottle):

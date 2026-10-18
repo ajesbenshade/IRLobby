@@ -817,7 +817,7 @@ def cancel_event(request, pk):
             transaction.on_commit(lambda: _notify_cancelled_attendees(activity.id, user.id, reason))
 
     activity = (
-        Activity.objects.select_related("host", "host_church")
+        Activity.objects.select_related("host", "host__church", "host_church")
         .prefetch_related("participants__dependents", "photos")
         .get(pk=pk)
     )
@@ -871,7 +871,7 @@ class GoingActivitiesView(generics.ListAPIView):
                 participants__user=self.request.user,
                 participants__status__in=statuses,
             )
-            .select_related("host", "host_church")
+            .select_related("host", "host__church", "host_church")
             .prefetch_related("participants__dependents", "photos")
             .distinct()
             .order_by("time", "id")
@@ -945,7 +945,11 @@ def event_photo_file(request, pk, photo_id):
             )
         return _delete_event_photo(request, pk, photo_id)
     photo = get_object_or_404(
-        EventPhoto.objects.select_related("activity"), pk=photo_id, activity_id=pk
+        EventPhoto.objects.select_related(
+            "activity", "activity__host__church", "activity__host_church"
+        ),
+        pk=photo_id,
+        activity_id=pk,
     )
     if not photo.image:
         return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -1082,7 +1086,7 @@ def public_event_ics_view(request, pk):
             pk=pk, list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
         )
         .filter(church_has_website_calendar_q())
-        .select_related("host", "host_church")
+        .select_related("host", "host__church", "host_church")
         .first()
     )
     if activity is None:
@@ -1099,7 +1103,11 @@ def private_event_ics_view(request):
     activity_id = activity_id_from_ics_token(token)
     if activity_id is None:
         return HttpResponse(status=404)
-    activity = Activity.objects.filter(pk=activity_id).select_related("host", "host_church").first()
+    activity = (
+        Activity.objects.filter(pk=activity_id)
+        .select_related("host", "host__church", "host_church")
+        .first()
+    )
     if activity is None:
         return HttpResponse(status=404)
     hide = ics_token_hides_location(token) and not _is_open_address(activity)

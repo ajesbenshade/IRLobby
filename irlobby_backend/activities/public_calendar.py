@@ -127,7 +127,7 @@ def public_calendar_queryset(since=None):
     if since is not None:
         qs = qs.filter(Q(time__gte=since) | Q(end_time__gte=since))
     return (
-        qs.select_related("host", "host_church")
+        qs.select_related("host", "host__church", "host_church")
         .prefetch_related("photos", "participants__dependents")
         .order_by("time", "id")
     )

@@ -7,11 +7,14 @@ that are not on that feed use a stable signed token so ids cannot be enumerated.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from urllib.parse import quote, urlencode, urlsplit, urlunsplit
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.core.signing import BadSignature, Signer
+from django.db.models import Q
 from django.utils import timezone
 
 from activities.capacity import is_full
@@ -20,6 +23,8 @@ from activities.models import Activity
 from activities.photos import cover_photo_url
 
 PUBLIC_EVENT_FIELDS = (
+    "id",
+    "url",
     "title",
     "start",
     "end",
@@ -37,12 +42,52 @@ ICS_TOKEN_SALT = "foyer-event-ics"
 _SIGNER = Signer(salt=ICS_TOKEN_SALT)
 
 
-def public_calendar_queryset():
+# The feed keeps gatherings that ended (or, with no end, started) within this
+# window, so an event happening today does not drop off mid-afternoon.
+PAST_EVENT_GRACE = timedelta(days=1)
+
+
+class InvalidFromDate(ValueError):
+    pass
+
+
+def default_feed_since(now=None):
+    return (now or timezone.now()) - PAST_EVENT_GRACE
+
+
+def parse_from_param(value):
+    """``?from=YYYY-MM-DD`` → midnight America/New_York on that day (aware).
+
+    Returns None when the parameter is absent or blank. Raises InvalidFromDate
+    for anything else that is not a calendar date.
+    """
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        day = date.fromisoformat(value)
+    except ValueError as exc:
+        raise InvalidFromDate(value) from exc
+    if len(value) != 10:
+        # date.fromisoformat also accepts e.g. "20261018"; keep the documented form only.
+        raise InvalidFromDate(value)
+    return datetime.combine(day, time.min, tzinfo=ZoneInfo(CHURCH_TIMEZONE))
+
+
+def public_calendar_queryset(since=None):
+    """Approved, listed, not-cancelled gatherings, oldest first.
+
+    With ``since``, only gatherings whose start or end is at or after it.
+    """
+    qs = Activity.objects.filter(
+        list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
+    )
+    if since is not None:
+        qs = qs.filter(Q(time__gte=since) | Q(end_time__gte=since))
     return (
-        Activity.objects.filter(
-            list_on_church_calendar=True, calendar_approved=True, is_cancelled=False
-        )
-        .select_related("host", "host_church")
+        qs.select_related("host", "host_church")
         .prefetch_related("photos", "participants__dependents")
         .order_by("time", "id")
     )
@@ -52,9 +97,39 @@ def is_public_calendar_event(activity) -> bool:
     return bool(activity.list_on_church_calendar and activity.calendar_approved)
 
 
+def gathering_web_url(activity) -> str:
+    return f"{settings.PUBLIC_WEB_BASE_URL}/gatherings/{activity.id}"
+
+
+def absolute_api_url(url):
+    """Make a site-relative API path absolute on PUBLIC_API_BASE_URL."""
+    if not url:
+        return url
+    if url.startswith("/"):
+        return f"{settings.PUBLIC_API_BASE_URL}{url}"
+    return url
+
+
+def ics_photo_url(activity):
+    """Absolute cover photo URL for .ics files, or None.
+
+    Uploaded photos are only linked for gatherings on the public calendar (that
+    file URL needs no token). Other gatherings only link an external https image.
+    """
+    photos = [p for p in activity.photos.all() if getattr(p, "image", None)]
+    if photos and not is_public_calendar_event(activity):
+        for image in activity.images or []:
+            if isinstance(image, str) and image.strip().startswith("https://"):
+                return image.strip()
+        return None
+    return absolute_api_url(cover_photo_url(activity, None))
+
+
 def public_event_payload(activity, request=None) -> dict:
     end = activity.end_time.isoformat() if activity.end_time else None
     return {
+        "id": activity.id,
+        "url": gathering_web_url(activity),
         "title": activity.title,
         "start": activity.time.isoformat(),
         "end": end,
@@ -238,15 +313,23 @@ def _render(lines: list[str]) -> str:
 
 
 def _public_feed_description(activity) -> str:
-    payload = public_event_payload(activity)
     parts = [
         f"Host: {calendar_host_name(activity)}",
-        f"Audience: {payload['audience']}",
-        payload["description"] or "",
+        f"Audience: {audience_label(activity)}",
+        activity.description or "",
     ]
-    if payload["cover_photo_url"]:
-        parts.append(f"Photo: {payload['cover_photo_url']}")
+    photo = ics_photo_url(activity)
+    if photo:
+        parts.append(f"Photo: {photo}")
     return "\n".join(parts)
+
+
+def _single_event_ics_description(activity) -> str:
+    description = event_description(activity)
+    photo = ics_photo_url(activity)
+    if photo:
+        description = f"{description}\nPhoto: {photo}"
+    return description
 
 
 def public_calendar_ics(activities) -> str:
@@ -267,7 +350,7 @@ def event_ics(activity, *, hide_location: bool = False) -> str:
     lines.extend(
         _vevent_lines(
             activity,
-            description=event_description(activity),
+            description=_single_event_ics_description(activity),
             dtstamp=dtstamp,
             hide_location=hide_location,
         )

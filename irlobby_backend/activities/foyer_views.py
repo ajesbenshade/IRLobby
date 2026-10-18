@@ -11,7 +11,12 @@ from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -60,15 +65,19 @@ from .photos import (
     photo_token_valid,
 )
 from .public_calendar import (
+    InvalidFromDate,
     activity_id_from_ics_token,
+    default_feed_since,
     event_ics,
     ics_token_hides_location,
     is_public_calendar_event,
+    parse_from_param,
     public_calendar_ics,
     public_calendar_queryset,
     public_event_payload,
 )
 from .serializers import ActivitySerializer
+from .throttles import PublicCalendarThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -999,11 +1008,27 @@ def event_photo_download_file(request, pk, photo_id):
     return response
 
 
+FROM_PARAM_ERROR = "from must be a date in the form YYYY-MM-DD."
+
+
+def _feed_since(request):
+    """Lower bound for the public feed: ?from=YYYY-MM-DD, else now minus one day."""
+    since = parse_from_param(request.query_params.get("from"))
+    return since if since is not None else default_feed_since()
+
+
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PublicCalendarThrottle])
 def public_calendar(request):
-    events = [public_event_payload(activity, request) for activity in public_calendar_queryset()]
+    try:
+        since = _feed_since(request)
+    except InvalidFromDate:
+        return Response({"detail": FROM_PARAM_ERROR}, status=status.HTTP_400_BAD_REQUEST)
+    events = [
+        public_event_payload(activity, request) for activity in public_calendar_queryset(since)
+    ]
     return Response({"events": events})
 
 
@@ -1021,14 +1046,20 @@ def _calendar_ics_response(body: str, filename: str, *, private: bool) -> HttpRe
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PublicCalendarThrottle])
 def public_calendar_ics_view(request):
-    body = public_calendar_ics(public_calendar_queryset())
+    try:
+        since = _feed_since(request)
+    except InvalidFromDate:
+        return Response({"detail": FROM_PARAM_ERROR}, status=status.HTTP_400_BAD_REQUEST)
+    body = public_calendar_ics(public_calendar_queryset(since))
     return _calendar_ics_response(body, "calendar.ics", private=False)
 
 
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PublicCalendarThrottle])
 def public_event_ics_view(request, pk):
     activity = (
         Activity.objects.filter(
@@ -1045,6 +1076,7 @@ def public_event_ics_view(request, pk):
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PublicCalendarThrottle])
 def private_event_ics_view(request):
     token = request.query_params.get("token") or ""
     activity_id = activity_id_from_ics_token(token)

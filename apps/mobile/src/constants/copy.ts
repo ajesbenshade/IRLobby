@@ -18,7 +18,7 @@ export const auth = {
   login: {
     eyebrow: brand.name,
     title: 'Login',
-    subtitle: 'Gatherings at Franconia Mennonite Church.',
+    subtitle: 'Gather with your congregation.',
     pillText: 'Real plans, real fast',
     primaryCta: 'Continue with email',
     twitterCta: 'Continue with X',

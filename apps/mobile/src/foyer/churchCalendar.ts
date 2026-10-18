@@ -11,8 +11,9 @@ export const churchHasWebsiteCalendar = (church: WebsiteCalendarFlags | null | u
   church?.has_website_calendar === true || church?.website_calendar === true;
 
 /** Design copy for a 400 `{code: 'church_calendar_unavailable'}` on create/edit. */
+/** The server rejects the whole save, so the form stays open with this message. */
 export const CHURCH_CALENDAR_UNAVAILABLE_MESSAGE =
-  "Your church's website calendar isn't connected to The Foyer yet. Your gathering is still posted in the app.";
+  "Your church's website calendar isn't connected to The Foyer yet. Turn off “Post to the church website calendar” and try again.";
 
 export const isChurchCalendarUnavailable = (error: unknown): boolean => {
   if (!axios.isAxiosError(error) || error.response?.status !== 400) {

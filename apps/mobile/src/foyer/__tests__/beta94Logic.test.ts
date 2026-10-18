@@ -201,6 +201,13 @@ describe('churchHasWebsiteCalendar', () => {
     expect(churchHasWebsiteCalendar(undefined)).toBe(false);
   });
 
+  it('the 400 message is Design copy with curly quotes around the toggle name', () => {
+    const { CHURCH_CALENDAR_UNAVAILABLE_MESSAGE } = require('@foyer/churchCalendar') as typeof import('@foyer/churchCalendar');
+    expect(CHURCH_CALENDAR_UNAVAILABLE_MESSAGE).toBe(
+      "Your church's website calendar isn't connected to The Foyer yet. Turn off \u201cPost to the church website calendar\u201d and try again.",
+    );
+  });
+
   it('maps only a 400 church_calendar_unavailable', () => {
     expect(isChurchCalendarUnavailable(axiosError(400, { code: 'church_calendar_unavailable' }))).toBe(true);
     expect(isChurchCalendarUnavailable(axiosError(500, { code: 'church_calendar_unavailable' }))).toBe(false);

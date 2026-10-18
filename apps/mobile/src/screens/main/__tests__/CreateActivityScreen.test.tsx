@@ -77,6 +77,7 @@ const mockConfig = (jest.requireMock('@constants/config') as { config: { ticketi
 
 beforeEach(() => {
   mockConfig.ticketingEnabled = true;
+  mockNavigate.mockClear();
   mockUser = { canSellTickets: false, church: FRANCONIA_LIKE, churchId: 1 };
   require('@foyer/churchName').resetChurchNameCache();
 });
@@ -264,7 +265,7 @@ describe('CreateActivityScreen photos (Frame A2)', () => {
 describe('Post to the church website calendar (only when the church has one)', () => {
   const CALENDAR_LABEL = 'Post to the church website calendar';
   const UNAVAILABLE =
-    "Your church's website calendar isn't connected to The Foyer yet. Your gathering is still posted in the app.";
+    "Your church's website calendar isn't connected to The Foyer yet. Turn off “Post to the church website calendar” and try again.";
 
   beforeEach(() => {
     process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
@@ -329,5 +330,8 @@ describe('Post to the church website calendar (only when the church has one)', (
     fireEvent.press(screen.getByText('Post gathering'));
     expect(await screen.findByText(UNAVAILABLE)).toBeTruthy();
     expect(screen.queryByText('Server text that should not show')).toBeNull();
+    // The whole save was rejected: the form stays open for another try.
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByText('Post gathering')).toBeTruthy();
   });
 });

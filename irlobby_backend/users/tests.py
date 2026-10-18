@@ -1178,6 +1178,11 @@ class PushNotificationTests(APITestCase):
 
 
 class SeedReviewAccountTests(APITestCase):
+    def setUp(self):
+        from users.test_seed_review_accounts import isolate_review_password_env
+
+        isolate_review_password_env(self)
+
     def test_seeds_review_account_with_content_visible_from_any_location(self):
         from django.core.management import call_command
 
@@ -1227,3 +1232,14 @@ class SeedReviewAccountTests(APITestCase):
 
         with self.assertRaises(CommandError):
             call_command("seed_review_account")
+
+    def test_seed_review_account_reads_password_from_environment(self):
+        import os
+        from unittest.mock import patch
+
+        from django.core.management import call_command
+
+        with patch.dict(os.environ, {"REVIEW_ACCOUNT_PASSWORD": "Env-review-pass-1"}):
+            call_command("seed_review_account")
+        reviewer = User.objects.get(email="app-review@irlobby.com")
+        self.assertTrue(reviewer.check_password("Env-review-pass-1"))

@@ -2,7 +2,7 @@ export type AudienceGender = 'everyone' | 'men' | 'women';
 
 export const CHAT_GATE_MESSAGE = 'Chat opens for people who are going.';
 export const CALENDAR_ADDRESS_WARNING =
-  "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
+  "Public gatherings appear on your church's website calendar, with their location, after a church admin approves them.";
 export const WHOS_COMING_NOTE =
   'Only children in your household are listed. Teens with their own account RSVP for themselves.';
 

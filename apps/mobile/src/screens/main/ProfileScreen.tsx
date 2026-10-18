@@ -23,9 +23,7 @@ import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { FoyerHeader } from "@components/FoyerHeader";
 import { FoyerProfileCard } from "@components/FoyerProfileCard";
-import { InfoNotice } from "@components/foyer/ui";
-import { SUPPORT_COPY, WELCOME_COPY } from "@constants/foyerCopy";
-import { isFoyerWelcomeActive } from "@foyer/firstRun";
+import { SUPPORT_COPY } from "@constants/foyerCopy";
 import { PickChurchCard } from "@components/foyer/PickChurchCard";
 import { helpMailto, openSupportEmail } from "@foyer/support";
 import { isFoyerMode, isTicketingUiEnabled } from "@constants/appMode";
@@ -207,9 +205,6 @@ export const ProfileScreen = () => {
         }
       >
         <FoyerHeader />
-        {isFoyerWelcomeActive() ? (
-          <InfoNotice title={WELCOME_COPY.title} message={WELCOME_COPY.body} testID="foyer-welcome" />
-        ) : null}
         <PickChurchCard surface="profile" />
         <FoyerProfileCard />
         <PanelCard style={styles.menuCard}>

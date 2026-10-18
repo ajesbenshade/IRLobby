@@ -705,12 +705,6 @@ export const DISCOVER_FILTER_COPY = {
 
 export const discoverCountLabel = (count: number) => (count === 1 ? '1 gathering' : `${count} gatherings`);
 
-/** First run in Foyer mode: no legacy onboarding. Church step, then Profile basics with a welcome note. */
-export const WELCOME_COPY = {
-  title: 'Welcome to The Foyer',
-  body: 'Add your name, city and a photo so people at your church know who you are, then tap Save.',
-} as const;
-
 /** Church step (first run) and the shared church picker. */
 export const CHURCH_STEP_COPY = {
   title: 'Which church do you attend?',

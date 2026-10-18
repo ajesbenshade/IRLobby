@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -9,10 +10,11 @@ const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockRefreshProfile = jest.fn();
 let mockUser: { id: number; eventLimitExempt?: boolean } = { id: 9 };
+let mockParams: Record<string, unknown> = { activityId: 12 };
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, setOptions: () => undefined }),
-  useRoute: () => ({ params: { activityId: 12 } }),
+  useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('@expo/vector-icons', () => ({ MaterialCommunityIcons: 'MaterialCommunityIcons' }));
 jest.mock('expo-image-picker', () => ({}));
@@ -54,6 +56,7 @@ const openSheet = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 9 };
+  mockParams = { activityId: 12 };
   fetchActivity.mockResolvedValue(gathering);
   fetchAttendees.mockResolvedValue(null);
   mockRefreshProfile.mockResolvedValue(null);
@@ -98,6 +101,11 @@ describe('host Delete gathering', () => {
     const keys = invalidate.mock.calls.map(([filters]) => (filters as { queryKey: unknown[] }).queryKey[0]);
     expect(keys).toEqual(expect.arrayContaining(['mobile-discover-activities', 'foyer-hosted', 'foyer-going', 'mobile-hosted-activities']));
     expect(mockRefreshProfile).toHaveBeenCalled();
+    // N6: the deleted gathering is never refetched, and the screen never flashes the unavailable state while it pops.
+    expect(keys).not.toContain('foyer-gathering');
+    expect(fetchActivity).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('This gathering is unavailable.')).toBeNull();
+    expect(screen.getByText('Family Game Night')).toBeTruthy();
   });
 
   it('on error shows the plain ErrorNotice and stays open', async () => {
@@ -110,6 +118,26 @@ describe('host Delete gathering', () => {
     expect(screen.queryByText(/status code/)).toBeNull();
     expect(mockGoBack).not.toHaveBeenCalled();
     expect(mockRefreshProfile).not.toHaveBeenCalled();
+  });
+
+  it('opens the 248/249 sheet passed by the host form after posting (N4)', async () => {
+    mockParams = {
+      activityId: 12,
+      photoNotice: { title: 'This gathering is full of photos', body: 'Each gathering can hold 50 photos. Remove one to add another.' },
+    };
+    renderScreen();
+    expect(await screen.findByTestId('photo-limit-title')).toBeTruthy();
+    expect(screen.getByText('This gathering is full of photos')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('photo-limit-ok'));
+    await waitFor(() => expect(screen.queryByTestId('photo-limit-title')).toBeNull());
+  });
+
+  it('Delete is a red outline pill, not solid', async () => {
+    renderScreen();
+    const style = StyleSheet.flatten((await screen.findByTestId('delete-gathering')).props.style);
+    expect(style.borderColor).toBe('#8a0a1f');
+    expect(style.backgroundColor).not.toBe('#8a0a1f');
+    expect(style.borderWidth).toBeGreaterThan(0);
   });
 
   it('non-hosts do not see Delete gathering', async () => {

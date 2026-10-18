@@ -78,6 +78,8 @@ export type MainStackParamList = {
   Household: undefined;
   GatheringDetail: {
     activityId: number | string;
+    /** Set by the host form when the photo posted with a new gathering hit a limit: opens sheet 248/249 here. */
+    photoNotice?: { title: string; body: string };
   };
   /**
    * Per-gathering chat (host + people going). `conversationId` is optional and only carried from

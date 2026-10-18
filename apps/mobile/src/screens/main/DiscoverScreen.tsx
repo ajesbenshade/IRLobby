@@ -71,6 +71,7 @@ import {
   discoverCountLabel,
 } from '@constants/foyerCopy';
 import { useMapCenter } from '@foyer/mapLocation';
+import { useMemberChurchName } from '@foyer/churchName';
 import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
 import { isActivityCancelled, isCancelledMessage } from '@foyer/cancel';
@@ -131,6 +132,7 @@ export const DiscoverScreen = () => {
   const navigation = useNavigation<DiscoverNavigationProp>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const churchName = useMemberChurchName();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [matchContext, setMatchContext] = useState<{ name?: string; title?: string } | null>(null);
@@ -557,7 +559,9 @@ export const DiscoverScreen = () => {
         title={foyerMode ? 'Upcoming gatherings' : 'Gatherings near you'}
         subtitle={
           foyerMode
-            ? `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`
+            ? churchName
+              ? `From ${churchName}`
+              : undefined
             : 'Swipe to pass, or say you’re going.'
         }
         rightContent={

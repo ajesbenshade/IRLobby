@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memberChurchName } from '@foyer/churchName';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -458,7 +459,7 @@ export const FoyerProfileCard = () => {
           <Text style={styles.calendarTitle}>Church calendar</Text>
         </View>
         <Text style={styles.calendarBody}>
-          Subscribe to see every Franconia gathering in your own calendar. It updates automatically.
+          {`Subscribe to see every ${memberChurchName(user) ?? 'church'} gathering in your own calendar. It updates automatically.`}
         </Text>
         <Pressable
           accessibilityRole="link"

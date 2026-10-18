@@ -1,66 +1,36 @@
-# Reviewer Demo Account
+# The Foyer – TestFlight beta text (DRAFT for build 94+; Webmaster pastes into App Store Connect)
 
-Used for both Apple App Review (App Store Connect → your version → App Review Information → Sign-In Information) and Google Play (Play Console → App content → App access).
+Source for Mobile's rewrite of apps/mobile/store/metadata/reviewer-demo-account.md. No passwords in this file or the repo; the demo password lives only in App Store Connect.
 
-## Credentials
+## Beta App Description
+The Foyer helps members of a congregation find and host gatherings together: potlucks, small groups, service days and other events. Members choose their church, see upcoming gatherings from people in their church, RSVP, chat with guests and share photos from the event. This beta is being tested with a small group of Mennonite churches in southeastern Pennsylvania.
 
-> **Action required:** Run `seed_review_account` on production before every submission (see Maintenance). It creates the account and all demo content.
+## Feedback Email
+support@irlobby.com   (pending Aaron's OK)
 
-- **Email**: `app-review@irlobby.com`
-- **Password**: `<set in 1Password / shared secret store; paste into ASC + Play Console only>`
-- **Display name**: `App Reviewer`
-- **Region**: United States (account created with US zipcode for activity feed)
+## Beta App Review Information – notes for Apple's reviewer
+Sign in with the demo account entered in the Sign-In Information fields (app-review@irlobby.com).
 
-## What the reviewer will see after sign-in
+The demo account already has a home church selected and is exempt from the one-gathering-per-week member limit, so you can create more than one gathering while reviewing.
 
-1. Onboarding is marked complete, so they land directly on Home.
-2. Home shows 8 upcoming activities (6 plus two Require-approval gatherings, see below) around Cupertino, CA, hosted by 4 other seeded users
-   (Maya, Jordan, Priya, Sam). The review account skips the nearby-radius filter, so this
-   content appears wherever the review device is located.
-3. The reviewer can:
-   - Browse and swipe activities, and join one (they are already confirmed for the hike)
-   - Open the existing chat with Maya (a match with message history) and send messages
-   - See their own hosted activity ("Sunday Farmers Market Stroll") with a pending join request
-   - Edit profile, upload a photo
-   - Trigger account deletion from Settings → Delete account (do not delete this account; it is shared)
+Suggested path:
+1. Sign in. Discover shows upcoming gatherings from the account's church.
+2. Open a gathering to see details, RSVP, guest chat and photos.
+3. Tap Host to create a gathering (title, time, place, who can see it). Hosts can cancel a gathering (keeps its photos) or delete it (removes the gathering and its photos).
+4. Profile lets you change your church. Settings has Send feedback, notifications and account deletion (Settings > Delete account removes the account and the photos it added).
 
-## Second reviewer account
+The app has no purchases, payments, ads or tracking. Location is optional and used only to center maps (the Discover map and the place picker when hosting) on where you are. It is off by default; the app asks for location "While Using the App" only after the member turns on "Use my location for maps" in Profile and opens a map. It is never used in the background, and the app does not show distances. [Checked by Mobile against build 94 code, Oct 18]
 
-`seed_review_account` also creates a second account so a reviewer can try both sides of friends, 1:1 chat, and join requests.
+## What to Test (build 94)
+Thanks for trying The Foyer!
 
-- **Email**: `app-review2@irlobby.com` (username `app_review2`)
-- **Password**: the same as the first account unless `--password2` or `REVIEW_ACCOUNT_PASSWORD2` is set
-  (the option wins over the env var, which wins over the shared password).
-- Already friends with the first account, with a short 1:1 chat between the two (Chats tab).
-- Has asked to join "Neighborhood Potluck (host approves guests)", a Require-approval gathering hosted by Sam; the request shows as pending.
-- The first account hosts "Hosting demo: Porch Games (you approve guests)", with a pending request from Priya to approve or decline.
-- Safe to re-run: the seed rebuilds both accounts' content without duplicates. Home now shows 8 upcoming activities for the first account (the two Require-approval gatherings are added).
+Please try:
+- Signing up and choosing your church at the new "Your church" step.
+- Browsing gatherings from your church and RSVPing to one.
+- Hosting a gathering. Members can host one gathering per week; deleting a gathering doesn't free up that week.
+- Adding photos to a gathering (up to 30 an hour, 50 per gathering).
+- Settings > Send feedback for anything confusing, broken or missing.
 
-## Notes for reviewers (paste verbatim into ASC / Play Console)
+Please don't tick "Post to the church website calendar" on test gatherings unless you mean for it to appear on your church's public website.
 
-```
-Sign in with email + password using the credentials above ("Continue with email" on the
-login screen). Onboarding is pre-completed, so you land on the Home feed.
-
-The account is pre-populated with other users, upcoming activities, an activity you have
-joined, an activity you host (with a pending join request), and an existing chat with
-another user under the Chats tab. Demo content is shown regardless of device location.
-
-Location access ("While Using") and push notifications are optional.
-
-Delete-account flow: Settings → Account → Delete account. Please do NOT confirm
-deletion on this shared review account.
-```
-
-## Maintenance
-
-- Rotate the password each release cycle and update both stores.
-- Re-seed sample activities monthly so reviewers see fresh content.
-- Before each submission (and if the account is locked, deleted, or its activities have
-  passed), refresh it on the production backend. This resets the password, re-creates the
-  demo users/activities with future dates, and rebuilds the chat:
-
-  ```bash
-  cd irlobby_backend
-  REVIEW_ACCOUNT_PASSWORD='<password>' python manage.py seed_review_account
-  ```
+The app is iPhone-only for now. Please install build 94 or later.

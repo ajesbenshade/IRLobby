@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 
 import { View } from '@components/RNCompat';
+import { useMemberChurchName } from '@foyer/churchName';
 import { useAuth } from '@hooks/useAuth';
 import { appColors, appTypography, brand, fontSize } from '@theme/index';
 
@@ -13,6 +14,7 @@ export const FoyerHeader = ({ tone = 'default' }: FoyerHeaderProps) => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const onPrimary = tone === 'onPrimary';
+  const churchName = useMemberChurchName();
   const initial = (user?.firstName || user?.email || 'F').charAt(0).toUpperCase();
 
   const openProfile = () => {
@@ -32,7 +34,11 @@ export const FoyerHeader = ({ tone = 'default' }: FoyerHeaderProps) => {
     <View style={styles.row}>
       <View style={styles.wordBlock}>
         <Text style={[styles.wordmark, onPrimary ? styles.onPrimary : null]}>{brand.name}</Text>
-        <Text style={[styles.church, onPrimary ? styles.churchOnPrimary : null]}>{brand.church}</Text>
+        {churchName ? (
+          <Text style={[styles.church, onPrimary ? styles.churchOnPrimary : null]} testID="foyer-header-church">
+            {churchName}
+          </Text>
+        ) : null}
       </View>
       <Pressable
         accessibilityRole="button"

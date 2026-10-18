@@ -51,6 +51,7 @@ import { createActivity, fetchActivity, updateActivity } from '@services/activit
 import { uploadGatheringPhoto } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import { memberChurchName } from '@foyer/churchName';
 
 type FoyerHostFormProps = {
   activityId?: number | string;
@@ -178,28 +179,29 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       const saved = isEditing && activityId
         ? await updateActivity(activityId, payload as never)
         : await createActivity(payload as never);
-      let photoProblem: PhotoLimitNotice | null = null;
+      let photoProblem: { notice: PhotoLimitNotice | null } | null = null;
       if (photoUri) {
         try {
           const compressed = await compressGatheringPhoto(photoUri);
           await uploadGatheringPhoto(saved.id, compressed);
         } catch (photoError) {
           // The gathering is already saved: never leave the form up (a second Post would make a duplicate).
-          const notice = photoLimitNotice(photoError);
-          photoProblem = notice ?? { title: COMMON_COPY.photosAddFailed, body: '' };
+          photoProblem = { notice: photoLimitNotice(photoError) };
         }
       }
       return { saved, photoProblem };
     },
-    onSuccess: ({ photoProblem }) => {
+    onSuccess: ({ saved, photoProblem }) => {
       if (!isEditing) {
         // Picks up the new next_host_available_at so the Host tab shows the weekly limit.
         void refreshProfile();
       }
       navigation.navigate('Tabs', { screen: 'Activity' });
-      if (photoProblem) {
-        // The form is closing, so a system alert carries the photo-limit copy.
-        Alert.alert(photoProblem.title, photoProblem.body || undefined);
+      if (photoProblem?.notice) {
+        // Photo limit (248/249): open the new gathering so its photos show the real sheet, not a system alert.
+        navigation.navigate('GatheringDetail', { activityId: saved.id, photoNotice: photoProblem.notice });
+      } else if (photoProblem) {
+        Alert.alert(COMMON_COPY.photosAddFailed);
       }
     },
     onError: (saveError) => {
@@ -422,7 +424,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
           <View style={styles.admin}>
             <Text style={styles.adminLabel}>Admin only</Text>
             <CheckRow
-              label="Host as Franconia Mennonite Church"
+              label={`Host as ${memberChurchName(user) ?? "your church"}`}
               value={hostAsChurch}
               onChange={setHostAsChurch}
             />

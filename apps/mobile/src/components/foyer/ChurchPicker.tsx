@@ -62,11 +62,17 @@ export const ChurchPicker = ({ selected, onSelect, notListedMode = 'sheet' }: Ch
               accessibilityState={{ selected: isSelected }}
               accessibilityLabel={church.name}
               onPress={() => onSelect(church)}
-              style={[styles.row, index < results.length - 1 ? styles.rowDivider : null]}
+              style={styles.row}
               testID={`church-option-${church.id}`}
             >
               <Radio selected={isSelected} />
-              <Text style={[styles.rowText, isSelected ? styles.rowTextSelected : null]}>{church.name}</Text>
+              {/* Frame 242: the divider is inset to start at the label, not under the radio. */}
+              <View
+                style={[styles.rowLabel, index < results.length - 1 ? styles.rowDivider : null]}
+                testID={`church-option-label-${church.id}`}
+              >
+                <Text style={[styles.rowText, isSelected ? styles.rowTextSelected : null]}>{church.name}</Text>
+              </View>
             </Pressable>
           );
         })}
@@ -113,7 +119,8 @@ const styles = StyleSheet.create({
   list: { backgroundColor: appColors.white, borderRadius: radii.list, overflow: 'hidden' },
   loading: { paddingVertical: 16 },
   empty: { padding: 16, fontFamily: appTypography.bodyRegular, fontSize: 15, color: appColors.mutedInk },
-  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
+  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 16 },
+  rowLabel: { flex: 1, alignSelf: 'stretch', minHeight: 56, justifyContent: 'center', paddingRight: 16 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: appColors.line },
   rowText: { flex: 1, fontFamily: appTypography.bodyMedium, fontSize: 16, color: appColors.ink },
   rowTextSelected: { fontFamily: appTypography.bodySemibold, fontWeight: '700' },

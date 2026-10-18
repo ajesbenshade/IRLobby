@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Text } from 'react-native-paper';
@@ -68,6 +68,9 @@ export const GatheringDetailScreen = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** Set once the server deleted it: the detail query stops (no refetch of a 404) and the screen keeps its last data while it pops. */
+  const [deleted, setDeleted] = useState(false);
+  const deletedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pickedUris, setPickedUris] = useState<string[]>([]);
@@ -89,9 +92,21 @@ export const GatheringDetailScreen = () => {
   const activityQuery = useQuery({
     queryKey: ['foyer-gathering', activityId],
     queryFn: () => fetchActivity(activityId),
+    enabled: !deleted,
   });
 
-  const [photoNotice, setPhotoNotice] = useState<PhotoLimitNotice | null>(null);
+  // After a delete, drop this gathering's cached detail only once the screen has gone (no error flash while it pops).
+  useEffect(
+    () => () => {
+      if (deletedRef.current) {
+        queryClient.removeQueries({ queryKey: ['foyer-gathering', activityId] });
+        queryClient.removeQueries({ queryKey: ['foyer-attendees', activityId] });
+      }
+    },
+    [activityId, queryClient],
+  );
+
+  const [photoNotice, setPhotoNotice] = useState<PhotoLimitNotice | null>(() => route.params.photoNotice ?? null);
   const uploadMutation = useMutation({
     mutationFn: async (uris: string[]) => {
       // One at a time so a failure keeps the photos already added.
@@ -140,15 +155,17 @@ export const GatheringDetailScreen = () => {
       setDeleteError(DELETE_GATHERING_COPY.error);
       return;
     }
-    queryClient.removeQueries({ queryKey: ['foyer-gathering', activityId] });
-    await Promise.all(
-      [...CANCEL_QUERY_KEYS, ['mobile-activity']].map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
-      ),
-    ).catch(() => undefined);
+    deletedRef.current = true;
+    setDeleted(true);
     setDeletePending(false);
     setDeleteOpen(false);
     navigation.goBack();
+    // Lists refresh in the background; this gathering's own detail key is skipped (it would refetch a 404).
+    void Promise.all(
+      [...CANCEL_QUERY_KEYS, ['mobile-activity']]
+        .filter((queryKey) => queryKey[0] !== 'foyer-gathering')
+        .map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
+    ).catch(() => undefined);
     void refreshProfile?.().catch(() => undefined);
   };
 

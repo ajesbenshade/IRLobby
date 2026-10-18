@@ -128,12 +128,15 @@ export const PickChurchCard = ({ surface }: { surface: PickChurchSurface }) => {
   );
 };
 
+export const PICK_CHURCH_BUTTON_HEIGHT = 48;
+
 const styles = StyleSheet.create({
   card: { backgroundColor: appColors.white, borderRadius: radii.list, padding: 16, gap: 8 },
   title: { fontFamily: appTypography.heading, fontSize: 22, lineHeight: 30, color: appColors.ink },
   body: { fontFamily: appTypography.bodyRegular, fontSize: 15, lineHeight: 22, color: appColors.mutedInk },
   // Frame 245: side by side, Choose church (burgundy) then Not now (outline).
   buttons: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  button: { flex: 1 },
+  // Frame 245: both buttons are 48pt (PillButton's default minimum is 54).
+  button: { flex: 1, minHeight: PICK_CHURCH_BUTTON_HEIGHT, paddingVertical: 8 },
   sheetTitle: { fontFamily: appTypography.heading, fontSize: 24, lineHeight: 32, color: appColors.ink },
 });

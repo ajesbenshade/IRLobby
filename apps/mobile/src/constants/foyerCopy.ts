@@ -783,4 +783,7 @@ export const DELETE_GATHERING_COPY = {
   limitedLine: "Deleting it won't let you host another gathering this week.",
   confirm: 'Delete gathering',
   keep: 'Keep gathering',
+  /** Host action on the gathering, below Cancel gathering. */
+  action: 'Delete gathering',
+  error: "Couldn't delete the gathering. Try again.",
 } as const;

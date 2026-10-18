@@ -10,6 +10,7 @@ import { Modal, Portal, Text } from 'react-native-paper';
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { AppScrollView } from '@components/AppChrome';
 import { CancelGatheringSheet } from '@components/foyer/CancelGatheringSheet';
+import { DeleteGatheringSheet } from '@components/foyer/DeleteGatheringSheet';
 import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
 import { CancelledChatCard, CancelledPhotosCard } from '@components/foyer/CancelledGuestCards';
 import { HostAttendeesCard } from '@components/foyer/HostAttendeesCard';
@@ -19,7 +20,7 @@ import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { GRAYSCALE_IMAGE_STYLE, PillButton, Toast } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { WhosComingSheet } from '@components/WhosComingSheet';
-import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, COMMON_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, COMMON_COPY, DELETE_GATHERING_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import {
   declineNoteFor,
   gatheringRequiresApproval,
@@ -34,7 +35,7 @@ import { fullBlocksJoin, fullNotice, isFullMessage } from '@foyer/full';
 import { buildPastAttendees, isHostAttendeeView } from '@foyer/attendees';
 import { formatGatheringWhen } from '@foyer/dates';
 import { openGatheringChat } from '@foyer/gatheringChat';
-import { canCancelRsvp, canSeeChat, hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
+import { CANCEL_QUERY_KEYS, canCancelRsvp, canSeeChat, hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
 import type { WhosComingResponse } from '@foyer/logic';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
 import {
@@ -49,7 +50,7 @@ import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { calendarEventSummary } from '@shared/calendarLinks';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
-import { fetchActivity } from '@services/activityService';
+import { deleteActivity, fetchActivity } from '@services/activityService';
 import { fetchAttendees, fetchWhosComing, postRsvp, uploadGatheringPhoto } from '@services/foyerService';
 import { photoLimitNotice, type PhotoLimitNotice } from '@foyer/hostLimit';
 import { NoticeSheet } from '@components/foyer/NoticeSheet';
@@ -62,8 +63,11 @@ export const CANCELLED_DATE_COLOR = '#5a5654';
 
 export const GatheringDetailScreen = () => {
   const route = useRoute<RouteProp<MainStackParamList, 'GatheringDetail'>>();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pickedUris, setPickedUris] = useState<string[]>([]);
@@ -122,6 +126,32 @@ export const GatheringDetailScreen = () => {
       ].filter((url, index, all) => all.indexOf(url) === index)
     : [];
   const hostId = activity && typeof activity.host === 'object' ? activity.host.id : null;
+  /** Host delete: 204 removes the gathering and its photos. It still counts toward the weekly limit, so refresh the profile. */
+  const confirmDelete = async () => {
+    if (deletePending) {
+      return;
+    }
+    setDeletePending(true);
+    setDeleteError(null);
+    try {
+      await deleteActivity(activityId);
+    } catch {
+      setDeletePending(false);
+      setDeleteError(DELETE_GATHERING_COPY.error);
+      return;
+    }
+    queryClient.removeQueries({ queryKey: ['foyer-gathering', activityId] });
+    await Promise.all(
+      [...CANCEL_QUERY_KEYS, ['mobile-activity']].map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey: [...queryKey] }),
+      ),
+    ).catch(() => undefined);
+    setDeletePending(false);
+    setDeleteOpen(false);
+    navigation.goBack();
+    void refreshProfile?.().catch(() => undefined);
+  };
+
   const isHost = hostId != null && user?.id != null && String(hostId) === String(user.id);
   const isGoing = isGoingRsvp(activity?.my_rsvp);
   const churchAdmin = Boolean(activity?.host_kind === 'church' && user?.isChurchAdmin);
@@ -532,6 +562,19 @@ export const GatheringDetailScreen = () => {
         </View>
       ) : null}
       {hostControls.kind === 'started' ? <Text style={styles.helperText}>{hostControls.helper}</Text> : null}
+      {isHost ? (
+        <View style={styles.cancelBlock}>
+          <PillButton
+            label={DELETE_GATHERING_COPY.action}
+            variant="destructiveOutline"
+            onPress={() => {
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+            testID="delete-gathering"
+          />
+        </View>
+      ) : null}
       <PhotoUploadSheet
         visible={pickedUris.length > 0}
         subtitle={`${activity.title}${activity.time ? ` · ${formatGatheringWhen(activity.time).split(' · ')[0]}` : ''}`}
@@ -563,6 +606,19 @@ export const GatheringDetailScreen = () => {
         body={photoNotice?.body ?? ''}
         onClose={() => setPhotoNotice(null)}
         testID="photo-limit"
+      />
+      <DeleteGatheringSheet
+        visible={deleteOpen}
+        eventLimitExempt={user?.eventLimitExempt}
+        pending={deletePending}
+        error={deleteError}
+        onKeep={() => {
+          if (!deletePending) {
+            setDeleteOpen(false);
+            setDeleteError(null);
+          }
+        }}
+        onDelete={confirmDelete}
       />
       <CancelGatheringSheet
         visible={cancelGatheringOpen}

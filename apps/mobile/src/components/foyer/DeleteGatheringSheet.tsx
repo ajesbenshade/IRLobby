@@ -1,7 +1,7 @@
 import { StyleSheet, Text } from 'react-native';
 
 import { FoyerSheet } from '@components/foyer/FoyerSheet';
-import { InlineError, PillButton, SheetButtons } from '@components/foyer/ui';
+import { ErrorNotice, PillButton, SheetButtons } from '@components/foyer/ui';
 import { DELETE_GATHERING_COPY } from '@constants/foyerCopy';
 import { appColors, appTypography } from '@theme/index';
 
@@ -13,9 +13,8 @@ export const deleteGatheringBody = (eventLimitExempt?: boolean | null) =>
   eventLimitExempt ? DELETE_GATHERING_COPY.body : `${DELETE_GATHERING_COPY.body} ${DELETE_GATHERING_COPY.limitedLine}`;
 
 /**
- * Delete gathering confirmation (frame 250). Delete only: cancelling a gathering keeps its photos and uses
- * CancelGatheringSheet. NOTE: the app has no host "Delete gathering" action yet, so nothing opens this sheet;
- * it is ready for when the delete endpoint and entry point exist.
+ * Delete gathering confirmation (frame 250; 253 for non-exempt hosts). Opened from the host's `Delete gathering`
+ * action on GatheringDetailScreen. Cancelling a gathering keeps its photos and uses CancelGatheringSheet instead.
  */
 export const DeleteGatheringSheet = ({
   visible,
@@ -37,7 +36,7 @@ export const DeleteGatheringSheet = ({
     onDismiss={onKeep}
     footer={
       <SheetButtons>
-        <InlineError message={error} />
+        <ErrorNotice message={error} testID="delete-gathering-error" />
         <PillButton
           label={DELETE_GATHERING_COPY.confirm}
           variant="destructiveOutline"

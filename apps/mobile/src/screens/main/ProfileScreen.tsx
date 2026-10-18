@@ -4,7 +4,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Alert, Pressable, StyleSheet } from "react-native";
 import { Button, HelperText, Text } from "react-native-paper";
 import { API_ROUTES } from "@shared/schema";
 
@@ -23,6 +23,9 @@ import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
 import { FoyerHeader } from "@components/FoyerHeader";
 import { FoyerProfileCard } from "@components/FoyerProfileCard";
+import { SUPPORT_COPY } from "@constants/foyerCopy";
+import { PickChurchCard } from "@components/foyer/PickChurchCard";
+import { helpMailto, openSupportEmail } from "@foyer/support";
 import { isFoyerMode, isTicketingUiEnabled } from "@constants/appMode";
 import { config } from "@constants/config";
 import { DEFAULT_PROFILE_AVATARS } from "@constants/profileAvatars";
@@ -186,6 +189,13 @@ export const ProfileScreen = () => {
     }
   };
 
+  // Foyer Help is an email to support (the hosted help page was a legacy redirect loop).
+  const openHelpEmail = async () => {
+    if (!(await openSupportEmail(helpMailto()))) {
+      Alert.alert(SUPPORT_COPY.mailUnavailable);
+    }
+  };
+
   if (isFoyerMode()) {
     return (
       <AppScrollView
@@ -195,6 +205,7 @@ export const ProfileScreen = () => {
         }
       >
         <FoyerHeader />
+        <PickChurchCard surface="profile" />
         <FoyerProfileCard />
         <PanelCard style={styles.menuCard}>
           <ProfileMenuRow
@@ -210,7 +221,7 @@ export const ProfileScreen = () => {
           <ProfileMenuRow
             icon="help-circle-outline"
             title="Help"
-            onPress={() => navigation.navigate("HelpSupport")}
+            onPress={() => void openHelpEmail()}
           />
           <ProfileMenuRow
             icon="logout"

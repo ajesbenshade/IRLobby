@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { Modal, Portal, Text } from 'react-native-paper';
@@ -10,6 +10,7 @@ import { Modal, Portal, Text } from 'react-native-paper';
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
 import { AppScrollView } from '@components/AppChrome';
 import { CancelGatheringSheet } from '@components/foyer/CancelGatheringSheet';
+import { DeleteGatheringSheet } from '@components/foyer/DeleteGatheringSheet';
 import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
 import { CancelledChatCard, CancelledPhotosCard } from '@components/foyer/CancelledGuestCards';
 import { HostAttendeesCard } from '@components/foyer/HostAttendeesCard';
@@ -19,7 +20,7 @@ import { ActionSheet, ReportSheet } from '@components/foyer/SafetySheets';
 import { GRAYSCALE_IMAGE_STYLE, PillButton, Toast } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { WhosComingSheet } from '@components/WhosComingSheet';
-import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, COMMON_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, ATTENDEE_COPY, CANCEL_COPY, COMMON_COPY, DELETE_GATHERING_COPY, FULL_COPY, GOING_COPY, MEMBER_COPY, PHOTO_COPY } from '@constants/foyerCopy';
 import {
   declineNoteFor,
   gatheringRequiresApproval,
@@ -34,7 +35,7 @@ import { fullBlocksJoin, fullNotice, isFullMessage } from '@foyer/full';
 import { buildPastAttendees, isHostAttendeeView } from '@foyer/attendees';
 import { formatGatheringWhen } from '@foyer/dates';
 import { openGatheringChat } from '@foyer/gatheringChat';
-import { canCancelRsvp, canSeeChat, hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
+import { CANCEL_QUERY_KEYS, canCancelRsvp, canSeeChat, hasEventStarted, isGoingRsvp } from '@foyer/rsvp';
 import type { WhosComingResponse } from '@foyer/logic';
 import { MAX_GATHERING_PHOTOS, compressGatheringPhoto } from '@foyer/photos';
 import {
@@ -49,8 +50,10 @@ import { gatheringCalendarUrls, openCalendarUrl } from '@foyer/openCalendar';
 import { calendarEventSummary } from '@shared/calendarLinks';
 import { useAuth } from '@hooks/useAuth';
 import type { MainStackParamList } from '@navigation/types';
-import { fetchActivity } from '@services/activityService';
+import { deleteActivity, fetchActivity } from '@services/activityService';
 import { fetchAttendees, fetchWhosComing, postRsvp, uploadGatheringPhoto } from '@services/foyerService';
+import { photoLimitNotice, type PhotoLimitNotice } from '@foyer/hostLimit';
+import { NoticeSheet } from '@components/foyer/NoticeSheet';
 import { submitReport } from '@services/reportAdapter';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
@@ -60,8 +63,14 @@ export const CANCELLED_DATE_COLOR = '#5a5654';
 
 export const GatheringDetailScreen = () => {
   const route = useRoute<RouteProp<MainStackParamList, 'GatheringDetail'>>();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** Set once the server deleted it: the detail query stops (no refetch of a 404) and the screen keeps its last data while it pops. */
+  const [deleted, setDeleted] = useState(false);
+  const deletedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pickedUris, setPickedUris] = useState<string[]>([]);
@@ -83,8 +92,21 @@ export const GatheringDetailScreen = () => {
   const activityQuery = useQuery({
     queryKey: ['foyer-gathering', activityId],
     queryFn: () => fetchActivity(activityId),
+    enabled: !deleted,
   });
 
+  // After a delete, drop this gathering's cached detail only once the screen has gone (no error flash while it pops).
+  useEffect(
+    () => () => {
+      if (deletedRef.current) {
+        queryClient.removeQueries({ queryKey: ['foyer-gathering', activityId] });
+        queryClient.removeQueries({ queryKey: ['foyer-attendees', activityId] });
+      }
+    },
+    [activityId, queryClient],
+  );
+
+  const [photoNotice, setPhotoNotice] = useState<PhotoLimitNotice | null>(() => route.params.photoNotice ?? null);
   const uploadMutation = useMutation({
     mutationFn: async (uris: string[]) => {
       // One at a time so a failure keeps the photos already added.
@@ -98,7 +120,17 @@ export const GatheringDetailScreen = () => {
       setPickedUris([]);
       await queryClient.invalidateQueries({ queryKey: ['foyer-gathering', activityId] });
     },
-    onError: (uploadError) => setError(getErrorMessage(uploadError, COMMON_COPY.photosAddFailed)),
+    onError: async (uploadError) => {
+      // Throttle (429) and 50-photo cap (400) get plain copy; the photos added before it stay.
+      const notice = photoLimitNotice(uploadError);
+      if (notice) {
+        setError(null);
+        setPhotoNotice(notice);
+      } else {
+        setError(getErrorMessage(uploadError, COMMON_COPY.photosAddFailed));
+      }
+      await queryClient.invalidateQueries({ queryKey: ['foyer-gathering', activityId] });
+    },
   });
 
   const activity = activityQuery.data;
@@ -109,6 +141,34 @@ export const GatheringDetailScreen = () => {
       ].filter((url, index, all) => all.indexOf(url) === index)
     : [];
   const hostId = activity && typeof activity.host === 'object' ? activity.host.id : null;
+  /** Host delete: 204 removes the gathering and its photos. It still counts toward the weekly limit, so refresh the profile. */
+  const confirmDelete = async () => {
+    if (deletePending) {
+      return;
+    }
+    setDeletePending(true);
+    setDeleteError(null);
+    try {
+      await deleteActivity(activityId);
+    } catch {
+      setDeletePending(false);
+      setDeleteError(DELETE_GATHERING_COPY.error);
+      return;
+    }
+    deletedRef.current = true;
+    setDeleted(true);
+    setDeletePending(false);
+    setDeleteOpen(false);
+    navigation.goBack();
+    // Lists refresh in the background; this gathering's own detail key is skipped (it would refetch a 404).
+    void Promise.all(
+      [...CANCEL_QUERY_KEYS, ['mobile-activity']]
+        .filter((queryKey) => queryKey[0] !== 'foyer-gathering')
+        .map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
+    ).catch(() => undefined);
+    void refreshProfile?.().catch(() => undefined);
+  };
+
   const isHost = hostId != null && user?.id != null && String(hostId) === String(user.id);
   const isGoing = isGoingRsvp(activity?.my_rsvp);
   const churchAdmin = Boolean(activity?.host_kind === 'church' && user?.isChurchAdmin);
@@ -519,6 +579,19 @@ export const GatheringDetailScreen = () => {
         </View>
       ) : null}
       {hostControls.kind === 'started' ? <Text style={styles.helperText}>{hostControls.helper}</Text> : null}
+      {isHost ? (
+        <View style={styles.cancelBlock}>
+          <PillButton
+            label={DELETE_GATHERING_COPY.action}
+            variant="destructiveOutline"
+            onPress={() => {
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+            testID="delete-gathering"
+          />
+        </View>
+      ) : null}
       <PhotoUploadSheet
         visible={pickedUris.length > 0}
         subtitle={`${activity.title}${activity.time ? ` · ${formatGatheringWhen(activity.time).split(' · ')[0]}` : ''}`}
@@ -543,6 +616,26 @@ export const GatheringDetailScreen = () => {
             setCancelledToast(true);
           }
         }}
+      />
+      <NoticeSheet
+        visible={photoNotice != null}
+        title={photoNotice?.title ?? ''}
+        body={photoNotice?.body ?? ''}
+        onClose={() => setPhotoNotice(null)}
+        testID="photo-limit"
+      />
+      <DeleteGatheringSheet
+        visible={deleteOpen}
+        eventLimitExempt={user?.eventLimitExempt}
+        pending={deletePending}
+        error={deleteError}
+        onKeep={() => {
+          if (!deletePending) {
+            setDeleteOpen(false);
+            setDeleteError(null);
+          }
+        }}
+        onDelete={confirmDelete}
       />
       <CancelGatheringSheet
         visible={cancelGatheringOpen}

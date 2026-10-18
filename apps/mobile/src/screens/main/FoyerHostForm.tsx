@@ -32,7 +32,9 @@ import {
 } from '@foyer/dates';
 import { churchCenterOf } from '@foyer/mapLocation';
 import { compressGatheringPhoto } from '@foyer/photos';
-import { APPROVAL_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { APPROVAL_COPY, COMMON_COPY, HOST_FORM_COPY, MAP_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { parseEventLimitError, photoLimitNotice, type PhotoLimitNotice } from '@foyer/hostLimit';
+import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { parseTurnOffFallback } from '@foyer/approval';
 import { useDetectedCapabilities, isRequireApprovalEnabled } from '@foyer/capabilities';
 import {
@@ -49,6 +51,8 @@ import { createActivity, fetchActivity, updateActivity } from '@services/activit
 import { uploadGatheringPhoto } from '@services/foyerService';
 import { appColors, appTypography, radii } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
+import { memberChurchName, useMemberChurchHasWebsiteCalendar } from '@foyer/churchName';
+import { CHURCH_CALENDAR_UNAVAILABLE_MESSAGE, isChurchCalendarUnavailable } from '@foyer/churchCalendar';
 
 type FoyerHostFormProps = {
   activityId?: number | string;
@@ -56,7 +60,8 @@ type FoyerHostFormProps = {
 
 export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const [limitSheet, setLimitSheet] = useState<{ nextAllowedAt: Date | null } | null>(null);
   // Host is a tab (the floating bar covers the bottom); Edit is a stack screen with no bar.
   const tabBottomPadding = useTabScreenBottomPadding();
   const isEditing = Boolean(activityId);
@@ -74,7 +79,10 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
   const [audience, setAudience] = useState<AudienceGender>('everyone');
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
-  const [listOnCalendar, setListOnCalendar] = useState(false);
+  const [listOnCalendarChoice, setListOnCalendar] = useState(false);
+  // "Post to the church website calendar" exists only when the member's church has one; otherwise it is never sent as true.
+  const churchHasCalendar = useMemberChurchHasWebsiteCalendar();
+  const listOnCalendar = churchHasCalendar && listOnCalendarChoice;
   const [hostAsChurch, setHostAsChurch] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -175,16 +183,43 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
       const saved = isEditing && activityId
         ? await updateActivity(activityId, payload as never)
         : await createActivity(payload as never);
+      let photoProblem: { notice: PhotoLimitNotice | null } | null = null;
       if (photoUri) {
-        const compressed = await compressGatheringPhoto(photoUri);
-        await uploadGatheringPhoto(saved.id, compressed);
+        try {
+          const compressed = await compressGatheringPhoto(photoUri);
+          await uploadGatheringPhoto(saved.id, compressed);
+        } catch (photoError) {
+          // The gathering is already saved: never leave the form up (a second Post would make a duplicate).
+          photoProblem = { notice: photoLimitNotice(photoError) };
+        }
       }
-      return saved;
+      return { saved, photoProblem };
     },
-    onSuccess: () => {
+    onSuccess: ({ saved, photoProblem }) => {
+      if (!isEditing) {
+        // Picks up the new next_host_available_at so the Host tab shows the weekly limit.
+        void refreshProfile();
+      }
       navigation.navigate('Tabs', { screen: 'Activity' });
+      if (photoProblem?.notice) {
+        // Photo limit (248/249): open the new gathering so its photos show the real sheet, not a system alert.
+        navigation.navigate('GatheringDetail', { activityId: saved.id, photoNotice: photoProblem.notice });
+      } else if (photoProblem) {
+        Alert.alert(COMMON_COPY.photosAddFailed);
+      }
     },
     onError: (saveError) => {
+      const limit = parseEventLimitError(saveError);
+      if (limit) {
+        setError(null);
+        setLimitSheet({ nextAllowedAt: limit.nextAllowedAt });
+        void refreshProfile();
+        return;
+      }
+      if (isChurchCalendarUnavailable(saveError)) {
+        setError(CHURCH_CALENDAR_UNAVAILABLE_MESSAGE);
+        return;
+      }
       const message = getErrorMessage(saveError, HOST_FORM_COPY.postFailed);
       // Server fallback for "turn off with waiting requests": same alert as the client check.
       const waiting = parseTurnOffFallback(message);
@@ -228,6 +263,11 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
 
   return (
     <View style={styles.root}>
+      <EventLimitSheet
+        visible={limitSheet != null}
+        nextAllowedAt={limitSheet?.nextAllowedAt ?? null}
+        onClose={() => setLimitSheet(null)}
+      />
       <SafeAreaView edges={['top']} style={styles.topBar}>
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.topButton}>
           <Text maxFontSizeMultiplier={1.4} style={styles.topAction}>Cancel</Text>
@@ -248,7 +288,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
 
         <Field label="Title" value={title} onChange={setTitle} placeholder="Women's Fall Brunch" />
         <Field label="Description" value={description} onChange={setDescription} multiline placeholder="Egg casseroles, apple crisp, and good conversation." />
-        <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship Hall, Franconia Mennonite Church" />
+        <Field label="Place" value={place} onChange={setPlace} placeholder="Fellowship hall, a park, or someone's home." />
         <PillButton label={MAP_COPY.chooseOnMap} variant="outline" icon="map-marker-outline" onPress={() => setMapOpen(true)} />
         <MapPickerSheet
           visible={mapOpen}
@@ -363,15 +403,19 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
         </View>
         <Text style={styles.helper}>Leave max blank for no upper limit. Children in a household can be added if they fit the range.</Text>
 
-        <CheckboxRow
-          label="Post to the church website calendar"
-          value={listOnCalendar}
-          onChange={setListOnCalendar}
-          testID="host-calendar-checkbox"
-        />
-        <View style={styles.warn}>
-          <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
-        </View>
+        {churchHasCalendar ? (
+          <>
+            <CheckboxRow
+              label="Post to the church website calendar"
+              value={listOnCalendar}
+              onChange={setListOnCalendar}
+              testID="host-calendar-checkbox"
+            />
+            <View style={styles.warn}>
+              <Text style={styles.warnText}>{CALENDAR_ADDRESS_WARNING}</Text>
+            </View>
+          </>
+        ) : null}
 
         {showApprovalCard ? (
           <View style={styles.approvalCard}>
@@ -392,7 +436,7 @@ export const FoyerHostForm = ({ activityId }: FoyerHostFormProps) => {
           <View style={styles.admin}>
             <Text style={styles.adminLabel}>Admin only</Text>
             <CheckRow
-              label="Host as Franconia Mennonite Church"
+              label={`Host as ${memberChurchName(user) ?? "your church"}`}
               value={hostAsChurch}
               onChange={setHostAsChurch}
             />

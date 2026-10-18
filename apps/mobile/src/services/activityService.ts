@@ -106,6 +106,11 @@ export const fetchActivity = async (
   return response.data;
 };
 
+/** Host-only. Server returns 204 and deletes the gathering's photos; it still counts toward the weekly host limit. */
+export const deleteActivity = async (activityId: number | string): Promise<void> => {
+  await api.delete(API_ROUTE_BUILDERS.activityDetail(activityId));
+};
+
 export const updateActivity = async (
   activityId: number | string,
   payload: CreateActivityPayload

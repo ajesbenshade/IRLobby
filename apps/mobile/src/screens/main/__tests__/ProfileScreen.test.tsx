@@ -143,6 +143,22 @@ describe('ProfileScreen (Foyer mode)', () => {
     expect(screen.queryByLabelText('Connections')).toBeNull();
   });
 
+  it('Help opens an email to support (subject "The Foyer help"), never the irlobby.com help page', async () => {
+    const { Linking } = require('react-native');
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    renderScreen();
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Help'));
+    });
+    expect(openURL).toHaveBeenCalledWith('mailto:support@irlobby.com?subject=The%20Foyer%20help');
+    openURL.mockRestore();
+  });
+
+  it('shows Pick your church on Profile while the member has no church', async () => {
+    renderScreen();
+    expect(await screen.findByText('Pick your church')).toBeTruthy();
+  });
+
   it('refreshes the profile by pulling down', async () => {
     renderScreen();
 

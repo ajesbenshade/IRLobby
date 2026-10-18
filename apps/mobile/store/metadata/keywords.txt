@@ -1,1 +1,1 @@
-irl,meetups,activities,hangouts,friends,events,swipe,local,nearby,social,chat,group,vibequiz,match
+church,congregation,mennonite,gatherings,potluck,fellowship,events,community,family,rsvp

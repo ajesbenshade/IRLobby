@@ -51,6 +51,9 @@ export const AccountScreen = () => {
             <Text style={[styles.body, styles.bulletText]}>{bullet}</Text>
           </View>
         ))}
+        <Text style={[styles.body, styles.photosLine]} testID="delete-photos-line">
+          {DELETE_ACCOUNT_COPY.photosLine}
+        </Text>
         <Text style={styles.body}>{DELETE_ACCOUNT_COPY.retention}</Text>
         {hostedCount > 0 ? (
           <View style={styles.hostingNote} testID="hosting-note">
@@ -120,6 +123,7 @@ export const AccountScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  photosLine: { fontWeight: '700' },
   screen: { flex: 1, backgroundColor: appColors.background },
   content: { padding: 20, gap: 12 },
   title: { fontFamily: appTypography.heading, fontSize: 28, color: appColors.ink },

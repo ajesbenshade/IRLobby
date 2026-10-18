@@ -1,6 +1,7 @@
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { View } from '@components/RNCompat';
+import { isFoyerMode } from '@constants/appMode';
 import { appColors, appTypography, brand, fontSize } from '@theme/index';
 
 type IrlobbyLoginMarkProps = {
@@ -62,7 +63,10 @@ export const IrlobbyLoginMark = ({
         >
           {brand.name}
         </Text>
-        <Text style={[styles.church, inverted ? styles.churchInverted : null]}>{brand.church}</Text>
+        {/* Signed out there is no member church yet, so Foyer shows no church line (multi-church beta). */}
+        {isFoyerMode() ? null : (
+          <Text style={[styles.church, inverted ? styles.churchInverted : null]}>{brand.church}</Text>
+        )}
       </View>
     </View>
   );

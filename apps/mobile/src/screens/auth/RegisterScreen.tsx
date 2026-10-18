@@ -179,7 +179,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
     <AuthShell
       eyebrow={authCopy.register.eyebrow}
       title={authCopy.register.title}
-      subtitle={authCopy.register.subtitle}
+      subtitle={isFoyerMode() ? authCopy.register.foyerSubtitle : authCopy.register.subtitle}
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>{authCopy.register.footerPrompt}</Text>
@@ -194,7 +194,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         </View>
       }
     >
-      <AccentPill tone="secondary">Real plans, real fast</AccentPill>
+      {isFoyerMode() ? null : <AccentPill tone="secondary">Real plans, real fast</AccentPill>}
 
       <View style={styles.form}>
         <Field

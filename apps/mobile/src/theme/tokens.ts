@@ -180,6 +180,7 @@ export const motion = {
 
 export const brand = {
   name: 'The Foyer',
+  /** Legacy irlobby login mark only. Foyer screens show the member's own church (useMemberChurchName). */
   church: 'Franconia Mennonite Church',
   tagline: sharedBrand.tagline,
 } as const;

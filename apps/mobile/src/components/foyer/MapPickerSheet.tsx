@@ -38,7 +38,7 @@ export const isUserDrag = (region: MapCenter, center: MapCenter, details?: { isG
   return Math.abs(region.latitude - center.latitude) > SAME_SPOT || Math.abs(region.longitude - center.longitude) > SAME_SPOT;
 };
 
-const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel: string = MAP_COPY.franconiaLabel): Promise<string> => {
+const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel = ''): Promise<string> => {
   try {
     // Reverse geocoding needs no location permission and never prompts.
     const Location = await import('expo-location');
@@ -62,7 +62,8 @@ const labelFor = async (center: MapCenter, isDefault: boolean, defaultLabel: str
 const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
   const insets = useSafeInsets();
   const { center, source, loading } = useMapCenter(visible, homeChurch);
-  const defaultLabel = source === 'church' && homeChurch?.name ? homeChurch.name : MAP_COPY.franconiaLabel;
+  // The bare default center is not a real place, so it has no label (Design). The home church keeps its name.
+  const defaultLabel = source === 'church' && homeChurch?.name ? homeChurch.name : '';
   const [selected, setSelected] = useState<MapCenter>(FRANCONIA_CENTER);
   const [label, setLabel] = useState<string>(defaultLabel);
   const mapRef = useRef<{ animateToRegion?: (region: object, duration?: number) => void } | null>(null);
@@ -79,7 +80,7 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
     mapRef.current?.animateToRegion?.({ ...center, latitudeDelta: DEFAULT_DELTA, longitudeDelta: DEFAULT_DELTA }, 300);
     let cancelled = false;
     if (isDefault) {
-      // Franconia, PA and the church name are fixed strings: a geocoder could answer "Souderton" or "Pennsylvania" here.
+      // The church name (or no label at the default center) is fixed: a geocoder could answer "Souderton" or "Pennsylvania" here.
       return undefined;
     }
     void labelFor(center, isDefault, defaultLabel).then((next) => {
@@ -93,7 +94,7 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
   }, [visible, center.latitude, center.longitude, isDefault, defaultLabel]);
 
   // Only a real drag moves the pin and re-labels it. The initial region and the animateToRegion on open also fire
-  // onRegionChangeComplete; those must not geocode and overwrite the fixed "Franconia, PA" / church label.
+  // onRegionChangeComplete; those must not geocode and overwrite the fixed church label (or add one at the default center).
   const onRegionChange = (region: MapCenter, details?: { isGesture?: boolean }) => {
     if (!isUserDrag(region, center, details)) {
       return;
@@ -145,7 +146,11 @@ const MapPickerBody = ({ visible, onCancel, onChoose, homeChurch }: Props) => {
         </View>
         <View style={[styles.card, { paddingBottom: insets.bottom + 16 }]}>
           <Text style={styles.cardLabel}>{MAP_COPY.selectedLocation}</Text>
-          <Text style={styles.cardPlace}>{label}</Text>
+          {label ? (
+            <Text style={styles.cardPlace} testID="map-place-label">
+              {label}
+            </Text>
+          ) : null}
           <Text style={styles.cardHelp}>{MAP_COPY.drag}</Text>
           <PillButton label={MAP_COPY.useThisLocation} onPress={() => onChoose({ ...selected, label })} testID="map-use-location" />
         </View>

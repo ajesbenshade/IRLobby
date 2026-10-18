@@ -15,12 +15,14 @@ jest.mock('@foyer/mapLocation', () => {
 const mapLocation = jest.requireMock('@foyer/mapLocation') as { useMapCenter: jest.Mock; useUseMyLocationSetting: jest.Mock; FRANCONIA_CENTER: object };
 
 describe('map picker', () => {
-  it('opens on Franconia with the caption chip, no recenter button, and the header below the status bar', async () => {
+  it('opens on the default center with the caption chip and no place label, no recenter button, and the header below the status bar', async () => {
     mapLocation.useMapCenter.mockReturnValue({ center: mapLocation.FRANCONIA_CENTER, source: 'default', loading: false });
     const onChoose = jest.fn();
     const view = render(<MapPickerSheet visible onCancel={jest.fn()} onChoose={onChoose} />);
     expect(view.getByText('Choose a location')).toBeTruthy();
-    expect(view.getByText(MAP_COPY.defaultCaption)).toBeTruthy();
+    expect(view.getByText('Pick your church in Profile or turn on location to center the map near you.')).toBeTruthy();
+    expect(view.queryByText(/Franconia/)).toBeNull();
+    expect(view.queryByTestId('map-place-label')).toBeNull();
     expect(view.queryByLabelText(MAP_COPY.recenter)).toBeNull();
     expect(view.queryByText('You are here')).toBeNull();
     const header = view.getByTestId('map-picker-header');
@@ -28,7 +30,7 @@ describe('map picker', () => {
     expect(flat.paddingTop).toBeGreaterThanOrEqual(47);
     fireEvent.press(view.getByTestId('map-use-location'));
     await waitFor(() => expect(onChoose).toHaveBeenCalled());
-    expect(onChoose.mock.calls[0][0]).toMatchObject({ latitude: expect.any(Number), longitude: expect.any(Number) });
+    expect(onChoose.mock.calls[0][0]).toMatchObject({ latitude: expect.any(Number), longitude: expect.any(Number), label: '' });
   });
 
   it('opens on the home church with the church name and a church caption when location is off', () => {
@@ -38,7 +40,7 @@ describe('map picker', () => {
     );
     expect(mapLocation.useMapCenter).toHaveBeenCalledWith(true, expect.objectContaining({ id: 7 }));
     expect(view.getByText(MAP_COPY.churchCaption)).toBeTruthy();
-    expect(view.getByText('Plains Mennonite Church')).toBeTruthy();
+    expect(view.getByTestId('map-place-label').props.children).toBe('Plains Mennonite Church');
     expect(view.queryByLabelText(MAP_COPY.recenter)).toBeNull();
     expect(view.queryByText('You are here')).toBeNull();
   });
@@ -99,13 +101,14 @@ describe('map picker label', () => {
     expect(isUserDrag(center, center, { isGesture: true })).toBe(true);
   });
 
-  it('keeps the fixed Franconia label when the initial region callback fires', async () => {
+  it('adds no label at the default center when the initial region callback fires', async () => {
     mapLocation.useMapCenter.mockReturnValue({ center, source: 'default', loading: false });
     const view = render(<MapPickerSheet visible onCancel={jest.fn()} onChoose={jest.fn()} />);
     const map = view.UNSAFE_getByType('MapView' as never);
     await act(async () => {
       map.props.onRegionChangeComplete({ ...center, latitudeDelta: 0.05, longitudeDelta: 0.05 });
     });
-    expect(view.getByText('Franconia, PA')).toBeTruthy();
+    expect(view.queryByTestId('map-place-label')).toBeNull();
+    expect(view.queryByText(/Franconia/)).toBeNull();
   });
 });

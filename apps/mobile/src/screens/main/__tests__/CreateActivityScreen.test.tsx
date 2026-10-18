@@ -21,9 +21,12 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: {} }),
 }));
 
+const FRANCONIA_LIKE = { id: 1, name: 'Franconia Mennonite Church', has_website_calendar: true };
+let mockUser: Record<string, unknown> = { canSellTickets: false, church: FRANCONIA_LIKE, churchId: 1 };
+
 jest.mock('@hooks/useAuth', () => ({
   useAuth: () => ({
-    user: { canSellTickets: false },
+    user: mockUser,
     refreshProfile: jest.fn(),
   }),
 }));
@@ -74,6 +77,9 @@ const mockConfig = (jest.requireMock('@constants/config') as { config: { ticketi
 
 beforeEach(() => {
   mockConfig.ticketingEnabled = true;
+  mockNavigate.mockClear();
+  mockUser = { canSellTickets: false, church: FRANCONIA_LIKE, churchId: 1 };
+  require('@foyer/churchName').resetChurchNameCache();
 });
 
 const renderScreen = () => {
@@ -89,6 +95,7 @@ const renderScreen = () => {
 
 jest.mock('@services/foyerService', () => ({
   uploadGatheringPhoto: jest.fn(),
+  fetchChurches: jest.fn(async () => []),
 }));
 
 jest.mock('expo-image-manipulator', () => ({
@@ -122,7 +129,7 @@ describe('CreateActivityScreen in foyer mode', () => {
     expect(screen.queryByText('Set up payouts')).toBeNull();
     expect(screen.getByText('Post gathering')).toBeTruthy();
     expect(screen.queryByText(CREATE_EVENT_TICKETED_PUBLISH_LABEL)).toBeNull();
-    expect(screen.getByText(/Don't list a home address/)).toBeTruthy();
+    expect(screen.getByText(/appear on your church's website calendar, with their location, after a church admin approves them/)).toBeTruthy();
   });
 
   it('rejects a capacity outside 1–500 and accepts a blank unlimited capacity', async () => {
@@ -252,5 +259,79 @@ describe('CreateActivityScreen photos (Frame A2)', () => {
 
     fireEvent.press(screen.getByLabelText('Remove photo 1'));
     expect(screen.getAllByLabelText('Add photo')).toHaveLength(5);
+  });
+});
+
+describe('Post to the church website calendar (only when the church has one)', () => {
+  const CALENDAR_LABEL = 'Post to the church website calendar';
+  const UNAVAILABLE =
+    "Your church's website calendar isn't connected to The Foyer yet. Turn off “Post to the church website calendar” and try again.";
+
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_APP_MODE = 'foyer';
+  });
+
+  const fillRequired = async () => {
+    fireEvent.changeText(await screen.findByLabelText('Title'), 'Harvest Supper');
+    fireEvent.changeText(screen.getByLabelText('Place'), 'Fellowship Hall');
+    await chooseHostDateAndTime();
+  };
+
+  it('shows for a church with website_calendar true', async () => {
+    mockUser = { church: { id: 1, name: 'Franconia Mennonite Church', website_calendar: true }, churchId: 1 };
+    renderScreen();
+    expect(await screen.findByText(CALENDAR_LABEL)).toBeTruthy();
+  });
+
+  it('shows for a church with has_website_calendar true', async () => {
+    mockUser = { church: { id: 1, name: 'Franconia Mennonite Church', has_website_calendar: true }, churchId: 1 };
+    renderScreen();
+    expect(await screen.findByText(CALENDAR_LABEL)).toBeTruthy();
+    expect(screen.getByTestId('host-calendar-checkbox')).toBeTruthy();
+  });
+
+  it('shows when only the churches-list entry for church_id has the flag', async () => {
+    const { fetchChurches } = jest.requireMock('@services/foyerService') as { fetchChurches: jest.Mock };
+    fetchChurches.mockResolvedValueOnce([{ id: 5, name: 'Salford Mennonite', has_website_calendar: true }]);
+    mockUser = { church: null, churchId: 5 };
+    renderScreen();
+    expect(await screen.findByText(CALENDAR_LABEL)).toBeTruthy();
+  });
+
+  it('hides for a church without a website calendar and never sends the flag as true', async () => {
+    const { createActivity } = jest.requireMock('@services/activityService') as { createActivity: jest.Mock };
+    createActivity.mockReset();
+    createActivity.mockResolvedValue({ id: 9 });
+    mockUser = { church: { id: 2, name: 'Blooming Glen Mennonite', has_website_calendar: false }, churchId: 2 };
+    renderScreen();
+    await fillRequired();
+    expect(screen.queryByText(CALENDAR_LABEL)).toBeNull();
+    expect(screen.queryByText(/appear on your church's website calendar/)).toBeNull();
+    fireEvent.press(screen.getByText('Post gathering'));
+    await waitFor(() => expect(createActivity).toHaveBeenCalled());
+    expect(createActivity.mock.calls[0][0].list_on_church_calendar).toBe(false);
+  });
+
+  it('shows Design copy for a 400 church_calendar_unavailable', async () => {
+    const { createActivity } = jest.requireMock('@services/activityService') as { createActivity: jest.Mock };
+    const { AxiosError, AxiosHeaders } = jest.requireActual('axios');
+    createActivity.mockReset();
+    createActivity.mockRejectedValue(
+      new AxiosError('Request failed with status code 400', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: { code: 'church_calendar_unavailable', detail: 'Server text that should not show' },
+      }),
+    );
+    renderScreen();
+    await fillRequired();
+    fireEvent.press(screen.getByText('Post gathering'));
+    expect(await screen.findByText(UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByText('Server text that should not show')).toBeNull();
+    // The whole save was rejected: the form stays open for another try.
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByText('Post gathering')).toBeTruthy();
   });
 });

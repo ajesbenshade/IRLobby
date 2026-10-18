@@ -66,6 +66,6 @@ describe('host form: calendar is a checkbox, approval and church stay switches',
     expect(source).not.toMatch(/<CheckRow\s+label="Post to the church website calendar"/);
     expect(source).toMatch(/<CheckRow label=\{APPROVAL_COPY\.toggleLabel\}/);
     expect(source).toMatch(/<CheckRow label=\{APPROVAL_COPY\.askAgainLabel\}/);
-    expect(source).toMatch(/<CheckRow\s+label="Host as Franconia Mennonite Church"/);
+    expect(source).toMatch(/<CheckRow\s+label=\{`Host as \$\{memberChurchName\(user\) \?\? "your church"\}`\}/);
   });
 });

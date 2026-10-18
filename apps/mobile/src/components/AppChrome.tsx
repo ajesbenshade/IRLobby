@@ -45,7 +45,7 @@ type PageHeaderProps = {
 
 type SectionIntroProps = {
   eyebrow?: string;
-  title: string;
+  title?: string;
   subtitle?: string;
 };
 
@@ -83,6 +83,7 @@ type DetailRowProps = {
   /** Disabled control on the right: the labels fade to 50% with it. */
   dimmed?: boolean;
   onPress?: () => void;
+  testID?: string;
 };
 
 export const AppScrollView = ({ children, contentContainerStyle, refreshControl, scrollRef, headerless = false }: AppScrollViewProps) => {
@@ -168,9 +169,11 @@ export const PageHeader = ({ eyebrow, title, subtitle, rightContent }: PageHeade
 export const SectionIntro = ({ eyebrow, title, subtitle }: SectionIntroProps) => (
   <View style={styles.sectionIntro}>
     {eyebrow ? <Text style={styles.sectionEyebrow}>{eyebrow}</Text> : null}
-    <Text variant="titleMedium" style={styles.sectionTitle}>
-      {title}
-    </Text>
+    {title ? (
+      <Text variant="titleMedium" style={styles.sectionTitle}>
+        {title}
+      </Text>
+    ) : null}
     {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
   </View>
 );
@@ -182,6 +185,7 @@ export const DetailRow = ({
   danger = false,
   dimmed = false,
   onPress,
+  testID,
 }: DetailRowProps) => {
   const row = (
     <View style={[styles.detailRow, danger ? styles.detailRowDanger : null]}>
@@ -198,7 +202,7 @@ export const DetailRow = ({
   }
 
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} testID={testID}>
       {row}
     </Pressable>
   );

@@ -9,6 +9,8 @@ import { AppScrollView } from '@components/AppChrome';
 import { FoyerHeader } from '@components/FoyerHeader';
 import { GRAYSCALE_IMAGE_STYLE } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
+import { HOST_LIMIT_NOTE_SPACE, HostLimitNote } from '@components/foyer/HostLimitNote';
+import { useHostLimit } from '@foyer/useHostLimit';
 import {
   coverPhotoUrl,
   goingCountLabel,
@@ -80,7 +82,10 @@ export const FoyerGatherings = () => {
   const hosting = useMemo(() => sortCancelledLast(filterRows((hostedQuery.data ?? []) as Row[])), [hostedQuery.data, segment]);
   const { requests, going } = useMemo(() => splitGoingRows(filterRows(goingQuery.data ?? [])), [goingQuery.data, segment]);
 
+  const hostLimit = useHostLimit();
+
   return (
+    <View style={styles.screen}>
     <AppScrollView
       contentContainerStyle={styles.container}
       refreshControl={
@@ -137,7 +142,10 @@ export const FoyerGatherings = () => {
         onChat={(row) => openGatheringChat(stackNavigation(), { activityId: row.id, title: row.title })}
         onOpen={(row) => stackNavigation().navigate('GatheringDetail', { activityId: row.id })}
       />
+      {hostLimit.blocked ? <View style={{ height: HOST_LIMIT_NOTE_SPACE }} /> : null}
     </AppScrollView>
+    {hostLimit.blocked ? <HostLimitNote opensAt={hostLimit.opensAt} /> : null}
+    </View>
   );
 };
 
@@ -223,6 +231,7 @@ const TagPill = ({ tag }: { tag: RowTag }) => (
 );
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, marginTop: 4 },
   tagText: { fontFamily: appTypography.bodySemibold, fontSize: 12, lineHeight: 16 },

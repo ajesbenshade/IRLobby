@@ -9,12 +9,14 @@ import * as Linking from 'expo-linking';
 import { ActivityIndicator } from 'react-native';
 
 import { View } from '@components/RNCompat';
-import { isTicketingUiEnabled } from '@constants/appMode';
+import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
 import { config } from '@constants/config';
+import { needsFoyerChurchStep, showsLegacyOnboarding, useChurchStepDone } from '@foyer/firstRun';
 import { withGatheringBelowChat } from '@foyer/gatheringChat';
 import { useAuth } from '@hooks/useAuth';
 import { AccountDeletedScreen } from '@screens/auth/AccountDeletedScreen';
 import { BirthDateGateScreen } from '@screens/auth/BirthDateGateScreen';
+import { FoyerChurchStepScreen } from '@screens/auth/FoyerChurchStepScreen';
 import { OnboardingScreen } from '@screens/main/OnboardingScreen';
 import {
   useNavigationContainerRef,
@@ -27,7 +29,7 @@ import type { RootStackParamList } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-const linking: LinkingOptions<RootStackParamList> = {
+export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     Linking.createURL('/'),
     'irlobby://',
@@ -51,11 +53,12 @@ const linking: LinkingOptions<RootStackParamList> = {
               Discover: 'discover',
               Activity: 'activity',
               Create: 'create',
-              Chat: 'chat',
+              // Legacy matches chat and the matchmaking Pings feed: not linkable in Foyer mode.
+              ...(isFoyerMode() ? {} : { Chat: 'chat' }),
               Profile: 'profile',
             },
           },
-          Notifications: 'notifications',
+          ...(isFoyerMode() ? {} : { Notifications: 'notifications' }),
           GatheringDetail: 'gatherings/:activityId',
           GatheringChat: 'gatherings/:activityId/chat',
           ...(isTicketingUiEnabled(config.ticketingEnabled)
@@ -89,6 +92,7 @@ export const AppNavigator = () => {
   const { isAuthenticated, isInitializing, user, accountDeleted, needsBirthDate } = useAuth();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   usePushNotificationNavigation(navigationRef);
+  useChurchStepDone();
 
 
   if (isInitializing) {
@@ -112,7 +116,9 @@ export const AppNavigator = () => {
         {isAuthenticated ? (
           needsBirthDate ? (
             <RootStack.Screen name="BirthDateGate" component={BirthDateGateScreen} />
-          ) : user?.onboardingCompleted === false ? (
+          ) : needsFoyerChurchStep(user) ? (
+            <RootStack.Screen name="ChurchStep" component={FoyerChurchStepScreen} />
+          ) : showsLegacyOnboarding(user) ? (
             <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
           ) : (
             <RootStack.Screen name="Main" component={MainNavigator} />

@@ -51,6 +51,11 @@ describe('AccountScreen (delete account)', () => {
     ).toBeTruthy();
   });
 
+  it('says photos added to gatherings are deleted too (build 94)', () => {
+    renderScreen();
+    expect(screen.getByTestId('delete-photos-line').props.children).toBe('Photos you added to gatherings will be deleted too.');
+  });
+
   it('keeps Delete my account locked until DELETE is typed', () => {
     renderScreen();
     expect(screen.getByTestId('delete-button').props.accessibilityState?.disabled).toBe(true);
@@ -72,7 +77,7 @@ describe('AccountScreen (delete account)', () => {
     renderScreen();
     fireEvent.changeText(screen.getByTestId('delete-input'), 'DELETE');
     fireEvent.press(screen.getByTestId('delete-button'));
-    expect(alert).toHaveBeenCalledWith('Delete your account?', "This can't be undone.", expect.any(Array));
+    expect(alert).toHaveBeenCalledWith('Delete your account?', "Photos you added to gatherings will be deleted too. This can't be undone.", expect.any(Array));
     await waitFor(() => expect(mockDeleteCurrentAccount).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('Your account was deleted')).toBeTruthy();
     expect(mockSignOut).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { memberChurchName } from '@foyer/churchName';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +33,7 @@ import {
 } from '@constants/foyerCopy';
 import { birthDayLimits, defaultBirthMonth, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { TOGGLE_DISABLED_LABEL_OPACITY } from '@foyer/buttonTokens';
+import { endFoyerWelcome } from '@foyer/firstRun';
 import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
 import {
   ageFromIso,
@@ -137,6 +139,8 @@ export const FoyerProfileCard = () => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await api.patch(API_ROUTES.USER_PROFILE, buildProfilePatch(draft, { isMinor }));
+      // The first-run welcome note on Profile goes away once the basics are saved.
+      endFoyerWelcome();
       await refreshProfile();
     },
     onSuccess: () => {
@@ -455,7 +459,7 @@ export const FoyerProfileCard = () => {
           <Text style={styles.calendarTitle}>Church calendar</Text>
         </View>
         <Text style={styles.calendarBody}>
-          Subscribe to see every Franconia gathering in your own calendar. It updates automatically.
+          {`Subscribe to see every ${memberChurchName(user) ?? 'church'} gathering in your own calendar. It updates automatically.`}
         </Text>
         <Pressable
           accessibilityRole="link"

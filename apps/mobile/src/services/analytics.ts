@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 
 import { config } from '@constants/config';
+import { isMonitoringInitialized } from '../lib/monitoring';
 
 export type AnalyticsEvent =
   | 'app_open'
@@ -39,6 +40,11 @@ export const initAnalytics = (): void => {
     return;
   }
   initialized = true;
+
+  if (isMonitoringInitialized()) {
+    // initMonitoring() already started Sentry with EXPO_PUBLIC_SENTRY_DSN; one init only.
+    return;
+  }
 
   const dsn = getSentryDsn();
   if (!dsn) {

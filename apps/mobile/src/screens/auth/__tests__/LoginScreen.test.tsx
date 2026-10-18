@@ -129,7 +129,8 @@ describe('LoginScreen dressed layout', () => {
   it('renders the dressed mark, Login heading, Apple + Google + email, and Terms & Privacy', async () => {
     renderScreen();
 
-    expect(screen.getByText(authCopy.login.subtitle)).toBeTruthy();
+    expect(screen.getByText('Gather with your congregation.')).toBeTruthy();
+    expect(screen.queryByText(/Franconia/)).toBeNull();
     expect(screen.getByText(authCopy.login.title)).toBeTruthy();
     expect(await screen.findByTestId('apple-sign-in-button')).toBeTruthy();
     expect(screen.getByLabelText(authCopy.login.googleCta)).toBeTruthy();

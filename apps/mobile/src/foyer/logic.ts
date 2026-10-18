@@ -7,7 +7,7 @@ export const CHAT_GATE_MESSAGE = 'Chat opens for people who are going.';
 export const UNDER_13_MESSAGE = 'Accounts are not available under age 13.';
 export const CAPACITY_ERROR = 'Capacity must be a whole number from 1 to 500.';
 export const CALENDAR_ADDRESS_WARNING =
-  "Public events show their location on franconiamennonite.org. Don't list a home address unless you want the congregation to see it.";
+  "Public gatherings appear on your church's website calendar, with their location, after a church admin approves them.";
 export const ADDRESS_AFTER_RSVP = 'Address shared after you RSVP';
 export const RSVP_CHOOSE_PEOPLE_MESSAGE = 'Choose yourself or your family.';
 /** @deprecated Final copy lives in constants/foyerCopy (GOING_COPY.underThirteenNote). */

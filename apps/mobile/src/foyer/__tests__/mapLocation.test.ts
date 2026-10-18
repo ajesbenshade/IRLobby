@@ -102,8 +102,8 @@ describe('source guard: OS location permission', () => {
       .map((file) => file.replace(src, ''))
       .sort();
     expect(files).toEqual(['/foyer/mapLocation.ts', '/screens/main/CreateActivityScreen.tsx', '/screens/main/OnboardingScreen.tsx']);
-    // CreateActivityScreen returns FoyerHostForm before its legacy code runs; Onboarding hides its button in Foyer mode.
-    expect(readFileSync(join(src, 'screens/main/CreateActivityScreen.tsx'), 'utf8')).toMatch(/if \(isFoyerMode\(\)\) \{\s*return <FoyerHostForm/);
+    // CreateActivityScreen returns the Foyer host entry (limit gate + FoyerHostForm) before its legacy code runs; Onboarding hides its button in Foyer mode.
+    expect(readFileSync(join(src, 'screens/main/CreateActivityScreen.tsx'), 'utf8')).toMatch(/if \(isFoyerMode\(\)\) \{[^}]*return <FoyerHostEntry/);
     expect(readFileSync(join(src, 'screens/main/OnboardingScreen.tsx'), 'utf8')).toMatch(/isFoyerMode\(\) \? null : \(\s*<AppButton onPress=\{\(\) => void requestLocationPermission/);
   });
 });

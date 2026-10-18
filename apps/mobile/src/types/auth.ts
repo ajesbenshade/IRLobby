@@ -57,9 +57,23 @@ export interface AuthUser {
   dateOfBirth?: string | null;
   sex?: 'male' | 'female' | '';
   // latitude / longitude are not sent by the backend yet (Church has no coordinates); optional so maps center on the church once they are.
-  church?: { id: number; name: string; is_verified?: boolean; latitude?: number | string | null; longitude?: number | string | null } | null;
+  church?: {
+    id: number;
+    name: string;
+    is_verified?: boolean;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    /** Church has a website calendar (final server name). Missing = no calendar. */
+    has_website_calendar?: boolean | null;
+    /** Older/alternate name for has_website_calendar; either one true counts. */
+    website_calendar?: boolean | null;
+  } | null;
   churchId?: number | null;
   isChurchAdmin?: boolean;
+  /** Not subject to the weekly host limit (server decides; e.g. church admins). Missing = false. */
+  eventLimitExempt?: boolean;
+  /** ISO time the member can host again; null = can host now (or the server doesn't send it yet). */
+  nextHostAvailableAt?: string | null;
   householdChildCount?: number;
   profileVisibility?: 'only_me' | 'church' | 'friends' | 'public';
   phone?: string | null;

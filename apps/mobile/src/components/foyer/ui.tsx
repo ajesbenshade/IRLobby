@@ -202,6 +202,21 @@ export const ErrorNotice = ({ message, testID }: { message?: string | null; test
     </View>
   ) : null;
 
+/** Info note (spec "info-note style"): burgundy tint card, 14pt corners, burgundy info icon, ink text. */
+export const InfoNotice = ({ title, message, testID }: { title?: string; message: string; testID?: string }) => (
+  <View style={styles.info} testID={testID}>
+    <MaterialCommunityIcons name="information-outline" size={20} color={appColors.primary} />
+    <View style={styles.infoCopy}>
+      {title ? (
+        <Text accessibilityRole="header" style={styles.infoTitle}>
+          {title}
+        </Text>
+      ) : null}
+      <Text style={styles.infoText}>{message}</Text>
+    </View>
+  </View>
+);
+
 type EmptyStateProps = {
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
@@ -290,6 +305,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  info: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: appColors.primarySoft, borderRadius: 14, padding: 14 },
+  infoCopy: { flex: 1, gap: 4 },
+  infoTitle: { fontFamily: appTypography.bodySemibold, fontSize: 16, lineHeight: 22, color: appColors.ink },
+  infoText: { fontFamily: appTypography.bodyMedium, fontSize: 14, lineHeight: 20, color: appColors.ink },
   noticeText: { flex: 1, color: ERROR_NOTICE_TEXT, fontFamily: appTypography.bodySemibold, fontWeight: '700', fontSize: 13, lineHeight: 18 },
   empty: { alignItems: 'center', gap: 12, paddingVertical: 40, paddingHorizontal: 24 },
   emptyCircle: {

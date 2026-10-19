@@ -1,0 +1,33 @@
+RewriteEngine On
+
+# Keep the production app on the apex domain so deep links use the same origin
+# as stored auth tokens.
+RewriteCond %{HTTP_HOST} ^www\.irlobby\.com$ [NC]
+RewriteRule ^ https://irlobby.com%{REQUEST_URI} [R=301,L,NE]
+
+# Preserve direct requests for real files/directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirect legacy .html URLs to clean route paths
+RewriteRule ^index\.html$ / [R=301,L]
+RewriteRule ^features\.html$ /features [R=301,L]
+RewriteRule ^how-it-works\.html$ /how-it-works [R=301,L]
+RewriteRule ^download\.html$ /download [R=301,L]
+RewriteRule ^support\.html$ /support [R=301,L]
+RewriteRule ^privacy\.html$ /privacy [R=301,L]
+RewriteRule ^privacy-policy\.html$ /privacy [R=301,L]
+RewriteRule ^terms\.html$ /terms [R=301,L]
+RewriteRule ^terms-of-service\.html$ /terms [R=301,L]
+
+# Client-side routing fallback for React Router
+RewriteRule ^ index.html [L]
+
+<IfModule mod_headers.c>
+	Header always set X-Content-Type-Options "nosniff"
+	Header always set X-Frame-Options "DENY"
+	Header always set Referrer-Policy "strict-origin-when-cross-origin"
+	Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.irlobby.com wss://api.irlobby.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+</IfModule>

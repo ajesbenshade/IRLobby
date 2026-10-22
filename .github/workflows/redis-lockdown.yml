@@ -1,0 +1,140 @@
+# Firewall-only containment for public Redis/TCP 6379.
+# Does not rotate REDIS_PASSWORD, recreate app containers, or change DNS/TLS.
+# Preferred first action when GHA/SSH is blocked: Hetzner Cloud Firewall
+# allow-list inbound TCP 22/80/443 only (see docs/REDIS_FIREWALL_LOCKDOWN.md).
+name: Redis Firewall Deny
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deny-6379:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preferred Cloud Firewall path (no SSH)
+        run: |
+          set -euo pipefail
+          cat <<'EOF'
+          Preferred P0 (no GitHub Actions SSH required):
+            Hetzner Cloud Console → Firewalls → attach to 5.75.156.23
+            Inbound allow TCP 22, 80, 443 only. Do not allow TCP 6379.
+            Hetzner Cloud Firewall is a whitelist; unlisted inbound ports are dropped.
+
+          This workflow is host-side defense in depth only (ufw/iptables deny 6379).
+          It does not rotate REDIS_PASSWORD and does not recreate redis/web/ws/celery.
+          Do not change DNS. Keep https://api.irlobby.com/api/health/ on HTTP 200.
+          Webmaster: after Cloud Firewall or this job, check external Redis PING fails.
+          Runbook: docs/REDIS_FIREWALL_LOCKDOWN.md
+          EOF
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Deny host TCP 6379 (contain-redis-exposure.sh only)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          connect() {
+            local user="$1"
+            ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${user}@${SSH_HOST}" "$2"
+          }
+
+          EFFECTIVE_USER=""
+          for candidate in root "${SSH_USER}" ubuntu opc admin deploy; do
+            if connect "${candidate}" "echo ok"; then
+              EFFECTIVE_USER="${candidate}"
+              break
+            fi
+          done
+          if [ -z "${EFFECTIVE_USER}" ]; then
+            echo "SSH failed for all attempted users." >&2
+            echo "Apply the Hetzner Cloud Firewall steps in docs/REDIS_FIREWALL_LOCKDOWN.md instead." >&2
+            exit 1
+          fi
+          echo "Connected as ${EFFECTIVE_USER}"
+
+          scp -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            irlobby_backend/deploy/oracle/contain-redis-exposure.sh \
+            "${EFFECTIVE_USER}@${SSH_HOST}:/tmp/contain-redis-exposure.sh"
+
+          # Command is an SSH argv string, not a stdin-fed remote script, so
+          # a later compose attach cannot consume leftover deploy commands.
+          REMOTE_CMD=$(cat <<'REMOTE'
+          set -euo pipefail
+          echo "=== firewall-only Redis containment (no rotate, no redeploy) ==="
+          chmod 0755 /tmp/contain-redis-exposure.sh
+          if [ "$(id -u)" -eq 0 ]; then
+            bash /tmp/contain-redis-exposure.sh 5.75.156.23
+          else
+            sudo bash /tmp/contain-redis-exposure.sh 5.75.156.23
+          fi
+
+          echo "=== docker ps ports ==="
+          if command -v docker >/dev/null 2>&1; then
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+          else
+            echo "docker not installed"
+          fi
+
+          echo "=== redis bind / TCP 6379 listeners ==="
+          if command -v ss >/dev/null 2>&1; then
+            ss -ltnp 'sport = :6379' || true
+          else
+            echo "ss is not installed"
+          fi
+
+          echo "=== ufw 6379 ==="
+          if command -v ufw >/dev/null 2>&1; then
+            ufw status verbose 2>/dev/null | grep -E 'Status|6379|Default' || true
+          fi
+
+          echo "=== iptables 6379 ==="
+          if command -v iptables >/dev/null 2>&1; then
+            iptables -S | grep 6379 || true
+          fi
+
+          echo "=== localhost HTTPS api.irlobby.com health (must stay 200) ==="
+          api_code="$(curl -skS -o /tmp/api-health.body -w "%{http_code}" --max-time 15 \
+            --resolve api.irlobby.com:443:127.0.0.1 https://api.irlobby.com/api/health/ || true)"
+          echo "localhost api health: HTTP ${api_code}"
+          if [ "${api_code}" != "200" ]; then
+            echo "api.irlobby.com health failed after host firewall deny" >&2
+            cat /tmp/api-health.body || true
+            exit 1
+          fi
+
+          echo "HOLD: this job did not rotate REDIS_PASSWORD and did not recreate app containers."
+          echo "Webmaster: check external Redis PING to 5.75.156.23:6379 from outside the VPS (must fail)."
+          REMOTE
+          )
+
+          ssh -o BatchMode=yes -o ConnectTimeout=90 -o StrictHostKeyChecking=accept-new \
+            "${EFFECTIVE_USER}@${SSH_HOST}" "${REMOTE_CMD}"
+
+      - name: Public API health check
+        run: |
+          set -euo pipefail
+          code=""
+          for attempt in 1 2 3 4 5 6 7 8; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 https://api.irlobby.com/api/health/ || true)"
+            echo "health attempt ${attempt}: HTTP ${code}"
+            head -c 200 /tmp/health.json || true
+            echo ""
+            if [ "${code}" = "200" ]; then
+              echo "Public https://api.irlobby.com/api/health/ returned 200."
+              echo "Webmaster: confirm external Redis PING to 5.75.156.23:6379 fails."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Public https://api.irlobby.com/api/health/ still failing" >&2
+          exit 1

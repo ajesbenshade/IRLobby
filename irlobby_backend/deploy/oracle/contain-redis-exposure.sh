@@ -57,7 +57,9 @@ else
 fi
 
 echo "Emergency containment applied."
-echo "Next: remove any Redis host port publishing or standalone public Redis service, rotate REDIS_PASSWORD, redeploy, then verify external 6379 access fails."
+echo "This script is firewall-only. Do not rotate REDIS_PASSWORD or recreate app containers from here."
+echo "HOLD rotate / requirepass / redeploy until Aaron or CoS authorizes that step."
+echo "Webmaster: verify external Redis PING to TCP 6379 fails from outside the VPS."
 
 if [[ -n "${PUBLIC_HOST}" ]]; then
   echo "Verification command from an external network: nc -vz ${PUBLIC_HOST} 6379"

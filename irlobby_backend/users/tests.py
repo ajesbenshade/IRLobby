@@ -119,7 +119,7 @@ class PasswordResetRequestTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         sent = mail.outbox[0]
         self.assertIn(self.user.email, sent.to)
-        self.assertIn("Password Reset", sent.subject)
+        self.assertEqual(sent.subject, "Reset your password for The Foyer")
         emailed_token = extract_reset_token(sent.body)
         self.assertNotEqual(self.user.password_reset_token, emailed_token)
         self.assertEqual(self.user.password_reset_token, hash_password_reset_token(emailed_token))

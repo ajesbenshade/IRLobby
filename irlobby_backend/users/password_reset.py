@@ -26,3 +26,21 @@ def password_reset_token_expired(created_at):
     if not created_at:
         return True
     return timezone.now() - created_at > PASSWORD_RESET_TOKEN_TTL
+
+
+def password_reset_token_ttl_display(ttl=None):
+    """Human-readable token lifetime for emails, e.g. "2 hours" or "1 hour 30 minutes"."""
+    ttl = PASSWORD_RESET_TOKEN_TTL if ttl is None else ttl
+    total_minutes = max(int(ttl.total_seconds() // 60), 1)
+    hours, minutes = divmod(total_minutes, 60)
+    parts = []
+    if hours:
+        parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    return " ".join(parts)
+
+
+def app_password_reset_link(token, scheme="irlobby"):
+    """Deep link that opens the app's Reset password screen with the token filled in."""
+    return f"{scheme}://reset-password/{token}"

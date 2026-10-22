@@ -1,12 +1,12 @@
 import hashlib
 import logging
-from urllib.parse import urljoin
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.decorators import (
@@ -24,10 +24,12 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .account_deletion import delete_account
 from .models import Invite, PushDeviceToken, User
 from .password_reset import (
+    app_password_reset_link,
     generate_password_reset_token,
     hash_password_reset_token,
     password_reset_token_expired,
     password_reset_token_matches,
+    password_reset_token_ttl_display,
 )
 from .serializers import (
     InviteCreateSerializer,
@@ -538,10 +540,10 @@ def stripe_connect_onboard(request):
 #
 # The previous implementation above generated a token and sent mail directly using
 # request.get_host(), which meant the link pointed back to the API server.  We now
-# use `request_password_reset` further down, which builds a frontend URL using
-# `FRONTEND_BASE_URL` and respects DEBUG email settings.  Keeping the implementation
-# behind a separate view avoids duplicate behaviour and ensures the route defined in
-# `urls.py` is exercised.
+# use `request_password_reset` further down, which emails the app deep link
+# (irlobby://reset-password/<token>) plus the code, and respects DEBUG email
+# settings.  Keeping the implementation behind a separate view avoids duplicate
+# behaviour and ensures the route defined in `urls.py` is exercised.
 
 
 @api_view(["GET", "POST", "OPTIONS"])
@@ -576,14 +578,9 @@ def password_reset_confirm(request):
             _clear_password_reset_token(user)
             return _invalid_response("Token has expired.")
 
-        frontend_base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
-        if frontend_base:
-            reset_path = f"reset-password/{token}"
-            redirect_url = urljoin(f"{frontend_base}/", reset_path)
-            response = Response(status=status.HTTP_302_FOUND)
-            response["Location"] = redirect_url
-            return response
-
+        # No redirect: there is no web reset page on irlobby.com (FRONTEND_BASE_URL/
+        # reset-password/<token> lands on a catch-all redirect loop). The app's
+        # irlobby://reset-password/<token> link is in the email; GET is just a check.
         success_response = Response(
             {"detail": "Token is valid.", "token": token}, status=status.HTTP_200_OK
         )
@@ -631,6 +628,48 @@ def password_reset_confirm(request):
         return response
 
 
+PASSWORD_RESET_EMAIL_SUBJECT = "Reset your password for The Foyer"
+
+
+def _send_password_reset_email(user, token):
+    """Send The Foyer reset email (text + HTML). Failures are logged, never raised."""
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    if not from_email:
+        logger.warning("DEFAULT_FROM_EMAIL is not configured; skipping password reset email send.")
+        return False
+
+    support_email = getattr(settings, "FOYER_SUPPORT_EMAIL", "") or ""
+    scheme = getattr(settings, "FOYER_APP_LINK_SCHEME", "") or "irlobby"
+    context = {
+        "user": user,
+        "token": token,
+        "reset_link": app_password_reset_link(token, scheme=scheme),
+        "expires_in": password_reset_token_ttl_display(),
+        "support_email": support_email,
+    }
+    try:
+        text_body = render_to_string("users/emails/password_reset.txt", context)
+        html_body = render_to_string("users/emails/password_reset.html", context)
+        message = EmailMultiAlternatives(
+            subject=PASSWORD_RESET_EMAIL_SUBJECT,
+            body=text_body,
+            from_email=from_email,
+            to=[user.email],
+            reply_to=[support_email] if support_email else None,
+        )
+        message.attach_alternative(html_body, "text/html")
+        message.send(fail_silently=False)
+    except Exception as exc:
+        # Same generic API response either way; never 500 or reveal delivery state.
+        logger.exception(
+            "Failed to send password reset email to user_id=%s: %s",
+            user.id,
+            exc.__class__.__name__,
+        )
+        return False
+    return True
+
+
 @api_view(["POST", "OPTIONS"])
 @permission_classes([AllowAny])
 @throttle_classes([AuthAnonThrottle, AuthUserThrottle])
@@ -658,37 +697,7 @@ def request_password_reset(request):
             user.token_created_at = timezone.now()
             user.save(update_fields=["password_reset_token", "token_created_at"])
 
-            base_url = getattr(settings, "FRONTEND_BASE_URL", None) or request.build_absolute_uri(
-                "/"
-            )
-            if not base_url.endswith("/"):
-                base_url = f"{base_url}/"
-            reset_link = urljoin(base_url, f"reset-password/{token}")
-
-            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
-            if from_email:
-                email_subject = "Password Reset Request"
-                email_body = (
-                    "You recently requested to reset your IRLobby password.\n\n"
-                    f"Use the link below to set a new password: {reset_link}\n\n"
-                    "If you did not request a password reset, you can safely ignore this message."
-                )
-                try:
-                    send_mail(
-                        email_subject,
-                        email_body,
-                        from_email,
-                        [user.email],
-                        fail_silently=False,
-                    )
-                except Exception as exc:  # pragma: no cover - defensive logging
-                    logger.exception(
-                        "Failed to send password reset email to user_id=%s: %s", user.id, exc
-                    )
-            else:
-                logger.warning(
-                    "DEFAULT_FROM_EMAIL is not configured; skipping password reset email send."
-                )
+            _send_password_reset_email(user, token)
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.exception(
                 "Failed to process password reset for user_id=%s: %s",

@@ -5,10 +5,37 @@ from users.models import User
 
 
 class Conversation(models.Model):
-    match = models.OneToOneField(Match, on_delete=models.CASCADE)
+    """One room, three subjects. Exactly one of match or prayer_request is set.
+
+    - match.activity set: gathering chat
+    - match.activity null: 1:1 chat
+    - prayer_request set (match null): shared prayer chat
+    """
+
+    match = models.OneToOneField(Match, on_delete=models.CASCADE, null=True, blank=True)
+    prayer_request = models.OneToOneField(
+        "prayers.PrayerRequest",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="conversation",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(match__isnull=False, prayer_request__isnull=True)
+                    | models.Q(match__isnull=True, prayer_request__isnull=False)
+                ),
+                name="conversation_match_xor_prayer",
+            )
+        ]
+
     def __str__(self):
+        if self.prayer_request_id:
+            return f"Prayer chat {self.prayer_request_id}"
         return f"Conversation for {self.match}"
 
 

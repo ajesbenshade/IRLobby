@@ -30,8 +30,8 @@ COMPANIONS = [
         "username": "review_maya",
         "first_name": "Maya",
         "last_name": "Chen",
-        "bio": "Weekend hiker, coffee snob, always down for trivia.",
-        "interests": ["hiking", "coffee", "trivia"],
+        "bio": "Weekend hiker and coffee snob.",
+        "interests": ["hiking", "coffee"],
     },
     {
         "username": "review_jordan",
@@ -59,18 +59,61 @@ COMPANIONS = [
 # (host index into COMPANIONS or None for the review account, title, description,
 #  category, lat offset, lon offset, hours from now, capacity, tags)
 ACTIVITIES = [
-    (0, "Rancho San Antonio Morning Hike", "Easy 4-mile loop, then coffee after.",
-     "Outdoors", 0.012, -0.008, 26, 8, ["hiking", "outdoors"]),
-    (1, "Pickup Basketball at Memorial Park", "Casual 3v3, all skill levels.",
-     "Sports", -0.006, 0.010, 50, 6, ["basketball", "sports"]),
-    (2, "Board Game Night", "Catan, Codenames, and snacks. Newcomers welcome!",
-     "Social", 0.004, 0.006, 74, 6, ["board games", "social"]),
-    (3, "Golden Hour Photo Walk", "Bring any camera, phones count.",
-     "Arts", -0.010, -0.012, 98, 8, ["photography", "art"]),
-    (0, "Trivia at the Taproom", "Team trivia night, we need a fourth!",
-     "Social", 0.008, 0.002, 122, 4, ["trivia", "social"]),
-    (None, "Sunday Farmers Market Stroll", "Grab breakfast and wander the stalls.",
-     "Food", -0.003, -0.004, 146, 6, ["food", "market"]),
+    (
+        0,
+        "Rancho San Antonio Morning Hike",
+        "Easy 4-mile loop, then coffee after.",
+        "Outdoors",
+        0.012,
+        -0.008,
+        26,
+        8,
+        ["hiking", "outdoors"],
+    ),
+    (
+        1,
+        "Pickup Basketball at Memorial Park",
+        "Casual 3v3, all skill levels.",
+        "Sports",
+        -0.006,
+        0.010,
+        50,
+        6,
+        ["basketball", "sports"],
+    ),
+    (
+        2,
+        "Board Game Night",
+        "Catan, Codenames, and snacks. Newcomers welcome!",
+        "Social",
+        0.004,
+        0.006,
+        74,
+        6,
+        ["board games", "social"],
+    ),
+    (
+        3,
+        "Golden Hour Photo Walk",
+        "Bring any camera, phones count.",
+        "Arts",
+        -0.010,
+        -0.012,
+        98,
+        8,
+        ["photography", "art"],
+    ),
+    (
+        None,
+        "Sunday Farmers Market Stroll",
+        "Grab breakfast and wander the stalls.",
+        "Food",
+        -0.003,
+        -0.004,
+        146,
+        6,
+        ["food", "market"],
+    ),
 ]
 
 CHAT_SCRIPT = [
@@ -162,7 +205,7 @@ class Command(BaseCommand):
             first_name="App",
             last_name="Reviewer Two",
             bio="Second demo account for App Review.",
-            interests=["food", "photography", "trivia"],
+            interests=["food", "photography"],
             now=now,
             app_review_account=True,
         )
@@ -216,9 +259,7 @@ class Command(BaseCommand):
                     )
 
         # Require-approval gatherings with a request waiting on each side.
-        approval_from_companion = self._create_activity(
-            companions[3], APPROVAL_FROM_COMPANION, now
-        )
+        approval_from_companion = self._create_activity(companions[3], APPROVAL_FROM_COMPANION, now)
         approval_from_reviewer = self._create_activity(reviewer, APPROVAL_FROM_REVIEWER, now)
         for activity in (approval_from_companion, approval_from_reviewer):
             activity.requires_approval = True
@@ -298,8 +339,18 @@ class Command(BaseCommand):
             tags=tags,
         )
 
-    def _upsert_user(self, *, username, email, first_name, last_name, bio, interests, now,
-                     app_review_account=False):
+    def _upsert_user(
+        self,
+        *,
+        username,
+        email,
+        first_name,
+        last_name,
+        bio,
+        interests,
+        now,
+        app_review_account=False,
+    ):
         user = User.objects.filter(email=email).first() or User(username=username, email=email)
         user.first_name = first_name
         user.last_name = last_name

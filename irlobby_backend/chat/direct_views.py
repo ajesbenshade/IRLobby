@@ -56,6 +56,9 @@ def _direct_or_404(user, conversation_id):
     conversation = get_object_or_404(
         Conversation.objects.select_related("match__activity", "match__user_a", "match__user_b"),
         pk=conversation_id,
+        # A null match is a prayer chat, not a 1:1. match__activity__isnull would
+        # include those, because the join yields NULL.
+        match__isnull=False,
         match__activity__isnull=True,
     )
     if not can_read_conversation(user, conversation):
@@ -73,7 +76,7 @@ def direct_conversations(request):
         hidden = blocked_user_ids(user)
         result = []
         for conversation in (
-            Conversation.objects.filter(match__activity__isnull=True)
+            Conversation.objects.filter(match__isnull=False, match__activity__isnull=True)
             .filter(Q(match__user_a=user) | Q(match__user_b=user))
             .select_related("match__user_a", "match__user_b", "match__activity")
             .order_by("-id")

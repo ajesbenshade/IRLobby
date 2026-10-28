@@ -1,9 +1,11 @@
 """Who may open, read, and write in a conversation (REST and websocket share this).
 
-Two kinds of conversation share one model:
+Three kinds of conversation share one model:
 - Gathering chats: ``match.activity`` is set; access follows the gathering rules.
-- Direct (1:1) chats: ``match.activity`` is None; access follows the friend / DM rules in
-  users/social.py. Each person also has a ConversationUserState (muted, left).
+- Direct (1:1) chats: ``match`` is set and ``match.activity`` is None; access follows the
+  friend / DM rules in users/social.py. Each person also has a ConversationUserState.
+- Prayer chats: ``prayer_request`` is set and ``match`` is null. Only people currently
+  praying, and not blocked with the author, may read or send.
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from .models import Conversation, ConversationUserState
 
 
 def is_direct(conversation) -> bool:
-    return conversation.match.activity_id is None
+    return conversation.match_id is not None and conversation.match.activity_id is None
 
 
 def other_participant(conversation, user):
@@ -31,8 +33,14 @@ def user_state(conversation, user) -> ConversationUserState:
 
 def can_read_conversation(user, conversation) -> bool:
     """Participant, and for a direct chat: not left and not blocked either way."""
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if conversation.prayer_request_id:
+        from prayers.access import can_access_prayer_chat
+
+        return can_access_prayer_chat(user, conversation.prayer_request)
     match = conversation.match
-    if user.id not in (match.user_a_id, match.user_b_id):
+    if match is None or user.id not in (match.user_a_id, match.user_b_id):
         return False
     if not is_direct(conversation):
         return user_can_access_activity_chat(user, match.activity)

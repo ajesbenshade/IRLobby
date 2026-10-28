@@ -89,6 +89,14 @@
   --bottom-nav-offset: calc(var(--safe-area-bottom) + 4.75rem);
 }
 
+@media (min-width: 768px) {
+  :root,
+  .dark {
+    /* Bottom tabs are phone-only; desktop uses the sidebar */
+    --bottom-nav-offset: 1rem;
+  }
+}
+
 @layer base {
   * {
     border-color: hsl(var(--border));

@@ -118,7 +118,7 @@ export default function HelpSupport() {
               </h3>
               <p className="text-sm text-gray-600">
                 Browse gatherings in the Discover tab. Open a gathering to see its
-                Details, then tap RSVP (I&apos;m going) to join. If it&apos;s an
+                Details, then tap RSVP to join. If it&apos;s an
                 open gathering, you&apos;ll be joined immediately. For private gatherings, the host
                 will need to approve your request.
               </p>

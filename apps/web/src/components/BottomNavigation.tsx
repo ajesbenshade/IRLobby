@@ -2,63 +2,35 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, Calendar, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+export const navItems = [
+  { id: 'discovery', route: '/app/discovery', label: 'Discover', icon: Search },
+  { id: 'gatherings', route: '/app/gatherings', label: 'Gatherings', icon: Calendar },
+  { id: 'create', route: '/app/host', label: 'Host', icon: Plus, isSpecial: true },
+  { id: 'profile', route: '/app/profile', label: 'Profile', icon: User },
+];
+
+export function currentNavId(path: string) {
+  if (path.startsWith('/app/gatherings') || path.startsWith('/app/activities')) return 'gatherings';
+  if (path.startsWith('/app/create') || path.startsWith('/app/host')) return 'create';
+  if (
+    path.startsWith('/app/profile') ||
+    path.startsWith('/app/settings') ||
+    path.startsWith('/app/reviews') ||
+    path.startsWith('/app/help-support')
+  ) {
+    return 'profile';
+  }
+  return 'discovery';
+}
+
 export default function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = [
-    {
-      id: 'discovery',
-      route: '/app/discovery',
-      label: 'Discover',
-      icon: Search,
-    },
-    {
-      id: 'gatherings',
-      route: '/app/gatherings',
-      label: 'Gatherings',
-      icon: Calendar,
-    },
-    {
-      id: 'create',
-      route: '/app/host',
-      label: 'Host',
-      icon: Plus,
-      isSpecial: true,
-    },
-    {
-      id: 'profile',
-      route: '/app/profile',
-      label: 'Profile',
-      icon: User,
-    },
-  ];
-
-  const getCurrentScreen = () => {
-    const path = location.pathname;
-
-    if (path.startsWith('/app/gatherings') || path.startsWith('/app/activities')) {
-      return 'gatherings';
-    }
-    if (path.startsWith('/app/create') || path.startsWith('/app/host')) {
-      return 'create';
-    }
-    if (
-      path.startsWith('/app/profile') ||
-      path.startsWith('/app/settings') ||
-      path.startsWith('/app/reviews') ||
-      path.startsWith('/app/help-support')
-    ) {
-      return 'profile';
-    }
-
-    return 'discovery';
-  };
-
-  const currentScreen = getCurrentScreen();
+  const currentScreen = currentNavId(location.pathname);
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 pb-[env(safe-area-inset-bottom)] shadow-lg dark:shadow-gray-900/20">
+    <nav className="fixed inset-x-0 bottom-0 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 pb-[env(safe-area-inset-bottom)] shadow-lg dark:shadow-gray-900/20">
       <div className="flex justify-around items-center py-2">
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;

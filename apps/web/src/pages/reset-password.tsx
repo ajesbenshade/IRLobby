@@ -24,10 +24,10 @@ const ResetPasswordPage = () => {
   // Basic token validation (you might want to do more)
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing reset token.');
+      setError('Invalid or missing reset code.');
       toast({
         title: 'Error',
-        description: 'Invalid or missing reset token.',
+        description: 'Invalid or missing reset code.',
         variant: 'destructive',
       });
     }
@@ -41,8 +41,8 @@ const ResetPasswordPage = () => {
       return;
     }
     if (!token) {
-      setError('Missing reset token.');
-      toast({ title: 'Error', description: 'Missing reset token.', variant: 'destructive' });
+      setError('Missing reset code.');
+      toast({ title: 'Error', description: 'Missing reset code.', variant: 'destructive' });
       return;
     }
 

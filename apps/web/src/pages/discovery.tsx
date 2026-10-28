@@ -1,7 +1,6 @@
 import ActivityDetailsModal from '@/components/ActivityDetailsModal';
 import { DiscoverySkeleton, PageState } from '@/components/AppState';
 import FilterModal from '@/components/FilterModal';
-import MapView from '@/components/MapView';
 import NotificationCenter from '@/components/NotificationCenter';
 import {
   AddToCalendarDialog,
@@ -19,7 +18,7 @@ import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map, WifiOff, Clock, Users } from 'lucide-react';
+import { Filter, MapPin, Bell, RefreshCw, WifiOff, Clock, Users } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -28,7 +27,6 @@ export default function Discovery() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
@@ -187,6 +185,41 @@ export default function Discovery() {
     setIsRefreshing(false);
   }, [refetch]);
 
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-11 w-11 p-0"
+        onClick={() => setShowFilterModal(true)}
+        aria-label="Open discovery filters"
+      >
+        <Filter className="h-5 w-5 text-muted-foreground" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-11 w-11 p-0"
+        onClick={() => void handleRefresh()}
+        disabled={isRefreshing}
+        aria-label="Refresh activities"
+      >
+        <RefreshCw
+          className={`h-5 w-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+        />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-11 w-11 p-0"
+        onClick={() => setShowNotifications(true)}
+        aria-label="Open notifications"
+      >
+        <Bell className="h-5 w-5 text-muted-foreground" />
+      </Button>
+    </div>
+  );
+
   if (isLoading) {
     return <DiscoverySkeleton />;
   }
@@ -213,23 +246,14 @@ export default function Discovery() {
   if (noActivities) {
     return (
       <div className="min-h-[100dvh] bg-background">
-        <header className="bg-card shadow-sm p-4 flex items-center justify-between">
+        <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between">
           <div>
             <h2 className="font-display text-[28px] font-bold text-foreground">
               Upcoming gatherings
             </h2>
             <p className="text-sm text-muted-foreground">{churchLine}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-10 h-10 p-0"
-              onClick={() => setShowFilterModal(true)}
-            >
-              <Filter className="w-5 h-5" />
-            </Button>
-          </div>
+          {headerActions}
         </header>
         <PageState
           icon={MapPin}
@@ -253,6 +277,10 @@ export default function Discovery() {
         />
         {goingDialog}
         {calendarDialog}
+        <NotificationCenter
+          isOpen={showNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
       </div>
     );
   }
@@ -282,57 +310,17 @@ export default function Discovery() {
       )}
 
       {/* Header with refresh indicator */}
-      <header className="bg-card shadow-sm p-4 flex items-center justify-between transition-transform duration-200">
+      <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between transition-transform duration-200">
         <div>
           <h2 className="font-display text-[28px] font-bold text-foreground">
             Upcoming gatherings
           </h2>
           <p className="text-sm text-muted-foreground">{churchLine}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-10 h-10 p-0 relative"
-            onClick={() => setShowNotifications(true)}
-            aria-label="Open notifications"
-          >
-            <Bell className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-10 h-10 p-0"
-            onClick={() => setShowMapView(true)}
-            aria-label="Open map view"
-          >
-            <Map className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-10 h-10 p-0"
-            onClick={() => setShowFilterModal(true)}
-            aria-label="Open discovery filters"
-          >
-            <Filter className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-10 h-10 p-0"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            aria-label="Refresh activities"
-          >
-            <RefreshCw
-              className={`w-5 h-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
-            />
-          </Button>
-        </div>
+        {headerActions}
       </header>
 
-      <ul className="space-y-3 p-4">
+      <ul className="grid gap-3 p-4 lg:grid-cols-2">
         {activities.map((activity) => {
           const g = activity as Activity & GatheringLike;
           const when = activity.time ? new Date(activity.time) : null;
@@ -427,7 +415,6 @@ export default function Discovery() {
               setCalendarActivity(currentActivity);
             }}
           />
-
         </>
       )}
 
@@ -441,21 +428,6 @@ export default function Discovery() {
 
       {/* Notification Center */}
       <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
-
-      {/* Map View Modal */}
-      {showMapView && (
-        <div className="fixed inset-0 z-50 bg-white">
-          <MapView
-            onActivitySelect={(activity) => {
-              setSelectedActivityId(activity.id);
-              setShowMapView(false);
-              setShowDetailsModal(true);
-            }}
-            onToggleView={() => setShowMapView(false)}
-            filters={effectiveFilters}
-          />
-        </div>
-      )}
     </div>
   );
 }

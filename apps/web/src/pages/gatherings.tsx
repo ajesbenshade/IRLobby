@@ -49,7 +49,7 @@ export default function GatheringsPage() {
     );
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-[calc(var(--bottom-nav-offset)+1rem)] pt-8">
+    <div className="mx-auto min-h-screen w-full bg-[#f6f1ee] px-5 pb-[calc(var(--bottom-nav-offset)+1rem)] pt-8">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
         <Link
@@ -75,16 +75,19 @@ export default function GatheringsPage() {
         ))}
       </div>
       <ChatsSection />
-      <Section
-        label="HOSTING"
-        rows={filter(hosted.data ?? [])}
-        summary={(row) => `${row.going_count ?? row.participant_count ?? 0} going`}
-      />
-      <Section
-        label="GOING"
-        rows={filter(going.data ?? [])}
-        summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
-      />
+      {/* lg: hosting | going. Below lg this wrapper is a plain stack (phone unchanged). */}
+      <div className="gatherings-columns lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+        <Section
+          label="HOSTING"
+          rows={filter(hosted.data ?? [])}
+          summary={(row) => `${row.going_count ?? row.participant_count ?? 0} going`}
+        />
+        <Section
+          label="GOING"
+          rows={filter(going.data ?? [])}
+          summary={(row) => whosGoingSummary(row.my_rsvp?.people_count)}
+        />
+      </div>
     </div>
   );
 }
@@ -99,7 +102,7 @@ function Section({
   summary: (row: Row) => string;
 }) {
   return (
-    <section className="mt-6">
+    <section className="mt-6 min-w-0">
       <h2 className="text-xs font-bold tracking-wide text-[#6e6a68]">{label}</h2>
       {rows.length === 0 ? <p className="mt-2 text-sm text-[#6e6a68]">Nothing here yet.</p> : null}
       <div className="mt-2 space-y-3">

@@ -193,9 +193,9 @@ export default function Chat() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate('/app/matches')}
+        onClick={() => navigate('/app/gatherings')}
         className="p-2"
-        aria-label="Back to matches"
+        aria-label="Back to gatherings"
       >
         <ArrowLeft className="w-5 h-5" />
       </Button>
@@ -221,9 +221,9 @@ export default function Chat() {
         <PageState
           icon={MessageCircle}
           title="Conversation not found"
-          description="This chat may still be getting created, or the match is no longer available."
-          actionLabel="Back to matches"
-          onAction={() => navigate('/app/matches')}
+          description="This chat may still be getting created, or is no longer available."
+          actionLabel="Back to gatherings"
+          onAction={() => navigate('/app/gatherings')}
           className="flex-1"
         />
       </div>

@@ -12,14 +12,10 @@ import {
   Calendar,
   Compass,
   HelpCircle,
-  Home,
-  MessageCircle,
   Plus,
   Settings,
-  Sparkles,
   Star,
   User,
-  Users,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,17 +26,13 @@ interface CommandPaletteProps {
 }
 
 const NAV = [
-  { to: '/app', label: 'Home', icon: Home },
-  { to: '/app/discovery', label: 'Discover activities', icon: Compass },
-  { to: '/app/matches', label: 'Matches', icon: MessageCircle },
-  { to: '/app/connections', label: 'Connections', icon: Users },
-  { to: '/app/activities', label: 'My events', icon: Calendar },
+  { to: '/app/discovery', label: 'Discover', icon: Compass },
+  { to: '/app/gatherings', label: 'Gatherings', icon: Calendar },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
 ];
 
 const ACTIONS = [
-  { to: '/app/create', label: 'Create new activity', icon: Plus },
-  { to: '/app/vibe-quiz', label: 'Take the Vibe Quiz', icon: Sparkles },
+  { to: '/app/host', label: 'Host a gathering', icon: Plus },
   { to: '/app/reviews', label: 'View reviews', icon: Star },
 ];
 

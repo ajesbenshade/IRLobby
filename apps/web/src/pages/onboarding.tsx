@@ -12,17 +12,15 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { VibeQuiz } from '@/components/vibe-quiz';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES, type VibeQuizResult } from '@shared/schema';
+import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-type OnboardingStep = 'vibe' | 'profile';
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
 const FALLBACK_AVATAR_BASE_URL = 'https://api.dicebear.com/9.x/initials/svg';
@@ -39,7 +37,6 @@ const buildFallbackAvatarUrl = (seedParts: string[]) => {
 };
 
 export default function Onboarding() {
-  const [step, setStep] = useState<OnboardingStep>('vibe');
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
   const [ageRange, setAgeRange] = useState('');
@@ -67,16 +64,6 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const advanceFromVibe = async (result?: VibeQuizResult) => {
-    await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
-    await queryClient.refetchQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
-    const vibeTags = result?.discoverTags ?? [];
-    if (vibeTags.length) {
-      setInterests((prev) => Array.from(new Set([...prev, ...vibeTags])).slice(0, 20));
-    }
-    setStep('profile');
-  };
 
   const addInterest = () => {
     const nextInterest = interestInput.trim();
@@ -278,24 +265,6 @@ export default function Onboarding() {
       setIsInviting(false);
     }
   };
-
-  if (step === 'vibe') {
-    return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="max-w-3xl mx-auto">
-          <VibeQuiz
-            existingActivityPreferences={user?.activityPreferences}
-            existingPhotoAlbum={user?.photoAlbum}
-            existingInterests={user?.interests ?? interests}
-            onComplete={(result) => void advanceFromVibe(result)}
-            onSkip={() => void advanceFromVibe()}
-            persistOnComplete
-            resultsCtaLabel="Continue to profile"
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { apiRequest } from '@/lib/queryClient';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
+import { API_ROUTES } from '@shared/schema';
 import {
   coverPhotoUrl,
   isUpcomingGathering,
@@ -63,6 +65,7 @@ export default function GatheringsPage() {
           </button>
         ))}
       </div>
+      <ChatsSection />
       <Section
         label="HOSTING"
         rows={filter(hosted.data ?? [])}
@@ -112,11 +115,46 @@ function Section({
                 to={`/app/activity/${row.id}`}
                 className="rounded-full bg-[#f9e8ee] px-3 py-2 text-sm font-semibold text-[#a2033f]"
               >
-                Chat
+                Details
               </Link>
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+interface ChatRow {
+  id: number;
+  match: string;
+  matchId: number;
+}
+
+function ChatsSection() {
+  const chats = useQuery({
+    queryKey: [API_ROUTES.MESSAGES_CONVERSATIONS],
+    queryFn: async () => {
+      const response = await apiRequest('GET', API_ROUTES.MESSAGES_CONVERSATIONS);
+      return asArrayResponse((await response.json()) as ChatRow[] | PaginatedResponse<ChatRow>);
+    },
+    retry: 1,
+  });
+  const rows = chats.data ?? [];
+  if (rows.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <h2 className="text-xs font-bold tracking-wide text-[#6e6a68]">CHATS</h2>
+      <div className="mt-2 space-y-2">
+        {rows.map((row) => (
+          <Link
+            key={row.id}
+            to={`/app/gatherings/${row.matchId}/chat`}
+            className="block rounded-[16px] bg-white p-3 font-display text-[16px]"
+          >
+            {row.match}
+          </Link>
+        ))}
       </div>
     </section>
   );

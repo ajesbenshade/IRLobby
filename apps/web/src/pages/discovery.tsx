@@ -2,7 +2,6 @@ import ActivityDetailsModal from '@/components/ActivityDetailsModal';
 import { DiscoverySkeleton, PageState } from '@/components/AppState';
 import FilterModal from '@/components/FilterModal';
 import MapView from '@/components/MapView';
-import MatchSuccessModal from '@/components/MatchSuccessModal';
 import NotificationCenter from '@/components/NotificationCenter';
 import {
   AddToCalendarDialog,
@@ -10,9 +9,7 @@ import {
   YoureGoingDialog,
   type WhosComingSheetData,
 } from '@/components/foyer/FoyerSheets';
-import SwipeCard from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { buildActivitySearchParams } from '@/lib/activityFilters';
 import { gatheringCalendarUrls, openCalendarUrl } from '@/lib/calendar';
@@ -21,30 +18,18 @@ import { audienceChipLabel, type GatheringLike } from '@/lib/foyer';
 import { apiRequest } from '@/lib/queryClient';
 import type { Activity, ActivityFilters } from '@/types/activity';
 import { API_ROUTES, API_ROUTE_BUILDERS, parseActivityListResponse } from '@shared/schema';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, MapPin, Bell, RefreshCw, Map, WifiOff, Sparkles } from 'lucide-react';
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Filter, MapPin, Bell, RefreshCw, Map, WifiOff, Clock, Users } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-interface SwipePayload {
-  activityId: number;
-  swipeType: 'like' | 'pass';
-}
-
-interface SwipeMutationResult {
-  match?: boolean;
-}
-
 export default function Discovery() {
-  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
+  const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showMatchSuccess, setShowMatchSuccess] = useState(false);
-  const [matchedActivity, setMatchedActivity] = useState<Activity | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
   const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
-  const [vibeReminderDismissed, setVibeReminderDismissed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
   const [goingActivity, setGoingActivity] = useState<(Activity & GatheringLike) | null>(null);
@@ -52,31 +37,10 @@ export default function Discovery() {
   const [rsvpPending, setRsvpPending] = useState(false);
   const navigate = useNavigate();
   const [pullDistance, setPullDistance] = useState(0);
-  const queryClient = useQueryClient();
   const { token, user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
-  const vibeSeededRef = useRef(false);
-
-  const vibeDiscoverTags = useMemo(
-    () => user?.vibe?.vibeDiscoverTags ?? [],
-    [user?.vibe?.vibeDiscoverTags],
-  );
-  const vibeQuizSkipped = Boolean(user?.vibe?.vibeQuizSkipped);
-  const hasVibeProfile = Boolean(user?.vibe?.vibeProfile);
-
-  useEffect(() => {
-    if (vibeSeededRef.current) return;
-    if (!hasVibeProfile || vibeDiscoverTags.length === 0) return;
-    if ((filters.tags?.length ?? 0) > 0) {
-      vibeSeededRef.current = true;
-      return;
-    }
-    vibeSeededRef.current = true;
-    setFilters((prev) => ({ ...prev, tags: [...vibeDiscoverTags] }));
-  }, [hasVibeProfile, vibeDiscoverTags, filters.tags]);
-
   const churchLine = `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`;
 
   const effectiveFilters = filters;
@@ -103,45 +67,11 @@ export default function Discovery() {
     retry: 1,
   });
 
-  const swipeMutation = useMutation<SwipeMutationResult, Error, SwipePayload>({
-    mutationFn: async ({ activityId, swipeType }) => {
-      const direction = swipeType === 'like' ? 'right' : 'left';
-      const response = await apiRequest('POST', API_ROUTE_BUILDERS.activitySwipe(activityId), {
-        direction,
-      });
-      return (await response.json()) as SwipeMutationResult;
-    },
-    onSuccess: (data) => {
-      if (data?.match) {
-        const activity = activities[currentActivityIndex];
-        setMatchedActivity(activity);
-        setShowMatchSuccess(true);
-        queryClient.invalidateQueries({ queryKey: [API_ROUTES.MATCHES] });
-      }
-      nextActivity();
-    },
-  });
-
-  const currentActivity = activities[currentActivityIndex];
-
-  const nextActivity = useCallback(() => {
-    setCurrentActivityIndex((prev) => prev + 1);
-  }, []);
-
-  const handleSwipe = (swipeType: 'like' | 'pass') => {
-    if (!currentActivity) return;
-    swipeMutation.mutate({
-      activityId: currentActivity.id,
-      swipeType,
-    });
-  };
-
-  const handleReject = () => handleSwipe('pass');
+  const currentActivity = activities.find((activity) => activity.id === selectedActivityId);
 
   const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
     setWhosComing(null);
     setGoingActivity(activity);
-    setCurrentActivityIndex((index) => index + 1);
   };
 
   const goingDialog = goingActivity ? (
@@ -154,7 +84,7 @@ export default function Discovery() {
       }}
       onChat={() => {
         setGoingActivity(null);
-        navigate('/app/matches');
+        navigate('/app/gatherings');
       }}
       onAddToCalendar={() => setCalendarActivity(goingActivity)}
       onDismiss={() => setGoingActivity(null)}
@@ -184,8 +114,8 @@ export default function Discovery() {
     }
   };
 
-  const handleJoin = async () => {
-    const activity = activities[currentActivityIndex] as (Activity & GatheringLike) | undefined;
+  const handleJoin = async (target?: Activity) => {
+    const activity = (target ?? currentActivity) as (Activity & GatheringLike) | undefined;
     if (!activity) return;
     try {
       const response = await apiRequest('GET', `/api/activities/${activity.id}/whos-coming/`);
@@ -202,16 +132,18 @@ export default function Discovery() {
       }
       setWhosComing(sheet);
     } catch {
-      handleSwipe('like');
+      try {
+        await confirmRsvp(activity, { include_self: true, dependent_ids: [] });
+      } catch {
+        // RSVP failed; leave the list as-is so the member can retry.
+      }
     }
   };
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
-    setCurrentActivityIndex(0);
   };
 
-  const deckCleared = activities.length > 0 && currentActivityIndex >= activities.length;
   const noActivities = !isLoading && activities.length === 0;
 
   // Pull to refresh functionality
@@ -273,14 +205,14 @@ export default function Discovery() {
         onAction={() => void handleRefresh()}
         isActionLoading={isRefreshing}
         tone="danger"
-        className="min-h-screen bg-background"
+        className="min-h-[100dvh] bg-background"
       />
     );
   }
 
-  if (noActivities || deckCleared) {
+  if (noActivities) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <header className="bg-card shadow-sm p-4 flex items-center justify-between">
           <div>
             <h2 className="font-display text-[28px] font-bold text-foreground">
@@ -301,25 +233,16 @@ export default function Discovery() {
         </header>
         <PageState
           icon={MapPin}
-          title={deckCleared ? 'You cleared the deck' : 'Nothing coming up'}
-          description={
-            deckCleared
-              ? 'You’ve seen this round. Refresh for anything new, or host a plan so others can find you.'
-              : 'No upcoming gatherings yet. Refresh, or host one for the church.'
-          }
-          actionLabel={deckCleared ? 'Reload deck' : 'Refresh'}
-          onAction={() => {
-            if (deckCleared) {
-              setCurrentActivityIndex(0);
-            }
-            void handleRefresh();
-          }}
+          title="Nothing coming up"
+          description="No upcoming gatherings yet. Refresh, or host one for the church."
+          actionLabel="Refresh"
+          onAction={() => void handleRefresh()}
           isActionLoading={isRefreshing}
           className="bg-transparent"
         />
         <div className="flex justify-center pb-8">
           <Button asChild variant="outline">
-            <Link to="/app/create">Host a plan</Link>
+            <Link to="/app/create">Host a gathering</Link>
           </Button>
         </div>
         <FilterModal
@@ -337,7 +260,7 @@ export default function Discovery() {
   return (
     <div
       ref={containerRef}
-      className="bg-background min-h-screen relative overflow-hidden pb-[calc(var(--bottom-nav-offset)+0.5rem)]"
+      className="bg-background min-h-[100dvh] relative overflow-hidden pb-[calc(var(--bottom-nav-offset)+0.5rem)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -409,59 +332,73 @@ export default function Discovery() {
         </div>
       </header>
 
-      {vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
-        <div className="mx-4 mt-4 rounded-xl border bg-card p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
-            <div className="flex-1 space-y-2">
-              <p className="font-medium text-foreground">Want a feed that actually fits?</p>
-              <p className="text-sm text-muted-foreground">
-                Take the 60-second vibe quiz and we&apos;ll spotlight the hangs that match your
-                energy.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setVibeReminderDismissed(true)}>
-                  Not now
+      <ul className="space-y-3 p-4">
+        {activities.map((activity) => {
+          const g = activity as Activity & GatheringLike;
+          const when = activity.time ? new Date(activity.time) : null;
+          const whenLabel =
+            when && !Number.isNaN(when.getTime())
+              ? when.toLocaleString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })
+              : 'Time to be announced';
+          return (
+            <li key={activity.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+              <button
+                type="button"
+                className="block w-full text-left"
+                onClick={() => {
+                  setSelectedActivityId(activity.id);
+                  setShowDetailsModal(true);
+                }}
+              >
+                <h3 className="font-display text-[20px] font-bold text-foreground">
+                  {activity.title}
+                </h3>
+                <p className="mt-2 flex items-center text-sm text-muted-foreground">
+                  <Clock className="mr-2 h-4 w-4 shrink-0" />
+                  {whenLabel}
+                </p>
+                {activity.location ? (
+                  <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                    <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="truncate">{activity.location}</span>
+                  </p>
+                ) : null}
+                <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                  <Users className="mr-2 h-4 w-4 shrink-0" />
+                  {g.going_count ?? activity.participant_count ?? 0} going
+                </p>
+              </button>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedActivityId(activity.id);
+                    setShowDetailsModal(true);
+                  }}
+                >
+                  Details
                 </Button>
-                <Button asChild size="sm">
-                  <Link to="/app/vibe-quiz">Take the quiz</Link>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedActivityId(activity.id);
+                    void handleJoin(activity);
+                  }}
+                >
+                  RSVP
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Swipe Cards Container */}
-      <div className="relative p-4 md:p-6 lg:p-8 h-full">
-        {/* Background cards for stacking effect */}
-        {activities
-          .slice(currentActivityIndex + 1, currentActivityIndex + 3)
-          .map((activity, index) => (
-            <Card
-              key={activity.id}
-              className={`absolute inset-x-4 bg-white rounded-2xl shadow-lg transform ${
-                index === 0 ? 'scale-97 opacity-80 z-20' : 'scale-95 opacity-60 z-10'
-              } ${index === 0 ? 'top-4' : 'top-6'}`}
-            >
-              <CardContent className="p-0">
-                <div className="w-full h-48 bg-muted rounded-t-2xl"></div>
-              </CardContent>
-            </Card>
-          ))}
-
-        {/* Active card */}
-        {currentActivity && (
-          <SwipeCard
-            activity={currentActivity}
-            onSwipeLeft={handleReject}
-            onSwipeRight={handleJoin}
-            onShowDetails={() => setShowDetailsModal(true)}
-            className="absolute inset-x-4 top-0 z-30"
-            disabled={swipeMutation.isPending}
-          />
-        )}
-      </div>
+            </li>
+          );
+        })}
+      </ul>
 
       {/* Modals */}
       {currentActivity && whosComing ? (
@@ -484,18 +421,13 @@ export default function Discovery() {
             activity={currentActivity}
             isOpen={showDetailsModal}
             onClose={() => setShowDetailsModal(false)}
-            onJoin={handleJoin}
+            onJoin={() => void handleJoin()}
             onAddToCalendar={() => {
               setShowDetailsModal(false);
               setCalendarActivity(currentActivity);
             }}
           />
 
-          <MatchSuccessModal
-            activity={matchedActivity}
-            isOpen={showMatchSuccess}
-            onClose={() => setShowMatchSuccess(false)}
-          />
         </>
       )}
 
@@ -515,9 +447,7 @@ export default function Discovery() {
         <div className="fixed inset-0 z-50 bg-white">
           <MapView
             onActivitySelect={(activity) => {
-              setCurrentActivityIndex(
-                activities.findIndex((candidate) => candidate.id === activity.id),
-              );
+              setSelectedActivityId(activity.id);
               setShowMapView(false);
               setShowDetailsModal(true);
             }}

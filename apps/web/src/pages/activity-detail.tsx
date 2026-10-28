@@ -78,7 +78,7 @@ export default function ActivityDetailPage() {
       await apiRequest('POST', API_ROUTE_BUILDERS.activityJoin(activityId), {});
     },
     onSuccess: () => {
-      toast({ title: 'Joined!', description: "You're in. Check matches to chat." });
+      toast({ title: 'Joined!', description: "You're in. Check Gatherings to chat." });
       qc.invalidateQueries({ queryKey: [route] });
       qc.invalidateQueries({ queryKey: [API_ROUTES.MATCHES] });
     },

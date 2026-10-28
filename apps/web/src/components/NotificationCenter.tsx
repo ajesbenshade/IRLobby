@@ -63,8 +63,8 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const notifications: NotificationItem[] = [
     ...matches.map((match) => ({
       id: `match-${match.id}`,
-      title: 'New match confirmed',
-      body: `${match.user_a} and ${match.user_b} matched for ${match.activity}.`,
+      title: "You're confirmed",
+      body: `You're going to ${match.activity}.`,
       createdAt: match.created_at,
     })),
     ...conversations

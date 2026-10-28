@@ -159,7 +159,7 @@ export default function ModerationPage() {
             <>
               <p>You haven&apos;t blocked anyone yet.</p>
               <p>
-                From any profile, you can block someone to keep them out of discovery, matches, and
+                From any profile, you can block someone to keep them out of discovery and
                 conversations.
               </p>
             </>
@@ -173,7 +173,7 @@ export default function ModerationPage() {
                   <div>
                     <p className="font-medium text-foreground">{item.blocked_username}</p>
                     <p className="text-xs text-muted-foreground">
-                      Hidden from your feed and match flow
+                      Hidden from your feed
                     </p>
                   </div>
                   <Button

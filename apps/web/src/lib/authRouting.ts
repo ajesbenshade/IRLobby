@@ -31,7 +31,7 @@ export function getSafePostAuthRedirect(
 
 export function buildLoginRedirect(currentPath: string) {
   const safeTarget = getSafePostAuthRedirect(currentPath);
-  return `/?redirect=${encodeURIComponent(safeTarget)}#auth`;
+  return `/login?redirect=${encodeURIComponent(safeTarget)}`;
 }
 
 export function getAuthRedirect(kind: AuthRouteKind, state: AuthRouteState) {

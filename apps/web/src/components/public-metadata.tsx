@@ -6,7 +6,7 @@ type PublicMetadataProps = {
   canonicalPath?: string;
 };
 
-const DEFAULT_OG_IMAGE = 'https://irlobby.app/og-default.png';
+const DEFAULT_OG_IMAGE = 'https://irlobby.com/app-icon.png';
 
 function upsertMetaByName(name: string, content: string) {
   let tag = document.querySelector(`meta[name="${name}"]`);

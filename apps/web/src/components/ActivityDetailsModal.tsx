@@ -192,8 +192,8 @@ export default function ActivityDetailsModal({
               View page
             </Link>
           </Button>
-          <Button onClick={handleJoin} className="flex-1 bg-green-600 hover:bg-green-700">
-            I'm going
+          <Button onClick={handleJoin} className="flex-1">
+            RSVP
           </Button>
         </div>
       </DialogContent>

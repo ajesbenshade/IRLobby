@@ -397,7 +397,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="new-matches">New Matches</Label>
+              <Label htmlFor="new-matches">Gathering updates</Label>
               <Switch
                 id="new-matches"
                 checked={settings.notifications.newMatches}
@@ -584,7 +584,7 @@ export default function Settings() {
               Delete Account
             </Button>
             <p className="text-xs text-gray-500">
-              This action cannot be undone. All your activities, swipes, matches, and reviews will
+              This action cannot be undone. All your activities, RSVPs and reviews will
               be permanently deleted.
             </p>
           </CardContent>

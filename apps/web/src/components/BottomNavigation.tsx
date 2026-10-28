@@ -37,7 +37,7 @@ export default function BottomNavigation() {
   const getCurrentScreen = () => {
     const path = location.pathname;
 
-    if (path.startsWith('/app/matches') || path.startsWith('/app/activities') || path.startsWith('/app/gatherings')) {
+    if (path.startsWith('/app/gatherings') || path.startsWith('/app/activities')) {
       return 'gatherings';
     }
     if (path.startsWith('/app/create') || path.startsWith('/app/host')) {
@@ -58,7 +58,7 @@ export default function BottomNavigation() {
   const currentScreen = getCurrentScreen();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20">
       <div className="flex justify-around items-center py-2">
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;

@@ -65,7 +65,7 @@ function PublicNav({ activePath }: { activePath?: string }) {
               asChild
               className="rounded-full bg-[#a2033f] px-5 text-white hover:bg-[#7c0230]"
             >
-              <a href="/#auth">Get started</a>
+              <a href="/login">Get started</a>
             </Button>
           )}
         </div>

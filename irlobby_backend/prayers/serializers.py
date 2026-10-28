@@ -9,6 +9,7 @@ from .models import Circle, CircleMembership, PrayerRequest
 TITLE_MAX = 140
 DETAILS_MAX = 2000
 CIRCLE_NAME_MAX = 80
+CIRCLE_DESCRIPTION_MAX = 280
 
 
 def author_card(user) -> dict:
@@ -36,21 +37,101 @@ def clean_circle_name(value) -> str:
     return name
 
 
+def clean_circle_description(value) -> str:
+    text = " ".join(strip_html(value or "").split())
+    if len(text) > CIRCLE_DESCRIPTION_MAX:
+        raise serializers.ValidationError(
+            f"Description must be {CIRCLE_DESCRIPTION_MAX} characters or fewer."
+        )
+    return text
+
+
+def _viewer(serializer):
+    request = serializer.context.get("request")
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user
+    return None
+
+
 class CircleSerializer(serializers.ModelSerializer):
+    """Directory row. `is_member` is true only when `membership_state` is `joined`.
+
+    Prayer create still picks circles the caller has joined. Pending and invited
+    are not membership.
+    """
+
     church_id = serializers.IntegerField(read_only=True)
-    member_count = serializers.IntegerField(read_only=True)
-    is_member = serializers.BooleanField(read_only=True)
+    member_count = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+    membership_state = serializers.SerializerMethodField()
 
     class Meta:
         model = Circle
-        fields = ("id", "name", "church_id", "member_count", "is_member")
+        fields = (
+            "id",
+            "name",
+            "description",
+            "church_id",
+            "member_count",
+            "is_member",
+            "is_admin",
+            "membership_state",
+        )
+
+    def get_member_count(self, obj):
+        count = getattr(obj, "member_count", None)
+        if isinstance(count, int):
+            return count
+        return obj.memberships.count()
+
+    def get_is_member(self, obj):
+        flagged = getattr(obj, "is_member", None)
+        if isinstance(flagged, bool):
+            return flagged
+        user = _viewer(self)
+        if user is None:
+            return False
+        return obj.memberships.filter(user=user).exists()
+
+    def get_is_admin(self, obj):
+        flagged = getattr(obj, "is_admin", None)
+        if isinstance(flagged, bool):
+            return flagged
+        user = _viewer(self)
+        if user is None:
+            return False
+        return obj.memberships.filter(user=user, is_admin=True).exists()
+
+    def get_membership_state(self, obj):
+        if self.get_is_member(obj):
+            return "joined"
+        user = _viewer(self)
+        if user is None:
+            return "none"
+        invited = getattr(obj, "has_pending_invite", None)
+        if not isinstance(invited, bool):
+            invited = obj.invites.filter(invitee=user, status="pending").exists()
+        if invited:
+            return "invited"
+        pending = getattr(obj, "has_pending_request", None)
+        if not isinstance(pending, bool):
+            pending = obj.join_requests.filter(user=user, status="pending").exists()
+        if pending:
+            return "pending"
+        return "none"
 
 
 class CircleCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate_name(self, value):
         return clean_circle_name(value)
+
+    def validate_description(self, value):
+        return clean_circle_description(value)
 
     def validate(self, attrs):
         user = self.context["request"].user
@@ -70,9 +151,10 @@ class CircleCreateSerializer(serializers.Serializer):
                 circle = Circle.objects.create(
                     church_id=user.church_id,
                     name=validated_data["name"],
+                    description=validated_data.get("description") or "",
                     created_by=user,
                 )
-                CircleMembership.objects.create(circle=circle, user=user)
+                CircleMembership.objects.create(circle=circle, user=user, is_admin=True)
         except IntegrityError:
             raise serializers.ValidationError(
                 {"name": "A circle with this name already exists in your church."}

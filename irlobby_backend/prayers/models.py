@@ -4,7 +4,11 @@ from django.db.models.functions import Lower
 
 
 class Circle(models.Model):
-    """A church-scoped group. Prayer visibility picks these; whole church is a separate opt-in."""
+    """A church-scoped group. Prayer visibility picks these; whole church is a separate opt-in.
+
+    Joining is a request an admin approves, or an invite the person accepts.
+    There is no open join.
+    """
 
     church = models.ForeignKey(
         "activities.Church",
@@ -12,6 +16,7 @@ class Circle(models.Model):
         related_name="circles",
     )
     name = models.CharField(max_length=80)
+    description = models.CharField(max_length=280, blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -43,6 +48,7 @@ class CircleMembership(models.Model):
         related_name="circle_memberships",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    is_admin = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -54,6 +60,106 @@ class CircleMembership(models.Model):
 
     def __str__(self):
         return f"{self.user_id} in {self.circle_id}"
+
+
+class CircleJoinRequest(models.Model):
+    """A person asking to join a circle. Pending until an admin approves or declines."""
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_DECLINED = "declined"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_DECLINED, "Declined"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="join_requests")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="circle_join_requests",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    responded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="circle_join_requests_decided",
+    )
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        indexes = [
+            models.Index(fields=["circle", "status"], name="circle_join_req_status_idx"),
+            models.Index(fields=["user", "status"], name="circle_join_req_user_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["circle", "user"],
+                condition=models.Q(status="pending"),
+                name="unique_pending_circle_join_request",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.status} {self.circle_id}"
+
+
+class CircleInvite(models.Model):
+    """An admin invited a person. Accept makes them a member. Decline ends the invite."""
+
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_DECLINED = "declined"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_DECLINED, "Declined"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="invites")
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="circle_invites_sent",
+    )
+    invitee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="circle_invites_received",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["circle", "status"], name="circle_invite_status_idx"),
+            models.Index(fields=["invitee", "status"], name="circle_invite_invitee_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["circle", "invitee"],
+                condition=models.Q(status="pending"),
+                name="unique_pending_circle_invite",
+            ),
+            models.CheckConstraint(
+                check=~models.Q(inviter=models.F("invitee")),
+                name="circle_invite_not_self",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.inviter_id} invited {self.invitee_id} to {self.circle_id}"
 
 
 class PrayerRequest(models.Model):

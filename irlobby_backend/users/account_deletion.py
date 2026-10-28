@@ -15,7 +15,9 @@ What ``delete_account`` REMOVES (and the terms say so):
   first: attendees and pending requesters get a push and a chat note ("The host deleted their
   account.") before the gathering is deleted;
 - prayer requests the user authored, including the shared prayer chat;
-- the user's circle memberships and "I'm praying" rows. Messages they sent in someone else's
+- the user's circle memberships, join requests, and invites, and their "I'm praying" rows.
+  If they were the only admin of a circle that still has other members, the earliest remaining
+  member becomes admin before the membership is removed. Messages they sent in someone else's
   prayer chat are removed; that chat stays for the people still praying;
 - contact details in invites other people sent to the user's email or phone number (the invite
   rows stay for the inviter but are blanked);
@@ -183,6 +185,10 @@ def delete_account(user) -> None:
         scrub_invites_addressed_to(user)
         keep_gathering_chats(user)
         OutstandingToken.objects.filter(user=user).delete()
+        # Promote another member first: deleting the user cascades their admin membership away.
+        from prayers.circle_policy import hand_off_last_admin
+
+        hand_off_last_admin(user)
         # 3. Everything else goes with the account row (foreign keys cascade or clear).
         user.delete()
 

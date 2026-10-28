@@ -1,11 +1,10 @@
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from chat.models import Message
 from moderation.reporting import file_report
@@ -20,35 +19,9 @@ from .access import (
     mine_feed,
     user_is_actively_praying,
 )
-from .models import Circle, CircleMembership, PrayerParticipant, PrayerRequest
-from .serializers import (
-    CircleCreateSerializer,
-    CircleSerializer,
-    PrayerCreateSerializer,
-    PrayerRequestSerializer,
-)
+from .models import PrayerParticipant, PrayerRequest
+from .serializers import PrayerCreateSerializer, PrayerRequestSerializer
 from .services import chat_payload, pass_prayer, post_message, start_praying, stop_praying
-
-
-def _circle_queryset(user):
-    if not user.church_id:
-        return Circle.objects.none()
-    return (
-        Circle.objects.filter(church_id=user.church_id)
-        .annotate(
-            member_count=Count("memberships"),
-            is_member=Exists(
-                CircleMembership.objects.filter(circle=OuterRef("pk"), user_id=user.id)
-            ),
-        )
-        .order_by("-is_member", "name", "id")
-    )
-
-
-def _circle_or_404(user, pk):
-    if not user.church_id:
-        raise NotFound()
-    return get_object_or_404(Circle, pk=pk, church_id=user.church_id)
 
 
 def _load_prayer(pk):
@@ -74,21 +47,6 @@ def _visible_prayer(user, pk):
     if prayer is None:
         raise NotFound()
     return prayer
-
-
-class CircleListCreateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        circles = CircleSerializer(_circle_queryset(request.user), many=True).data
-        return Response({"church_id": request.user.church_id, "circles": circles})
-
-    def post(self, request):
-        serializer = CircleCreateSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        circle = serializer.save()
-        payload = CircleSerializer(_circle_queryset(request.user).get(pk=circle.pk)).data
-        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class PrayerListCreateView(generics.ListCreateAPIView):
@@ -132,24 +90,6 @@ class PrayerDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return annotated_prayers(self.request.user)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def join_circle(request, pk):
-    circle = _circle_or_404(request.user, pk)
-    _membership, created = CircleMembership.objects.get_or_create(circle=circle, user=request.user)
-    payload = CircleSerializer(_circle_queryset(request.user).get(pk=circle.pk)).data
-    return Response(payload, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def leave_circle(request, pk):
-    circle = _circle_or_404(request.user, pk)
-    CircleMembership.objects.filter(circle=circle, user=request.user).delete()
-    payload = CircleSerializer(_circle_queryset(request.user).get(pk=circle.pk)).data
-    return Response(payload)
 
 
 @api_view(["POST"])

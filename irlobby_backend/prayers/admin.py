@@ -1,20 +1,45 @@
 from django.contrib import admin
 
-from .models import Circle, CircleMembership, PrayerParticipant, PrayerPass, PrayerRequest
+from .models import (
+    Circle,
+    CircleInvite,
+    CircleJoinRequest,
+    CircleMembership,
+    PrayerParticipant,
+    PrayerPass,
+    PrayerRequest,
+)
 
 
 @admin.register(Circle)
 class CircleAdmin(admin.ModelAdmin):
     list_display = ("name", "church", "created_by", "created_at")
-    search_fields = ("name", "church__name")
+    search_fields = ("name", "description", "church__name")
     raw_id_fields = ("church", "created_by")
 
 
 @admin.register(CircleMembership)
 class CircleMembershipAdmin(admin.ModelAdmin):
-    list_display = ("user", "circle", "joined_at")
+    list_display = ("user", "circle", "is_admin", "joined_at")
+    list_filter = ("is_admin",)
     search_fields = ("user__username", "circle__name")
     raw_id_fields = ("user", "circle")
+
+
+@admin.register(CircleJoinRequest)
+class CircleJoinRequestAdmin(admin.ModelAdmin):
+    list_display = ("user", "circle", "status", "created_at", "responded_at")
+    list_filter = ("status",)
+    search_fields = ("user__username", "circle__name")
+    raw_id_fields = ("user", "circle", "responded_by")
+
+
+@admin.register(CircleInvite)
+class CircleInviteAdmin(admin.ModelAdmin):
+    list_display = ("inviter", "invitee", "circle", "status", "created_at")
+    list_filter = ("status",)
+    search_fields = ("inviter__username", "invitee__username", "circle__name")
+    raw_id_fields = ("inviter", "invitee", "circle")
 
 
 @admin.register(PrayerRequest)

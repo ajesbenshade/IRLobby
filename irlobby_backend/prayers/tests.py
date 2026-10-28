@@ -79,7 +79,10 @@ class CircleApiTests(APITestCase):
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
         self.assertEqual(created.data["name"], "Young Adults")
+        self.assertEqual(created.data["description"], "")
         self.assertTrue(created.data["is_member"])
+        self.assertTrue(created.data["is_admin"])
+        self.assertEqual(created.data["membership_state"], "joined")
         self.assertEqual(created.data["member_count"], 1)
         self.assertEqual(created.data["church_id"], self.church.id)
 
@@ -107,7 +110,7 @@ class CircleApiTests(APITestCase):
             status.HTTP_404_NOT_FOUND,
         )
 
-    def test_join_leave_and_member_first_order(self):
+    def test_directory_is_by_name_and_open_join_does_not_add_a_member(self):
         young = Circle.objects.create(
             church=self.church, name="Young Adults", created_by=self.member
         )
@@ -116,25 +119,29 @@ class CircleApiTests(APITestCase):
         self.client.force_authenticate(self.member)
         listing = self.client.get(reverse("circle-list"))
         self.assertEqual(
-            [row["name"] for row in listing.data["circles"]], ["Young Adults", "Parents"]
+            [row["name"] for row in listing.data["circles"]], ["Parents", "Young Adults"]
         )
-        self.assertTrue(listing.data["circles"][0]["is_member"])
-        self.assertFalse(listing.data["circles"][1]["is_member"])
+        by_name = {row["name"]: row for row in listing.data["circles"]}
+        self.assertEqual(by_name["Young Adults"]["membership_state"], "joined")
+        self.assertTrue(by_name["Young Adults"]["is_member"])
+        self.assertEqual(by_name["Parents"]["membership_state"], "none")
+        self.assertFalse(by_name["Parents"]["is_member"])
 
         joined = self.client.post(reverse("circle-join", args=[parents.id]))
-        self.assertEqual(joined.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(joined.data["is_member"])
-        self.assertEqual(joined.data["member_count"], 1)
+        self.assertEqual(joined.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(joined.data["code"], "open_join_closed")
+        self.assertFalse(CircleMembership.objects.filter(circle=parents, user=self.member).exists())
         again = self.client.post(reverse("circle-join", args=[parents.id]))
-        self.assertEqual(again.status_code, status.HTTP_200_OK)
+        self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
 
-        left = self.client.post(reverse("circle-leave", args=[parents.id]))
+        left = self.client.post(reverse("circle-leave", args=[young.id]))
         self.assertEqual(left.status_code, status.HTTP_200_OK)
         self.assertFalse(left.data["is_member"])
+        self.assertEqual(left.data["membership_state"], "none")
         self.assertEqual(left.data["member_count"], 0)
         # Leaving twice is fine.
         self.assertEqual(
-            self.client.post(reverse("circle-leave", args=[parents.id])).status_code,
+            self.client.post(reverse("circle-leave", args=[young.id])).status_code,
             status.HTTP_200_OK,
         )
 

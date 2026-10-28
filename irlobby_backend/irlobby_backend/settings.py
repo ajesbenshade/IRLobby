@@ -176,6 +176,9 @@ REST_FRAMEWORK = {
         "public_calendar": config("PUBLIC_CALENDAR_THROTTLE_RATE", default="60/min"),
         # Gathering photo uploads, per signed-in user.
         "event_photo_upload": config("EVENT_PHOTO_UPLOAD_THROTTLE_RATE", default="30/hour"),
+        # Circle create, per signed-in user. Invite sends have their own bucket.
+        "circle_create": config("CIRCLE_CREATE_THROTTLE_RATE", default="10/hour"),
+        "circle_invite": config("CIRCLE_INVITE_THROTTLE_RATE", default="30/hour"),
     },
 }
 

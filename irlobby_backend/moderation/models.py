@@ -42,6 +42,7 @@ class AbuseReport(models.Model):
         ("join_request", "Request to join"),
         ("prayer_request", "Prayer request"),
         ("prayer_message", "Prayer chat message"),
+        ("circle", "Circle"),
     ]
 
     # Null after the reporter deletes their account: the report is kept, without who filed it.

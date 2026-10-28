@@ -6,7 +6,15 @@ import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, HelperText, Surface, Switch, Text, TextInput } from 'react-native-paper';
+import {
+  Button,
+  HelperText,
+  RadioButton,
+  Surface,
+  Switch,
+  Text,
+  TextInput,
+} from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createActivity } from '@services/activityService';
@@ -24,6 +32,19 @@ const STEP_LABELS: Record<CreateStep, string> = {
   preferences: 'Preferences',
 };
 
+// Design Type list. Stored on Activity.category so Discover `type` filters match.
+// Slugs: irlobby_backend/activities/discover_filters.py (GATHERING_TYPES).
+const GATHERING_TYPES = [
+  'Worship & service',
+  'Fellowship & meals',
+  'Kids & family',
+  'Youth',
+  'Small groups',
+  'Music',
+  'Outreach',
+  'Other',
+] as const;
+
 export const CreateActivityScreen = () => {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const queryClient = useQueryClient();
@@ -40,7 +61,7 @@ export const CreateActivityScreen = () => {
   const [latitude, setLatitude] = useState('0');
   const [longitude, setLongitude] = useState('0');
   const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('Social');
+  const [category, setCategory] = useState('');
   const [visibility, setVisibility] = useState('everyone');
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [skillLevel, setSkillLevel] = useState('All Levels');
@@ -64,7 +85,7 @@ export const CreateActivityScreen = () => {
       setLatitude('0');
       setLongitude('0');
       setTags('');
-      setCategory('Social');
+      setCategory('');
       setVisibility('everyone');
       setRequiresApproval(false);
       setSkillLevel('All Levels');
@@ -82,7 +103,8 @@ export const CreateActivityScreen = () => {
     },
   });
 
-  const canProceedDetails = title.trim().length > 0 && description.trim().length > 0;
+  const canProceedDetails =
+    title.trim().length > 0 && description.trim().length > 0 && category.trim().length > 0;
   const canProceedWhenWhere = location.trim().length > 0 && time.trim().length > 0;
 
   const handlePickImages = async () => {
@@ -267,7 +289,7 @@ export const CreateActivityScreen = () => {
     createMutation.mutate({
       title: title.trim(),
       description: description.trim(),
-      category: category.trim() || 'Social',
+      category: category.trim(),
       location: location.trim(),
       time: normalizedStartTime,
       end_time: normalizedEndTime ?? undefined,
@@ -327,12 +349,21 @@ export const CreateActivityScreen = () => {
               multiline
               style={styles.input}
             />
-            <TextInput
-              label="Category"
-              value={category}
-              onChangeText={setCategory}
-              style={styles.input}
-            />
+            <Text variant="titleSmall">Type</Text>
+            <HelperText type="info" visible>
+              Discover filters use this list.
+            </HelperText>
+            <RadioButton.Group onValueChange={setCategory} value={category}>
+              {GATHERING_TYPES.map((gatheringType) => (
+                <RadioButton.Item
+                  key={gatheringType}
+                  label={gatheringType}
+                  value={gatheringType}
+                  position="leading"
+                  style={styles.typeOption}
+                />
+              ))}
+            </RadioButton.Group>
             <TextInput
               label="Tags (comma separated)"
               value={tags}
@@ -530,6 +561,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: 'transparent',
+  },
+  typeOption: {
+    paddingHorizontal: 0,
   },
   row: {
     flexDirection: 'row',

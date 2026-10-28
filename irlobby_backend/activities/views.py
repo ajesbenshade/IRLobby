@@ -24,6 +24,7 @@ from matches.models import Match
 from moderation.models import BlockedUser
 
 from .capacity import FULL_ERROR, exclude_full_for_strangers
+from .discover_filters import apply_discover_gathering_filters
 from .limits import event_limit_response, is_event_limit_exempt, next_host_available_at
 from .models import Activity, ActivityParticipant, Ticket, TicketRedemptionLog
 from .permissions import IsHostOrReadOnly
@@ -158,9 +159,11 @@ class ActivityListCreateView(generics.ListCreateAPIView):
                     },
                 )
 
-        category = self.request.query_params.get("category")
-        if category:
-            queryset = queryset.filter(category__icontains=category)
+        # Church Discover filters (audience, ages, type/category). Additive:
+        # latitude/longitude/radius above and location/date_from/date_to below
+        # are unchanged. price_min/price_max/skill_level/tags/age_restriction
+        # stay optional. See activities.discover_filters for the overlap rule.
+        queryset = apply_discover_gathering_filters(queryset, self.request.query_params)
 
         location = self.request.query_params.get("location")
         if location:

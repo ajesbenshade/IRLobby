@@ -153,6 +153,48 @@ Response adds:
 { "status": "confirmed", "include_self": true, "dependent_ids": [1], "people_count": 2 }
 ```
 
+### Discover gatherings (`GET /api/activities/`)
+
+Auth required. These query params are additive. `latitude`, `longitude`, `radius` (default 10 km), `location`, `date_from`, and `date_to` are unchanged. Clients do not need to send `price_min`, `price_max`, `skill_level`, `tags`, or `age_restriction`. Prayer requests stay on `/api/prayers/` and are not mixed into this list.
+
+Omit a param to skip that filter. Unknown `audience`, `ages`, and `type` values are ignored.
+
+**`audience`** — exact match on `audience_gender`.
+
+| Value | Matches |
+|---|---|
+| `everyone` | `audience_gender=everyone` |
+| `men` | `men` |
+| `women` | `women` |
+
+**`ages`** — overlap of the gathering's `[age_min, age_max]` window with a bucket. A null `age_min` means no lower bound. A null `age_max` means no upper bound. The ranges match when they share at least one age.
+
+| Value | Bucket |
+|---|---|
+| `kids_family` | 0–12 |
+| `youth` | 13–17 |
+| `adults` | 18 and older, no upper bound |
+| `all` | no age filter |
+
+Open-age gatherings (`age_min` and `age_max` both null) match `ages=all` and a request that omits `ages` only. They are not included in `kids_family`, `youth`, or `adults`. A window with only one bound is not open-age. Example: `age_min=5` with no max (5+) overlaps kids, youth, and adults. No min with `age_max=8` overlaps kids only.
+
+**`type`** — stable slug. Exact match on the Design label stored in `category`. Sending that label, or the same slug, as `category` is also an exact match. Any other `category` value keeps the older substring search.
+
+| `type` | Stored `category` (host create) |
+|---|---|
+| `worship_service` | Worship & service |
+| `fellowship_meals` | Fellowship & meals |
+| `kids_family` | Kids & family |
+| `youth` | Youth |
+| `small_groups` | Small groups |
+| `music` | Music |
+| `outreach` | Outreach |
+| `other` | Other |
+
+Web host-create and `irlobby_mobile` Create Activity offer only these labels. Rows still stored with older categories (Sports & Fitness, Social, and the rest) do not match a `type` slug until they are recategorized.
+
+Example: `GET /api/activities/?audience=women&ages=adults&type=small_groups&date_from=2026-11-01T00:00:00Z&date_to=2026-11-30T23:59:59Z`
+
 `GET /api/activities/hosted/` — gatherings you host.
 
 `GET /api/activities/going/` — gatherings where your RSVP is `confirmed`.

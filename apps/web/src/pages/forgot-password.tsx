@@ -118,7 +118,7 @@ const ForgotPasswordPage = () => {
             <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">{message}</p>
           )}
           <form onSubmit={handleTokenSubmit} className="mt-6 space-y-3 border-t pt-4">
-            <p className="text-sm font-medium">I have a token</p>
+            <p className="text-sm font-medium">I have a code</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Paste the code from your reset email to choose a new password.
             </p>

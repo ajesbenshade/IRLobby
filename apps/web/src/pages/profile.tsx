@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
-import { Calendar, Copy } from 'lucide-react';
-import { Edit, Settings, HelpCircle, Star, LogOut, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, Copy, Edit, HelpCircle, LogOut, Settings, Users } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -233,15 +231,6 @@ export default function Profile() {
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => navigate('/app/reviews')}
-          >
-            <Star className="w-4 h-4 mr-2" />
-            Reviews
           </Button>
 
           <Button

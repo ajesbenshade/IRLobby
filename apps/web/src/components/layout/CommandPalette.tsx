@@ -11,6 +11,7 @@ import {
   Bell,
   Calendar,
   Compass,
+  Triangle,
   HelpCircle,
   Plus,
   Settings,
@@ -28,6 +29,7 @@ interface CommandPaletteProps {
 const NAV = [
   { to: '/app/discovery', label: 'Discover', icon: Compass },
   { to: '/app/gatherings', label: 'Gatherings', icon: Calendar },
+  { to: '/app/prayer', label: 'Prayer', icon: Triangle },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
 ];
 

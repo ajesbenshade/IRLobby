@@ -52,6 +52,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
             screens: {
               Discover: 'discover',
               Activity: 'activity',
+              Prayer: 'prayer',
               Create: 'create',
               // Legacy matches chat and the matchmaking Pings feed: not linkable in Foyer mode.
               ...(isFoyerMode() ? {} : { Chat: 'chat' }),
@@ -61,6 +62,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
           ...(isFoyerMode() ? {} : { Notifications: 'notifications' }),
           GatheringDetail: 'gatherings/:activityId',
           GatheringChat: 'gatherings/:activityId/chat',
+          PrayerCreate: 'prayer/new',
+          PrayerChat: 'prayer/:prayerId/chat',
+          PrayerDetail: 'prayer/:prayerId',
           ...(isTicketingUiEnabled(config.ticketingEnabled)
             ? {
                 BuyTicket: 'tickets/buy/:activityId',

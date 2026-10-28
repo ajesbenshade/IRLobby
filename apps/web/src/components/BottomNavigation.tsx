@@ -1,15 +1,17 @@
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Calendar, User } from 'lucide-react';
+import { Search, Plus, Calendar, User, Triangle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const navItems = [
   { id: 'discovery', route: '/app/discovery', label: 'Discover', icon: Search },
   { id: 'gatherings', route: '/app/gatherings', label: 'Gatherings', icon: Calendar },
+  { id: 'prayer', route: '/app/prayer', label: 'Prayer', icon: Triangle },
   { id: 'create', route: '/app/host', label: 'Host', icon: Plus, isSpecial: true },
   { id: 'profile', route: '/app/profile', label: 'Profile', icon: User },
 ];
 
 export function currentNavId(path: string) {
+  if (path.startsWith('/app/prayer')) return 'prayer';
   if (path.startsWith('/app/gatherings') || path.startsWith('/app/activities')) return 'gatherings';
   if (path.startsWith('/app/create') || path.startsWith('/app/host')) return 'create';
   if (
@@ -56,7 +58,9 @@ export default function BottomNavigation() {
                 <Icon className="w-5 h-5 mb-1" />
               )}
 
-              <span className="text-xs font-medium text-center">{item.label}</span>
+              <span className="text-[10.5px] font-medium leading-none text-center">
+                {item.label}
+              </span>
             </Button>
           );
         })}

@@ -19,6 +19,13 @@ jest.mock('@hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 1, church: { name: 'Franconia Mennonite Church' }, vibe: {} } }),
 }));
 
+jest.mock('@services/prayerService', () => ({
+  fetchPrayerRequests: jest.fn(async () => ({ items: [], unavailable: true })),
+  prayForRequest: jest.fn(),
+  passPrayerRequest: jest.fn(),
+  fetchPrayerRequest: jest.fn(),
+}));
+
 jest.mock('@services/activityService', () => ({
   fetchActivities: (...args: unknown[]) => mockFetchActivities(...args),
   joinActivity: jest.fn(),

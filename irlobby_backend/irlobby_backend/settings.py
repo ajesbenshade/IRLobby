@@ -530,13 +530,11 @@ if FOYER_EMAIL_FROM_NAME and "<" not in _from_address:
     DEFAULT_FROM_EMAIL = formataddr((FOYER_EMAIL_FROM_NAME, _from_address))
 else:
     DEFAULT_FROM_EMAIL = _from_address
-# Custom URL scheme for app deep links in email (irlobby://reset-password/<token>).
-FOYER_APP_LINK_SCHEME = config("FOYER_APP_LINK_SCHEME", default="irlobby")
-
 EXPO_PUSH_API_URL = config("EXPO_PUSH_API_URL", default="https://exp.host/--/api/v2/push/send")
 EXPO_PUSH_ACCESS_TOKEN = config("EXPO_PUSH_ACCESS_TOKEN", default="")
 
-# Frontend base URL for password reset links
+# Apex web origin for password-reset email links (www 301s to apex; do not emit www).
+# The emailed CTA is urljoin(FRONTEND_BASE_URL, "reset-password/<token>").
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:5173/")
 
 SENTRY_DSN = config("SENTRY_DSN", default="")

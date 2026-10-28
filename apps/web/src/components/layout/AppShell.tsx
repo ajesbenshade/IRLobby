@@ -16,7 +16,8 @@ export default function AppShell({ children }: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Hide bottom nav inside chat threads
-  const hideBottomNav = location.pathname.includes('/chat');
+  const hideBottomNav =
+    location.pathname.includes('/chat') || location.pathname.startsWith('/app/prayer/');
 
   return (
     <div className="min-h-[100dvh] w-full bg-background">

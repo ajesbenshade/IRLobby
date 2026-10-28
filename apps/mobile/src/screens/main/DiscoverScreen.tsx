@@ -20,6 +20,8 @@ import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { PillButton, Toast } from '@components/foyer/ui';
 import { YouAreGoing } from '@components/foyer/YouAreGoing';
+import { DiscoverFeedFilterButton } from '@components/prayer/DiscoverFeedFilterButton';
+import { DiscoverPrayerDeck } from '@components/prayer/DiscoverPrayerDeck';
 import { FoyerGatheringCard } from '@components/FoyerGatheringCard';
 import { SwipeActionButtons } from '@components/SwipeActionButtons';
 import { WhosComingSheet } from '@components/WhosComingSheet';
@@ -79,6 +81,7 @@ import { fullBlocksJoin, isFullMessage } from '@foyer/full';
 import { formatDayShort, formatGatheringWhen, hostDayLimits, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { applyClientEligibility, selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
+import type { DiscoverFeedFilter } from '@shared/prayer';
 import { getErrorMessage } from '@utils/error';
 import type { Activity } from '../../types/activity';
 
@@ -139,6 +142,7 @@ export const DiscoverScreen = () => {
   const [showMap, setShowMap] = useState(false);
   const mapCenter = useMapCenter(showMap, user?.church);
   const [showFilters, setShowFilters] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<DiscoverFeedFilter>('both');
   const [showDetails, setShowDetails] = useState(false);
   const [safetyUserId, setSafetyUserId] = useState<number | string | null>(null);
   const [safetyUserLabel, setSafetyUserLabel] = useState<string | undefined>(undefined);
@@ -575,6 +579,7 @@ export const DiscoverScreen = () => {
       />
 
       {foyerMode ? <PickChurchCard surface="discover" /> : null}
+      {foyerMode ? <DiscoverFeedFilterButton value={feedFilter} onChange={setFeedFilter} /> : null}
 
       {!foyerMode && vibeQuizSkipped && !hasVibeProfile && !vibeReminderDismissed ? (
         <PanelCard style={styles.vibeReminderCard}>
@@ -595,6 +600,8 @@ export const DiscoverScreen = () => {
         </PanelCard>
       ) : null}
 
+      {!foyerMode || feedFilter !== 'prayer' ? (
+      <>
       <View style={styles.toolbar}>
             <Chip
               label={showFilters ? 'Hide filters' : `Filters${activeFilterCount ? ` · ${activeFilterCount}` : ''}`}
@@ -952,6 +959,8 @@ export const DiscoverScreen = () => {
             </View>
           ) : null}
           {rsvpError && !foyerMode ? <Text style={styles.errorText}>{rsvpError}</Text> : null}
+      </>
+      ) : null}
 
           <Portal>
             <Modal visible={showDetails} onDismiss={() => setShowDetails(false)} contentContainerStyle={styles.detailsModal}>
@@ -1221,6 +1230,13 @@ export const DiscoverScreen = () => {
                 />
               </Modal>
             </Portal>
+          ) : null}
+          {foyerMode && feedFilter !== 'gatherings' ? (
+            <DiscoverPrayerDeck
+              showEmpty={feedFilter === 'prayer'}
+              onOpen={(prayer) => navigation.navigate('PrayerDetail', { prayerId: prayer.id })}
+              onJoined={(prayer) => navigation.navigate('PrayerChat', { prayerId: prayer.id, title: prayer.title })}
+            />
           ) : null}
     </AppScrollView>
     <SafetyActionsModal

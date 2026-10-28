@@ -16,6 +16,10 @@ const Discovery = lazy(() => import('@/pages/discovery'));
 const CreateActivity = lazy(() => import('@/pages/create-activity'));
 const FoyerHost = lazy(() => import('@/pages/foyer-host'));
 const Gatherings = lazy(() => import('@/pages/gatherings'));
+const PrayerRequests = lazy(() => import('@/pages/prayer-requests'));
+const PrayerCreate = lazy(() => import('@/pages/prayer-create'));
+const PrayerDetail = lazy(() => import('@/pages/prayer-detail'));
+const PrayerChat = lazy(() => import('@/pages/prayer-chat'));
 const Household = lazy(() => import('@/pages/household'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Chat = lazy(() => import('@/pages/chat'));
@@ -109,6 +113,10 @@ function AppRoutes() {
         <Route path="create" element={<CreateActivity />} />
         <Route path="host" element={<FoyerHost />} />
         <Route path="gatherings" element={<Gatherings />} />
+        <Route path="prayer" element={<PrayerRequests />} />
+        <Route path="prayer/new" element={<PrayerCreate />} />
+        <Route path="prayer/:prayerId/chat" element={<PrayerChat />} />
+        <Route path="prayer/:prayerId" element={<PrayerDetail />} />
         <Route path="household" element={<Household />} />
         <Route path="activities" element={<Navigate to="/app/gatherings" replace />} />
         <Route path="notifications" element={<Notifications />} />

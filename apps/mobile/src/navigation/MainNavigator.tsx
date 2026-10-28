@@ -21,6 +21,10 @@ import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { APPROVAL_COPY, GATHERING_CHAT_COPY } from '@constants/foyerCopy';
 import { DirectChatScreen } from '@screens/main/DirectChatScreen';
 import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
+import { PrayerChatScreen } from '@screens/main/PrayerChatScreen';
+import { PrayerDetailScreen } from '@screens/main/PrayerDetailScreen';
+import { PrayerRequestsScreen } from '@screens/main/PrayerRequestsScreen';
+import { CreatePrayerScreen } from '@screens/main/CreatePrayerScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
 import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
@@ -90,6 +94,7 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
   > = {
     Discover: { active: 'compass', inactive: 'compass-outline' },
     Activity: { active: 'calendar-month', inactive: 'calendar-month-outline' },
+    Prayer: { active: 'triangle-outline', inactive: 'triangle-outline' },
     Create: { active: 'plus', inactive: 'plus' },
     Chat: { active: 'message-text', inactive: 'message-text-outline' },
     Profile: { active: 'account-circle', inactive: 'account-circle-outline' },
@@ -153,20 +158,20 @@ const MainTabs = () => {
         // floats above the inset (see tabBarLayout), so the items are centered instead.
         paddingTop: 0,
         paddingBottom: 0,
-        paddingHorizontal: 6,
+        paddingHorizontal: 2,
         backgroundColor: appColors.card,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: appColors.line,
       },
       tabBarLabelStyle: {
-        fontSize: 11,
+        fontSize: 10.5,
         fontWeight: '600',
-        letterSpacing: 0.1,
+        letterSpacing: 0,
         lineHeight: TAB_LABEL_LINE_HEIGHT,
         marginTop: 1,
       },
       tabBarItemStyle: {
-        marginHorizontal: 2,
+        marginHorizontal: 0,
         borderRadius: 16,
         justifyContent: 'center',
       },
@@ -193,6 +198,7 @@ const MainTabs = () => {
   >
     <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Prayer" component={PrayerRequestsScreen} options={{ title: 'Prayer' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen
       name="Create"
       component={CreateActivityScreen}
@@ -339,12 +345,15 @@ export const MainNavigator = () => (
       component={GatheringChatScreen}
       options={{ title: GATHERING_CHAT_COPY.title }}
     />
+    <Stack.Screen name="PrayerCreate" component={CreatePrayerScreen} options={{ headerShown: false, title: 'New prayer request' }} />
+    <Stack.Screen name="PrayerDetail" component={PrayerDetailScreen} options={{ headerShown: false, title: 'Prayer' }} />
+    <Stack.Screen name="PrayerChat" component={PrayerChatScreen} options={{ headerShown: false, title: 'Prayer chat' }} />
   </Stack.Navigator>
 );
 
 const styles = StyleSheet.create({
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
     letterSpacing: 0.1,
     lineHeight: TAB_LABEL_LINE_HEIGHT,

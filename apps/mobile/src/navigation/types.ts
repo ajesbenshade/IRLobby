@@ -21,6 +21,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Discover: undefined;
   Activity: undefined;
+  Prayer: undefined;
   Create: undefined;
   Chat: undefined;
   Profile: undefined;
@@ -86,6 +87,11 @@ export type MainStackParamList = {
    * push notifications; messages are always loaded by `activityId`.
    */
   GatheringChat: { activityId: number | string; conversationId?: number | string; title?: string };
+  /** Prayer tab create form. Circle picker, whole-church toggle off by default. */
+  PrayerCreate: undefined;
+  PrayerDetail: { prayerId: number | string };
+  /** Shared prayer chat. Reuses gathering-chat chrome, labeled Prayer chat. */
+  PrayerChat: { prayerId: number | string; title?: string };
   PhotoGallery: { activityId: number | string };
   /** Host's Require approval deck. */
   Requests: { activityId: number | string };

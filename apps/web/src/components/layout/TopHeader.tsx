@@ -38,11 +38,11 @@ export default function TopHeader({
         <button
           type="button"
           onClick={onOpenCommandPalette}
+          aria-label="Search"
           className="hidden md:flex h-10 flex-1 max-w-md items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 text-sm text-muted-foreground transition-colors duration-fast hover:bg-muted/50"
         >
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">Search activities, people, places…</span>
-          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+          <Search className="h-4 w-4 shrink-0" />
+          <kbd className="pointer-events-none ml-auto hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
             <span className="text-xs">⌘</span>K
           </kbd>
         </button>

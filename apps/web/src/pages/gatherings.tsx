@@ -49,7 +49,7 @@ export default function GatheringsPage() {
     );
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-28 pt-8">
+    <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-[calc(var(--bottom-nav-offset)+1rem)] pt-8">
       <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
       <div className="mt-4 flex rounded-xl bg-white p-1">
         {(['upcoming', 'past'] as const).map((value) => (

@@ -45,11 +45,10 @@ export default function Discovery() {
   const [rsvpPending, setRsvpPending] = useState(false);
   const navigate = useNavigate();
   const [pullDistance, setPullDistance] = useState(0);
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
-  const churchLine = `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`;
 
   const effectiveFilters = filters;
 
@@ -86,7 +85,7 @@ export default function Discovery() {
   );
   const showGatherings = feedFilter !== 'prayer';
   const showPrayers = feedFilter !== 'gatherings';
-  const discoverTitle = feedFilter === 'prayer' ? PRAYER_COPY.listTitle : 'Upcoming gatherings';
+  const discoverTitle = feedFilter === 'prayer' ? PRAYER_COPY.listTitle : 'Discover';
 
   const skipPrayer = (prayer: PrayerRequest) => {
     setSkippedPrayers((previous) => [...previous, String(prayer.id)]);
@@ -321,10 +320,7 @@ export default function Discovery() {
     return (
       <div className="min-h-[100dvh] bg-background">
         <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
-            <p className="text-sm text-muted-foreground">{churchLine}</p>
-          </div>
+          <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
           {headerActions}
         </header>
         <div className="px-4 pt-3">
@@ -386,10 +382,7 @@ export default function Discovery() {
 
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between transition-transform duration-200">
-        <div>
-          <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
-          <p className="text-sm text-muted-foreground">{churchLine}</p>
-        </div>
+        <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
         {headerActions}
       </header>
       <div className="px-4 pt-3">

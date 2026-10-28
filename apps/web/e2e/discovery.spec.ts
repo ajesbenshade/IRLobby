@@ -28,9 +28,7 @@ const activity = {
   participant_count: 2,
 };
 
-test('authenticated user can load discovery and swipe an activity', async ({ page }) => {
-  let swipeRequestSeen = false;
-
+test('authenticated user can load discovery', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('authToken', 'e2e-access-token');
     window.localStorage.setItem('userId', '1');
@@ -49,22 +47,13 @@ test('authenticated user can load discovery and swipe an activity', async ({ pag
     await route.continue();
   });
 
-  await page.route('**/api/swipes/42/swipe/', async (route) => {
-    swipeRequestSeen = true;
-    await route.fulfill({
-      status: 201,
-      json: { message: 'Swipe recorded successfully', matched: false },
-    });
-  });
-
   await page.goto('/app/discovery');
 
-  await expect(page.getByRole('heading', { name: 'Upcoming gatherings', exact: true })).toBeVisible();
-  await expect(page.getByText('From Franconia Mennonite Church')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Upcoming gatherings' })).toHaveCount(0);
+  await expect(page.getByText('From Franconia Mennonite Church')).toHaveCount(0);
   await expect(page.getByText(activity.title)).toBeVisible();
-
-  await page.getByLabel(`I'm going to ${activity.title}`).click();
-
-  await expect.poll(() => swipeRequestSeen).toBe(true);
-  await expect(page.getByText('You cleared the deck')).toBeVisible();
+  // Card actions stay RSVP / Details until Design tips those labels.
+  await expect(page.getByRole('button', { name: 'RSVP' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details' })).toBeVisible();
 });

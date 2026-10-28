@@ -35,7 +35,7 @@ const MAX_ACTIVITY_IMAGES = 5;
 const insertActivitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
+  category: z.string().min(1, 'Type is required'),
   location: z.string().min(1, 'Location is required'),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -65,17 +65,17 @@ const formSchema = insertActivitySchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
+// Design Type list. Stored on Activity.category. Slugs are in
+// irlobby_backend/activities/discover_filters.py (GATHERING_TYPES).
 const categories = [
-  'Sports & Fitness',
-  'Food & Drinks',
-  'Outdoor Adventures',
-  'Arts & Culture',
-  'Nightlife',
-  'Learning',
-  'Technology',
+  'Worship & service',
+  'Fellowship & meals',
+  'Kids & family',
+  'Youth',
+  'Small groups',
   'Music',
-  'Social',
-  'Gaming',
+  'Outreach',
+  'Other',
 ];
 
 const participantOptions = Array.from({ length: MAX_EVENT_CAPACITY }, (_, i) => i + 1);
@@ -381,17 +381,17 @@ export default function CreateActivity() {
               )}
             />
 
-            {/* Category */}
+            {/* Type */}
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Type</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="Select a type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

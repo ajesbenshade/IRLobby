@@ -39,11 +39,21 @@ test('authenticated user can load discovery', async ({ page }) => {
   });
 
   await page.route('**/api/activities/**', async (route) => {
-    if (route.request().method() === 'GET') {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/whos-coming/') && method === 'GET') {
+      await route.fulfill({
+        json: {
+          me: { name: 'Test', eligible: true },
+          dependents: [{ id: 1, name: 'Caleb', age: 10, eligible: true }],
+        },
+      });
+      return;
+    }
+    if (method === 'GET') {
       await route.fulfill({ json: [activity] });
       return;
     }
-
     await route.continue();
   });
 
@@ -52,8 +62,22 @@ test('authenticated user can load discovery', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Upcoming gatherings' })).toHaveCount(0);
   await expect(page.getByText('From Franconia Mennonite Church')).toHaveCount(0);
-  await expect(page.getByText(activity.title)).toBeVisible();
-  // Card actions stay RSVP / Details until Design tips those labels.
-  await expect(page.getByRole('button', { name: 'RSVP' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Details' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: activity.title, level: 3 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pass', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: "I'm coming", exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'RSVP', exact: true })).toHaveCount(0);
+
+  await page.getByRole('heading', { name: activity.title, level: 3 }).click();
+  const details = page.getByTestId('gathering-details-sheet');
+  await expect(details).toBeVisible();
+  await details.getByRole('button', { name: 'Close', exact: true }).first().click();
+  await expect(details).toHaveCount(0);
+
+  await page.getByRole('button', { name: "I'm coming", exact: true }).click();
+  await expect(page.getByRole('heading', { name: "Who's coming?" })).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Pass', exact: true }).click();
+  await expect(page.getByRole('heading', { name: activity.title, level: 3 })).toHaveCount(0);
 });

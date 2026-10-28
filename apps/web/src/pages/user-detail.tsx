@@ -60,7 +60,7 @@ export default function UserDetailPage() {
     onSuccess: () => {
       toast({
         title: 'User blocked',
-        description: 'They will be filtered out of your feed and matches.',
+        description: 'They will be filtered out of your feed.',
       });
     },
     onError: (error: unknown) => {
@@ -181,7 +181,7 @@ export default function UserDetailPage() {
 
       <div className="flex gap-2">
         <Button asChild variant="outline" className="flex-1">
-          <Link to="/app/connections">View connections</Link>
+          <Link to="/app/gatherings">Back to gatherings</Link>
         </Button>
         <Button
           variant="outline"

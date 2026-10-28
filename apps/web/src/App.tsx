@@ -10,13 +10,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 
 // Lazy load pages for better mobile performance
 const Landing = lazy(() => import('@/pages/landing'));
-const FeaturesPage = lazy(() => import('@/pages/features'));
-const HowItWorksPage = lazy(() => import('@/pages/how-it-works'));
-const DownloadPage = lazy(() => import('@/pages/download'));
 const SupportPage = lazy(() => import('@/pages/support'));
 const Home = lazy(() => import('@/pages/home'));
 const Discovery = lazy(() => import('@/pages/discovery'));
-const Matches = lazy(() => import('@/pages/matches'));
 const CreateActivity = lazy(() => import('@/pages/create-activity'));
 const FoyerHost = lazy(() => import('@/pages/foyer-host'));
 const Gatherings = lazy(() => import('@/pages/gatherings'));
@@ -33,10 +29,7 @@ const ResetPasswordPage = lazy(() => import('@/pages/reset-password'));
 const PrivacyPolicy = lazy(() => import('@/pages/privacy-policy'));
 const TermsOfService = lazy(() => import('@/pages/terms-of-service'));
 const TwitterCallback = lazy(() => import('@/pages/twitter-callback'));
-const Dashboard = lazy(() => import('@/pages/dashboard'));
-const Connections = lazy(() => import('@/pages/connections'));
 const Notifications = lazy(() => import('@/pages/notifications'));
-const VibeQuiz = lazy(() => import('@/pages/vibe-quiz'));
 const Moderation = lazy(() => import('@/pages/moderation'));
 const ActivityDetail = lazy(() => import('@/pages/activity-detail'));
 const UserDetail = lazy(() => import('@/pages/user-detail'));
@@ -96,6 +89,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/login"
+        element={
+          <PublicHomeRoute>
+            <Landing />
+          </PublicHomeRoute>
+        }
+      />
+      <Route
         path="/app"
         element={
           <ProtectedRoute>
@@ -103,18 +104,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route index element={<Navigate to="/app/discovery" replace />} />
         <Route path="discovery" element={<Discovery />} />
-        <Route path="matches" element={<Matches />} />
-        <Route path="matches/:matchId/chat" element={<Chat />} />
+        <Route path="gatherings/:matchId/chat" element={<Chat />} />
         <Route path="create" element={<CreateActivity />} />
         <Route path="host" element={<FoyerHost />} />
         <Route path="gatherings" element={<Gatherings />} />
         <Route path="household" element={<Household />} />
-        <Route path="activities" element={<Matches showUserActivities />} />
-        <Route path="connections" element={<Connections />} />
+        <Route path="activities" element={<Navigate to="/app/gatherings" replace />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="vibe-quiz" element={<VibeQuiz />} />
         <Route path="moderation" element={<Moderation />} />
         <Route path="activity/:activityId" element={<ActivityDetail />} />
         <Route path="user/:userId" element={<UserDetail />} />
@@ -131,9 +129,10 @@ function AppRoutes() {
           </OnboardingRoute>
         }
       />
-      <Route path="/features" element={<FeaturesPage />} />
-      <Route path="/how-it-works" element={<HowItWorksPage />} />
-      <Route path="/download" element={<DownloadPage />} />
+      <Route path="/features" element={<Navigate to="/" replace />} />
+      <Route path="/how-it-works" element={<Navigate to="/" replace />} />
+      <Route path="/download" element={<Navigate to="/" replace />} />
+      <Route path="/app/matches/*" element={<Navigate to="/app/gatherings" replace />} />
       <Route path="/support" element={<SupportPage />} />
       <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

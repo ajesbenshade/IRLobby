@@ -89,12 +89,10 @@ export default function NotificationsPage() {
     const matchItems = asArrayResponse(matches).map<NotificationItem>((match) => ({
       id: `match-${match.id}`,
       type: 'match',
-      title: 'New match confirmed',
-      body: `${match.user_a ?? 'Someone'} and ${match.user_b ?? 'someone'} matched${
-        match.activity ? ` for ${match.activity}` : ''
-      }.`,
+      title: "You're confirmed",
+      body: match.activity ? `You're going to ${match.activity}.` : "You're going.",
       createdAt: match.created_at,
-      href: '/app/connections',
+      href: '/app/gatherings',
     }));
 
     const messageItems = asArrayResponse(conversations).flatMap<NotificationItem>(
@@ -114,7 +112,7 @@ export default function NotificationsPage() {
             title: `New message in ${conversation.match}`,
             body: `${sender}: ${lastMessage.message}`,
             createdAt: lastMessage.createdAt,
-            href: `/app/matches/${conversation.matchId}/chat`,
+            href: `/app/gatherings/${conversation.matchId}/chat`,
           },
         ];
       },
@@ -137,7 +135,7 @@ export default function NotificationsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
         <p className="text-sm text-muted-foreground">
-          Catch up on matches and active conversations in one place.
+          Catch up on your gatherings and chats in one place.
         </p>
       </div>
 
@@ -152,7 +150,7 @@ export default function NotificationsPage() {
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2">
               <p className="font-medium">{latest.title}</p>
-              <Badge variant="secondary">{latest.type === 'message' ? 'Message' : 'Match'}</Badge>
+              <Badge variant="secondary">{latest.type === 'message' ? 'Message' : 'Gathering'}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{latest.body}</p>
             <div className="flex items-center justify-between gap-2">
@@ -210,7 +208,7 @@ export default function NotificationsPage() {
             <Bell className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium">No notifications yet</p>
             <p className="max-w-sm text-xs text-muted-foreground">
-              When a match lands or a conversation gets a new message, the update will appear here.
+              When a gathering is confirmed or a chat gets a new message, the update will appear here.
             </p>
           </CardContent>
         </Card>
@@ -248,7 +246,7 @@ export default function NotificationsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-4 w-4 text-primary" />
-              Match updates
+              Gathering updates
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -260,7 +258,7 @@ export default function NotificationsPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">{item.title}</p>
-                  <Badge variant="secondary">Match</Badge>
+                  <Badge variant="secondary">Gathering</Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{relativeTime(item.createdAt)}</p>

@@ -74,12 +74,12 @@ test('keeps fully onboarded users in the app', () => {
 test('builds a login redirect that preserves protected app links', () => {
   assert.equal(
     buildLoginRedirect('/app/moderation?userId=42&name=IRLobby%20Member'),
-    '/?redirect=%2Fapp%2Fmoderation%3FuserId%3D42%26name%3DIRLobby%2520Member#auth',
+    '/login?redirect=%2Fapp%2Fmoderation%3FuserId%3D42%26name%3DIRLobby%2520Member',
   );
 
   assert.equal(
     buildLoginRedirect('/app/notifications'),
-    '/?redirect=%2Fapp%2Fnotifications#auth',
+    '/login?redirect=%2Fapp%2Fnotifications',
   );
 });
 

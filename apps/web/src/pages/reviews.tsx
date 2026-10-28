@@ -177,7 +177,7 @@ export default function Reviews() {
         <header>
           <h1 className="text-2xl font-bold">Reviews</h1>
           <p className="text-sm text-muted-foreground">
-            Rate your matched activities and participants.
+            Rate gatherings you attended and the people you met.
           </p>
         </header>
 

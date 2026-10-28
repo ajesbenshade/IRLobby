@@ -50,7 +50,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
         </DialogHeader>
 
         <div className="text-sm text-muted-foreground mb-3">
-          Your confirmed activity matches appear here.
+          People you're gathering with appear here.
         </div>
 
         {isLoading ? (
@@ -78,7 +78,7 @@ export default function FriendsModal({ isOpen, onClose }: FriendsModalProps) {
                     <p className="font-medium">{match.user_a}</p>
                     <p className="text-muted-foreground">{match.user_b}</p>
                   </div>
-                  <Badge variant="secondary">Matched</Badge>
+                  <Badge variant="secondary">Going</Badge>
                 </div>
               </Card>
             ))}

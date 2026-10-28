@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { footerLinks, publicNavLinks } from '@/lib/public-site-content';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 type PublicSiteLayoutProps = {
   children: ReactNode;
@@ -37,18 +37,16 @@ function PublicNav({ activePath }: { activePath?: string }) {
 
         <div className="hidden items-center gap-7 text-sm font-medium text-[#6e6a68] md:flex">
           {publicNavLinks.map((link) => (
-            <NavLink
+            <a
               key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                cn(
-                  'transition hover:text-[#a2033f]',
-                  activePath === link.to || isActive ? 'text-[#a2033f]' : 'text-[#6e6a68]',
-                )
-              }
+              href={link.to}
+              className={cn(
+                'transition hover:text-[#a2033f]',
+                activePath === link.to ? 'text-[#a2033f]' : 'text-[#6e6a68]',
+              )}
             >
               {link.label}
-            </NavLink>
+            </a>
           ))}
         </div>
 
@@ -84,9 +82,9 @@ function PublicFooter() {
         </div>
         <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-[#6e6a68]">
           {footerLinks.map((link) => (
-            <Link key={link.to} to={link.to} className="transition hover:text-[#a2033f]">
+            <a key={link.to} href={link.to} className="transition hover:text-[#a2033f]">
               {link.label}
-            </Link>
+            </a>
           ))}
         </div>
       </div>

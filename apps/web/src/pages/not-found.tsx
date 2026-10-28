@@ -29,18 +29,12 @@ export default function NotFound() {
             >
               Go home
             </Link>
-            <Link
-              to="/features"
-              className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-[#222222] transition hover:bg-white/10"
-            >
-              View features
-            </Link>
-            <Link
-              to="/support"
+            <a
+              href="/support"
               className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-[#222222] transition hover:bg-white/10"
             >
               Support
-            </Link>
+            </a>
           </div>
         </div>
       </section>

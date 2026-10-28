@@ -117,8 +117,8 @@ export default function HelpSupport() {
                 How do I join an activity?
               </h3>
               <p className="text-sm text-gray-600">
-                Browse gatherings in the Discover tab. When you find one
-                you&apos;d like to join, swipe right or tap I&apos;m going. If it&apos;s an
+                Browse gatherings in the Discover tab. Open a gathering to see its
+                Details, then tap RSVP (I&apos;m going) to join. If it&apos;s an
                 open gathering, you&apos;ll be joined immediately. For private gatherings, the host
                 will need to approve your request.
               </p>

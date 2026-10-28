@@ -23,6 +23,11 @@ import { PrayerChatScreen } from '@screens/main/PrayerChatScreen';
 import { PrayerDetailScreen } from '@screens/main/PrayerDetailScreen';
 import { PrayerRequestsScreen } from '@screens/main/PrayerRequestsScreen';
 import { CreatePrayerScreen } from '@screens/main/CreatePrayerScreen';
+import { CircleDetailScreen } from '@screens/main/circles/CircleDetailScreen';
+import { CirclesScreen } from '@screens/main/circles/CirclesScreen';
+import { CreateCircleScreen } from '@screens/main/circles/CreateCircleScreen';
+import { InvitePeopleScreen } from '@screens/main/circles/InvitePeopleScreen';
+import { ManageCircleScreen } from '@screens/main/circles/ManageCircleScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
 import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
@@ -303,6 +308,11 @@ export const MainNavigator = () => (
       options={{ title: GATHERING_CHAT_COPY.title }}
     />
     <Stack.Screen name="PrayerCreate" component={CreatePrayerScreen} options={{ headerShown: false, title: 'New prayer request' }} />
+    <Stack.Screen name="Circles" component={CirclesScreen} options={{ headerShown: false, title: 'Circles' }} />
+    <Stack.Screen name="CircleCreate" component={CreateCircleScreen} options={{ headerShown: false, title: 'Create a circle' }} />
+    <Stack.Screen name="CircleDetail" component={CircleDetailScreen} options={{ headerShown: false, title: 'Circle' }} />
+    <Stack.Screen name="CircleInvite" component={InvitePeopleScreen} options={{ headerShown: false, title: 'Invite people' }} />
+    <Stack.Screen name="CircleManage" component={ManageCircleScreen} options={{ headerShown: false, title: 'Manage circle' }} />
     <Stack.Screen name="PrayerDetail" component={PrayerDetailScreen} options={{ headerShown: false, title: 'Prayer' }} />
     <Stack.Screen name="PrayerChat" component={PrayerChatScreen} options={{ headerShown: false, title: 'Prayer chat' }} />
   </Stack.Navigator>

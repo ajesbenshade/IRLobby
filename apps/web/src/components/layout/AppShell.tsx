@@ -17,7 +17,9 @@ export default function AppShell({ children }: AppShellProps) {
 
   // Hide bottom nav inside chat threads
   const hideBottomNav =
-    location.pathname.includes('/chat') || location.pathname.startsWith('/app/prayer/');
+    location.pathname.includes('/chat') ||
+    location.pathname.startsWith('/app/prayer/') ||
+    /^\/app\/circles\/.+/.test(location.pathname);
 
   return (
     <div className="min-h-[100dvh] w-full bg-background">

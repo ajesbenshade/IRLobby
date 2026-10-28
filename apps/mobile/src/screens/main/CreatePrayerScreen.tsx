@@ -10,7 +10,7 @@ import { ScrollView, View } from '@components/RNCompat';
 import { appColors, appTypography, radii } from '@theme/index';
 import { PRAYER_COPY, PrayerClientError, buildPrayerCreate, initialCircleIds, type PrayerCreatePayload } from '@shared/prayer';
 import type { MainStackParamList } from '@navigation/types';
-import { createPrayerRequest, fetchPrayerCircles, joinPrayerCircle } from '@services/prayerService';
+import { createPrayerRequest, fetchPrayerCircles } from '@services/prayerService';
 
 type Navigation = NativeStackNavigationProp<MainStackParamList, 'PrayerCreate'>;
 
@@ -48,15 +48,7 @@ export const CreatePrayerScreen = () => {
   const draft = buildPrayerCreate({ title, details, circleIds, wholeChurch });
 
   const post = useMutation({
-    mutationFn: async (payload: PrayerCreatePayload) => {
-      const selected = circleRows.filter(
-        (circle) => payload.circle_ids.some((id) => String(id) === String(circle.id)) && circle.isMember === false,
-      );
-      for (const circle of selected) {
-        await joinPrayerCircle(circle.id);
-      }
-      return createPrayerRequest(payload);
-    },
+    mutationFn: (payload: PrayerCreatePayload) => createPrayerRequest(payload),
     onSuccess: async (prayer) => {
       await queryClient.invalidateQueries({ queryKey: ['prayer-requests'] });
       navigation.replace('PrayerDetail', { prayerId: prayer.id });
@@ -126,6 +118,7 @@ export const CreatePrayerScreen = () => {
           wholeChurch={wholeChurch}
           onChangeWholeChurch={setWholeChurch}
           circlesStatus={circlesStatus}
+          onBrowseCircles={() => navigation.navigate('Circles')}
         />
         <Text style={styles.footnote}>{PRAYER_COPY.noDatePlace}</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}

@@ -209,6 +209,11 @@ export const ProfileScreen = () => {
         <FoyerProfileCard />
         <PanelCard style={styles.menuCard}>
           <ProfileMenuRow
+            icon="account-group-outline"
+            title="Circles"
+            onPress={() => navigation.navigate("Circles")}
+          />
+          <ProfileMenuRow
             icon="cog-outline"
             title="Settings"
             onPress={() => navigation.navigate("Settings")}
@@ -342,6 +347,11 @@ export const ProfileScreen = () => {
       ) : null}
 
       <PanelCard style={styles.menuCard}>
+        <ProfileMenuRow
+          icon="account-group-outline"
+          title="Circles"
+          onPress={() => navigation.navigate("Circles")}
+        />
         <ProfileMenuRow
           icon="cog-outline"
           title="Settings"

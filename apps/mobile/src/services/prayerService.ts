@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+import { pickerCircles } from '@shared/circles';
 import {
   PRAYER_COPY,
   PrayerClientError,
@@ -140,28 +141,11 @@ export const reportPrayerRequest = async (id: number | string): Promise<'sent' |
   }
 };
 
-/** Join a church circle so a prayer can be posted to it. */
-export const joinPrayerCircle = async (id: number | string): Promise<void> => {
-  try {
-    await api.post(prayerPaths.circleJoin(id), {});
-  } catch (error) {
-    return raise(error, PRAYER_COPY.circlesFailed);
-  }
-};
-
-export const leavePrayerCircle = async (id: number | string): Promise<void> => {
-  try {
-    await api.post(prayerPaths.circleLeave(id), {});
-  } catch (error) {
-    return raise(error, PRAYER_COPY.circlesFailed);
-  }
-};
-
-/** 404/405/501 yields an empty list so create can still show the picker. */
+/** Joined circles only. Pending, invited, and open join are not a way onto a prayer. */
 export const fetchPrayerCircles = async (): Promise<{ circles: PrayerCircle[]; unavailable: boolean }> => {
   try {
     const response = await api.get(prayerPaths.circles());
-    return { circles: normalizeCircles(response.data), unavailable: false };
+    return { circles: pickerCircles(normalizeCircles(response.data)), unavailable: false };
   } catch (error) {
     if (isMissingPrayerStatus(statusOf(error))) return { circles: [], unavailable: true };
     return raise(error, PRAYER_COPY.circlesFailed);

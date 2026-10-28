@@ -17,6 +17,7 @@ import {
   Settings,
   Star,
   User,
+  Users,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,7 @@ const NAV = [
   { to: '/app/discovery', label: 'Discover', icon: Compass },
   { to: '/app/gatherings', label: 'Gatherings', icon: Calendar },
   { to: '/app/prayer', label: 'Prayer', icon: Triangle },
+  { to: '/app/circles', label: 'Circles', icon: Users },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
 ];
 

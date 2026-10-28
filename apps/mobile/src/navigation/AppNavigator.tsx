@@ -66,6 +66,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
           PrayerCreate: 'prayer/new',
           PrayerChat: 'prayer/:prayerId/chat',
           PrayerDetail: 'prayer/:prayerId',
+          Circles: 'circles',
+          CircleCreate: 'circles/new',
+          CircleInvite: 'circles/:circleId/invite',
+          CircleManage: 'circles/:circleId/manage',
+          CircleDetail: 'circles/:circleId',
           ...(isTicketingUiEnabled(config.ticketingEnabled)
             ? {
                 BuyTicket: 'tickets/buy/:activityId',

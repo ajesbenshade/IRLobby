@@ -13,6 +13,7 @@ import {
   selectedCircleLabel,
   visibleToLabel,
 } from '@shared/prayer';
+import { circlePaths, pickerCircles } from '@shared/circles';
 
 describe('prayer visibility', () => {
   it('requires a title and a circle while whole church is off', () => {
@@ -58,8 +59,9 @@ describe('prayer visibility', () => {
     expect(prayerPaths.list('active').endsWith('/prayers/active/')).toBe(true);
     expect(prayerPaths.list('mine').endsWith('/prayers/mine/')).toBe(true);
     expect(prayerPaths.chat(8).endsWith('/prayers/8/chat/')).toBe(true);
-    expect(prayerPaths.circleJoin(3).endsWith('/circles/3/join/')).toBe(true);
-    expect(prayerPaths.circleLeave(3).endsWith('/circles/3/leave/')).toBe(true);
+    expect(circlePaths.joinRequests(3)).toBe('/api/circles/3/join-requests/');
+    expect(circlePaths.leave(3)).toBe('/api/circles/3/leave/');
+    expect(Object.keys(circlePaths)).not.toContain('join');
   });
 });
 
@@ -111,11 +113,21 @@ describe('prayer response normalization', () => {
     expect(normalizePrayer(raw)?.viewerIsPraying).toBe(false);
     expect(normalizePrayerList({ results: [raw] })).toHaveLength(1);
     expect(normalizePrayer({ id: 1 })).toBeNull();
-    expect(normalizeCircles({ church_id: 1, circles: [{ id: 3, name: 'Young Adults', is_member: true }] })[0]).toMatchObject({
+    expect(normalizeCircles({ church_id: 1, circles: [{ id: 3, name: 'Young Adults', is_member: true, membership_state: 'joined' }] })[0]).toMatchObject({
       id: 3,
       name: 'Young Adults',
       isMember: true,
+      membershipState: 'joined',
     });
+    const directory = normalizeCircles({
+      circles: [
+        { id: 1, name: 'Young Adults', is_member: true, membership_state: 'joined' },
+        { id: 2, name: 'Parents', is_member: false, membership_state: 'pending' },
+        { id: 4, name: 'Choir', is_member: false, membership_state: 'invited' },
+      ],
+    });
+    expect(pickerCircles(directory).map((circle) => circle.id)).toEqual([1]);
+    expect(initialCircleIds(directory, true, [])).toEqual([1]);
     expect(normalizePrayerChat({ conversation_id: 9, praying_for: 'Dad', praying_count: 2, messages: [] }).conversationId).toBe(9);
   });
 });

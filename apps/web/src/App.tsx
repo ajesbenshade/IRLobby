@@ -16,6 +16,11 @@ const Discovery = lazy(() => import('@/pages/discovery'));
 const CreateActivity = lazy(() => import('@/pages/create-activity'));
 const FoyerHost = lazy(() => import('@/pages/foyer-host'));
 const Gatherings = lazy(() => import('@/pages/gatherings'));
+const CirclesPage = lazy(() => import('@/pages/circles'));
+const CircleCreate = lazy(() => import('@/pages/circle-create'));
+const CircleDetail = lazy(() => import('@/pages/circle-detail'));
+const CircleInvite = lazy(() => import('@/pages/circle-invite'));
+const CircleManage = lazy(() => import('@/pages/circle-manage'));
 const PrayerRequests = lazy(() => import('@/pages/prayer-requests'));
 const PrayerCreate = lazy(() => import('@/pages/prayer-create'));
 const PrayerDetail = lazy(() => import('@/pages/prayer-detail'));
@@ -114,6 +119,11 @@ function AppRoutes() {
         <Route path="host" element={<FoyerHost />} />
         <Route path="gatherings" element={<Gatherings />} />
         <Route path="prayer" element={<PrayerRequests />} />
+        <Route path="circles" element={<CirclesPage />} />
+        <Route path="circles/new" element={<CircleCreate />} />
+        <Route path="circles/:circleId/invite" element={<CircleInvite />} />
+        <Route path="circles/:circleId/manage" element={<CircleManage />} />
+        <Route path="circles/:circleId" element={<CircleDetail />} />
         <Route path="prayer/new" element={<PrayerCreate />} />
         <Route path="prayer/:prayerId/chat" element={<PrayerChat />} />
         <Route path="prayer/:prayerId" element={<PrayerDetail />} />

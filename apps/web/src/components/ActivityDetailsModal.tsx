@@ -1,10 +1,18 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { Activity } from '@/types/activity';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { format, isValid } from 'date-fns';
-import { ExternalLink, MapPin, Clock, Users, Star } from 'lucide-react';
+import { ExternalLink, MapPin, Clock, Users, Star, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ActivityDetailsModalProps {
@@ -60,143 +68,177 @@ export default function ActivityDetailsModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Activity Details</DialogTitle>
-        </DialogHeader>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogPortal>
+        <DialogOverlay style={{ backgroundColor: 'rgba(20, 14, 16, 0.42)' }} />
+        {/*
+          Phone: full-bleed bottom sheet (left/right 0, width 100% of the shell).
+          The sheet is not centered with translate. iOS Safari sets transform: translateZ(0)
+          on [role=dialog], which used to cancel translateX(-50%) and clip the sheet off the right.
+          Desktop (md+): the inner panel is centered. That translate is not on role=dialog.
+        */}
+        <DialogPrimitive.Content
+          className="fixed inset-0 z-50 outline-none"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) onClose();
+          }}
+        >
+          <div
+            data-testid="gathering-details-sheet"
+            className="absolute inset-x-0 bottom-0 max-h-[92dvh] w-full overflow-x-hidden overflow-y-auto rounded-t-[22px] bg-background p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-lg md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:max-h-[90vh] md:w-[min(28rem,calc(100%-2rem))] md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[22px] md:pb-6"
+          >
+            <DialogHeader>
+              <DialogTitle className="sr-only">Activity Details</DialogTitle>
+            </DialogHeader>
+            <DialogClose className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
 
-        {/* Activity Image */}
-        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary-deep/20 rounded-xl mb-4 overflow-hidden">
-          {activity.images && activity.images.length > 0 ? (
-            <img src={activity.images[0]} alt={safeTitle} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
+            {/* Activity Image */}
+            <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary-deep/20 rounded-xl mb-4 overflow-hidden">
+              {activity.images && activity.images.length > 0 ? (
+                <img
+                  src={activity.images[0]}
+                  alt={safeTitle}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white text-xl font-bold">{safeTitle.charAt(0)}</span>
+                    </div>
+                    <p className="text-[#6e6a68] font-medium">
+                      {safeTags.length > 0 ? safeTags[0] : 'Activity'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[#6e6a68] font-medium">
-                  {safeTags.length > 0 ? safeTags[0] : 'Activity'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Title and Category */}
-        <div className="flex items-start justify-between mb-4">
-          <h2 className="text-2xl font-bold text-foreground flex-1 mr-2">{safeTitle}</h2>
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            {safeTags.length > 0 ? safeTags[0] : 'Activity'}
-          </Badge>
-        </div>
-
-        {/* Activity Details */}
-        <div className="space-y-3 mb-6">
-          <div className="flex items-center text-muted-foreground">
-            <MapPin className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span>{activity.location}</span>
-          </div>
-
-          <div className="flex items-center text-muted-foreground">
-            <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span>
-              {hasValidDate && parsedActivityDate
-                ? format(parsedActivityDate, 'EEEE, MMM d, yyyy')
-                : 'Date TBD'}
-              {hasValidDate && parsedActivityDate && (
-                <>
-                  <span aria-hidden="true" className="mx-1">
-                    &bull;
-                  </span>
-                  {format(parsedActivityDate, 'h:mm a')}
-                </>
               )}
-            </span>
-          </div>
-
-          <div className="flex items-center text-muted-foreground">
-            <Users className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span>
-              {activity.participant_count || 0} of {activity.capacity || 0} spots filled
-            </span>
-          </div>
-        </div>
-
-        {/* Description */}
-        {activity.description && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-foreground mb-2">What to expect</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">{activity.description}</p>
-          </div>
-        )}
-
-        {/* Tags */}
-        {safeTags.length > 0 && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-foreground mb-3">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {safeTags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
             </div>
-          </div>
-        )}
 
-        {/* Host Information */}
-        <div className="mb-6 p-4 bg-muted/40 rounded-xl">
-          <h3 className="font-semibold text-foreground mb-3">Hosted by</h3>
-          <div className="flex items-center">
-            <Avatar className="w-12 h-12 mr-3">
-              <AvatarImage src={activity.host?.profileImageUrl} />
-              <AvatarFallback>{hostInitials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <p className="font-medium text-foreground">{hostName}</p>
-              <p className="text-sm text-muted-foreground">
-                {activity.host?.eventsHosted || 0} events hosted
-              </p>
+            {/* Title and Category */}
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-2xl font-bold text-foreground flex-1 mr-2">{safeTitle}</h2>
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                {safeTags.length > 0 ? safeTags[0] : 'Activity'}
+              </Badge>
             </div>
-            {activity.host?.rating && (
-              <div className="flex items-center">
-                <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="text-sm font-medium text-foreground">
-                  {activity.host.rating.toFixed(1)}
+
+            {/* Activity Details */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center text-muted-foreground">
+                <MapPin className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span>{activity.location}</span>
+              </div>
+
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span>
+                  {hasValidDate && parsedActivityDate
+                    ? format(parsedActivityDate, 'EEEE, MMM d, yyyy')
+                    : 'Date TBD'}
+                  {hasValidDate && parsedActivityDate && (
+                    <>
+                      <span aria-hidden="true" className="mx-1">
+                        &bull;
+                      </span>
+                      {format(parsedActivityDate, 'h:mm a')}
+                    </>
+                  )}
                 </span>
               </div>
+
+              <div className="flex items-center text-muted-foreground">
+                <Users className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span>
+                  {activity.participant_count || 0} of {activity.capacity || 0} spots filled
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            {activity.description && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-2">What to expect</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {activity.description}
+                </p>
+              </div>
             )}
+
+            {/* Tags */}
+            {safeTags.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-3">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {safeTags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Host Information */}
+            <div className="mb-6 p-4 bg-muted/40 rounded-xl">
+              <h3 className="font-semibold text-foreground mb-3">Hosted by</h3>
+              <div className="flex items-center">
+                <Avatar className="w-12 h-12 mr-3">
+                  <AvatarImage src={activity.host?.profileImageUrl} />
+                  <AvatarFallback>{hostInitials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">{hostName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.host?.eventsHosted || 0} events hosted
+                  </p>
+                </div>
+                {activity.host?.rating && (
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                    <span className="text-sm font-medium text-foreground">
+                      {activity.host.rating.toFixed(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {onAddToCalendar ? (
+              <button
+                type="button"
+                className="mb-3 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
+                onClick={onAddToCalendar}
+              >
+                Add to calendar
+              </button>
+            ) : null}
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={onClose} className="flex-1">
+                Close
+              </Button>
+              <Button asChild variant="outline" className="flex-1">
+                <Link to={`/app/activity/${activity.id}`} onClick={onClose}>
+                  <ExternalLink className="mr-1 h-4 w-4" />
+                  View page
+                </Link>
+              </Button>
+              <Button onClick={handleJoin} className="flex-1">
+                RSVP
+              </Button>
+            </div>
           </div>
-        </div>
-
-        {onAddToCalendar ? (
-          <button
-            type="button"
-            className="mb-3 h-[52px] w-full rounded-2xl bg-[#f9e8ee] font-semibold text-[#a2033f]"
-            onClick={onAddToCalendar}
-          >
-            Add to calendar
-          </button>
-        ) : null}
-
-        {/* Action Buttons */}
-        <div className="flex space-x-3">
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Close
-          </Button>
-          <Button asChild variant="outline" className="flex-1">
-            <Link to={`/app/activity/${activity.id}`} onClick={onClose}>
-              <ExternalLink className="mr-1 h-4 w-4" />
-              View page
-            </Link>
-          </Button>
-          <Button onClick={handleJoin} className="flex-1">
-            RSVP
-          </Button>
-        </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }

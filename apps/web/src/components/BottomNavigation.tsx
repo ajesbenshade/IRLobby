@@ -1,19 +1,25 @@
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Calendar, User, Triangle } from 'lucide-react';
+import { Search, Calendar, User, Triangle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const navItems = [
   { id: 'discovery', route: '/app/discovery', label: 'Discover', icon: Search },
   { id: 'gatherings', route: '/app/gatherings', label: 'Gatherings', icon: Calendar },
   { id: 'prayer', route: '/app/prayer', label: 'Prayer', icon: Triangle },
-  { id: 'create', route: '/app/host', label: 'Host', icon: Plus, isSpecial: true },
   { id: 'profile', route: '/app/profile', label: 'Profile', icon: User },
 ];
 
 export function currentNavId(path: string) {
   if (path.startsWith('/app/prayer')) return 'prayer';
-  if (path.startsWith('/app/gatherings') || path.startsWith('/app/activities')) return 'gatherings';
-  if (path.startsWith('/app/create') || path.startsWith('/app/host')) return 'create';
+  // Host/create stays a route, entered from Gatherings +. It is not its own primary item.
+  if (
+    path.startsWith('/app/gatherings') ||
+    path.startsWith('/app/activities') ||
+    path.startsWith('/app/host') ||
+    path.startsWith('/app/create')
+  ) {
+    return 'gatherings';
+  }
   if (
     path.startsWith('/app/profile') ||
     path.startsWith('/app/settings') ||
@@ -50,13 +56,7 @@ export default function BottomNavigation() {
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
-              {item.isSpecial ? (
-                <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary-deep rounded-full flex items-center justify-center mb-1 shadow-[0_8px_24px_hsl(var(--primary)/0.24)]">
-                  <Icon className="w-4 h-4 text-white" />
-                </div>
-              ) : (
-                <Icon className="w-5 h-5 mb-1" />
-              )}
+              <Icon className="w-5 h-5 mb-1" />
 
               <span className="text-[10.5px] font-medium leading-none text-center">
                 {item.label}

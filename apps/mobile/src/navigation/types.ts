@@ -22,7 +22,7 @@ export type MainTabParamList = {
   Discover: undefined;
   Activity: undefined;
   Prayer: undefined;
-  Create: undefined;
+  /** Hidden. Chat is not a primary tab; gathering chat is a stack screen. */
   Chat: undefined;
   Profile: undefined;
 };
@@ -73,6 +73,11 @@ export type MainStackParamList = {
     quantity?: number;
   };
   GetPaid: undefined;
+  /**
+   * Host / create a gathering. Not a primary tab: Gatherings + opens this.
+   * Deep links that used to land on the Host tab (`create`) still open this screen.
+   */
+  Create: undefined;
   EditActivity: {
     activityId: number | string;
   };

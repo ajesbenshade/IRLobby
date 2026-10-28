@@ -7,11 +7,13 @@ import { AppScrollView, EmptyStatePanel, PageHeader, PanelCard } from '@componen
 import { View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
 import { useAuth } from '@hooks/useAuth';
-import type { MainTabParamList } from '@navigation/types';
+import type { MainStackParamList, MainTabParamList } from '@navigation/types';
 import { fetchActivities, fetchHostedActivities } from '@services/activityService';
 import { appColors, spacing } from '@theme/index';
 import { getErrorMessage } from '@utils/error';
 
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 type HomeOverviewContentProps = {
@@ -37,7 +39,12 @@ const formatTime = (value?: string) => {
 };
 
 export const HomeOverviewContent = ({ compact = false, onOpenDiscover }: HomeOverviewContentProps) => {
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const navigation = useNavigation<
+    CompositeNavigationProp<
+      BottomTabNavigationProp<MainTabParamList>,
+      NativeStackNavigationProp<MainStackParamList>
+    >
+  >();
   const { user } = useAuth();
 
   const {

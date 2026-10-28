@@ -86,6 +86,7 @@ export default function Discovery() {
   );
   const showGatherings = feedFilter !== 'prayer';
   const showPrayers = feedFilter !== 'gatherings';
+  const discoverTitle = feedFilter === 'prayer' ? PRAYER_COPY.listTitle : 'Upcoming gatherings';
 
   const skipPrayer = (prayer: PrayerRequest) => {
     setSkippedPrayers((previous) => [...previous, String(prayer.id)]);
@@ -303,7 +304,7 @@ export default function Discovery() {
               {PRAYER_COPY.imPraying}
             </button>
           </div>
-          <p className="text-center text-sm text-[#6e6a68]">{PRAYER_COPY.swipeHint}</p>
+          <p className="text-center text-sm text-[#6e6a68]">{PRAYER_COPY.buttonHint}</p>
         </div>
       ))}
       {!prayersQuery.isLoading && prayers.length === 0 && feedFilter === 'prayer' ? (
@@ -321,9 +322,7 @@ export default function Discovery() {
       <div className="min-h-[100dvh] bg-background">
         <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="font-display text-[28px] font-bold text-foreground">
-              Upcoming gatherings
-            </h2>
+            <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
             <p className="text-sm text-muted-foreground">{churchLine}</p>
           </div>
           {headerActions}
@@ -388,9 +387,7 @@ export default function Discovery() {
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between transition-transform duration-200">
         <div>
-          <h2 className="font-display text-[28px] font-bold text-foreground">
-            Upcoming gatherings
-          </h2>
+          <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
           <p className="text-sm text-muted-foreground">{churchLine}</p>
         </div>
         {headerActions}

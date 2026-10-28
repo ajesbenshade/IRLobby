@@ -86,6 +86,8 @@ describe('AppNavigator first run (Foyer)', () => {
     expect('Notifications' in main).toBe(false);
     const tabs = (main.Tabs as { screens: Record<string, string> }).screens;
     expect('Chat' in tabs).toBe(false);
+    expect('Create' in tabs).toBe(false);
+    expect(main.Create).toBe('create');
     expect(main.GatheringChat).toBe('gatherings/:activityId/chat');
     expect(main.GatheringDetail).toBe('gatherings/:activityId');
   });

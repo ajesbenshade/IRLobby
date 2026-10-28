@@ -6,7 +6,7 @@ import { useAuth } from '@hooks/useAuth';
 /** setTimeout's ceiling is ~24.8 days; re-check at least daily. */
 const MAX_WAIT_MS = 24 * 60 * 60 * 1000;
 
-/** The member's weekly host limit, re-evaluated when the next slot opens (so the Host tab un-greys by itself). */
+/** The member's weekly host limit, re-evaluated when the next slot opens (so Gatherings + stops opening the sheet). */
 export const useHostLimit = (): HostLimitState => {
   const { user } = useAuth();
   const [, setTick] = useState(0);

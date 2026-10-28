@@ -1,16 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-import { apiRequest } from '@/lib/queryClient';
-import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
-import { API_ROUTES } from '@shared/schema';
 import {
   coverPhotoUrl,
   isUpcomingGathering,
   whosGoingSummary,
   type GatheringLike,
 } from '@/lib/foyer';
+import { asArrayResponse, type PaginatedResponse } from '@/lib/paginated';
+import { apiRequest } from '@/lib/queryClient';
+import { API_ROUTES } from '@shared/schema';
+import { useQuery } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type Row = GatheringLike & { id: number | string; title: string; time?: string };
 
@@ -50,7 +50,16 @@ export default function GatheringsPage() {
 
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-[#f6f1ee] px-5 pb-[calc(var(--bottom-nav-offset)+1rem)] pt-8">
-      <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display text-[28px] text-[#222222]">Your gatherings</h1>
+        <Link
+          to="/app/host"
+          aria-label="Host a gathering"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#a2033f] text-white"
+        >
+          <Plus className="h-6 w-6" aria-hidden />
+        </Link>
+      </div>
       <div className="mt-4 flex rounded-xl bg-white p-1">
         {(['upcoming', 'past'] as const).map((value) => (
           <button

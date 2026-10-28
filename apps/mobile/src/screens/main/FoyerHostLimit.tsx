@@ -10,7 +10,7 @@ import { appColors, appTypography } from '@theme/index';
 
 import { FoyerHostForm } from './FoyerHostForm';
 
-/** Host tab while the weekly limit is in effect (reached through a Host button, not the greyed tab): the note only, no form. */
+/** Host screen while the weekly limit is in effect (deep link or any path other than Gatherings +): the note only, no form. */
 export const HostLimitScreen = ({ opensAt }: { opensAt: Date }) => {
   const tabBottomPadding = useTabScreenBottomPadding();
   return (
@@ -27,7 +27,7 @@ export const HostLimitScreen = ({ opensAt }: { opensAt: Date }) => {
 };
 
 /**
- * Host tab in Foyer mode. New gatherings are gated by the weekly limit (church admins never are). Editing an
+ * Host flow in Foyer mode. New gatherings are gated by the weekly limit (church admins never are). Editing an
  * existing gathering is never gated.
  */
 export const FoyerHostEntry = ({ activityId }: { activityId?: number | string }) => {

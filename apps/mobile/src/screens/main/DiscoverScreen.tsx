@@ -81,7 +81,7 @@ import { fullBlocksJoin, isFullMessage } from '@foyer/full';
 import { formatDayShort, formatGatheringWhen, hostDayLimits, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { applyClientEligibility, selectionFromMyRsvp, type RsvpSelection } from '@foyer/rsvp';
 import { appColors, appTypography, radii } from '@theme/index';
-import type { DiscoverFeedFilter } from '@shared/prayer';
+import { PRAYER_COPY, type DiscoverFeedFilter } from '@shared/prayer';
 import { getErrorMessage } from '@utils/error';
 import type { Activity } from '../../types/activity';
 
@@ -560,7 +560,13 @@ export const DiscoverScreen = () => {
       <FoyerHeader />
       <PageHeader
         eyebrow="Discover"
-        title={foyerMode ? 'Upcoming gatherings' : 'Gatherings near you'}
+        title={
+          foyerMode
+            ? feedFilter === 'prayer'
+              ? PRAYER_COPY.listTitle
+              : 'Upcoming gatherings'
+            : 'Gatherings near you'
+        }
         subtitle={
           foyerMode
             ? churchName

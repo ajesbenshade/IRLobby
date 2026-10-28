@@ -69,8 +69,7 @@ export const auth = {
 export const tabs = {
   Discover: 'Discover',
   Activity: 'Gatherings',
-  Create: 'Host',
-  Chat: 'Chat',
+  Prayer: 'Prayer',
   Profile: 'Profile',
 } as const;
 

@@ -68,7 +68,7 @@ export default function PrivacyPolicy() {
             <h3 className="text-xl font-medium mb-2">2.4 Optional sign-in and diagnostics</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4">
               <li>
-                Apple, Google, or X (Twitter) identifiers and profile fields if you use that
+                Apple or Google identifiers and profile fields if you use that
                 sign-in
               </li>
               <li>Crash and performance diagnostics via Sentry when configured</li>

@@ -566,9 +566,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_conversation_access(self, user, conversation_id):
         try:
-            conversation = Conversation.objects.select_related("match__activity").get(
-                id=conversation_id
-            )
+            conversation = Conversation.objects.select_related(
+                "match__activity", "prayer_request"
+            ).get(id=conversation_id)
         except Conversation.DoesNotExist:
             return False
         return can_read_conversation(user, conversation)
@@ -576,9 +576,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_can_send(self, user, conversation_id):
         try:
-            conversation = Conversation.objects.select_related("match__activity").get(
-                id=conversation_id
-            )
+            conversation = Conversation.objects.select_related(
+                "match__activity", "prayer_request"
+            ).get(id=conversation_id)
         except Conversation.DoesNotExist:
             return False
         return can_send_in_conversation(user, conversation)
@@ -586,6 +586,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_conversation_participant_ids(self, conversation_id):
         conversation = Conversation.objects.select_related("match").get(id=conversation_id)
+        if conversation.prayer_request_id:
+            from prayers.models import PrayerParticipant
+
+            return list(
+                PrayerParticipant.objects.filter(
+                    prayer_request_id=conversation.prayer_request_id,
+                    status=PrayerParticipant.STATUS_PRAYING,
+                )
+                .order_by("joined_at", "id")
+                .values_list("user_id", flat=True)
+            )
+        if conversation.match_id is None:
+            return []
         return [conversation.match.user_a_id, conversation.match.user_b_id]
 
     @database_sync_to_async

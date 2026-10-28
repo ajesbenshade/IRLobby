@@ -53,7 +53,8 @@ class MessageListView(generics.ListCreateAPIView):
     def get_queryset(self):
         conversation_id = self.kwargs["conversation_id"]
         conversation = get_object_or_404(
-            Conversation.objects.select_related("match__activity"), id=conversation_id
+            Conversation.objects.select_related("match__activity", "prayer_request"),
+            id=conversation_id,
         )
 
         if not _user_can_use_conversation(self.request.user, conversation):
@@ -69,7 +70,8 @@ class MessageListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         conversation_id = self.kwargs["conversation_id"]
         conversation = get_object_or_404(
-            Conversation.objects.select_related("match__activity"), id=conversation_id
+            Conversation.objects.select_related("match__activity", "prayer_request"),
+            id=conversation_id,
         )
 
         if not can_send_in_conversation(self.request.user, conversation):

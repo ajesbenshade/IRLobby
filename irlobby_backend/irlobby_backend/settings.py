@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     "channels",
     "users",
     "activities",
+    "prayers",
     "moderation",
     "swipes",
     "matches",

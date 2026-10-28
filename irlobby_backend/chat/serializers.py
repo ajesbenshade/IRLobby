@@ -29,8 +29,8 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     messages = serializers.SerializerMethodField()
-    match = serializers.StringRelatedField()
-    matchId = serializers.IntegerField(source="match.id", read_only=True)
+    match = serializers.StringRelatedField(allow_null=True)
+    matchId = serializers.IntegerField(source="match.id", read_only=True, allow_null=True)
     activityId = serializers.IntegerField(
         source="match.activity.id", read_only=True, allow_null=True
     )
@@ -53,7 +53,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_otherUserId(self, obj):
         request = self.context.get("request")
-        if not request or not getattr(request, "user", None):
+        if not request or not getattr(request, "user", None) or obj.match_id is None:
             return None
         current_user_id = request.user.id
         if obj.match.user_a_id == current_user_id:

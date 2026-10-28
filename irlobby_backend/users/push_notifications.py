@@ -4,7 +4,7 @@ import requests
 from django.conf import settings
 from django.db.models import Q
 
-from .models import PushDeviceToken
+from .models import PushDeviceToken, User
 
 logger = logging.getLogger(__name__)
 INVALID_TOKEN_ERRORS = {"DeviceNotRegistered"}
@@ -113,16 +113,51 @@ def send_new_match_notifications(match):
     )
 
 
+def send_prayer_message_notifications(message):
+    """Tell everyone currently praying, except the sender and people blocked either way."""
+    from prayers.models import PrayerParticipant
+    from users.social import blocked_user_ids
+
+    prayer = message.conversation.prayer_request
+    if prayer is None:
+        return
+    recipient_ids = (
+        PrayerParticipant.objects.filter(
+            prayer_request=prayer, status=PrayerParticipant.STATUS_PRAYING
+        )
+        .exclude(user_id=message.sender_id)
+        .values_list("user_id", flat=True)
+    )
+    hidden = blocked_user_ids(message.sender)
+    recipients = User.objects.filter(id__in=list(recipient_ids)).exclude(id__in=hidden)
+    payload = {
+        "type": "prayer_message",
+        "conversationId": message.conversation_id,
+        "prayerRequestId": prayer.id,
+        "screen": "PrayerChat",
+    }
+    title = f"Prayer chat · {prayer.title[:80]}"
+    for recipient in recipients:
+        send_push_to_user(recipient, title, message.text[:120], payload)
+
+
 def send_new_message_notification(message):
     conversation = message.conversation
+    if conversation.prayer_request_id:
+        send_prayer_message_notifications(message)
+        return
     match = conversation.match
+    if match is None:
+        return
     recipient = match.user_b if message.sender_id == match.user_a_id else match.user_a
 
     from chat.models import ConversationUserState
 
-    if ConversationUserState.objects.filter(
-        conversation=conversation, user=recipient
-    ).filter(Q(muted=True) | Q(left=True)).exists():
+    if (
+        ConversationUserState.objects.filter(conversation=conversation, user=recipient)
+        .filter(Q(muted=True) | Q(left=True))
+        .exists()
+    ):
         return
 
     sender_label = message.sender.first_name.strip() or message.sender.username

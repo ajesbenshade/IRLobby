@@ -14,6 +14,9 @@ What ``delete_account`` REMOVES (and the terms say so):
 - every gathering the user hosted, with its RSVPs, chats and photos. Upcoming ones are cancelled
   first: attendees and pending requesters get a push and a chat note ("The host deleted their
   account.") before the gathering is deleted;
+- prayer requests the user authored, including the shared prayer chat;
+- the user's circle memberships and "I'm praying" rows. Messages they sent in someone else's
+  prayer chat are removed; that chat stays for the people still praying;
 - contact details in invites other people sent to the user's email or phone number (the invite
   rows stay for the inviter but are blanked);
 - the Sign in with Apple link, which is revoked at Apple when we hold a token for it.

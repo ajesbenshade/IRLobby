@@ -254,6 +254,8 @@ urlpatterns = [
     ),
     path("api/public/event.ics", foyer_views.private_event_ics_view, name="private-event-ics"),
     path("api/activities/", include("activities.urls")),
+    path("api/circles/", include("prayers.circle_urls")),
+    path("api/prayers/", include("prayers.urls")),
     path("api/swipes/", include("swipes.urls")),
     path("api/matches/", include("matches.urls")),
     path("api/messages/", include("chat.urls")),

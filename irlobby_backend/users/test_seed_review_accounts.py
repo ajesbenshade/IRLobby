@@ -43,6 +43,16 @@ class SeedSecondReviewAccountTests(APITestCase):
             User.objects.get(email="app-review2@irlobby.com"),
         )
 
+    def test_seed_omits_trivia_at_the_taproom(self):
+        seed()
+        self.assertFalse(Activity.objects.filter(title__icontains="Trivia").exists())
+        self.assertFalse(Activity.objects.filter(title__icontains="Taproom").exists())
+        maya = User.objects.get(username="review_maya")
+        self.assertNotIn("trivia", [tag.lower() for tag in maya.preferences["interests"]])
+        self.assertNotIn("trivia", maya.bio.lower())
+        _one, two = self.accounts()
+        self.assertNotIn("trivia", [tag.lower() for tag in two.preferences["interests"]])
+
     def test_second_account_shares_the_first_password_by_default(self):
         seed()
         one, two = self.accounts()

@@ -1,0 +1,1 @@
+function t(t){const e=(t??"").trim();if(!e)return"";const n=e.match(/[?&]token=([^&#\s]+)/);if(n)return r(n[1]);const c=e.match(/reset-password\/([^/?#\s]+)/);return c?r(c[1]):e.replace(/\s+/g,"")}function r(t){try{return decodeURIComponent(t)}catch{return t}}export{t as e};

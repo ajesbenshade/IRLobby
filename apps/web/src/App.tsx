@@ -28,7 +28,6 @@ const ForgotPasswordPage = lazy(() => import('@/pages/forgot-password'));
 const ResetPasswordPage = lazy(() => import('@/pages/reset-password'));
 const PrivacyPolicy = lazy(() => import('@/pages/privacy-policy'));
 const TermsOfService = lazy(() => import('@/pages/terms-of-service'));
-const TwitterCallback = lazy(() => import('@/pages/twitter-callback'));
 const Notifications = lazy(() => import('@/pages/notifications'));
 const Moderation = lazy(() => import('@/pages/moderation'));
 const ActivityDetail = lazy(() => import('@/pages/activity-detail'));
@@ -134,8 +133,8 @@ function AppRoutes() {
       <Route path="/download" element={<Navigate to="/" replace />} />
       <Route path="/app/matches/*" element={<Navigate to="/app/gatherings" replace />} />
       <Route path="/support" element={<SupportPage />} />
-      <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />

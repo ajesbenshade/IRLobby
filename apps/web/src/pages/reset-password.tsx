@@ -1,6 +1,6 @@
 import { API_ROUTES } from '@shared/schema';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -8,10 +8,13 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
+import { extractResetToken } from '../lib/resetToken';
 
 const ResetPasswordPage = () => {
-  const { token } = useParams<{ token: string }>();
+  const { token: pathToken } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const token = extractResetToken(pathToken || searchParams.get('token'));
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +56,7 @@ const ResetPasswordPage = () => {
         newPassword: password,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         // Check for error messages in different fields
@@ -69,7 +72,7 @@ const ResetPasswordPage = () => {
         title: 'Success',
         description: successMessage,
       });
-      setTimeout(() => navigate('/'), 3000); // Redirect to login after 3 seconds
+      setTimeout(() => navigate('/login'), 3000); // Redirect to login after 3 seconds
     } catch (err) {
       console.error('Reset password error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -94,6 +97,13 @@ const ResetPasswordPage = () => {
         <CardContent>
           {error && (
             <p className="mb-4 text-sm text-center text-red-600 dark:text-red-400">{error}</p>
+          )}
+          {!token && (
+            <p className="mb-4 text-sm text-center">
+              <Link to="/forgot-password" className="font-medium text-primary hover:underline">
+                Request a new reset link or enter your code
+              </Link>
+            </p>
           )}
           {message && !error && (
             <p className="mb-4 text-sm text-center text-green-600 dark:text-green-400">{message}</p>
@@ -133,7 +143,7 @@ const ResetPasswordPage = () => {
           </form>
           {message && (
             <div className="mt-4 text-center text-sm">
-              <Link to="/" className="font-medium text-primary hover:underline">
+              <Link to="/login" className="font-medium text-primary hover:underline">
                 Back to Login
               </Link>
             </div>

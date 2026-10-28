@@ -1,5 +1,6 @@
 import { API_ROUTES } from '@shared/schema';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
@@ -462,9 +463,9 @@ const AuthForm = ({
                 />
               </div>
               <div className="text-sm text-right">
-                <a href="/forgot-password" className="font-medium text-primary hover:underline">
+                <Link to="/forgot-password" className="font-medium text-primary hover:underline">
                   Forgot Password?
-                </a>
+                </Link>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Logging in...' : 'Login'}

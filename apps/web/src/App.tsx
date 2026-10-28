@@ -134,6 +134,7 @@ function AppRoutes() {
       <Route path="/app/matches/*" element={<Navigate to="/app/gatherings" replace />} />
       <Route path="/support" element={<SupportPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />

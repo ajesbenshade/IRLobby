@@ -1,6 +1,6 @@
 import { API_ROUTES } from '@shared/schema';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -8,11 +8,21 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
+import { extractResetToken } from '../lib/resetToken';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [tokenInput, setTokenInput] = useState('');
+  const navigate = useNavigate();
+
+  const handleTokenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = extractResetToken(tokenInput);
+    if (!token) return;
+    navigate(`/reset-password/${encodeURIComponent(token)}`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +117,30 @@ const ForgotPasswordPage = () => {
           {message && (
             <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">{message}</p>
           )}
+          <form onSubmit={handleTokenSubmit} className="mt-6 space-y-3 border-t pt-4">
+            <p className="text-sm font-medium">I have a token</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Paste the code from your reset email to choose a new password.
+            </p>
+            <Label htmlFor="token">Reset code</Label>
+            <Input
+              id="token"
+              name="token"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="Paste your reset code"
+              required
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+            />
+            <Button type="submit" variant="outline" className="w-full">
+              Continue
+            </Button>
+          </form>
           <div className="mt-4 text-center text-sm">
-            <Link to="/" className="font-medium text-primary hover:underline">
+            <Link to="/login" className="font-medium text-primary hover:underline">
               Back to Login
             </Link>
           </div>

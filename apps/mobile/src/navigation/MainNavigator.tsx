@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Animated, StyleSheet, Text } from 'react-native';
 
 import { View } from '@components/RNCompat';
-import { safeImpactHaptic, safeSelectionHaptic } from '@lib/haptics';
+import { safeSelectionHaptic } from '@lib/haptics';
 
 import { ChatScreen } from '@screens/main/ChatScreen';
 import { CreateActivityScreen, EditActivityScreen } from '@screens/main/CreateActivityScreen';
@@ -16,8 +16,6 @@ import { DoorScanScreen } from '@screens/main/tickets/DoorScanScreen';
 import { TicketWalletScreen } from '@screens/main/tickets/TicketWalletScreen';
 import { isFoyerMode } from '@constants/appMode';
 import { isFoyerWelcomeActive } from '@foyer/firstRun';
-import { useHostLimit } from '@foyer/useHostLimit';
-import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { APPROVAL_COPY, GATHERING_CHAT_COPY } from '@constants/foyerCopy';
 import { DirectChatScreen } from '@screens/main/DirectChatScreen';
 import { GatheringChatScreen } from '@screens/main/GatheringChatScreen';
@@ -55,9 +53,6 @@ import {
 import type { MainStackParamList, MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
-
-/** Host tab icon and label while the weekly limit is in effect (frame 246). */
-export const HOST_TAB_DISABLED_COLOR = '#c9c3bf';
 const Stack = createNativeStackNavigator<MainStackParamList>();
 const AnimatedView = Animated.View as unknown as ComponentType<any>;
 
@@ -95,12 +90,10 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
     Discover: { active: 'compass', inactive: 'compass-outline' },
     Activity: { active: 'calendar-month', inactive: 'calendar-month-outline' },
     Prayer: { active: 'triangle-outline', inactive: 'triangle-outline' },
-    Create: { active: 'plus', inactive: 'plus' },
     Chat: { active: 'message-text', inactive: 'message-text-outline' },
     Profile: { active: 'account-circle', inactive: 'account-circle-outline' },
   };
   const iconName = focused ? iconMap[routeName].active : iconMap[routeName].inactive;
-  const isCreateRoute = routeName === 'Create';
 
   return (
     <AnimatedView
@@ -109,18 +102,8 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
         transform: [{ scale }],
       }}
     >
-      <View
-        style={[
-          styles.tabIconWrap,
-          focused && !isCreateRoute ? styles.tabIconWrapFocused : null,
-          isCreateRoute ? styles.createIconWrap : null,
-        ]}
-      >
-        <MaterialCommunityIcons
-          name={iconName}
-          size={size}
-          color={isCreateRoute ? appColors.white : color}
-        />
+      <View style={[styles.tabIconWrap, focused ? styles.tabIconWrapFocused : null]}>
+        <MaterialCommunityIcons name={iconName} size={size} color={color} />
       </View>
     </AnimatedView>
   );
@@ -130,15 +113,8 @@ const MainTabs = () => {
   const tabBar = useTabBarLayout();
   // Right after the Foyer church step the app opens on Profile for the basics. Read once on mount.
   const [initialTab] = useState<keyof MainTabParamList>(() => (isFoyerWelcomeActive() ? 'Profile' : 'Discover'));
-  // Weekly host limit (frames 246-247): Host tab drawn disabled; tapping it opens the sheet instead of the form.
-  const hostLimit = useHostLimit();
-  const hostLocked = isFoyerMode() && hostLimit.blocked;
-  const [limitSheetOpen, setLimitSheetOpen] = useState(false);
-  const tintFor = (routeName: string, color: string) =>
-    hostLocked && routeName === 'Create' ? HOST_TAB_DISABLED_COLOR : color;
 
   return (
-  <>
   <Tab.Navigator
     initialRouteName={initialTab}
     screenOptions={({ route }) => ({
@@ -177,7 +153,7 @@ const MainTabs = () => {
       },
       tabBarIcon: ({ color, focused }) => (
         <TabIcon
-          color={tintFor(route.name, color)}
+          color={color}
           size={TAB_ICON_SIZE}
           focused={focused}
           routeName={route.name as keyof MainTabParamList}
@@ -187,7 +163,7 @@ const MainTabs = () => {
       tabBarLabel: ({ color, children }) => (
         <Text
           maxFontSizeMultiplier={TIGHT_CHROME_MAX_FONT_SCALE}
-          style={[styles.tabLabel, { color: tintFor(route.name, color) }]}
+          style={[styles.tabLabel, { color }]}
         >
           {children}
         </Text>
@@ -200,24 +176,6 @@ const MainTabs = () => {
     <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Prayer" component={PrayerRequestsScreen} options={{ title: 'Prayer' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen
-      name="Create"
-      component={CreateActivityScreen}
-      options={{
-        title: 'Host',
-        tabBarAccessibilityLabel: hostLocked ? 'Host, unavailable until your next gathering opens' : 'Host',
-      }}
-      listeners={{
-        tabPress: (event) => {
-          if (hostLocked) {
-            event.preventDefault();
-            setLimitSheetOpen(true);
-            return;
-          }
-          void safeImpactHaptic('medium');
-        },
-      }}
-    />
-    <Tab.Screen
       name="Chat"
       component={ChatScreen}
       options={{
@@ -228,12 +186,6 @@ const MainTabs = () => {
     />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
   </Tab.Navigator>
-  <EventLimitSheet
-    visible={limitSheetOpen && hostLocked}
-    nextAllowedAt={hostLimit.blocked ? hostLimit.opensAt : null}
-    onClose={() => setLimitSheetOpen(false)}
-  />
-  </>
   );
 };
 
@@ -325,6 +277,11 @@ export const MainNavigator = () => (
       </>
     ) : null}
     <Stack.Screen
+      name="Create"
+      component={CreateActivityScreen}
+      options={{ headerShown: false, title: 'Host a gathering' }}
+    />
+    <Stack.Screen
       name="EditActivity"
       component={EditActivityScreen}
       options={{ title: 'Edit event' }}
@@ -369,11 +326,5 @@ const styles = StyleSheet.create({
   },
   tabIconWrapFocused: {
     backgroundColor: appColors.primaryWash,
-  },
-  createIconWrap: {
-    minWidth: 40,
-    minHeight: TAB_ICON_SIZE,
-    borderRadius: 10,
-    backgroundColor: appColors.primary,
   },
 });

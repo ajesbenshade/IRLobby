@@ -1,8 +1,7 @@
-import React from 'react';
-import { Text } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import type React from 'react';
+import { render, screen } from '@testing-library/react-native';
 
-import { HOST_TAB_DISABLED_COLOR, MainNavigator } from '../MainNavigator';
+import { MainNavigator } from '../MainNavigator';
 
 let mockUser: Record<string, unknown> = {};
 const mockTabNavigations: string[] = [];
@@ -89,48 +88,20 @@ jest.mock('@screens/main/tickets/TicketWalletScreen', () => ({ TicketWalletScree
 jest.mock('@screens/main/vibeQuiz/VibeQuizModalScreen', () => ({ VibeQuizModalScreen: () => null }));
 jest.mock('@screens/main/vibeQuiz/VibeQuizResultsScreen', () => ({ VibeQuizResultsScreen: () => null }));
 
-const colorOf = (name: string) => {
-  const label = screen.getByTestId(`tab-${name}`).findByType(Text);
-  return Object.assign({}, ...[label.props.style].flat(4).filter(Boolean)).color;
-};
-
 beforeEach(() => {
   mockTabNavigations.length = 0;
 });
 
-describe('Host tab and the weekly limit (frames 246-247)', () => {
-  it('limited: Host tab is greyed, tapping it opens One gathering a week and does not open the form', async () => {
-    const opens = new Date(Date.now() + 2 * 24 * 3600 * 1000);
-    mockUser = { id: 1, eventLimitExempt: false, nextHostAvailableAt: opens.toISOString() };
+describe('primary tabs', () => {
+  it('is Discover, Gatherings, Prayer, and Profile — Host is not a tab', () => {
+    mockUser = { id: 1, eventLimitExempt: false, nextHostAvailableAt: new Date(Date.now() + 86400000).toISOString() };
     render(<MainNavigator />);
-    expect(colorOf('Create')).toBe(HOST_TAB_DISABLED_COLOR);
-    expect(colorOf('Discover')).not.toBe(HOST_TAB_DISABLED_COLOR);
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('tab-Create'));
-    });
-    expect(mockTabNavigations).not.toContain('Create');
-    expect(screen.getByText('One gathering a week')).toBeTruthy();
-    expect(screen.getByTestId('event-limit-body').props.children).toMatch(
-      /^Members can host one gathering each week\. You can start your next one on \w+day, \w{3} \d{1,2} at \d{1,2}:\d{2} (AM|PM), or ask a church admin to post it for you\.$/,
-    );
-  });
-
-  it('not limited (missing fields, past time, or exempt): Host tab works normally', async () => {
-    for (const user of [
-      { id: 1 },
-      { id: 1, nextHostAvailableAt: new Date(Date.now() - 1000).toISOString() },
-      { id: 1, eventLimitExempt: true, nextHostAvailableAt: new Date(Date.now() + 86400000).toISOString() },
-    ]) {
-      mockUser = user;
-      mockTabNavigations.length = 0;
-      const view = render(<MainNavigator />);
-      expect(colorOf('Create')).not.toBe(HOST_TAB_DISABLED_COLOR);
-      await act(async () => {
-        fireEvent.press(screen.getByTestId('tab-Create'));
-      });
-      expect(mockTabNavigations).toContain('Create');
-      expect(screen.queryByText('One gathering a week')).toBeNull();
-      view.unmount();
-    }
+    expect(screen.getByText('Discover')).toBeTruthy();
+    expect(screen.getByText('Gatherings')).toBeTruthy();
+    expect(screen.getByText('Prayer')).toBeTruthy();
+    expect(screen.getByText('Profile')).toBeTruthy();
+    expect(screen.queryByText('Host')).toBeNull();
+    expect(screen.queryByTestId('tab-Create')).toBeNull();
+    expect(screen.queryByText('One gathering a week')).toBeNull();
   });
 });

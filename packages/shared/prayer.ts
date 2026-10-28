@@ -116,6 +116,8 @@ export const PRAYER_COPY = {
   pass: 'Pass',
   imPraying: "I'm praying",
   swipeHint: "Swipe right to pray, or tap I'm praying.",
+  /** Web Discover has buttons, not a swipe deck. */
+  buttonHint: "Tap I'm praying to join.",
   releaseHint: 'Release to join. The chat opens next.',
   openChat: 'Open chat',
   stopPraying: 'Stop praying',

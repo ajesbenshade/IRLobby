@@ -6,6 +6,7 @@ import { Image, Pressable, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { AppScrollView } from '@components/AppChrome';
+import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
 import { FoyerHeader } from '@components/FoyerHeader';
 import { GRAYSCALE_IMAGE_STYLE } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
@@ -83,6 +84,14 @@ export const FoyerGatherings = () => {
   const { requests, going } = useMemo(() => splitGoingRows(filterRows(goingQuery.data ?? [])), [goingQuery.data, segment]);
 
   const hostLimit = useHostLimit();
+  const [limitSheetOpen, setLimitSheetOpen] = useState(false);
+  const openHost = () => {
+    if (hostLimit.blocked) {
+      setLimitSheetOpen(true);
+      return;
+    }
+    navigation.navigate('Create');
+  };
 
   return (
     <View style={styles.screen}>
@@ -99,7 +108,20 @@ export const FoyerGatherings = () => {
       }
     >
       <FoyerHeader />
-      <Text style={styles.title}>Your gatherings</Text>
+      <View style={styles.header}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Your gatherings
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Host a gathering"
+          onPress={openHost}
+          style={styles.plus}
+          testID="gatherings-create"
+        >
+          <MaterialCommunityIcons name="plus" size={26} color={appColors.white} />
+        </Pressable>
+      </View>
       <View style={styles.segment}>
         {(['upcoming', 'past'] as const).map((value) => (
           <Pressable
@@ -145,6 +167,11 @@ export const FoyerGatherings = () => {
       {hostLimit.blocked ? <View style={{ height: HOST_LIMIT_NOTE_SPACE }} /> : null}
     </AppScrollView>
     {hostLimit.blocked ? <HostLimitNote opensAt={hostLimit.opensAt} /> : null}
+    <EventLimitSheet
+      visible={limitSheetOpen && hostLimit.blocked}
+      nextAllowedAt={hostLimit.blocked ? hostLimit.opensAt : null}
+      onClose={() => setLimitSheetOpen(false)}
+    />
     </View>
   );
 };
@@ -240,7 +267,16 @@ const styles = StyleSheet.create({
   chatMuted: { backgroundColor: appColors.white, borderWidth: 1.5, borderColor: appColors.primary },
   // No paddingBottom here: AppScrollView adds tab bar height + safe area + 16 inside the tabs.
   container: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
-  title: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title: { flex: 1, fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
+  plus: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: appColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segment: { flexDirection: 'row', backgroundColor: appColors.white, borderRadius: 12, padding: 4 },
   segmentItem: { flex: 1, minHeight: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
   segmentOn: { backgroundColor: appColors.white, borderWidth: 1, borderColor: appColors.line },

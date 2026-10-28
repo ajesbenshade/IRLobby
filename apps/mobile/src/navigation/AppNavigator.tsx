@@ -53,13 +53,14 @@ export const linking: LinkingOptions<RootStackParamList> = {
               Discover: 'discover',
               Activity: 'activity',
               Prayer: 'prayer',
-              Create: 'create',
               // Legacy matches chat and the matchmaking Pings feed: not linkable in Foyer mode.
               ...(isFoyerMode() ? {} : { Chat: 'chat' }),
               Profile: 'profile',
             },
           },
           ...(isFoyerMode() ? {} : { Notifications: 'notifications' }),
+          // Host is not a primary tab. `create` still opens the host flow for old Host-tab links.
+          Create: 'create',
           GatheringDetail: 'gatherings/:activityId',
           GatheringChat: 'gatherings/:activityId/chat',
           PrayerCreate: 'prayer/new',

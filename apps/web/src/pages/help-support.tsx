@@ -105,9 +105,8 @@ export default function HelpSupport() {
                 How do I create an activity?
               </h3>
               <p className="text-sm text-gray-600">
-                To host a gathering, go to the Host tab in the bottom navigation.
-                Fill out the details including title, description, date, time, location,
-                and capacity. Once complete, tap Publish.
+                To host a gathering, open Gatherings and tap +. Fill out the details including
+                title, description, date, time, location, and capacity. Once complete, tap Publish.
               </p>
             </div>
 
@@ -117,10 +116,9 @@ export default function HelpSupport() {
                 How do I join an activity?
               </h3>
               <p className="text-sm text-gray-600">
-                Browse gatherings in the Discover tab. Open a gathering to see its
-                Details, then tap RSVP to join. If it&apos;s an
-                open gathering, you&apos;ll be joined immediately. For private gatherings, the host
-                will need to approve your request.
+                Browse gatherings in the Discover tab. Open a gathering to see its Details, then tap
+                RSVP to join. If it&apos;s an open gathering, you&apos;ll be joined immediately. For
+                private gatherings, the host will need to approve your request.
               </p>
             </div>
 
@@ -130,8 +128,8 @@ export default function HelpSupport() {
                 How do I message other participants?
               </h3>
               <p className="text-sm text-gray-600">
-                Once you&apos;ve joined a gathering, open Gatherings and choose Chats.
-                Select the gathering to talk with everyone who is coming.
+                Once you&apos;ve joined a gathering, open Gatherings and choose Chats. Select the
+                gathering to talk with everyone who is coming.
               </p>
             </div>
           </CardContent>

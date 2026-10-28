@@ -2,7 +2,7 @@ import { NoticeSheet } from '@components/foyer/NoticeSheet';
 import { HOST_LIMIT_COPY } from '@constants/foyerCopy';
 import { eventLimitSheetBody } from '@foyer/hostLimit';
 
-/** `One gathering a week` (frame 247): tapping the greyed Host tab, or a 429 `event_limit_reached` on create. */
+/** `One gathering a week` (frame 247): Gatherings + while blocked, or a 429 `event_limit_reached` on create. */
 export const EventLimitSheet = ({
   visible,
   nextAllowedAt,

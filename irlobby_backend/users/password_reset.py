@@ -1,7 +1,9 @@
 import hashlib
 import secrets
 from datetime import timedelta
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
+from django.conf import settings
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 
@@ -41,6 +43,27 @@ def password_reset_token_ttl_display(ttl=None):
     return " ".join(parts)
 
 
-def app_password_reset_link(token, scheme="irlobby"):
-    """Deep link that opens the app's Reset password screen with the token filled in."""
-    return f"{scheme}://reset-password/{token}"
+def app_password_reset_link(token, base_url=None):
+    """Web reset URL under FRONTEND_BASE_URL.
+
+    ``urljoin(base, "reset-password/<token>")``, for example
+    ``https://irlobby.com/reset-password/<token>``. ``www.irlobby.com`` is
+    rewritten to the apex host because that host 301s to apex. The emailed
+    button uses this https URL, not the ``irlobby://`` app scheme.
+    """
+    if base_url is None:
+        base_url = getattr(settings, "FRONTEND_BASE_URL", "") or ""
+    base = str(base_url).strip()
+    if not base:
+        return urljoin(base, f"reset-password/{token}")
+
+    parsed = urlsplit(base)
+    netloc = parsed.netloc
+    if (parsed.hostname or "").lower() == "www.irlobby.com":
+        port = f":{parsed.port}" if parsed.port else ""
+        netloc = f"irlobby.com{port}"
+    path = parsed.path or "/"
+    if not path.endswith("/"):
+        path += "/"
+    base = urlunsplit((parsed.scheme, netloc, path, parsed.query, parsed.fragment))
+    return urljoin(base, f"reset-password/{token}")

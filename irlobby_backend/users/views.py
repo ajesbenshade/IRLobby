@@ -540,8 +540,8 @@ def stripe_connect_onboard(request):
 #
 # The previous implementation above generated a token and sent mail directly using
 # request.get_host(), which meant the link pointed back to the API server.  We now
-# use `request_password_reset` further down, which emails the app deep link
-# (irlobby://reset-password/<token>) plus the code, and respects DEBUG email
+# use `request_password_reset` further down, which emails an https link under
+# FRONTEND_BASE_URL (reset-password/<token>) plus the code, and respects DEBUG email
 # settings.  Keeping the implementation behind a separate view avoids duplicate
 # behaviour and ensures the route defined in `urls.py` is exercised.
 
@@ -578,9 +578,8 @@ def password_reset_confirm(request):
             _clear_password_reset_token(user)
             return _invalid_response("Token has expired.")
 
-        # No redirect: there is no web reset page on irlobby.com (FRONTEND_BASE_URL/
-        # reset-password/<token> lands on a catch-all redirect loop). The app's
-        # irlobby://reset-password/<token> link is in the email; GET is just a check.
+        # GET only checks the token and does not redirect. The emailed link opens
+        # FRONTEND_BASE_URL/reset-password/<token>. Confirm POST is unchanged.
         success_response = Response(
             {"detail": "Token is valid.", "token": token}, status=status.HTTP_200_OK
         )
@@ -639,11 +638,10 @@ def _send_password_reset_email(user, token):
         return False
 
     support_email = getattr(settings, "FOYER_SUPPORT_EMAIL", "") or ""
-    scheme = getattr(settings, "FOYER_APP_LINK_SCHEME", "") or "irlobby"
     context = {
         "user": user,
         "token": token,
-        "reset_link": app_password_reset_link(token, scheme=scheme),
+        "reset_link": app_password_reset_link(token),
         "expires_in": password_reset_token_ttl_display(),
         "support_email": support_email,
     }

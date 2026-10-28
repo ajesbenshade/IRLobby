@@ -14,12 +14,14 @@ from rest_framework.test import APITestCase
 from users.models import User
 from users.password_reset import (
     PASSWORD_RESET_TOKEN_TTL,
+    app_password_reset_link,
     hash_password_reset_token,
     password_reset_token_ttl_display,
 )
 
 GENERIC_MESSAGE = "If an account with that email exists, a password reset link has been sent."
-TOKEN_RE = re.compile(r"irlobby://reset-password/([A-Za-z0-9_-]+)")
+TOKEN_RE = re.compile(r"reset-password/([A-Za-z0-9_-]+)")
+APEX_RESET_BASE = "https://irlobby.com/"
 
 
 @override_settings(
@@ -72,17 +74,22 @@ class PasswordResetEmailTests(APITestCase):
         self.assertIn("Write to help@example.org.", sent.body)
         self.assertIn('href="mailto:help@example.org"', self._html(sent))
 
-    def test_link_uses_app_scheme_in_text_and_html(self):
+    def test_link_uses_frontend_base_url_in_text_and_html(self):
         self._request()
 
         sent = self._sent()
         html = self._html(sent)
         token = TOKEN_RE.search(sent.body).group(1)
-        self.assertIn(f"irlobby://reset-password/{token}", sent.body)
-        self.assertIn(f'href="irlobby://reset-password/{token}"', html)
+        link = app_password_reset_link(token, base_url=APEX_RESET_BASE)
+        self.assertEqual(link, f"https://irlobby.com/reset-password/{token}")
+        self.assertIn(link, sent.body)
+        self.assertIn(f'href="{link}"', html)
         for body in (sent.body, html):
-            self.assertNotIn("https://irlobby.com/reset-password", body)
-            self.assertNotIn("http://", body.replace("http://www.w3.org", ""))
+            self.assertNotIn("irlobby://", body)
+            self.assertNotIn("www.irlobby.com", body)
+            self.assertNotIn("I have a token", body)
+            self.assertIn("I have a code", body)
+            self.assertIn("On a phone without this page", body)
 
     def test_raw_token_written_out_in_text_and_html(self):
         self._request()
@@ -182,11 +189,20 @@ class PasswordResetEmailTests(APITestCase):
         self.assertEqual(response.json(), {"message": GENERIC_MESSAGE})
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(FOYER_APP_LINK_SCHEME="foyer-dev")
-    def test_link_scheme_setting(self):
+    @override_settings(FRONTEND_BASE_URL="https://www.irlobby.com")
+    def test_www_frontend_base_url_is_emailed_as_apex(self):
         self._request()
 
-        self.assertIn("foyer-dev://reset-password/", self._sent().body)
+        sent = self._sent()
+        html = self._html(sent)
+        token = TOKEN_RE.search(sent.body).group(1)
+        link = f"https://irlobby.com/reset-password/{token}"
+        self.assertEqual(app_password_reset_link(token), link)
+        self.assertIn(link, sent.body)
+        self.assertIn(f'href="{link}"', html)
+        for body in (sent.body, html):
+            self.assertNotIn("www.irlobby.com", body)
+            self.assertNotIn("irlobby://", body)
 
 
 @override_settings(FRONTEND_BASE_URL="https://irlobby.com/")
@@ -215,6 +231,33 @@ class PasswordResetConfirmGetTests(APITestCase):
         self.user.save(update_fields=["token_created_at"])
         response = self.client.get(reverse("password-reset-confirm"), {"token": "good-token"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetLinkTests(SimpleTestCase):
+    def test_urljoin_with_and_without_trailing_slash(self):
+        token = "abc_DEF-123"
+        expected = f"https://irlobby.com/reset-password/{token}"
+        self.assertEqual(app_password_reset_link(token, base_url="https://irlobby.com"), expected)
+        self.assertEqual(app_password_reset_link(token, base_url="https://irlobby.com/"), expected)
+
+    def test_www_irlobby_host_is_rewritten_to_apex(self):
+        token = "abc"
+        expected = f"https://irlobby.com/reset-password/{token}"
+        self.assertEqual(
+            app_password_reset_link(token, base_url="https://www.irlobby.com"),
+            expected,
+        )
+        self.assertEqual(
+            app_password_reset_link(token, base_url="https://www.irlobby.com/"),
+            expected,
+        )
+
+    @override_settings(FRONTEND_BASE_URL="https://preview.example.org")
+    def test_other_hosts_follow_frontend_base_url(self):
+        link = app_password_reset_link("abc")
+        self.assertEqual(link, "https://preview.example.org/reset-password/abc")
+        self.assertNotIn("www.", link)
+        self.assertFalse(link.startswith("irlobby://"))
 
 
 class PasswordResetTtlDisplayTests(SimpleTestCase):

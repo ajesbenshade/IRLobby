@@ -1,180 +1,95 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
 import { apiRequest } from '@/lib/queryClient';
-import { API_ROUTES } from '@shared/schema';
 import {
-  ArrowLeft,
-  Bell,
-  Eye,
-  Trash2,
-  Download,
-  Shield,
-  Globe,
-  Moon,
-  Sun,
-  User,
-} from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+  feedbackMailto,
+  settingsFromProfilePreferences,
+  SUPPORT_EMAIL,
+  toSettingsPayload,
+  type NotificationSettings,
+  type UserSettings,
+} from '@/lib/settingsPreferences';
+import { API_ROUTES } from '@shared/schema';
+import { ArrowLeft, Bell, Download, Mail, Shield, Trash2, User } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-interface NotificationSettings {
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  activityReminders: boolean;
-  newMatches: boolean;
-  messages: boolean;
-}
+type VisibleNotificationKey =
+  | 'pushNotifications'
+  | 'emailNotifications'
+  | 'activityReminders'
+  | 'messages';
 
-interface PrivacySettings {
-  profileVisibility: 'public' | 'friends' | 'private';
-  locationSharing: boolean;
-  showAge: boolean;
-  showEmail: boolean;
-}
+const NOTIFICATION_ROWS: { key: VisibleNotificationKey; id: string; label: string }[] = [
+  { key: 'pushNotifications', id: 'push-notifications', label: 'Push notifications' },
+  { key: 'emailNotifications', id: 'email-notifications', label: 'Email notifications' },
+  { key: 'activityReminders', id: 'activity-reminders', label: 'Activity reminders' },
+  { key: 'messages', id: 'messages', label: 'Messages' },
+];
 
-interface PreferenceSettings {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  distanceUnit: 'miles' | 'kilometers';
-  maxDistance: number;
-}
-
-interface UserSettings {
-  notifications: NotificationSettings;
-  privacy: PrivacySettings;
-  preferences: PreferenceSettings;
-}
-
-type UserPreferencesResponse = Partial<PreferenceSettings> & {
-  notifications?: NotificationSettings;
-  privacy?: PrivacySettings;
-};
-
-interface UserProfileResponse {
-  preferences?: UserPreferencesResponse;
-}
+const emptySettings = (): UserSettings => settingsFromProfilePreferences(undefined);
 
 export default function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setTheme } = useTheme();
 
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<UserSettings>({
-    notifications: {
-      pushNotifications: true,
-      emailNotifications: true,
-      activityReminders: true,
-      newMatches: true,
-      messages: true,
-    },
-    privacy: {
-      profileVisibility: 'public',
-      locationSharing: true,
-      showAge: true,
-      showEmail: false,
-    },
-    preferences: {
-      theme: 'system',
-      language: 'English',
-      distanceUnit: 'miles',
-      maxDistance: 25,
-    },
-  });
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [settings, setSettings] = useState<UserSettings>(emptySettings);
 
   const loadUserSettings = useCallback(async () => {
     try {
+      setLoadError(false);
       const response = await apiRequest('GET', API_ROUTES.USER_PROFILE);
       if (!response.ok) {
         throw new Error('Failed to load settings');
       }
 
-      const userData = (await response.json()) as UserProfileResponse;
-      const preferences = userData.preferences ?? {};
-      const { notifications, privacy, ...preferenceOverrides } = preferences;
-
-      setSettings((prev) => ({
-        notifications: notifications ?? prev.notifications,
-        privacy: privacy ?? prev.privacy,
-        preferences: {
-          ...prev.preferences,
-          ...preferenceOverrides,
-        },
-      }));
-
-      if (preferenceOverrides.theme) {
-        setTheme(preferenceOverrides.theme);
-      }
+      const userData = (await response.json()) as { preferences?: unknown };
+      setSettings(settingsFromProfilePreferences(userData.preferences));
+      setReady(true);
     } catch (error) {
       console.error('Failed to load settings:', error);
+      setReady(false);
+      setLoadError(true);
     }
-  }, [setTheme]);
+  }, []);
 
   useEffect(() => {
-    // Load user settings from API
-    loadUserSettings();
+    void loadUserSettings();
   }, [loadUserSettings]);
 
-  const updateSettings = useCallback(
-    async <Section extends keyof UserSettings>(
-      section: Section,
-      newSettings: UserSettings[Section],
-    ) => {
+  const updateNotifications = useCallback(
+    async (notifications: NotificationSettings) => {
+      const next: UserSettings = { ...settings, notifications };
       try {
         setLoading(true);
 
-        const nextSettings: UserSettings = {
-          ...settings,
-          [section]: newSettings,
-        } as UserSettings;
-
-        const payload = {
-          preferences: {
-            ...nextSettings.preferences,
-            notifications: nextSettings.notifications,
-            privacy: nextSettings.privacy,
-          },
-        };
-
-        const response = await apiRequest('PATCH', API_ROUTES.USER_PROFILE, payload);
+        const response = await apiRequest(
+          'PATCH',
+          API_ROUTES.USER_PROFILE,
+          toSettingsPayload(next),
+        );
 
         if (!response.ok) {
           throw new Error('Failed to update settings');
         }
 
-        const updatedUser = (await response.json()) as UserProfileResponse;
-        const preferences = updatedUser.preferences ?? {};
-        const { notifications, privacy, ...preferenceOverrides } = preferences;
-
-        setSettings((prev) => ({
-          notifications:
-            notifications ??
-            (section === 'notifications'
-              ? (newSettings as NotificationSettings)
-              : prev.notifications),
-          privacy:
-            privacy ?? (section === 'privacy' ? (newSettings as PrivacySettings) : prev.privacy),
-          preferences: {
-            ...prev.preferences,
-            ...preferenceOverrides,
-          },
-        }));
+        const updatedUser = (await response.json()) as { preferences?: unknown };
+        const savedPreferences = updatedUser.preferences;
+        setSettings(
+          savedPreferences && typeof savedPreferences === 'object'
+            ? settingsFromProfilePreferences(savedPreferences)
+            : next,
+        );
 
         toast({
           title: 'Settings updated',
@@ -184,7 +99,7 @@ export default function Settings() {
         console.error('Failed to update settings:', error);
         toast({
           title: 'Error',
-          description: 'Failed to update settings. Please try again.',
+          description: "Something didn't save. Try again.",
           variant: 'destructive',
         });
       } finally {
@@ -194,32 +109,8 @@ export default function Settings() {
     [settings, toast],
   );
 
-  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
-    const newNotifications: NotificationSettings = { ...settings.notifications, [key]: value };
-    updateSettings('notifications', newNotifications);
-  };
-
-  const handlePrivacyChange = <Key extends keyof PrivacySettings>(
-    key: Key,
-    value: PrivacySettings[Key],
-  ) => {
-    const newPrivacy: PrivacySettings = { ...settings.privacy, [key]: value };
-    updateSettings('privacy', newPrivacy);
-  };
-
-  const handlePreferenceChange = <Key extends keyof PreferenceSettings>(
-    key: Key,
-    value: PreferenceSettings[Key],
-  ) => {
-    const newPreferences: PreferenceSettings = {
-      ...settings.preferences,
-      [key]: value,
-    } as PreferenceSettings;
-    updateSettings('preferences', newPreferences);
-
-    if (key === 'theme') {
-      setTheme(value as PreferenceSettings['theme']);
-    }
+  const handleNotificationChange = (key: VisibleNotificationKey, value: boolean) => {
+    void updateNotifications({ ...settings.notifications, [key]: value });
   };
 
   const exportData = async () => {
@@ -267,7 +158,6 @@ export default function Settings() {
       try {
         await apiRequest('DELETE', API_ROUTES.USER_PROFILE_DELETE);
 
-        // Clear all user data from local storage
         localStorage.removeItem('authToken');
         localStorage.removeItem('userId');
 
@@ -302,10 +192,10 @@ export default function Settings() {
     `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() ||
     user.email?.charAt(0).toUpperCase() ||
     'U';
+  const switchesDisabled = loading || !ready;
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
-      {/* Header */}
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
         <div className="flex items-center">
           <Button
@@ -319,14 +209,13 @@ export default function Settings() {
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Manage notification and privacy preferences.
+              Notifications, feedback, and account actions.
             </p>
           </div>
         </div>
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Profile Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -354,7 +243,19 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
+        {loadError ? (
+          <Card>
+            <CardContent className="space-y-3 pt-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Couldn&apos;t load settings. Try again.
+              </p>
+              <Button variant="outline" onClick={() => void loadUserSettings()}>
+                Try again
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -363,207 +264,38 @@ export default function Settings() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="push-notifications">Push Notifications</Label>
-              <Switch
-                id="push-notifications"
-                checked={settings.notifications.pushNotifications}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange('pushNotifications', checked)
-                }
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="email-notifications">Email Notifications</Label>
-              <Switch
-                id="email-notifications"
-                checked={settings.notifications.emailNotifications}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange('emailNotifications', checked)
-                }
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="activity-reminders">Activity Reminders</Label>
-              <Switch
-                id="activity-reminders"
-                checked={settings.notifications.activityReminders}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange('activityReminders', checked)
-                }
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="new-matches">Gathering updates</Label>
-              <Switch
-                id="new-matches"
-                checked={settings.notifications.newMatches}
-                onCheckedChange={(checked) => handleNotificationChange('newMatches', checked)}
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="messages">Messages</Label>
-              <Switch
-                id="messages"
-                checked={settings.notifications.messages}
-                onCheckedChange={(checked) => handleNotificationChange('messages', checked)}
-                disabled={loading}
-              />
-            </div>
+            {NOTIFICATION_ROWS.map((row) => (
+              <div key={row.key} className="flex items-center justify-between">
+                <Label htmlFor={row.id}>{row.label}</Label>
+                <Switch
+                  id={row.id}
+                  checked={Boolean(settings.notifications[row.key])}
+                  onCheckedChange={(checked) => handleNotificationChange(row.key, checked)}
+                  disabled={switchesDisabled}
+                />
+              </div>
+            ))}
           </CardContent>
         </Card>
 
-        {/* Privacy */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Eye className="w-5 h-5 mr-2" />
-              Privacy
+              <Mail className="w-5 h-5 mr-2" />
+              Help
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="profile-visibility" className="text-sm font-medium">
-                Profile Visibility
-              </Label>
-              <Select
-                value={settings.privacy.profileVisibility}
-                onValueChange={(value) =>
-                  handlePrivacyChange(
-                    'profileVisibility',
-                    value as 'public' | 'friends' | 'private',
-                  )
-                }
-                disabled={loading}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="public">Public</SelectItem>
-                  <SelectItem value="friends">Friends Only</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="show-location">Show Location</Label>
-              <Switch
-                id="show-location"
-                checked={settings.privacy.locationSharing}
-                onCheckedChange={(checked) => handlePrivacyChange('locationSharing', checked)}
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="show-age">Show Age</Label>
-              <Switch
-                id="show-age"
-                checked={settings.privacy.showAge}
-                onCheckedChange={(checked) => handlePrivacyChange('showAge', checked)}
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="show-email">Show Email</Label>
-              <Switch
-                id="show-email"
-                checked={settings.privacy.showEmail}
-                onCheckedChange={(checked) => handlePrivacyChange('showEmail', checked)}
-                disabled={loading}
-              />
-            </div>
+          <CardContent className="space-y-2">
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <a href={feedbackMailto()} data-testid="settings-send-feedback">
+                <Mail className="w-4 h-4 mr-2" />
+                Send feedback
+              </a>
+            </Button>
+            <p className="text-xs text-gray-500">Email the team at {SUPPORT_EMAIL}</p>
           </CardContent>
         </Card>
 
-        {/* Preferences */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Globe className="w-5 h-5 mr-2" />
-              Preferences
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="theme" className="text-sm font-medium">
-                Theme
-              </Label>
-              <Select
-                value={settings.preferences.theme}
-                onValueChange={(value) =>
-                  handlePreferenceChange('theme', value as PreferenceSettings['theme'])
-                }
-                disabled={loading}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">
-                    <div className="flex items-center">
-                      <Sun className="w-4 h-4 mr-2" />
-                      Light
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="dark">
-                    <div className="flex items-center">
-                      <Moon className="w-4 h-4 mr-2" />
-                      Dark
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="distance-unit" className="text-sm font-medium">
-                Distance Unit
-              </Label>
-              <Select
-                value={settings.preferences.distanceUnit}
-                onValueChange={(value) =>
-                  handlePreferenceChange(
-                    'distanceUnit',
-                    value as PreferenceSettings['distanceUnit'],
-                  )
-                }
-                disabled={loading}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="miles">Miles</SelectItem>
-                  <SelectItem value="kilometers">Kilometers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="max-distance" className="text-sm font-medium">
-                Maximum Distance ({settings.preferences.distanceUnit})
-              </Label>
-              <Input
-                id="max-distance"
-                type="number"
-                value={settings.preferences.maxDistance}
-                onChange={(e) =>
-                  handlePreferenceChange('maxDistance', Number.parseInt(e.target.value, 10) || 0)
-                }
-                disabled={loading}
-                min="1"
-                max="100"
-                className="mt-1"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Data & Security */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -574,18 +306,18 @@ export default function Settings() {
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full justify-start" onClick={exportData}>
               <Download className="w-4 h-4 mr-2" />
-              Export My Data
+              Export my data
             </Button>
 
             <Separator />
 
             <Button variant="destructive" className="w-full justify-start" onClick={deleteAccount}>
               <Trash2 className="w-4 h-4 mr-2" />
-              Delete Account
+              Delete account
             </Button>
             <p className="text-xs text-gray-500">
-              This action cannot be undone. All your activities, RSVPs and reviews will
-              be permanently deleted.
+              This action cannot be undone. Your gatherings, RSVPs, and account data will be
+              permanently deleted.
             </p>
           </CardContent>
         </Card>

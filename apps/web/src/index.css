@@ -44,7 +44,7 @@
   --sidebar-ring: 337 96% 32%;
   --radius: 1.375rem; /* 22px cards */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
+  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4.75rem);
 }
 
 .dark {
@@ -86,7 +86,7 @@
   --sidebar-ring: 337 96% 42%;
   --radius: 1.375rem;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4rem);
+  --bottom-nav-offset: calc(var(--safe-area-bottom) + 4.75rem);
 }
 
 @layer base {

@@ -27,7 +27,7 @@ export default function Landing() {
       />
       <main
         id="auth"
-        className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col justify-center bg-[#f6f1ee] px-5 py-8 sm:shadow-xl"
+        className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col justify-center bg-[#f6f1ee] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] sm:shadow-xl"
       >
         <div className="mb-6 flex flex-col items-center text-center">
           <img src="/app-icon.png" alt="" className="h-16 w-16 rounded-2xl ring-1 ring-[#e1dbd7]" />

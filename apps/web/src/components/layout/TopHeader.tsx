@@ -16,7 +16,7 @@ export default function TopHeader({ onOpenCommandPalette, showSidebarTrigger = f
   const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('') || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex min-h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       {showSidebarTrigger ? <SidebarTrigger className="-ml-1 hidden md:flex" /> : null}
       <Link to="/app" className="flex min-w-0 flex-col">
         <span className="font-display text-[22px] font-bold leading-none text-foreground md:text-[26px]">

@@ -58,7 +58,7 @@ export default function BottomNavigation() {
   const currentScreen = getCurrentScreen();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 shadow-lg dark:shadow-gray-900/20">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 pb-[env(safe-area-inset-bottom)] shadow-lg dark:shadow-gray-900/20">
       <div className="flex justify-around items-center py-2">
         {navItems.map((item) => {
           const isActive = currentScreen === item.id;

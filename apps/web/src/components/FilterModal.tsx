@@ -1,7 +1,7 @@
+import { DiscoverSheet } from '@/components/DiscoverSheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -94,213 +94,207 @@ function FilterModal({ isOpen, onClose, onApplyFilters, currentFilters }: Filter
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="max-w-md mx-auto max-h-[90vh] overflow-y-auto"
-        aria-describedby="filter-description"
-      >
-        <DialogHeader>
-          <DialogTitle>Filter Activities</DialogTitle>
-          <p id="filter-description" className="text-sm text-gray-600">
-            Set your preferences to find activities that match your interests
-          </p>
-        </DialogHeader>
+    <DiscoverSheet
+      open={isOpen}
+      onClose={onClose}
+      testId="discover-filter-sheet"
+      title="Filter Activities"
+      description="Set your preferences to find activities that match your interests"
+    >
+      <div className="space-y-6">
+        <div>
+          <Label>Category</Label>
+          <Select
+            value={filters.category}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, category: value }))}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="space-y-6">
-          <div>
-            <Label>Category</Label>
-            <Select
-              value={filters.category}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Location</Label>
-            <div className="relative mt-1">
-              <Input
-                placeholder="Enter city or address"
-                value={filters.location}
-                onChange={(event) =>
-                  setFilters((prev) => ({ ...prev, location: event.currentTarget.value }))
-                }
-                className="pr-10"
-              />
-              <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-          </div>
-
-          <div>
-            <Label>Max Distance: {filters.maxDistance[0]} miles</Label>
-            <Slider
-              value={filters.maxDistance}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, maxDistance: value }))}
-              max={50}
-              min={1}
-              step={1}
-              className="mt-2"
+        <div>
+          <Label>Location</Label>
+          <div className="relative mt-1">
+            <Input
+              placeholder="Enter city or address"
+              value={filters.location}
+              onChange={(event) =>
+                setFilters((prev) => ({ ...prev, location: event.currentTarget.value }))
+              }
+              className="pr-10"
             />
-          </div>
-
-          <div>
-            <Label>
-              Price Range: ${filters.priceRange[0]} - ${filters.priceRange[1]}
-            </Label>
-            <Slider
-              value={filters.priceRange}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, priceRange: value }))}
-              max={200}
-              min={0}
-              step={5}
-              className="mt-2"
-              minStepsBetweenThumbs={1}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>From Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal mt-1"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filters.dateFrom ? format(filters.dateFrom, 'MMM dd') : 'Any date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={filters.dateFrom ?? undefined}
-                    onSelect={(date) => setFilters((prev) => ({ ...prev, dateFrom: date ?? null }))}
-                    disabled={(date) => date < new Date()}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label>To Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal mt-1"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filters.dateTo ? format(filters.dateTo, 'MMM dd') : 'Any date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={filters.dateTo ?? undefined}
-                    onSelect={(date) => setFilters((prev) => ({ ...prev, dateTo: date ?? null }))}
-                    disabled={(date) =>
-                      date < new Date() || (filters.dateFrom ? date < filters.dateFrom : false)
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div>
-            <Label>Skill Level</Label>
-            <Select
-              value={filters.skillLevel}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, skillLevel: value }))}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {skillLevels.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {level}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Age Requirement</Label>
-            <Select
-              value={filters.ageRestriction}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, ageRestriction: value }))}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ageRestrictions.map((age) => (
-                  <SelectItem key={age} value={age}>
-                    {age}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Tags</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                placeholder="Add tag..."
-                value={newTag}
-                onChange={(event) => setNewTag(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    handleAddTag();
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button onClick={handleAddTag} size="sm">
-                Add
-              </Button>
-            </div>
-            {filters.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {filters.tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="cursor-pointer"
-                    onClick={() => handleRemoveTag(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={handleReset} className="flex-1">
-              Reset
-            </Button>
-            <Button onClick={handleApply} className="flex-1">
-              Apply Filters
-            </Button>
+            <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div>
+          <Label>Max Distance: {filters.maxDistance[0]} miles</Label>
+          <Slider
+            value={filters.maxDistance}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, maxDistance: value }))}
+            max={50}
+            min={1}
+            step={1}
+            className="mt-2"
+          />
+        </div>
+
+        <div>
+          <Label>
+            Price Range: ${filters.priceRange[0]} - ${filters.priceRange[1]}
+          </Label>
+          <Slider
+            value={filters.priceRange}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, priceRange: value }))}
+            max={200}
+            min={0}
+            step={5}
+            className="mt-2"
+            minStepsBetweenThumbs={1}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>From Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal mt-1"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.dateFrom ? format(filters.dateFrom, 'MMM dd') : 'Any date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.dateFrom ?? undefined}
+                  onSelect={(date) => setFilters((prev) => ({ ...prev, dateFrom: date ?? null }))}
+                  disabled={(date) => date < new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label>To Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal mt-1"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.dateTo ? format(filters.dateTo, 'MMM dd') : 'Any date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.dateTo ?? undefined}
+                  onSelect={(date) => setFilters((prev) => ({ ...prev, dateTo: date ?? null }))}
+                  disabled={(date) =>
+                    date < new Date() || (filters.dateFrom ? date < filters.dateFrom : false)
+                  }
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        <div>
+          <Label>Skill Level</Label>
+          <Select
+            value={filters.skillLevel}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, skillLevel: value }))}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {skillLevels.map((level) => (
+                <SelectItem key={level} value={level}>
+                  {level}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Age Requirement</Label>
+          <Select
+            value={filters.ageRestriction}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, ageRestriction: value }))}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ageRestrictions.map((age) => (
+                <SelectItem key={age} value={age}>
+                  {age}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Tags</Label>
+          <div className="flex gap-2 mt-1">
+            <Input
+              placeholder="Add tag..."
+              value={newTag}
+              onChange={(event) => setNewTag(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="flex-1"
+            />
+            <Button onClick={handleAddTag} size="sm">
+              Add
+            </Button>
+          </div>
+          {filters.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {filters.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => handleRemoveTag(tag)}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <Button variant="outline" onClick={handleReset} className="flex-1">
+            Reset
+          </Button>
+          <Button onClick={handleApply} className="flex-1">
+            Apply Filters
+          </Button>
+        </div>
+      </div>
+    </DiscoverSheet>
   );
 }
 

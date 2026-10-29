@@ -29,6 +29,7 @@ const Voting = lazy(() => import('@/pages/voting'));
 const VotingCreate = lazy(() => import('@/pages/voting-create'));
 const VotingBallot = lazy(() => import('@/pages/voting-ballot'));
 const Household = lazy(() => import('@/pages/household'));
+const Directory = lazy(() => import('@/pages/directory'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Chat = lazy(() => import('@/pages/chat'));
 const Reviews = lazy(() => import('@/pages/reviews'));
@@ -136,6 +137,7 @@ function AppRoutes() {
           <Route path=":voteId" element={<VotingBallot />} />
         </Route>
         <Route path="household" element={<Household />} />
+        <Route path="directory" element={<Directory />} />
         <Route path="activities" element={<Navigate to="/app/gatherings" replace />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="moderation" element={<Moderation />} />

@@ -27,6 +27,7 @@ export type MainTabParamList = {
   /** Hidden. Chat is not a primary tab; gathering chat is a stack screen. */
   Chat: undefined;
   Profile: undefined;
+  // Directory is not a tab. Open it from Profile → Directory.
 };
 
 export type MainStackParamList = {
@@ -113,6 +114,8 @@ export type MainStackParamList = {
   PhotoGallery: { activityId: number | string };
   /** Host's Require approval deck. */
   Requests: { activityId: number | string };
+  /** Church directory. Pushed from Profile. Not a bottom tab. */
+  Directory: undefined;
   MemberProfile: { userId: number | string };
   DirectChat: { conversationId: number | string; name?: string };
   Messaging: undefined;

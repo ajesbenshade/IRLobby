@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
 import { CONNECTIONS_COPY } from '@shared/connections';
+import { DIRECTORY_COPY, directoryListingNudge } from '@shared/directory';
 import { API_ROUTES } from '@shared/schema';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
@@ -259,6 +260,12 @@ export const FoyerProfileCard = () => {
 
       <View style={styles.rowsCard}>
         <NavRow
+          icon="card-account-details-outline"
+          label={DIRECTORY_COPY.title}
+          helper={DIRECTORY_COPY.rowHelper}
+          onPress={() => navigation.navigate('Directory')}
+        />
+        <NavRow
           icon="account-multiple-outline"
           label={PROFILE_COPY.myFamilyRow}
           count={FAMILY_COPY.membersCount(familyCount)}
@@ -356,6 +363,7 @@ export const FoyerProfileCard = () => {
         })}
       </View>
       <Text style={styles.helper}>{PROFILE_COPY.visibilityFooter}</Text>
+      <Text style={styles.helper}>{directoryListingNudge(draft.visibility)}</Text>
 
       <SectionLabel>{PROFILE_COPY.contactInfo}</SectionLabel>
       <View style={styles.rowsCard}>
@@ -603,6 +611,7 @@ const Label = ({ text }: { text: string }) => <Text style={styles.label}>{text}<
 const NavRow = ({
   icon,
   label,
+  helper,
   count,
   onPress,
   last,
@@ -611,18 +620,22 @@ const NavRow = ({
   danger?: boolean;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   label: string;
+  helper?: string;
   count?: string;
   onPress: () => void;
   last?: boolean;
 }) => (
   <Pressable
     accessibilityRole="button"
-    accessibilityLabel={count ? `${label}, ${count}` : label}
+    accessibilityLabel={[label, helper, count].filter(Boolean).join(', ')}
     onPress={onPress}
     style={[styles.navRow, last ? null : styles.rowDivider]}
   >
     <MaterialCommunityIcons name={icon} size={22} color={danger ? '#8a0a1f' : appColors.primary} />
-    <Text style={[styles.navLabel, danger ? { color: '#8a0a1f' } : null]}>{label}</Text>
+    <View style={styles.navCopy}>
+      <Text style={[styles.navLabel, danger ? { color: '#8a0a1f' } : null]}>{label}</Text>
+      {helper ? <Text style={styles.navHelper}>{helper}</Text> : null}
+    </View>
     {count ? <Text style={styles.navCount}>{count}</Text> : null}
     <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.mutedInk} />
   </Pressable>
@@ -720,7 +733,9 @@ const styles = StyleSheet.create({
   rowsCard: { backgroundColor: appColors.white, borderRadius: radii.list, overflow: 'hidden' },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: appColors.line },
   navRow: { minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  navLabel: { flex: 1, flexShrink: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 16 },
+  navCopy: { flex: 1, flexShrink: 1, gap: 2 },
+  navLabel: { flexShrink: 1, fontFamily: appTypography.bodySemibold, color: appColors.ink, fontSize: 16 },
+  navHelper: { fontFamily: appTypography.bodyRegular, fontSize: 13, color: appColors.mutedInk },
   navCount: { flexShrink: 1, color: appColors.mutedInk, textAlign: 'right', fontFamily: appTypography.bodyRegular },
   serifHeading: { fontFamily: appTypography.heading, fontSize: 20, lineHeight: 28, color: appColors.ink },
   radioRow: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },

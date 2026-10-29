@@ -27,8 +27,9 @@ export const FEATURES: {
   /** Require approval: host toggles, request-to-join, Requests deck. */
   requireApproval: readSwitch(process.env.EXPO_PUBLIC_FOYER_REQUIRE_APPROVAL, 'auto'),
   /**
-   * Birthday sharing: only the account holder's own `Show my birthday` (adult opt-in, month and day, default off), `Birthdays this week`
-   * and wishes. Family members' birthdays are never shareable and have no switch. OFF until the remaining questions are answered. Never `auto`: the UI stays hidden even if the backend has the endpoints.
+   * Account-holder birthday sharing: `Show my birthday` (adult opt-in, month and day, default off), `Birthdays this week`,
+   * and wishes. Household rows have no per-child switch. The church Directory uses its own parent opt-in and does not read this flag.
+   * OFF until the remaining questions are answered. Never `auto`: the UI stays hidden even if the backend has the endpoints.
    * `on` additionally needs the endpoint or field to exist (see `@foyer/birthdays`).
    */
   birthdays: readSwitch(process.env.EXPO_PUBLIC_FOYER_BIRTHDAYS, 'off') === 'on' ? 'on' : 'off',

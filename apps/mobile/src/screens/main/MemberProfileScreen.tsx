@@ -10,6 +10,7 @@ import { ActionSheet, BlockSheet, ConfirmSheet, ReportSheet } from '@components/
 import { Avatar, InlineError, PillButton, SectionLabel, Toast } from '@components/foyer/ui';
 import { Image, View } from '@components/RNCompat';
 import { COMMON_COPY, FRIEND_COPY, MEMBER_COPY } from '@constants/foyerCopy';
+import { birthdayLong, validMonthDay } from '@shared/directory';
 import { contactKind, initialsFor, memberAddressText, profileView } from '@foyer/friends';
 import type { MainStackParamList } from '@navigation/types';
 import {
@@ -152,6 +153,9 @@ export const MemberProfileScreen = () => {
           <Text accessibilityRole="header" style={styles.name}>
             {name}
           </Text>
+          {profile.birthday && validMonthDay(profile.birthday.month, profile.birthday.day) ? (
+            <Text style={styles.helper}>Birthday {birthdayLong(profile.birthday.month, profile.birthday.day)}</Text>
+          ) : null}
         </View>
 
         {profile.visible && profile.bio ? (

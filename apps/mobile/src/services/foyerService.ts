@@ -313,6 +313,8 @@ export type MemberProfile = {
   phone?: string;
   /** Present only when the viewer may see it and the owner opted in. Never on directory list rows. */
   address?: string | null;
+  /** Adult opt-in month and day. Absent when hidden. Never a year. */
+  birthday?: { month: number; day: number } | null;
 };
 
 export type FriendRequestItem = {

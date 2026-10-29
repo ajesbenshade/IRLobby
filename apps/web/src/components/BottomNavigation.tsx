@@ -24,6 +24,8 @@ export function currentNavId(path: string) {
   }
   if (
     path.startsWith('/app/profile') ||
+    path.startsWith('/app/directory') ||
+    path.startsWith('/app/household') ||
     path.startsWith('/app/settings') ||
     path.startsWith('/app/reviews') ||
     path.startsWith('/app/help-support')

@@ -64,6 +64,7 @@ jest.mock('@react-navigation/bottom-tabs', () => {
 jest.mock('@screens/main/AccountScreen', () => ({ AccountScreen: () => null }));
 jest.mock('@screens/main/ChatScreen', () => ({ ChatScreen: () => null }));
 jest.mock('@screens/main/CreateActivityScreen', () => ({ CreateActivityScreen: () => null, EditActivityScreen: () => null }));
+jest.mock('@screens/main/DirectoryScreen', () => ({ DirectoryScreen: () => null }));
 jest.mock('@screens/main/DirectChatScreen', () => ({ DirectChatScreen: () => null }));
 jest.mock('@screens/main/DiscoverScreen', () => ({ DiscoverScreen: () => null }));
 jest.mock('@screens/main/FoyerFriendsScreen', () => ({ FoyerFriendsScreen: () => null }));

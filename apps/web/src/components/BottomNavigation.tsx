@@ -1,15 +1,17 @@
 import { Button } from '@/components/ui/button';
-import { Search, Calendar, User, Triangle } from 'lucide-react';
+import { Search, Calendar, User, Triangle, SquareCheck } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const navItems = [
   { id: 'discovery', route: '/app/discovery', label: 'Discover', icon: Search },
   { id: 'gatherings', route: '/app/gatherings', label: 'Gatherings', icon: Calendar },
   { id: 'prayer', route: '/app/prayer', label: 'Prayer', icon: Triangle },
+  { id: 'voting', route: '/app/voting', label: 'Voting', icon: SquareCheck },
   { id: 'profile', route: '/app/profile', label: 'Profile', icon: User },
 ];
 
 export function currentNavId(path: string) {
+  if (path.startsWith('/app/voting')) return 'voting';
   if (path.startsWith('/app/prayer') || path.startsWith('/app/circles')) return 'prayer';
   // Host/create stays a route, entered from Gatherings +. It is not its own primary item.
   if (

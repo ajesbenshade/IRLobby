@@ -19,7 +19,8 @@ export default function AppShell({ children }: AppShellProps) {
   const hideBottomNav =
     location.pathname.includes('/chat') ||
     location.pathname.startsWith('/app/prayer/') ||
-    /^\/app\/circles\/.+/.test(location.pathname);
+    /^\/app\/circles\/.+/.test(location.pathname) ||
+    location.pathname.startsWith('/app/voting/');
 
   return (
     <div className="min-h-[100dvh] w-full bg-background">

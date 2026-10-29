@@ -25,6 +25,9 @@ const PrayerRequests = lazy(() => import('@/pages/prayer-requests'));
 const PrayerCreate = lazy(() => import('@/pages/prayer-create'));
 const PrayerDetail = lazy(() => import('@/pages/prayer-detail'));
 const PrayerChat = lazy(() => import('@/pages/prayer-chat'));
+const Voting = lazy(() => import('@/pages/voting'));
+const VotingCreate = lazy(() => import('@/pages/voting-create'));
+const VotingBallot = lazy(() => import('@/pages/voting-ballot'));
 const Household = lazy(() => import('@/pages/household'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Chat = lazy(() => import('@/pages/chat'));
@@ -127,6 +130,11 @@ function AppRoutes() {
         <Route path="prayer/new" element={<PrayerCreate />} />
         <Route path="prayer/:prayerId/chat" element={<PrayerChat />} />
         <Route path="prayer/:prayerId" element={<PrayerDetail />} />
+        <Route path="voting" element={<Voting />}>
+          <Route index element={null} />
+          <Route path="new" element={<VotingCreate />} />
+          <Route path=":voteId" element={<VotingBallot />} />
+        </Route>
         <Route path="household" element={<Household />} />
         <Route path="activities" element={<Navigate to="/app/gatherings" replace />} />
         <Route path="notifications" element={<Notifications />} />

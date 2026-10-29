@@ -93,14 +93,17 @@ beforeEach(() => {
 });
 
 describe('primary tabs', () => {
-  it('is Discover, Gatherings, Prayer, and Profile — Host is not a tab', () => {
+  it('is Discover, Gatherings, Prayer, Voting, and Profile — Host and Directory are not tabs', () => {
     mockUser = { id: 1, eventLimitExempt: false, nextHostAvailableAt: new Date(Date.now() + 86400000).toISOString() };
     render(<MainNavigator />);
     expect(screen.getByText('Discover')).toBeTruthy();
     expect(screen.getByText('Gatherings')).toBeTruthy();
     expect(screen.getByText('Prayer')).toBeTruthy();
+    expect(screen.getByText('Voting')).toBeTruthy();
     expect(screen.getByText('Profile')).toBeTruthy();
     expect(screen.queryByText('Host')).toBeNull();
+    expect(screen.queryByText('Directory')).toBeNull();
+    expect(screen.queryByText('Circles')).toBeNull();
     expect(screen.queryByTestId('tab-Create')).toBeNull();
     expect(screen.queryByText('One gathering a week')).toBeNull();
   });

@@ -11,6 +11,7 @@ import {
   Bell,
   Calendar,
   Compass,
+  SquareCheck,
   Triangle,
   HelpCircle,
   Plus,
@@ -31,6 +32,7 @@ const NAV = [
   { to: '/app/discovery', label: 'Discover', icon: Compass },
   { to: '/app/gatherings', label: 'Gatherings', icon: Calendar },
   { to: '/app/prayer', label: 'Prayer', icon: Triangle },
+  { to: '/app/voting', label: 'Voting', icon: SquareCheck },
   { to: '/app/circles', label: 'Circles', icon: Users },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
 ];

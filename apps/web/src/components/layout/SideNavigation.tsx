@@ -9,8 +9,9 @@ const linkClass = (active: boolean) =>
       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
   }`;
 
-// Desktop/tablet navigation (md+). Same four primary destinations as the phone
+// Desktop/tablet navigation (md+). Same five primary destinations as the phone
 // tab bar; Notifications stays a header icon, not a sidebar peer. Host is not a row.
+// Directory lives under Profile and is not a tab.
 export default function SideNavigation() {
   const { pathname } = useLocation();
   const current = currentNavId(pathname);

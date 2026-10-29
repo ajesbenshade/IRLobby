@@ -30,6 +30,8 @@ type AppScrollViewProps = PropsWithChildren<{
    * height is added here. Tab screens are always headerless and need no flag.
    */
   headerless?: boolean;
+  /** Direct-child indexes that stay pinned while the rest of the screen scrolls. */
+  stickyHeaderIndices?: number[];
 }>;
 
 type AppScreenContainerProps = PropsWithChildren<{
@@ -86,7 +88,14 @@ type DetailRowProps = {
   testID?: string;
 };
 
-export const AppScrollView = ({ children, contentContainerStyle, refreshControl, scrollRef, headerless = false }: AppScrollViewProps) => {
+export const AppScrollView = ({
+  children,
+  contentContainerStyle,
+  refreshControl,
+  scrollRef,
+  headerless = false,
+  stickyHeaderIndices,
+}: AppScrollViewProps) => {
   // Only defined inside the tab navigator; stack screens pushed above the tabs have no bar to clear.
   const tabBottomPadding = useTabScreenBottomPadding();
   const insets = useSafeInsets();
@@ -99,6 +108,7 @@ export const AppScrollView = ({ children, contentContainerStyle, refreshControl,
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl as ScrollViewProps['refreshControl']}
+        stickyHeaderIndices={stickyHeaderIndices}
         contentContainerStyle={[
           styles.scrollContent,
           tabBottomPadding != null ? { paddingBottom: tabBottomPadding } : null,

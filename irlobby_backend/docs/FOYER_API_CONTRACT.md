@@ -496,7 +496,7 @@ Rules:
 
 `GET /api/directory/` list results never include a mailing address. A list row stays avatar, first name, and last initial: no `mailing_address`, `mailing_street`, `mailing_street2`, `mailing_city`, `mailing_state`, `mailing_postal`, or `show_mailing_address`. This change does not add directory list rows. The same omission applies to friend lists, attendee lists, and every other list.
 
-Database: `users.User` mailing fields, migration `users/0017_user_mailing_address`.
+Database: `users.User` mailing fields, migration `users/0018_user_mailing_address` (depends on `0016_user_show_birthday`; does not depend on the directory `0017`).
 
 ## Friends
 

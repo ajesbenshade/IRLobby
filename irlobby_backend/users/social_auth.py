@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from datetime import date
 
 import jwt
 import requests
@@ -29,6 +30,60 @@ _USERNAME_SANITIZER = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 class SocialAuthConflict(ValueError):
     pass
+
+
+class SocialSignupRejected(Exception):
+    """New OAuth account failed the same 18+ / voting-member checks as email signup."""
+
+    def __init__(self, errors):
+        self.errors = errors
+        super().__init__(str(errors))
+
+
+def _request_value(data, *names):
+    for name in names:
+        if name in data:
+            return data.get(name)
+    return None
+
+
+def voting_member_birth_date(data):
+    """Birth date for a new account, or raise SocialSignupRejected.
+
+    Missing attestation, a missing birth date, and an under-18 birth date use the
+    same messages as POST /api/users/register/. Existing accounts do not call this.
+    """
+    from django.utils.dateparse import parse_date
+
+    from activities.household_rules import ACCOUNT_AGE_ERROR, account_age_error
+    from users.serializers import VOTING_MEMBER_ATTESTATION_ERROR
+
+    errors = {}
+    if not _truthy(_request_value(data, "voting_member_attested", "votingMemberAttested")):
+        errors["voting_member_attested"] = [VOTING_MEMBER_ATTESTATION_ERROR]
+
+    raw = _request_value(data, "date_of_birth", "birthDate", "birth_date")
+    dob = None
+    if isinstance(raw, date):
+        dob = raw
+    elif isinstance(raw, str) and raw.strip():
+        dob = parse_date(raw.strip())
+        if dob is None:
+            errors["date_of_birth"] = [
+                "Date has wrong format. Use one of these formats instead: YYYY-MM-DD."
+            ]
+    else:
+        errors["date_of_birth"] = [ACCOUNT_AGE_ERROR]
+
+    if dob is not None and "date_of_birth" not in errors:
+        age_error = account_age_error(dob)
+        if age_error:
+            errors["date_of_birth"] = [age_error]
+            dob = None
+
+    if errors:
+        raise SocialSignupRejected(errors)
+    return dob
 
 
 def _truthy(value):
@@ -214,6 +269,8 @@ def resolve_or_create_social_user(
     first_name="",
     last_name="",
     legal=None,
+    require_voting_member=False,
+    signup_data=None,
 ):
     normalized_email = normalize_email(email)
     identity = (
@@ -246,12 +303,17 @@ def resolve_or_create_social_user(
                 resolved_email.split("@", 1)[0],
                 f"{provider}_{provider_user_id}",
             )
+            create_kwargs = {}
+            if require_voting_member:
+                create_kwargs["date_of_birth"] = voting_member_birth_date(signup_data or {})
+                create_kwargs["voting_member_attested_at"] = timezone.now()
             user = User.objects.create_user(
                 username=resolved_username,
                 email=resolved_email,
                 first_name=first_name or "",
                 last_name=last_name or "",
                 password=None,
+                **create_kwargs,
             )
             user.set_unusable_password()
             user.save(update_fields=["password"])

@@ -418,7 +418,13 @@ class GatheringChatSurvivalTests(DeletionBase):
 @override_settings(**APPLE_SETTINGS)
 class AppleSignInTests(DeletionBase):
     def apple_login(self, **extra):
-        body = {"identity_token": "tok", "email": "apple@example.com", **extra}
+        body = {
+            "identity_token": "tok",
+            "email": "apple@example.com",
+            "date_of_birth": "1990-06-15",
+            "voting_member_attested": True,
+            **extra,
+        }
         with patch("users.oauth_views.verify_apple_identity_token") as verify:
             verify.return_value = {"sub": "apple-sub-1", "email": "apple@example.com"}
             return self.client.post(reverse("apple_mobile_login"), body, format="json")

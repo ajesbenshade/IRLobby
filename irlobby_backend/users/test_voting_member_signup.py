@@ -3,13 +3,18 @@
 Legacy 13–17 accounts are not migrated or deleted. New ones cannot be created.
 """
 
+from unittest.mock import patch
+
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory, APITestCase
 
 from activities.household_rules import ACCOUNT_AGE_ERROR
 from activities.test_foyer import _safe_birthdate
+from users.apple_auth import apple_sign_in
+from users.google_auth import google_sign_in
 from users.models import User
 from users.serializers import VOTING_MEMBER_ATTESTATION_ERROR
 
@@ -199,3 +204,158 @@ class HouseholdAdultRefusalTests(APITestCase):
         self.assertEqual(aged_up.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(aged_up.data["date_of_birth"], HOUSEHOLD_ADULT_ERROR)
         self.assertEqual(self.parent.household_dependents.count(), 1)
+
+
+def _oauth_adult(**extra):
+    body = {
+        "date_of_birth": _safe_birthdate(28).isoformat(),
+        "voting_member_attested": True,
+    }
+    body.update(extra)
+    return body
+
+
+class OAuthVotingMemberTests(APITestCase):
+    def test_google_and_apple_mobile_reject_a_new_account_without_the_gate(self):
+        cases = (
+            (
+                "google_mobile_login",
+                "users.oauth_views.verify_google_identity_token",
+                "id_token",
+                {
+                    "sub": "g-new",
+                    "email": "g-new@example.com",
+                    "email_verified": True,
+                },
+                {"GOOGLE_OAUTH_CLIENT_IDS": ["gid"]},
+            ),
+            (
+                "apple_mobile_login",
+                "users.oauth_views.verify_apple_identity_token",
+                "identity_token",
+                {
+                    "sub": "a-new",
+                },
+                {"APPLE_OAUTH_AUDIENCES": ["com.irlobby.app"]},
+            ),
+        )
+        for url_name, verify_path, token_key, claims, settings in cases:
+            with self.subTest(url_name=url_name):
+                with override_settings(**settings), patch(verify_path) as verify:
+                    verify.return_value = claims
+                    missing = self.client.post(
+                        reverse(url_name), {token_key: "a.b.c"}, format="json"
+                    )
+                    self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+                    self.assertEqual(
+                        missing.data["voting_member_attested"], [VOTING_MEMBER_ATTESTATION_ERROR]
+                    )
+                    self.assertEqual(missing.data["date_of_birth"], [ACCOUNT_AGE_ERROR])
+                    young = self.client.post(
+                        reverse(url_name),
+                        _oauth_adult(
+                            **{
+                                token_key: "a.b.c",
+                                "date_of_birth": _safe_birthdate(16).isoformat(),
+                            }
+                        ),
+                        format="json",
+                    )
+                    self.assertEqual(young.status_code, status.HTTP_400_BAD_REQUEST)
+                    self.assertEqual(young.data["date_of_birth"], [ACCOUNT_AGE_ERROR])
+                self.assertFalse(User.objects.filter(email="g-new@example.com").exists())
+                self.assertFalse(User.objects.filter(email__endswith="@apple.oauth.local").exists())
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["gid"])
+    @patch("users.oauth_views.verify_google_identity_token")
+    def test_google_mobile_create_stores_attestation(self, verify):
+        verify.return_value = {
+            "sub": "g-ok",
+            "email": "g-ok@example.com",
+            "email_verified": True,
+        }
+        before = timezone.now()
+        response = self.client.post(
+            reverse("google_mobile_login"),
+            {
+                "id_token": "a.b.c",
+                "birthDate": _safe_birthdate(19).isoformat(),
+                "votingMemberAttested": True,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        user = User.objects.get(email="g-ok@example.com")
+        self.assertEqual(user.date_of_birth, _safe_birthdate(19))
+        self.assertIsNotNone(user.voting_member_attested_at)
+        self.assertGreaterEqual(user.voting_member_attested_at, before)
+        self.assertTrue(response.data["created"])
+        again = self.client.post(
+            reverse("google_mobile_login"), {"id_token": "a.b.c"}, format="json"
+        )
+        self.assertEqual(again.status_code, status.HTTP_200_OK, again.data)
+        self.assertFalse(again.data["created"])
+
+    @override_settings(APPLE_OAUTH_AUDIENCES=["com.irlobby.app"])
+    @patch("users.oauth_views.verify_apple_identity_token")
+    def test_apple_mobile_create_stores_attestation(self, verify):
+        verify.return_value = {"sub": "a-ok", "email": "a-ok@example.com"}
+        response = self.client.post(
+            reverse("apple_mobile_login"),
+            _oauth_adult(identity_token="t"),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        user = User.objects.get(email="a-ok@example.com")
+        self.assertEqual(user.date_of_birth, _safe_birthdate(28))
+        self.assertIsNotNone(user.voting_member_attested_at)
+
+    def test_web_sign_in_views_use_the_same_gate(self):
+        factory = APIRequestFactory()
+        google_claims = {
+            "sub": "web-g",
+            "email": "web-g@example.com",
+            "email_verified": True,
+            "given_name": "Web",
+            "family_name": "Google",
+        }
+        with (
+            override_settings(GOOGLE_CLIENT_IDS="web-client"),
+            patch("users.google_auth.verify_google_identity_token", return_value=google_claims),
+        ):
+            request = factory.post("/", {"identity_token": "t"}, format="json")
+            missing = google_sign_in(request)
+            self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(missing.data["date_of_birth"], [ACCOUNT_AGE_ERROR])
+            created = google_sign_in(
+                factory.post("/", _oauth_adult(identity_token="t"), format="json")
+            )
+            self.assertEqual(created.status_code, status.HTTP_200_OK, created.data)
+        user = User.objects.get(email="web-g@example.com")
+        self.assertIsNotNone(user.voting_member_attested_at)
+        self.assertEqual(user.date_of_birth, _safe_birthdate(28))
+
+        apple_claims = {"sub": "web-a", "email": "web-a@example.com"}
+        with (
+            override_settings(APPLE_CLIENT_ID="com.irlobby.web"),
+            patch("users.apple_auth.verify_apple_identity_token", return_value=apple_claims),
+        ):
+            young = apple_sign_in(
+                factory.post(
+                    "/",
+                    _oauth_adult(
+                        identity_token="t",
+                        date_of_birth=_safe_birthdate(15).isoformat(),
+                    ),
+                    format="json",
+                )
+            )
+            self.assertEqual(young.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(young.data["date_of_birth"], [ACCOUNT_AGE_ERROR])
+            self.assertFalse(User.objects.filter(email="web-a@example.com").exists())
+            created = apple_sign_in(
+                factory.post("/", _oauth_adult(identity_token="t"), format="json")
+            )
+            self.assertEqual(created.status_code, status.HTTP_200_OK, created.data)
+        apple_user = User.objects.get(email="web-a@example.com")
+        self.assertIsNotNone(apple_user.voting_member_attested_at)

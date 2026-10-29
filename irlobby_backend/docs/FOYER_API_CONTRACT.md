@@ -26,7 +26,9 @@ A missing birth date, or one that makes the person under 18, is **400** on regis
 
 Accounts are 18 and older. A 13–17 birth date cannot create an account. Rows that are already 13–17 are not migrated or deleted; those members can still update other profile fields. Sending their under-18 birth date again is rejected, and the stored date is left as it is. CoS/Aaron decide later whether to move those accounts onto a household or require them to age up.
 
-Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters). Apple and Google sign-in are unchanged: they still create an account without this checkbox or a birth date.
+Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters).
+
+Creating an account with Google or Apple uses the same two requirements. `POST /api/auth/google/mobile/`, `POST /api/auth/apple/mobile/`, and the web sign-in views (`google_sign_in`, `apple_sign_in`) reject a **new** account that is missing `voting_member_attested: true` or whose `date_of_birth` (aliases `birthDate`, `birth_date`) is missing or under 18. The 400 body uses the same keys and strings as register, and a created account stores `voting_member_attested_at`. Signing in to an account that already exists does not ask again.
 
 `GET/PATCH /api/users/profile/` (auth)
 
@@ -714,7 +716,7 @@ For member-hosted events (`host_kind` `person`, not on the public church calenda
 
 Old clients that send none of them keep working: nothing is stamped and the existing onboarding screen still collects acceptance (`PATCH /api/users/onboarding/`). An existing timestamp is never overwritten.
 
-`POST /api/auth/apple/mobile/` and `POST /api/auth/google/mobile/` accept the same four fields in the request body and stamp them on the signed-in account the same way (new or existing; once only).
+`POST /api/auth/apple/mobile/` and `POST /api/auth/google/mobile/` accept the same four fields in the request body and stamp them on the signed-in account the same way (new or existing; once only). A new Google or Apple account still has to send `date_of_birth` and `voting_member_attested: true` (see Profile and registration). An existing account can sign in without them.
 
 Setting `REQUIRE_TERMS_ON_REGISTER` (environment variable, default `false`): when `true`, register answers 400 without both acceptances:
 

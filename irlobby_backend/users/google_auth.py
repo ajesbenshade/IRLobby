@@ -5,6 +5,7 @@ import secrets
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from jwt import PyJWKClient
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -13,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import UserSerializer
+from .social_auth import SocialSignupRejected, voting_member_birth_date
 
 logger = logging.getLogger(__name__)
 
@@ -131,12 +133,13 @@ def _get_or_create_google_user(claims, request_data):
 
     full_name = request_data.get("full_name") or {}
     if isinstance(full_name, dict):
-        given_name = given_name or (
-            full_name.get("givenName") or full_name.get("given_name") or ""
-        ).strip()
-        family_name = family_name or (
-            full_name.get("familyName") or full_name.get("family_name") or ""
-        ).strip()
+        given_name = (
+            given_name or (full_name.get("givenName") or full_name.get("given_name") or "").strip()
+        )
+        family_name = (
+            family_name
+            or (full_name.get("familyName") or full_name.get("family_name") or "").strip()
+        )
 
     user = User.objects.filter(oauth_provider="google", oauth_id=google_sub).first()
     if user:
@@ -177,6 +180,8 @@ def _get_or_create_google_user(claims, request_data):
         avatar_url=(claims.get("picture") or "").strip(),
         oauth_provider="google",
         oauth_id=google_sub,
+        date_of_birth=voting_member_birth_date(request_data),
+        voting_member_attested_at=timezone.now(),
     )
     user.set_unusable_password()
     user.save()
@@ -221,6 +226,8 @@ def google_sign_in(request):
 
         try:
             user, created = _get_or_create_google_user(claims, request.data)
+        except SocialSignupRejected as exc:
+            return Response(exc.errors, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
 

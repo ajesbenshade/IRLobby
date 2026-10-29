@@ -28,6 +28,9 @@ import { CirclesScreen } from '@screens/main/circles/CirclesScreen';
 import { CreateCircleScreen } from '@screens/main/circles/CreateCircleScreen';
 import { InvitePeopleScreen } from '@screens/main/circles/InvitePeopleScreen';
 import { ManageCircleScreen } from '@screens/main/circles/ManageCircleScreen';
+import { CreateVoteScreen } from '@screens/main/CreateVoteScreen';
+import { VoteBallotScreen } from '@screens/main/VoteBallotScreen';
+import { VotingScreen } from '@screens/main/VotingScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
 import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
@@ -95,6 +98,7 @@ const TabIcon = ({ color, size, focused, routeName }: TabIconProps) => {
     Discover: { active: 'compass', inactive: 'compass-outline' },
     Activity: { active: 'calendar-month', inactive: 'calendar-month-outline' },
     Prayer: { active: 'triangle-outline', inactive: 'triangle-outline' },
+    Voting: { active: 'ballot', inactive: 'ballot-outline' },
     Chat: { active: 'message-text', inactive: 'message-text-outline' },
     Profile: { active: 'account-circle', inactive: 'account-circle-outline' },
   };
@@ -180,6 +184,7 @@ const MainTabs = () => {
     <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Prayer" component={PrayerRequestsScreen} options={{ title: 'Prayer' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Voting" component={VotingScreen} options={{ title: 'Voting' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen
       name="Chat"
       component={ChatScreen}
@@ -320,6 +325,8 @@ export const MainNavigator = () => (
     <Stack.Screen name="CircleManage" component={ManageCircleScreen} options={{ headerShown: false, title: 'Manage circle' }} />
     <Stack.Screen name="PrayerDetail" component={PrayerDetailScreen} options={{ headerShown: false, title: 'Prayer' }} />
     <Stack.Screen name="PrayerChat" component={PrayerChatScreen} options={{ headerShown: false, title: 'Prayer chat' }} />
+    <Stack.Screen name="VotingCreate" component={CreateVoteScreen} options={{ headerShown: false, title: 'Create a vote' }} />
+    <Stack.Screen name="VotingDetail" component={VoteBallotScreen} options={{ headerShown: false, title: 'Voting' }} />
   </Stack.Navigator>
 );
 

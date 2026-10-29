@@ -53,6 +53,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
               Discover: 'discover',
               Activity: 'activity',
               Prayer: 'prayer',
+              Voting: 'voting',
               // Legacy matches chat and the matchmaking Pings feed: not linkable in Foyer mode.
               ...(isFoyerMode() ? {} : { Chat: 'chat' }),
               Profile: 'profile',
@@ -71,6 +72,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
           CircleInvite: 'circles/:circleId/invite',
           CircleManage: 'circles/:circleId/manage',
           CircleDetail: 'circles/:circleId',
+          VotingCreate: 'voting/new',
+          VotingDetail: 'voting/:voteId',
           ...(isTicketingUiEnabled(config.ticketingEnabled)
             ? {
                 BuyTicket: 'tickets/buy/:activityId',

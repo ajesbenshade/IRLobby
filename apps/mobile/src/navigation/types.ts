@@ -22,6 +22,8 @@ export type MainTabParamList = {
   Discover: undefined;
   Activity: undefined;
   Prayer: undefined;
+  /** Ballots for circles the member is in, and whole-church votes. Directory stays off the tab bar. */
+  Voting: undefined;
   /** Hidden. Chat is not a primary tab; gathering chat is a stack screen. */
   Chat: undefined;
   Profile: undefined;
@@ -105,6 +107,9 @@ export type MainStackParamList = {
   PrayerDetail: { prayerId: number | string };
   /** Shared prayer chat. Reuses gathering-chat chrome, labeled Prayer chat. */
   PrayerChat: { prayerId: number | string; title?: string };
+  /** Voting tab create form. Circle admins, or a church admin for the whole church. */
+  VotingCreate: undefined;
+  VotingDetail: { voteId: number | string };
   PhotoGallery: { activityId: number | string };
   /** Host's Require approval deck. */
   Requests: { activityId: number | string };

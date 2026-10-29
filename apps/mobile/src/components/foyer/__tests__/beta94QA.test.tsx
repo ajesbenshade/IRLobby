@@ -77,10 +77,13 @@ describe("M1: the member's own church under The Foyer", () => {
     expect(screen.queryByText('Franconia Mennonite Church')).toBeNull();
   });
 
-  it('Discover subtitle has no Franconia fallback, and Host-as uses the member church', () => {
+  it('Discover header is bare Discover with no church subtitle, and Host-as uses the member church', () => {
     const discover = src('screens/main/DiscoverScreen.tsx');
     expect(discover).not.toMatch(/\|\| 'Franconia Mennonite Church'/);
-    expect(discover).toMatch(/churchName\s*\?\s*`From \$\{churchName\}`\s*:\s*undefined/);
+    expect(discover).not.toMatch(/`From \$\{churchName\}`/);
+    expect(discover).not.toMatch(/Upcoming gatherings/);
+    expect(discover).toMatch(/PRAYER_COPY\.listTitle/);
+    expect(discover).toMatch(/: 'Discover'/);
     expect(src('screens/main/FoyerHostForm.tsx')).not.toMatch(/Host as Franconia/);
     expect(src('components/FoyerProfileCard.tsx')).not.toMatch(/every Franconia gathering/);
   });

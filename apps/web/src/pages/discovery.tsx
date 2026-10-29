@@ -38,6 +38,7 @@ export default function Discovery() {
   const [filters, setFilters] = useState<Partial<ActivityFilters>>({});
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('both');
   const [skippedPrayers, setSkippedPrayers] = useState<string[]>([]);
+  const [passedGatherings, setPassedGatherings] = useState<number[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [whosComing, setWhosComing] = useState<WhosComingSheetData | null>(null);
   const [goingActivity, setGoingActivity] = useState<(Activity & GatheringLike) | null>(null);
@@ -45,11 +46,10 @@ export default function Discovery() {
   const [rsvpPending, setRsvpPending] = useState(false);
   const navigate = useNavigate();
   const [pullDistance, setPullDistance] = useState(0);
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
-  const churchLine = `From ${user?.church?.name?.trim() || 'Franconia Mennonite Church'}`;
 
   const effectiveFilters = filters;
 
@@ -86,7 +86,7 @@ export default function Discovery() {
   );
   const showGatherings = feedFilter !== 'prayer';
   const showPrayers = feedFilter !== 'gatherings';
-  const discoverTitle = feedFilter === 'prayer' ? PRAYER_COPY.listTitle : 'Upcoming gatherings';
+  const discoverTitle = feedFilter === 'prayer' ? PRAYER_COPY.listTitle : 'Discover';
 
   const skipPrayer = (prayer: PrayerRequest) => {
     setSkippedPrayers((previous) => [...previous, String(prayer.id)]);
@@ -101,9 +101,16 @@ export default function Discovery() {
 
   const currentActivity = activities.find((activity) => activity.id === selectedActivityId);
 
+  const leaveDiscover = (activityId: number) => {
+    setPassedGatherings((previous) =>
+      previous.includes(activityId) ? previous : [...previous, activityId],
+    );
+  };
+
   const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
     setWhosComing(null);
     setGoingActivity(activity);
+    leaveDiscover(activity.id);
   };
 
   const goingDialog = goingActivity ? (
@@ -174,6 +181,11 @@ export default function Discovery() {
 
   const handleApplyFilters = (newFilters: ActivityFilters) => {
     setFilters(newFilters);
+  };
+
+  // Pass matches a left-swipe: the card leaves this visit and no RSVP is recorded.
+  const passGathering = (activityId: number) => {
+    leaveDiscover(activityId);
   };
 
   const noActivities = !isLoading && activities.length === 0;
@@ -321,10 +333,7 @@ export default function Discovery() {
     return (
       <div className="min-h-[100dvh] bg-background">
         <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
-            <p className="text-sm text-muted-foreground">{churchLine}</p>
-          </div>
+          <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
           {headerActions}
         </header>
         <div className="px-4 pt-3">
@@ -386,10 +395,7 @@ export default function Discovery() {
 
       {/* Header with refresh indicator */}
       <header className="bg-card shadow-sm px-4 py-3 flex items-center justify-between transition-transform duration-200">
-        <div>
-          <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
-          <p className="text-sm text-muted-foreground">{churchLine}</p>
-        </div>
+        <h2 className="font-display text-[28px] font-bold text-foreground">{discoverTitle}</h2>
         {headerActions}
       </header>
       <div className="px-4 pt-3">
@@ -398,71 +404,71 @@ export default function Discovery() {
 
       {showGatherings ? (
         <ul className="grid gap-3 p-4 lg:grid-cols-2">
-          {activities.map((activity) => {
-            const g = activity as Activity & GatheringLike;
-            const when = activity.time ? new Date(activity.time) : null;
-            const whenLabel =
-              when && !Number.isNaN(when.getTime())
-                ? when.toLocaleString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })
-                : 'Time to be announced';
-            return (
-              <li key={activity.id} className="rounded-2xl border bg-card p-4 shadow-sm">
-                <button
-                  type="button"
-                  className="block w-full text-left"
-                  onClick={() => {
-                    setSelectedActivityId(activity.id);
-                    setShowDetailsModal(true);
-                  }}
-                >
-                  <h3 className="font-display text-[20px] font-bold text-foreground">
-                    {activity.title}
-                  </h3>
-                  <p className="mt-2 flex items-center text-sm text-muted-foreground">
-                    <Clock className="mr-2 h-4 w-4 shrink-0" />
-                    {whenLabel}
-                  </p>
-                  {activity.location ? (
-                    <p className="mt-1 flex items-center text-sm text-muted-foreground">
-                      <MapPin className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate">{activity.location}</span>
-                    </p>
-                  ) : null}
-                  <p className="mt-1 flex items-center text-sm text-muted-foreground">
-                    <Users className="mr-2 h-4 w-4 shrink-0" />
-                    {g.going_count ?? activity.participant_count ?? 0} going
-                  </p>
-                </button>
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
+          {activities
+            .filter((activity) => !passedGatherings.includes(activity.id))
+            .map((activity) => {
+              const g = activity as Activity & GatheringLike;
+              const when = activity.time ? new Date(activity.time) : null;
+              const whenLabel =
+                when && !Number.isNaN(when.getTime())
+                  ? when.toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })
+                  : 'Time to be announced';
+              return (
+                <li key={activity.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <button
+                    type="button"
+                    className="block w-full text-left"
                     onClick={() => {
                       setSelectedActivityId(activity.id);
                       setShowDetailsModal(true);
                     }}
                   >
-                    Details
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => {
-                      setSelectedActivityId(activity.id);
-                      void handleJoin(activity);
-                    }}
-                  >
-                    RSVP
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
+                    <h3 className="font-display text-[20px] font-bold text-foreground">
+                      {activity.title}
+                    </h3>
+                    <p className="mt-2 flex items-center text-sm text-muted-foreground">
+                      <Clock className="mr-2 h-4 w-4 shrink-0" />
+                      {whenLabel}
+                    </p>
+                    {activity.location ? (
+                      <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">{activity.location}</span>
+                      </p>
+                    ) : null}
+                    <p className="mt-1 flex items-center text-sm text-muted-foreground">
+                      <Users className="mr-2 h-4 w-4 shrink-0" />
+                      {g.going_count ?? activity.participant_count ?? 0} going
+                    </p>
+                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      className="h-14 min-h-11 flex-1 rounded-full border border-[#c8beba] bg-white text-base font-semibold"
+                      onClick={() => passGathering(activity.id)}
+                    >
+                      Pass
+                    </button>
+                    <button
+                      type="button"
+                      className="h-14 min-h-11 flex-1 rounded-full bg-[#a2033f] text-base font-semibold text-white"
+                      onClick={() => {
+                        setSelectedActivityId(activity.id);
+                        void handleJoin(activity);
+                      }}
+                    >
+                      {"I'm coming"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
         </ul>
       ) : null}
       {prayerBlock}

@@ -28,9 +28,13 @@ const activity = {
   participant_count: 2,
 };
 
-test('authenticated user can load discovery and swipe an activity', async ({ page }) => {
-  let swipeRequestSeen = false;
+const other = {
+  ...activity,
+  id: 43,
+  title: 'Neighborhood Potluck',
+};
 
+test('authenticated user can load discovery', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('authToken', 'e2e-access-token');
     window.localStorage.setItem('userId', '1');
@@ -41,30 +45,67 @@ test('authenticated user can load discovery and swipe an activity', async ({ pag
   });
 
   await page.route('**/api/activities/**', async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({ json: [activity] });
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/whos-coming/') && method === 'GET') {
+      await route.fulfill({
+        json: {
+          me: { name: 'Test', eligible: true },
+          dependents: [{ id: 1, name: 'Caleb', age: 10, eligible: true }],
+        },
+      });
       return;
     }
-
+    if (url.includes('/rsvp/') && method === 'POST') {
+      await route.fulfill({ json: { ok: true } });
+      return;
+    }
+    if (method === 'GET') {
+      await route.fulfill({ json: [activity, other] });
+      return;
+    }
     await route.continue();
-  });
-
-  await page.route('**/api/swipes/42/swipe/', async (route) => {
-    swipeRequestSeen = true;
-    await route.fulfill({
-      status: 201,
-      json: { message: 'Swipe recorded successfully', matched: false },
-    });
   });
 
   await page.goto('/app/discovery');
 
-  await expect(page.getByRole('heading', { name: 'Upcoming gatherings', exact: true })).toBeVisible();
-  await expect(page.getByText('From Franconia Mennonite Church')).toBeVisible();
-  await expect(page.getByText(activity.title)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Upcoming gatherings' })).toHaveCount(0);
+  await expect(page.getByText('From Franconia Mennonite Church')).toHaveCount(0);
+  const card = page.getByRole('listitem').filter({ hasText: activity.title });
+  await expect(card.getByRole('heading', { name: activity.title, level: 3 })).toBeVisible();
+  const pass = card.getByRole('button', { name: 'Pass', exact: true });
+  const coming = card.getByRole('button', { name: "I'm coming", exact: true });
+  await expect(pass).toBeVisible();
+  await expect(coming).toBeVisible();
+  const passBox = await pass.boundingBox();
+  const comingBox = await coming.boundingBox();
+  expect(passBox).not.toBeNull();
+  expect(comingBox).not.toBeNull();
+  expect(Math.abs((passBox?.width ?? 0) - (comingBox?.width ?? 0))).toBeLessThan(8);
+  expect(passBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(comingBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await expect(page.getByRole('button', { name: 'Details', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'RSVP', exact: true })).toHaveCount(0);
 
-  await page.getByLabel(`I'm going to ${activity.title}`).click();
+  await card.getByRole('heading', { name: activity.title, level: 3 }).click();
+  const details = page.getByTestId('gathering-details-sheet');
+  await expect(details).toBeVisible();
+  await details.getByRole('button', { name: 'Close', exact: true }).first().click();
+  await expect(details).toHaveCount(0);
 
-  await expect.poll(() => swipeRequestSeen).toBe(true);
-  await expect(page.getByText('You cleared the deck')).toBeVisible();
+  const otherCard = page.getByRole('listitem').filter({ hasText: other.title });
+  await otherCard.getByRole('button', { name: 'Pass', exact: true }).click();
+  await expect(otherCard).toHaveCount(0);
+  await expect(card).toBeVisible();
+
+  await coming.click();
+  await expect(page.getByRole('heading', { name: "Who's coming?" })).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(card).toBeVisible();
+
+  await coming.click();
+  await page.getByRole('button', { name: /Confirm/ }).click();
+  await expect(page.getByRole('heading', { name: "You're going" })).toBeVisible();
+  await expect(card).toHaveCount(0);
 });

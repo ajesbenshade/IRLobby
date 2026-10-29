@@ -55,14 +55,10 @@ export interface ChatMessage {
   message: string;
   createdAt: string;
 }
+/** Discover sheet state. Only location, distance, and dates are sent to the list API. */
 export interface ActivityFilters {
-  category: string;
+  location: string;
   maxDistance: number[];
-  priceRange: number[];
   dateFrom: Date | null;
   dateTo: Date | null;
-  skillLevel: string;
-  ageRestriction: string;
-  tags: string[];
-  location: string;
 }

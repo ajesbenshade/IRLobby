@@ -131,10 +131,13 @@ test('phone discover bell survives a paginated inbox and filter stays on screen'
     document.documentElement.appendChild(style);
   });
 
+  const activityUrls: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/activities')) activityUrls.push(request.url());
+  });
+
   await page.goto('/app/discovery');
-  await expect(
-    page.getByRole('heading', { name: 'Upcoming gatherings', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Open notifications' }).click();
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
@@ -145,25 +148,39 @@ test('phone discover bell survives a paginated inbox and filter stays on screen'
   await expectPhoneSheet(page, 'discover-notifications-sheet');
 
   await page.getByRole('button', { name: 'Back to Discover' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Upcoming gatherings', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.getByTestId('discover-notifications-sheet')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Open discovery filters' }).click();
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Filter Activities' })).toBeVisible();
-  await expect(page.getByText('Category')).toBeVisible();
-  await expect(page.getByText('All Categories')).toBeVisible();
-  const apply = page.getByRole('button', { name: 'Apply Filters' });
+  await expect(page.getByRole('heading', { name: 'Filter gatherings' })).toBeVisible();
+  await expect(page.getByText('Narrow Discover to gatherings that fit you.')).toBeVisible();
+  await expect(page.getByPlaceholder('City or church / place')).toBeVisible();
+  await expect(page.getByText('Within: 25 miles')).toBeVisible();
+  await expect(page.getByText('Price Range')).toHaveCount(0);
+  await expect(page.getByText('Skill Level')).toHaveCount(0);
+  await expect(page.getByText('Nightlife')).toHaveCount(0);
+  await expect(page.getByText('Tags')).toHaveCount(0);
+  const apply = page.getByRole('button', { name: 'Apply', exact: true });
   await apply.scrollIntoViewIfNeeded();
   await expect(apply).toBeVisible();
   await expectPhoneSheet(page, 'discover-filter-sheet');
   await apply.click();
   await expect(page.getByTestId('discover-filter-sheet')).toHaveCount(0);
-  await expect(
-    page.getByRole('heading', { name: 'Upcoming gatherings', exact: true }),
-  ).toBeVisible();
+  await expect.poll(() => activityUrls.at(-1) ?? '').toContain('radius=25');
+  const applied = new URL(activityUrls.at(-1) ?? 'http://127.0.0.1/api/activities/');
+  for (const dropped of [
+    'price_min',
+    'price_max',
+    'skill_level',
+    'tags',
+    'age_restriction',
+    'category',
+    'audience',
+  ]) {
+    expect(applied.searchParams.get(dropped)).toBeNull();
+  }
+  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
 });
 

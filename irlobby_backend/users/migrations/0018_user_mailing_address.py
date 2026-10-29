@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("users", "0016_user_show_birthday"),
+        ("users", "0017_user_show_household_in_directory"),
     ]
 
     operations = [

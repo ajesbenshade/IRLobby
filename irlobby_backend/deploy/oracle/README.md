@@ -164,13 +164,13 @@ nc -vz your-domain.com 6379
 
 The command must fail, refuse, or time out. If it succeeds, close TCP `6379` in the cloud firewall or security list and on the host before you continue.
 
-For emergency host-side containment when TCP `6379` is already reachable publicly, first close the provider firewall rule. Then SSH to the host and run:
+For emergency containment when TCP `6379` is already reachable publicly, first attach a Hetzner Cloud Firewall that allows inbound TCP `22`, `80`, and `443` only. See [docs/REDIS_FIREWALL_LOCKDOWN.md](../../../docs/REDIS_FIREWALL_LOCKDOWN.md). Then, if SSH is available, run:
 
 ```bash
 sudo bash deploy/oracle/contain-redis-exposure.sh your-domain.com
 ```
 
-This script removes common UFW allow rules. It adds host and Docker ingress drops for Redis on the default public interface. It prints the remaining listeners and Docker port mappings. This is a containment step, not the full fix. Rotate `REDIS_PASSWORD`, remove the underlying public listener or published port, and redeploy afterward.
+This script removes common UFW allow rules. It adds host and Docker ingress drops for Redis on the default public interface. It prints the remaining listeners and Docker port mappings. This is firewall-only containment. HOLD `REDIS_PASSWORD` rotation and app-container redeploy until Aaron or CoS authorizes that step.
 
 To make the script perform the same network check, run it from a machine outside the VM or from a network path that does not bypass the provider firewall:
 

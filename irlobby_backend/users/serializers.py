@@ -112,6 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
             "show_phone",
             "dm_from_shared_events",
             "show_birthday",
+            "show_household_in_directory",
         )
         read_only_fields = ("id",)
 

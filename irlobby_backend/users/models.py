@@ -62,6 +62,10 @@ class User(AbstractUser):
     # Adults only: let people inside profile_visibility see your birthday (month and day,
     # never the year). Always False for children; household members have no such setting.
     show_birthday = models.BooleanField(default=False)
+    # Opt-in for the church Directory only. When this is on and profile_visibility is
+    # church, a Franconia adult may see each under-18 household child's first name and
+    # birthday month/day under this parent. Off by default. Does not change gatherings.
+    show_household_in_directory = models.BooleanField(default=False)
 
     class Meta:
         # Add unique constraint on email to prevent duplicates

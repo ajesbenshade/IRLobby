@@ -199,6 +199,14 @@ def normalize_phone(value: str) -> str:
     return f"+{digits}"
 
 
+def last_initial(user) -> str:
+    """One capital letter from the last name, or "" when there is no last name."""
+    last = (getattr(user, "last_name", None) or "").strip()
+    if not last:
+        return ""
+    return last[0].upper()
+
+
 def short_name(user) -> str:
     """First name plus last initial; never a username or email."""
     first = (user.first_name or "").strip()
@@ -215,8 +223,10 @@ def full_name(user) -> str:
 
 # ---- Birthdays -----------------------------------------------------------------------
 # Only an adult's own month and day, only when they switched it on, only to people the
-# profile visibility level lets in. The year is never shared. Children's birthdays are
-# never shared at all (household members have no such setting).
+# profile visibility level lets in. The year is never shared. Children's birthdays stay
+# off gatherings, profile cards, and friend birthday lists. The church Directory can
+# show month and day under a parent who opted in (show_household_in_directory).
+# Household members have no birthday flag of their own.
 
 BIRTHDAY_MINOR_ERROR = "Birthdays can only be shared by accounts 18 and older."
 BIRTHDAY_NO_DOB_ERROR = "Add your birth date before sharing your birthday."

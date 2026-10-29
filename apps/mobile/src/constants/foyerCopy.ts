@@ -96,6 +96,7 @@ export const MEMBER_COPY = {
   contact: 'CONTACT',
   phone: 'Phone',
   email: 'Email',
+  address: 'Address',
   reportOrBlock: 'Report or block',
   report: 'Report',
   block: 'Block',
@@ -108,9 +109,9 @@ export const MEMBER_COPY = {
   unavailable: 'This profile is not available.',
   loadError: "This profile couldn't be loaded.",
   requestError: "Your request couldn't be sent. Please try again.",
-  privacyExplanation: (name: string, contact: 'phone' | 'email' | 'both' | null) =>
+  privacyExplanation: (name: string, contact: ContactShare) =>
     `${name}'s privacy settings let you see their profile.${contactSentence(contact)}`,
-  friendExplanation: (name: string, contact: 'phone' | 'email' | 'both' | null) =>
+  friendExplanation: (name: string, contact: ContactShare) =>
     `You can see ${name}'s profile because you're friends.${contactSentence(contact)}`,
   blockTitle: (name: string) => `Block ${name}?`,
   blockLead: (name: string) => `If you block ${name}:`,
@@ -145,12 +146,34 @@ export const MEMBER_COPY = {
   thisGathering: 'this gathering',
 } as const;
 
-function contactSentence(contact: 'phone' | 'email' | 'both' | null) {
+export type ContactShare =
+  | 'phone'
+  | 'email'
+  | 'both'
+  | 'address'
+  | 'phone_address'
+  | 'email_address'
+  | 'all'
+  | null;
+
+function contactSentence(contact: ContactShare) {
   if (!contact) {
     return '';
   }
   const what =
-    contact === 'phone' ? 'phone number' : contact === 'email' ? 'email address' : 'phone number and email address';
+    contact === 'phone'
+      ? 'phone number'
+      : contact === 'email'
+        ? 'email address'
+        : contact === 'both'
+          ? 'phone number and email address'
+          : contact === 'address'
+            ? 'address'
+            : contact === 'phone_address'
+              ? 'phone number and address'
+              : contact === 'email_address'
+                ? 'email address and mailing address'
+                : 'phone number, email address, and mailing address';
   return ` They chose to share their ${what}.`;
 }
 
@@ -376,7 +399,18 @@ export const PROFILE_COPY = {
   visibility: 'VISIBILITY',
   visibilityHeading: 'Who can see my profile',
   visibilityFooter:
-    'Your location and family are never shown to anyone. Email and phone appear only if you turn them on.',
+    'Your location and family are never shown to anyone. Email, phone, and mailing address appear only if you turn them on.',
+  mailingLabel: 'Mailing address (optional)',
+  mailingStreet: 'Street',
+  mailingStreet2: 'Apt / suite',
+  mailingCity: 'City',
+  mailingState: 'State',
+  mailingPostal: 'ZIP',
+  mailingHelper: 'Only people allowed by the visibility setting above can see this. Hidden by default.',
+  showChildren: 'Show my children in the Directory',
+  showChildrenHelper:
+    "People in our church can see each child's first name and birthday (month and day) in the Directory so they can send birthday cards. Never the year.",
+  showChildrenOnlyMe: 'Set Who can see my profile to People in my church to list your children.',
   defaultTag: 'Default',
   contactInfo: 'CONTACT INFO',
   email: 'Email',

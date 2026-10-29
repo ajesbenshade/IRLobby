@@ -77,6 +77,13 @@ export interface AuthUser {
   phone?: string | null;
   showEmail?: boolean;
   showPhone?: boolean;
+  mailingStreet?: string;
+  mailingStreet2?: string;
+  mailingCity?: string;
+  mailingState?: string;
+  mailingPostal?: string;
+  showMailingAddress?: boolean;
+  showHouseholdInDirectory?: boolean;
   dmFromSharedEvents?: boolean;
   /** Own `Show my birthday` (adult opt-in). Undefined when the profile payload does not carry `show_birthday`. */
   showBirthday?: boolean;

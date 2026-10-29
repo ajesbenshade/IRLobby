@@ -236,6 +236,25 @@ const normalizeUser = (
     phone: typeof userRecord.phone === 'string' ? userRecord.phone : null,
     showEmail: Boolean(userRecord.showEmail ?? userRecord.show_email),
     showPhone: Boolean(userRecord.showPhone ?? userRecord.show_phone),
+    mailingStreet: typeof (userRecord.mailingStreet ?? userRecord.mailing_street) === 'string'
+      ? String(userRecord.mailingStreet ?? userRecord.mailing_street)
+      : '',
+    mailingStreet2: typeof (userRecord.mailingStreet2 ?? userRecord.mailing_street2) === 'string'
+      ? String(userRecord.mailingStreet2 ?? userRecord.mailing_street2)
+      : '',
+    mailingCity: typeof (userRecord.mailingCity ?? userRecord.mailing_city) === 'string'
+      ? String(userRecord.mailingCity ?? userRecord.mailing_city)
+      : '',
+    mailingState: typeof (userRecord.mailingState ?? userRecord.mailing_state) === 'string'
+      ? String(userRecord.mailingState ?? userRecord.mailing_state)
+      : '',
+    mailingPostal: typeof (userRecord.mailingPostal ?? userRecord.mailing_postal) === 'string'
+      ? String(userRecord.mailingPostal ?? userRecord.mailing_postal)
+      : '',
+    showMailingAddress: Boolean(userRecord.showMailingAddress ?? userRecord.show_mailing_address),
+    showHouseholdInDirectory: Boolean(
+      userRecord.showHouseholdInDirectory ?? userRecord.show_household_in_directory,
+    ),
     dmFromSharedEvents: Boolean(userRecord.dmFromSharedEvents ?? userRecord.dm_from_shared_events),
     ...(typeof (userRecord.showBirthday ?? userRecord.show_birthday) === 'boolean'
       ? { showBirthday: (userRecord.showBirthday ?? userRecord.show_birthday) as boolean }

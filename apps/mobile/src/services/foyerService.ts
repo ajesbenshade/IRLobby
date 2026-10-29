@@ -311,6 +311,8 @@ export type MemberProfile = {
   visible: boolean;
   email?: string;
   phone?: string;
+  /** Present only when the viewer may see it and the owner opted in. Never on directory list rows. */
+  address?: string | null;
 };
 
 export type FriendRequestItem = {

@@ -23,6 +23,13 @@ const draft: ProfileDraft = {
   showEmail: false,
   showPhone: false,
   dmFromSharedEvents: false,
+  mailingStreet: '',
+  mailingStreet2: '',
+  mailingCity: '',
+  mailingState: '',
+  mailingPostal: '',
+  showMailingAddress: false,
+  showHouseholdInDirectory: false,
 };
 
 describe('profile visibility', () => {
@@ -76,6 +83,37 @@ describe('profile payload', () => {
     expect(buildProfilePatch({ ...draft, dmFromSharedEvents: true }, { isMinor: true })).not.toHaveProperty(
       'dm_from_shared_events',
     );
+  });
+  it('sends a valid mailing address and keeps Show off until it is complete', () => {
+    const patch = buildProfilePatch(
+      {
+        ...draft,
+        mailingStreet: '12 Main St',
+        mailingStreet2: 'Apt 2',
+        mailingCity: 'Telford',
+        mailingState: 'pa',
+        mailingPostal: '18969',
+        showMailingAddress: true,
+        visibility: 'church',
+        showHouseholdInDirectory: true,
+      },
+      { isMinor: false },
+    );
+    expect(patch).toMatchObject({
+      mailing_street: '12 Main St',
+      mailing_street2: 'Apt 2',
+      mailing_city: 'Telford',
+      mailing_state: 'PA',
+      mailing_postal: '18969',
+      show_mailing_address: true,
+      show_household_in_directory: true,
+    });
+    const hidden = buildProfilePatch(
+      { ...draft, visibility: 'only_me', showHouseholdInDirectory: true, showMailingAddress: true },
+      { isMinor: false },
+    );
+    expect(hidden.show_mailing_address).toBe(false);
+    expect(hidden.show_household_in_directory).toBe(false);
   });
   it('Save is enabled only after a change', () => {
     expect(isDraftDirty(draft, draft)).toBe(false);

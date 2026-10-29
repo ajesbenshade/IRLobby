@@ -10,7 +10,7 @@ import { ActionSheet, BlockSheet, ConfirmSheet, ReportSheet } from '@components/
 import { Avatar, InlineError, PillButton, SectionLabel, Toast } from '@components/foyer/ui';
 import { Image, View } from '@components/RNCompat';
 import { COMMON_COPY, FRIEND_COPY, MEMBER_COPY } from '@constants/foyerCopy';
-import { contactKind, initialsFor, profileView } from '@foyer/friends';
+import { contactKind, initialsFor, memberAddressText, profileView } from '@foyer/friends';
 import type { MainStackParamList } from '@navigation/types';
 import {
   acceptFriendRequest,
@@ -82,7 +82,8 @@ export const MemberProfileScreen = () => {
   };
 
   const name = profile?.first_name ?? '';
-  const kind = profile ? contactKind(profile) : null;
+  const address = profile ? memberAddressText(profile) : null;
+  const kind = profile ? contactKind({ ...profile, address }) : null;
 
   const header = (
     <View style={styles.topRow}>
@@ -176,6 +177,12 @@ export const MemberProfileScreen = () => {
                 <View style={styles.contactRow}>
                   <Text style={styles.contactLabel}>{MEMBER_COPY.email}</Text>
                   <Text style={styles.contactValue}>{profile.email}</Text>
+                </View>
+              ) : null}
+              {address ? (
+                <View style={styles.contactRow}>
+                  <Text style={styles.contactLabel}>{MEMBER_COPY.address}</Text>
+                  <Text style={styles.contactValue}>{address}</Text>
                 </View>
               ) : null}
             </View>

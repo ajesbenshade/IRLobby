@@ -1,3 +1,4 @@
+import type { ContactShare } from '@constants/foyerCopy';
 import type { FriendRequestItem, Friendship, MemberProfile } from '@services/foyerService';
 
 export const lastInitial = (name: string | null | undefined) => {
@@ -55,11 +56,56 @@ export const profileView = (profile: MemberProfile | null): ProfileView => {
   };
 };
 
+/** Formatted mailing address, or null when the API omitted it. */
+export const memberAddressText = (profile: {
+  address?: string | { street?: string | null; street2?: string | null; city?: string | null; state?: string | null; postal?: string | null } | null;
+}): string | null => {
+  const value = profile.address;
+  if (!value) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value.trim() || null;
+  }
+  const street = value.street?.trim() ?? '';
+  const city = value.city?.trim() ?? '';
+  if (!street || !city) {
+    return null;
+  }
+  const street2 = value.street2?.trim() ?? '';
+  const place = [city, [value.state?.trim(), value.postal?.trim()].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  return [street, street2, place].filter(Boolean).join('\n');
+};
+
 /** Which contact the viewer may see: only what the API returned (it omits keys unless opted in). */
-export const contactKind = (profile: Pick<MemberProfile, 'email' | 'phone'>): 'phone' | 'email' | 'both' | null => {
+export const contactKind = (
+  profile: Pick<MemberProfile, 'email' | 'phone'> & { address?: string | null },
+): ContactShare => {
   const hasPhone = Boolean(profile.phone);
   const hasEmail = Boolean(profile.email);
-  return hasPhone && hasEmail ? 'both' : hasPhone ? 'phone' : hasEmail ? 'email' : null;
+  const hasAddress = Boolean(profile.address?.trim());
+  if (hasPhone && hasEmail && hasAddress) {
+    return 'all';
+  }
+  if (hasPhone && hasEmail) {
+    return 'both';
+  }
+  if (hasPhone && hasAddress) {
+    return 'phone_address';
+  }
+  if (hasEmail && hasAddress) {
+    return 'email_address';
+  }
+  if (hasPhone) {
+    return 'phone';
+  }
+  if (hasEmail) {
+    return 'email';
+  }
+  if (hasAddress) {
+    return 'address';
+  }
+  return null;
 };
 
 export const splitRequests = (items: FriendRequestItem[]) => ({

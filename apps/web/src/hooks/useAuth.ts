@@ -43,6 +43,18 @@ interface User {
   dateOfBirth?: string | null;
   sex?: 'male' | 'female' | '';
   church?: { id?: number; name: string; has_website_calendar?: boolean } | null;
+  profileVisibility?: 'only_me' | 'friends' | 'church' | 'public';
+  /** True when this payload included mailing keys. Older servers omit them. */
+  mailingKnown?: boolean;
+  mailingStreet?: string;
+  mailingStreet2?: string;
+  mailingCity?: string;
+  mailingState?: string;
+  mailingPostal?: string;
+  showMailingAddress?: boolean;
+  /** True when this payload included the household directory flag. */
+  showHouseholdKnown?: boolean;
+  showHouseholdInDirectory?: boolean;
   swipesRemainingToday?: number | null;
 }
 
@@ -68,7 +80,9 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     ? (value as Record<string, unknown>)
     : undefined;
 
-const normalizeVibe = (vibeSource: Record<string, unknown> | null | undefined): UserVibe | undefined => {
+const normalizeVibe = (
+  vibeSource: Record<string, unknown> | null | undefined,
+): UserVibe | undefined => {
   if (!vibeSource) return undefined;
   return {
     vibeProfile: typeof vibeSource.vibeProfile === 'string' ? vibeSource.vibeProfile : undefined,
@@ -133,12 +147,57 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
       profile.swipesRemainingToday ?? profile.swipes_remaining_today,
     ),
     isChurchAdmin: Boolean(profile.isChurchAdmin ?? profile.is_church_admin),
-    householdChildCount: toOptionalNumber(profile.householdChildCount ?? profile.household_child_count),
+    householdChildCount: toOptionalNumber(
+      profile.householdChildCount ?? profile.household_child_count,
+    ),
     dateOfBirth:
       (typeof profile.dateOfBirth === 'string' ? profile.dateOfBirth : undefined) ??
       (typeof profile.date_of_birth === 'string' ? profile.date_of_birth : undefined) ??
       null,
     sex: profile.sex === 'male' || profile.sex === 'female' ? profile.sex : '',
+    profileVisibility:
+      profile.profileVisibility === 'friends' ||
+      profile.profile_visibility === 'friends' ||
+      profile.profileVisibility === 'church' ||
+      profile.profile_visibility === 'church' ||
+      profile.profileVisibility === 'public' ||
+      profile.profile_visibility === 'public'
+        ? ((profile.profileVisibility ?? profile.profile_visibility) as
+            | 'friends'
+            | 'church'
+            | 'public')
+        : 'only_me',
+    mailingKnown:
+      'mailing_street' in profile ||
+      'mailingStreet' in profile ||
+      'show_mailing_address' in profile ||
+      'showMailingAddress' in profile,
+    mailingStreet:
+      (typeof profile.mailingStreet === 'string' ? profile.mailingStreet : undefined) ??
+      (typeof profile.mailing_street === 'string' ? profile.mailing_street : '') ??
+      '',
+    mailingStreet2:
+      (typeof profile.mailingStreet2 === 'string' ? profile.mailingStreet2 : undefined) ??
+      (typeof profile.mailing_street2 === 'string' ? profile.mailing_street2 : '') ??
+      '',
+    mailingCity:
+      (typeof profile.mailingCity === 'string' ? profile.mailingCity : undefined) ??
+      (typeof profile.mailing_city === 'string' ? profile.mailing_city : '') ??
+      '',
+    mailingState:
+      (typeof profile.mailingState === 'string' ? profile.mailingState : undefined) ??
+      (typeof profile.mailing_state === 'string' ? profile.mailing_state : '') ??
+      '',
+    mailingPostal:
+      (typeof profile.mailingPostal === 'string' ? profile.mailingPostal : undefined) ??
+      (typeof profile.mailing_postal === 'string' ? profile.mailing_postal : '') ??
+      '',
+    showMailingAddress:
+      profile.showMailingAddress === true || profile.show_mailing_address === true,
+    showHouseholdKnown:
+      'show_household_in_directory' in profile || 'showHouseholdInDirectory' in profile,
+    showHouseholdInDirectory:
+      profile.showHouseholdInDirectory === true || profile.show_household_in_directory === true,
     church: (() => {
       const church = asRecord(profile.church);
       if (!church || typeof church.name !== 'string' || !church.name.trim()) {
@@ -358,10 +417,13 @@ export function useAuth() {
     [persistOAuthResponse],
   );
 
-  const updateOnboarding = useCallback(async (payload: Record<string, unknown>) => {
-    await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, payload);
-    await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
-  }, [queryClient]);
+  const updateOnboarding = useCallback(
+    async (payload: Record<string, unknown>) => {
+      await apiRequest('PATCH', API_ROUTES.USER_ONBOARDING, payload);
+      await queryClient.invalidateQueries({ queryKey: [API_ROUTES.USER_PROFILE] });
+    },
+    [queryClient],
+  );
 
   const logout = useCallback(async () => {
     try {

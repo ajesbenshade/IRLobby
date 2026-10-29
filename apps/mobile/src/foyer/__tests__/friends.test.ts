@@ -47,6 +47,9 @@ describe('contact and lists', () => {
     expect(contactKind({ phone: '+1215' })).toBe('phone');
     expect(contactKind({ email: 'a@b.c' })).toBe('email');
     expect(contactKind({ phone: '+1215', email: 'a@b.c' })).toBe('both');
+    expect(contactKind({ address: '12 Main St\nTelford, PA 18969' })).toBe('address');
+    expect(contactKind({ phone: '+1215', email: 'a@b.c', address: '12 Main' })).toBe('all');
+    expect(contactKind({ address: '   ' })).toBeNull();
   });
   it('searches friends by first name', () => {
     const friends = [{ first_name: 'Maria' }, { first_name: 'Tom' }];

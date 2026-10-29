@@ -1,6 +1,8 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { PICKER_COPY } from '@constants/foyerCopy';
+
 import { DatePickerSheet } from '../DatePickerSheet';
 import { TimePickerSheet } from '../TimePickerSheet';
 import { birthDayLimits, hostDayLimits, familyBirthMonthLimits, endTimeSlots, timeSlots, DEFAULT_START_MINUTES } from '@foyer/dates';
@@ -105,16 +107,23 @@ describe('DatePickerSheet age and future-month rules (injected today)', () => {
     return onDone;
   };
 
-  it('turning 13 today is allowed', () => {
-    const onDone = openBirth({ year: 2013, month: 10, day: 2 });
-    expect(screen.queryByText('Accounts are not available under age 13.')).toBeNull();
+  it('turning 18 today is allowed', () => {
+    const onDone = openBirth({ year: 2008, month: 10, day: 2 });
+    expect(screen.queryByText(PICKER_COPY.under13)).toBeNull();
     fireEvent.press(screen.getByLabelText('Confirm'));
-    expect(onDone).toHaveBeenCalledWith({ year: 2013, month: 10, day: 2 });
+    expect(onDone).toHaveBeenCalledWith({ year: 2008, month: 10, day: 2 });
   });
 
-  it('one day younger than 13 shows the pill and keeps Confirm disabled', () => {
-    const onDone = openBirth({ year: 2013, month: 10, day: 3 });
-    expect(screen.getByText('Accounts are not available under age 13.')).toBeTruthy();
+  it('a 13-year-old birth date shows the pill and keeps Confirm disabled', () => {
+    const onDone = openBirth({ year: 2013, month: 10, day: 2 });
+    expect(screen.getByText(PICKER_COPY.under13)).toBeTruthy();
+    expect(screen.getByTestId('picker-confirm').props.accessibilityState?.disabled).toBe(true);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('one day younger than 18 shows the pill and keeps Confirm disabled', () => {
+    const onDone = openBirth({ year: 2008, month: 10, day: 3 });
+    expect(screen.getByText(PICKER_COPY.under13)).toBeTruthy();
     // The message replaces the date readout instead of sitting under the grid.
     expect(screen.queryByText(/Thursday|Friday|Saturday|Sunday|Monday|Tuesday|Wednesday/)).toBeNull();
     expect(screen.queryByText('Pick a day')).toBeNull();

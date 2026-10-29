@@ -25,7 +25,7 @@ import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { LegalConsentText } from '@components/foyer/LegalConsentText';
-import { LEGAL_CONSENT_COPY, PICKER_COPY } from '@constants/foyerCopy';
+import { LEGAL_CONSENT_COPY, PICKER_COPY, VOTING_MEMBER_COPY } from '@constants/foyerCopy';
 
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -53,24 +53,28 @@ export const RegisterScreen = ({ navigation }: Props) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [votingMember, setVotingMember] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [socialError, setSocialError] = useState<unknown>(null);
 
   const passwordsMatch = password.length >= 8 && password === confirmPassword;
 
-  // The Foyer requires a birth date so the under-13 check cannot be skipped (legacy irlobby mode keeps it optional).
+  // The Foyer requires an 18+ birth date so the age check cannot be skipped (legacy irlobby mode keeps it optional).
   const hasValidBirthDate = !isFoyerMode() || isValidSignUpBirthDate(dateOfBirth);
+  const votingAttested = !isFoyerMode() || votingMember;
+  const oauthReady = hasValidBirthDate && votingAttested && acceptedLegal;
 
   const isFormValid = useMemo(
     () =>
       hasValidBirthDate &&
+      votingAttested &&
       firstName.trim().length > 0 &&
       lastName.trim().length > 0 &&
       email.trim().length > 0 &&
       username.trim().length >= 3 &&
       passwordsMatch &&
       acceptedLegal,
-    [acceptedLegal, email, firstName, hasValidBirthDate, lastName, passwordsMatch, username],
+    [acceptedLegal, email, firstName, hasValidBirthDate, lastName, passwordsMatch, username, votingAttested],
   );
 
   useEffect(() => {
@@ -104,6 +108,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         password,
         dateOfBirth: dateOfBirth.trim(),
         termsAccepted: acceptedLegal,
+        votingMemberAttested: votingMember,
       });
       await persistLegalAcceptance();
       return user;
@@ -116,7 +121,11 @@ export const RegisterScreen = ({ navigation }: Props) => {
     error: googleError,
   } = useMutation({
     mutationFn: async (idToken: string) => {
-      const result = await signInWithGoogleIdToken(idToken, { acceptedLegal });
+      const result = await signInWithGoogleIdToken(idToken, {
+        acceptedLegal,
+        dateOfBirth,
+        votingMemberAttested: votingMember,
+      });
       await persistLegalAcceptance();
       return result;
     },
@@ -150,6 +159,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
         acceptedLegal,
+        dateOfBirth,
+        votingMemberAttested: votingMember,
       });
       await persistLegalAcceptance();
       return result;
@@ -168,12 +179,12 @@ export const RegisterScreen = ({ navigation }: Props) => {
   }, [isFormValid, isBusy, mutateAsync]);
 
   const handleAppleSignIn = useCallback(async () => {
-    if (isBusy || !acceptedLegal) {
+    if (isBusy || !oauthReady) {
       return;
     }
 
     await signInWithAppleAsync();
-  }, [acceptedLegal, isBusy, signInWithAppleAsync]);
+  }, [isBusy, oauthReady, signInWithAppleAsync]);
 
   return (
     <AuthShell
@@ -243,6 +254,11 @@ export const RegisterScreen = ({ navigation }: Props) => {
             setBirthPickerOpen(false);
           }}
         />
+        {isFoyerMode() ? (
+          <Text style={styles.hintText} testID="register-birth-helper">
+            {VOTING_MEMBER_COPY.helper}
+          </Text>
+        ) : null}
         <Field
           label="Password"
           value={password}
@@ -267,6 +283,20 @@ export const RegisterScreen = ({ navigation }: Props) => {
             {(axios.isAxiosError(authError) ? registrationFieldError(authError.response?.data) : null) ||
               getErrorMessage(authError, authCopy.register.fallbackError)}
           </Text>
+        ) : null}
+
+        {isFoyerMode() ? (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel={VOTING_MEMBER_COPY.checkbox}
+            accessibilityState={{ checked: votingMember }}
+            onPress={() => setVotingMember((prev) => !prev)}
+            style={styles.legalRow}
+            testID="register-voting-member"
+          >
+            <Checkbox checked={votingMember} />
+            <Text style={styles.legalText}>{VOTING_MEMBER_COPY.checkbox}</Text>
+          </Pressable>
         ) : null}
 
         <Pressable
@@ -305,12 +335,12 @@ export const RegisterScreen = ({ navigation }: Props) => {
               mode="signUp"
               height={48}
               onPress={handleAppleSignIn}
-              disabled={isBusy || !acceptedLegal}
+              disabled={isBusy || !oauthReady}
               loading={isApplePending}
             />
           ) : null}
           <GoogleSignInButton
-            disabled={isBusy || !acceptedLegal}
+            disabled={isBusy || !oauthReady}
             label={authCopy.register.googleCta}
             notConfiguredHint={authCopy.register.googleNotConfigured}
             onIdToken={async (idToken) => {

@@ -41,6 +41,8 @@ interface User {
   isChurchAdmin?: boolean;
   householdChildCount?: number | null;
   dateOfBirth?: string | null;
+  /** ISO time the voting-member box was checked. Null when the account never attested. Read-only. */
+  votingMemberAttestedAt?: string | null;
   sex?: 'male' | 'female' | '';
   church?: { id?: number; name: string; has_website_calendar?: boolean } | null;
   profileVisibility?: 'only_me' | 'friends' | 'church' | 'public';
@@ -133,16 +135,16 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
     photoAlbum: Array.isArray(profile.photoAlbum)
       ? profile.photoAlbum.filter((item): item is string => typeof item === 'string')
       : Array.isArray(profile.photo_album)
-        ? profile.photo_album.filter((item): item is string => typeof item === 'string')
-        : undefined,
+      ? profile.photo_album.filter((item): item is string => typeof item === 'string')
+      : undefined,
     activityPreferences,
     vibe: normalizeVibe(vibeSource),
     onboardingCompleted:
       typeof profile.onboardingCompleted === 'boolean'
         ? profile.onboardingCompleted
         : typeof profile.onboarding_completed === 'boolean'
-          ? profile.onboarding_completed
-          : undefined,
+        ? profile.onboarding_completed
+        : undefined,
     swipesRemainingToday: toOptionalNumber(
       profile.swipesRemainingToday ?? profile.swipes_remaining_today,
     ),
@@ -153,6 +155,14 @@ const normalizeUser = (profile: Record<string, unknown>): User => {
     dateOfBirth:
       (typeof profile.dateOfBirth === 'string' ? profile.dateOfBirth : undefined) ??
       (typeof profile.date_of_birth === 'string' ? profile.date_of_birth : undefined) ??
+      null,
+    votingMemberAttestedAt:
+      (typeof profile.votingMemberAttestedAt === 'string'
+        ? profile.votingMemberAttestedAt
+        : undefined) ??
+      (typeof profile.voting_member_attested_at === 'string'
+        ? profile.voting_member_attested_at
+        : undefined) ??
       null,
     sex: profile.sex === 'male' || profile.sex === 'female' ? profile.sex : '',
     profileVisibility:
@@ -231,15 +241,15 @@ const resolveAuthTokens = (data: AuthResponsePayload) => {
     typeof data.tokens?.access === 'string'
       ? data.tokens.access
       : typeof data.access === 'string'
-        ? data.access
-        : null;
+      ? data.access
+      : null;
 
   const refreshToken =
     typeof data.tokens?.refresh === 'string'
       ? data.tokens.refresh
       : typeof data.refresh === 'string'
-        ? data.refresh
-        : null;
+      ? data.refresh
+      : null;
 
   return { accessToken, refreshToken };
 };
@@ -382,9 +392,12 @@ export function useAuth() {
   );
 
   const loginWithGoogleIdToken = useCallback(
-    async (idToken: string) => {
+    async (idToken: string, fields?: { dateOfBirth?: string; votingMemberAttested?: boolean }) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_GOOGLE_MOBILE, {
         id_token: idToken,
+        ...(fields?.votingMemberAttested && fields.dateOfBirth
+          ? { date_of_birth: fields.dateOfBirth, voting_member_attested: true }
+          : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {
@@ -401,12 +414,17 @@ export function useAuth() {
       email?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      dateOfBirth?: string;
+      votingMemberAttested?: boolean;
     }) => {
       const response = await apiRequest('POST', API_ROUTES.AUTH_APPLE_MOBILE, {
         identity_token: payload.identityToken,
         email: payload.email,
         first_name: payload.firstName,
         last_name: payload.lastName,
+        ...(payload.votingMemberAttested && payload.dateOfBirth
+          ? { date_of_birth: payload.dateOfBirth, voting_member_attested: true }
+          : {}),
       });
       const data = (await response.json()) as AuthResponsePayload;
       if (!response.ok) {

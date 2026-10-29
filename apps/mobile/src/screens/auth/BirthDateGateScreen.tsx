@@ -14,7 +14,7 @@ import { getErrorMessage } from '@utils/error';
 
 /**
  * Foyer only. Full-screen, no skip: shown after an Apple / Google sign-in when the account has no birth date.
- * Same picker as sign-up (13+, 1900..today). The only ways out are saving a valid date or signing out.
+ * Same picker as sign-up (18+, 1900..today). The only ways out are saving a valid date or signing out.
  */
 export const BirthDateGateScreen = () => {
   const { saveBirthDate, signOut } = useAuth();

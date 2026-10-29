@@ -1,4 +1,4 @@
-import { PROFILE_COPY, VISIBILITY_OPTIONS, type VisibilityLevel } from '@constants/foyerCopy';
+import { PICKER_COPY, PROFILE_COPY, VISIBILITY_OPTIONS, type VisibilityLevel } from '@constants/foyerCopy';
 
 export const PHONE_DIGITS = 10;
 
@@ -91,15 +91,23 @@ export const normalizeDraft = (draft: ProfileDraft): ProfileDraft => ({
   showHouseholdInDirectory: draft.visibility !== 'only_me' ? draft.showHouseholdInDirectory : false,
 });
 
-export const buildProfilePatch = (draft: ProfileDraft, options: { isMinor: boolean }) => {
+export const buildProfilePatch = (
+  draft: ProfileDraft,
+  options: { isMinor: boolean; originalDateOfBirth?: string | null },
+) => {
   const [firstName, ...rest] = draft.name.trim().split(/\s+/);
   const normalized = normalizeDraft(draft);
+  const birthChanged =
+    options.originalDateOfBirth === undefined
+      ? Boolean(draft.dateOfBirth)
+      : (draft.dateOfBirth ?? null) !== (options.originalDateOfBirth ?? null);
   return {
     first_name: firstName ?? '',
     last_name: rest.join(' '),
     location: draft.city.trim(),
     city: draft.city.trim(),
-    ...(draft.dateOfBirth ? { date_of_birth: draft.dateOfBirth } : {}),
+    // Resending an unchanged under-18 date is rejected, so other profile fields could not save.
+    ...(birthChanged && draft.dateOfBirth ? { date_of_birth: draft.dateOfBirth } : {}),
     sex: draft.sex || null,
     church_id: draft.churchId,
     profile_visibility: draft.visibility,
@@ -137,8 +145,11 @@ export const ageFromIso = (iso: string | null | undefined, now = new Date()): nu
 };
 
 /**
- * The server can still reject a birth date that makes the account under 13 (stale clock, edited request).
+ * The server can still reject a birth date that makes the account under 18 (stale clock, edited request).
  * That message belongs under the Birth date row, not in the generic save error.
+ * The older under-13 string is still recognized so a stale server maps to the same row.
  */
 export const isUnder13Rejection = (message: string | null | undefined): boolean =>
-  Boolean(message) && /\b13\b/.test(message as string) && /(age|old|under|younger|birth)/i.test(message as string);
+  Boolean(message) &&
+  ((message as string).includes(PICKER_COPY.under13) ||
+    (/\b13\b/.test(message as string) && /(age|old|under|younger|birth)/i.test(message as string)));

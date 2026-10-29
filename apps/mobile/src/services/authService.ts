@@ -215,6 +215,9 @@ const normalizeUser = (
       userRecord.canSellTickets ?? userRecord.can_sell_tickets
     ),
     dateOfBirth: (userRecord.dateOfBirth ?? userRecord.date_of_birth ?? null) as string | null,
+    votingMemberAttestedAt: (userRecord.votingMemberAttestedAt ??
+      userRecord.voting_member_attested_at ??
+      null) as string | null,
     sex: (userRecord.sex === 'male' || userRecord.sex === 'female' ? userRecord.sex : '') as
       | 'male'
       | 'female'
@@ -340,6 +343,12 @@ export const legalAcceptanceFields = (accepted: boolean | undefined) =>
       }
     : {};
 
+/** Sent only when creating an account. Existing Google/Apple sign-in omits both. */
+export const votingMemberSignupFields = (input?: { dateOfBirth?: string | null; votingMemberAttested?: boolean }) =>
+  input?.votingMemberAttested && input.dateOfBirth
+    ? { date_of_birth: input.dateOfBirth, voting_member_attested: true as const }
+    : {};
+
 export async function register(
   payload: RegisterPayload
 ): Promise<AuthResponse> {
@@ -356,6 +365,7 @@ export async function register(
     first_name: payload.firstName,
     last_name: payload.lastName,
     ...(payload.dateOfBirth ? { date_of_birth: payload.dateOfBirth } : {}),
+    ...(payload.votingMemberAttested ? { voting_member_attested: true } : {}),
     ...(payload.sex ? { sex: payload.sex } : {}),
     ...legalAcceptanceFields(payload.termsAccepted),
   };
@@ -534,7 +544,7 @@ export async function loginWithTwitter(): Promise<AuthResponse> {
 
 export async function loginWithGoogleIdToken(
   idToken: string,
-  options: { acceptedLegal?: boolean } = {}
+  options: { acceptedLegal?: boolean; dateOfBirth?: string | null; votingMemberAttested?: boolean } = {}
 ): Promise<AuthResponse> {
   const trimmedToken = typeof idToken === 'string' ? idToken.trim() : '';
   if (!trimmedToken) {
@@ -548,6 +558,7 @@ export async function loginWithGoogleIdToken(
     const response = await api.post<unknown>(API_ROUTES.AUTH_GOOGLE_MOBILE, {
       id_token: trimmedToken,
       ...legalAcceptanceFields(options.acceptedLegal),
+      ...votingMemberSignupFields(options),
     });
     const payload = unwrapGoogleAuthPayload(response.data);
     return persistAuthResponse(payload as unknown as AuthResponse);
@@ -565,6 +576,9 @@ export type AppleSignInPayload = {
   lastName?: string | null;
   /** True when the person ticked the Terms / Privacy box on this screen. */
   acceptedLegal?: boolean;
+  /** New Google/Apple accounts. Omitted for an existing sign-in. */
+  dateOfBirth?: string | null;
+  votingMemberAttested?: boolean;
 };
 
 /**
@@ -580,6 +594,7 @@ export function buildAppleAuthBody(payload: AppleSignInPayload) {
     first_name: payload.firstName,
     last_name: payload.lastName,
     ...legalAcceptanceFields(payload.acceptedLegal),
+    ...votingMemberSignupFields(payload),
   };
 }
 
@@ -605,7 +620,7 @@ export async function fetchProfile(): Promise<AuthUser> {
 
 /**
  * Saves the birth date on the signed-in account: PATCH /api/users/profile/ `{ date_of_birth: 'YYYY-MM-DD' }`
- * (the backend UserSerializer accepts it and rejects under 13 with a `date_of_birth` error).
+ * (the backend UserSerializer accepts it and rejects under 18 with a `date_of_birth` error).
  */
 export async function saveBirthDate(dateOfBirth: string): Promise<AuthUser> {
   const response = await api.patch<AuthUser>(API_ROUTES.USER_PROFILE, { date_of_birth: dateOfBirth });

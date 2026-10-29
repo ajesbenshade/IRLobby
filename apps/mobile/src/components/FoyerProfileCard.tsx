@@ -33,7 +33,7 @@ import {
   VISIBILITY_OPTIONS,
   type VisibilityLevel,
 } from '@constants/foyerCopy';
-import { birthDayLimits, defaultBirthMonth, formatDayShort, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
+import { birthDayLimits, defaultBirthMonth, formatDayShort, isValidSignUpBirthDate, parseIsoDate, toIsoDate, type DayValue } from '@foyer/dates';
 import { TOGGLE_DISABLED_LABEL_OPACITY } from '@foyer/buttonTokens';
 import { endFoyerWelcome } from '@foyer/firstRun';
 import { copyChurchCalendarLink, openChurchCalendarSubscription } from '@foyer/openCalendar';
@@ -155,7 +155,17 @@ export const FoyerProfileCard = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await api.patch(API_ROUTES.USER_PROFILE, buildProfilePatch(draft, { isMinor }));
+      if (
+        draft.dateOfBirth &&
+        draft.dateOfBirth !== baseline.dateOfBirth &&
+        !isValidSignUpBirthDate(draft.dateOfBirth)
+      ) {
+        throw new Error(PICKER_COPY.under13);
+      }
+      await api.patch(
+        API_ROUTES.USER_PROFILE,
+        buildProfilePatch(draft, { isMinor, originalDateOfBirth: baseline.dateOfBirth }),
+      );
       // The first-run welcome note on Profile goes away once the basics are saved.
       endFoyerWelcome();
       await refreshProfile();

@@ -41,7 +41,10 @@ interface AuthContextValue {
   saveBirthDate: (dateOfBirth: string) => Promise<AuthUser>;
   signIn: (payload: LoginPayload) => Promise<AuthUser>;
   signInWithTwitter: () => Promise<AuthUser>;
-  signInWithGoogleIdToken: (idToken: string, options?: { acceptedLegal?: boolean }) => Promise<AuthUser>;
+  signInWithGoogleIdToken: (
+    idToken: string,
+    options?: { acceptedLegal?: boolean; dateOfBirth?: string | null; votingMemberAttested?: boolean },
+  ) => Promise<AuthUser>;
   signInWithAppleIdentityToken: (payload: {
     identityToken: string;
     authorizationCode?: string | null;
@@ -49,6 +52,8 @@ interface AuthContextValue {
     firstName?: string | null;
     lastName?: string | null;
     acceptedLegal?: boolean;
+    dateOfBirth?: string | null;
+    votingMemberAttested?: boolean;
   }) => Promise<AuthUser>;
   signUp: (payload: RegisterPayload) => Promise<AuthUser>;
   signOut: () => Promise<void>;
@@ -153,7 +158,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return nextUser;
   }, []);
 
-  const signInWithGoogleIdToken = useCallback(async (idToken: string, options?: { acceptedLegal?: boolean }) => {
+  const signInWithGoogleIdToken = useCallback(async (
+    idToken: string,
+    options?: { acceptedLegal?: boolean; dateOfBirth?: string | null; votingMemberAttested?: boolean },
+  ) => {
     const { user: nextUser } = await loginWithGoogleIdToken(idToken, options);
     if (nextUser == null || nextUser.id === undefined || nextUser.id === null) {
       throw new Error('Google sign-in did not return a user.');
@@ -173,6 +181,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       firstName?: string | null;
       lastName?: string | null;
       acceptedLegal?: boolean;
+      dateOfBirth?: string | null;
+      votingMemberAttested?: boolean;
     }) => {
       const { user: nextUser } = await loginWithAppleIdentityToken(payload);
       await markBirthDateStep(nextUser);

@@ -4,7 +4,7 @@ export type AudienceGender = 'everyone' | 'men' | 'women';
 export type HostKind = 'person' | 'church';
 
 export const CHAT_GATE_MESSAGE = 'Chat opens for people who are going.';
-export const UNDER_13_MESSAGE = 'Accounts are not available under age 13.';
+export const UNDER_13_MESSAGE = 'Accounts are for voting members 18 and older.';
 export const CAPACITY_ERROR = 'Capacity must be a whole number from 1 to 500.';
 export const CALENDAR_ADDRESS_WARNING =
   "Public gatherings appear on your church's website calendar, with their location, after a church admin approves them.";
@@ -12,7 +12,7 @@ export const ADDRESS_AFTER_RSVP = 'Address shared after you RSVP';
 export const RSVP_CHOOSE_PEOPLE_MESSAGE = 'Choose yourself or your family.';
 /** @deprecated Final copy lives in constants/foyerCopy (GOING_COPY.underThirteenNote). */
 export const WHOS_COMING_NOTE =
-  "Family members under 13 are RSVP names only — they don't have accounts.";
+  "Children under 18 are RSVP names only — they don't have accounts.";
 
 export type GatheringLike = {
   audience?: string | null;
@@ -164,15 +164,41 @@ export const parseCapacity = (raw: string): CapacityParse => {
 export const isChatGateError = (status: number | undefined, message: string | undefined) =>
   status === 403 || /not authorized/i.test(message ?? '');
 
+const firstFieldMessage = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim()) {
+    return value;
+  }
+  if (Array.isArray(value) && typeof value[0] === 'string') {
+    return value[0];
+  }
+  return null;
+};
+
+const ACCOUNT_AGE_ERROR = 'Accounts are for voting members 18 and older.';
+const VOTING_MEMBER_ATTESTATION_ERROR =
+  'You must confirm you are a voting member of Franconia Mennonite Church.';
+
+/** True when Google/Apple rejected a new account that did not send an 18+ birth date and the checkbox. */
+export const isNewAccountGateBody = (data: unknown): boolean => {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+  const record = data as { date_of_birth?: unknown; voting_member_attested?: unknown };
+  return record.date_of_birth != null || record.voting_member_attested != null;
+};
+
+export const isNewAccountGateMessage = (message: string | null | undefined): boolean =>
+  Boolean(
+    message &&
+      (message.includes(ACCOUNT_AGE_ERROR) || message.includes(VOTING_MEMBER_ATTESTATION_ERROR)),
+  );
+
 export const registrationFieldError = (data: unknown): string | null => {
   if (!data || typeof data !== 'object') {
     return null;
   }
-  const dob = (data as { date_of_birth?: unknown }).date_of_birth;
-  if (Array.isArray(dob) && typeof dob[0] === 'string') {
-    return dob[0];
-  }
-  return null;
+  const record = data as { date_of_birth?: unknown; voting_member_attested?: unknown };
+  return firstFieldMessage(record.date_of_birth) ?? firstFieldMessage(record.voting_member_attested);
 };
 
 export const householdCountLabel = (count: number) =>

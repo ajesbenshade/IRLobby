@@ -297,7 +297,7 @@ export const GOING_COPY = {
   photos: 'Photos',
   chat: 'Chat',
   confirmRsvp: 'Confirm RSVP',
-  underThirteenNote: "Family members under 13 are RSVP names only — they don't have accounts.",
+  underThirteenNote: "Children under 18 are RSVP names only — they don't have accounts.",
   notEligible: (band: string) => `Not eligible: ${band}`,
   outsideRange: "Outside this event's age range",
   /** Shown when the server still rejects someone for age (the app already blocks them first). */
@@ -471,10 +471,16 @@ export const HOST_FORM_COPY = {
 /** Blocking birth-date step after Apple / Google sign-in when the account has no birth date. */
 export const BIRTH_GATE_COPY = {
   title: 'Birth date',
-  body: 'The Foyer is for ages 13 and up.',
+  body: 'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
   continue: 'Continue',
   signOut: 'Sign out',
   saveFailed: COMMON_COPY.genericError,
+} as const;
+
+/** Password sign-up: required Franconia voting-member attestation. */
+export const VOTING_MEMBER_COPY = {
+  checkbox: 'I am a voting member of Franconia Mennonite Church.',
+  helper: 'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
 } as const;
 
 export const PICKER_COPY = {
@@ -502,7 +508,7 @@ export const PICKER_COPY = {
   birthWheelHelper: 'Choose your month and year, then pick the day.',
   pickADay: 'Pick a day',
   birthCaption: 'Only used to check age ranges on events. Never shown to other people.',
-  under13: 'Accounts are not available under age 13.',
+  under13: 'Accounts are for voting members 18 and older.',
   /** Sign-up hint while the (required) birth date is empty. */
   birthRequired: 'Choose your birth date to continue.',
   monthYearHelper: "Month and year only. We don't keep the day.",

@@ -7,16 +7,28 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
+import {
+  ACCOUNT_AGE_ERROR,
+  BIRTH_DATE_HELPER,
+  VOTING_MEMBER_CHECKBOX,
+  accountBirthDateError,
+  isVotingGateError,
+} from '../lib/accountAge';
 import { apiRequest, extractApiErrorMessage } from '../lib/queryClient';
 
 interface AuthFormProps {
   onAuthenticated: (token: string, userId: string) => void;
-  loginWithGoogleIdToken?: (idToken: string) => Promise<void>;
+  loginWithGoogleIdToken?: (
+    idToken: string,
+    fields?: { dateOfBirth?: string; votingMemberAttested?: boolean },
+  ) => Promise<void>;
   loginWithAppleIdentityToken?: (payload: {
     identityToken: string;
     email?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    dateOfBirth?: string;
+    votingMemberAttested?: boolean;
   }) => Promise<void>;
   onOAuthSuccess?: () => void;
 }
@@ -33,10 +45,7 @@ declare global {
             cancel_on_tap_outside?: boolean;
           }) => void;
           prompt: () => void;
-          renderButton?: (
-            parent: HTMLElement,
-            options: Record<string, unknown>,
-          ) => void;
+          renderButton?: (parent: HTMLElement, options: Record<string, unknown>) => void;
         };
       };
     };
@@ -132,6 +141,20 @@ const AuthForm = ({
     lastName: '',
     dateOfBirth: '',
   });
+  const [votingMember, setVotingMember] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [oauthRetry, setOauthRetry] = useState<
+    | { provider: 'google'; credential: string }
+    | {
+        provider: 'apple';
+        identityToken: string;
+        email?: string | null;
+        firstName?: string | null;
+        lastName?: string | null;
+      }
+    | null
+  >(null);
+  const googleHandler = useRef<(credential?: string) => Promise<void>>(async () => undefined);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim() ?? '';
   const appleClientId = import.meta.env.VITE_APPLE_WEB_CLIENT_ID?.trim() ?? '';
@@ -170,20 +193,7 @@ const AuthForm = ({
               });
               return;
             }
-            try {
-              setIsLoading(true);
-              await loginWithGoogleIdToken(response.credential);
-              toast({ title: 'Success', description: 'Signed in with Google' });
-              onOAuthSuccess?.();
-            } catch (error) {
-              toast({
-                title: 'Google sign-in failed',
-                description: error instanceof Error ? error.message : 'Please try again.',
-                variant: 'destructive',
-              });
-            } finally {
-              setIsLoading(false);
-            }
+            await googleHandler.current(response.credential);
           },
           auto_select: false,
           cancel_on_tap_outside: true,
@@ -240,10 +250,22 @@ const AuthForm = ({
       });
       return;
     }
+    if (
+      activeTab === 'register' &&
+      (accountBirthDateError(formData.dateOfBirth) || !votingMember || !acceptedTerms)
+    ) {
+      return;
+    }
     window.google.accounts.id.prompt();
   };
 
   const handleAppleSignIn = async () => {
+    if (
+      activeTab === 'register' &&
+      (accountBirthDateError(formData.dateOfBirth) || !votingMember || !acceptedTerms)
+    ) {
+      return;
+    }
     if (!appleReady || !window.AppleID?.auth || !loginWithAppleIdentityToken) {
       toast({
         title: 'Apple sign-in unavailable',
@@ -255,22 +277,45 @@ const AuthForm = ({
       return;
     }
 
+    let identityToken: string | undefined;
+    let appleEmail: string | null = null;
+    let appleFirstName: string | null = null;
+    let appleLastName: string | null = null;
     try {
       setIsLoading(true);
       const response = await window.AppleID.auth.signIn();
-      const identityToken = response.authorization?.id_token;
+      identityToken = response.authorization?.id_token;
+      appleEmail = response.user?.email ?? null;
+      appleFirstName = response.user?.name?.firstName ?? null;
+      appleLastName = response.user?.name?.lastName ?? null;
       if (!identityToken) {
         throw new Error('Apple did not return an identity token.');
       }
+      const fields =
+        activeTab === 'register' && votingMember && !accountBirthDateError(formData.dateOfBirth)
+          ? { dateOfBirth: formData.dateOfBirth, votingMemberAttested: true as const }
+          : {};
       await loginWithAppleIdentityToken({
         identityToken,
-        email: response.user?.email ?? null,
-        firstName: response.user?.name?.firstName ?? null,
-        lastName: response.user?.name?.lastName ?? null,
+        email: appleEmail,
+        firstName: appleFirstName,
+        lastName: appleLastName,
+        ...fields,
       });
+      setOauthRetry(null);
       toast({ title: 'Success', description: 'Signed in with Apple' });
       onOAuthSuccess?.();
     } catch (error) {
+      if (isVotingGateError(error) && identityToken) {
+        setOauthRetry({
+          provider: 'apple',
+          identityToken,
+          email: appleEmail,
+          firstName: appleFirstName,
+          lastName: appleLastName,
+        });
+        setActiveTab('register');
+      }
       toast({
         title: 'Apple sign-in failed',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -343,6 +388,10 @@ const AuthForm = ({
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const birthProblem = accountBirthDateError(formData.dateOfBirth);
+    if (birthProblem || !votingMember || !acceptedTerms) {
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -353,7 +402,10 @@ const AuthForm = ({
         password_confirm: formData.passwordConfirm,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        ...(formData.dateOfBirth ? { date_of_birth: formData.dateOfBirth } : {}),
+        date_of_birth: formData.dateOfBirth,
+        voting_member_attested: true,
+        terms_accepted: true,
+        privacy_accepted: true,
       });
 
       const data = (await response.json()) as AuthResponsePayload;
@@ -404,13 +456,73 @@ const AuthForm = ({
     }
   };
 
+  const birthProblem = accountBirthDateError(formData.dateOfBirth);
+  const birthUnderAge = birthProblem === ACCOUNT_AGE_ERROR && Boolean(formData.dateOfBirth);
+  const registerOAuthBlocked =
+    activeTab === 'register' && (Boolean(birthProblem) || !votingMember || !acceptedTerms);
+
+  googleHandler.current = async (credential) => {
+    if (!credential || !loginWithGoogleIdToken) return;
+    const fields =
+      activeTab === 'register' && votingMember && !accountBirthDateError(formData.dateOfBirth)
+        ? { dateOfBirth: formData.dateOfBirth, votingMemberAttested: true as const }
+        : undefined;
+    try {
+      setIsLoading(true);
+      await loginWithGoogleIdToken(credential, fields);
+      setOauthRetry(null);
+      toast({ title: 'Success', description: 'Signed in with Google' });
+      onOAuthSuccess?.();
+    } catch (error) {
+      if (isVotingGateError(error)) {
+        setOauthRetry({ provider: 'google', credential });
+        setActiveTab('register');
+      }
+      toast({
+        title: 'Google sign-in failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const finishOAuth = async () => {
+    if (!oauthRetry || birthProblem || !votingMember) return;
+    const fields = { dateOfBirth: formData.dateOfBirth, votingMemberAttested: true as const };
+    setIsLoading(true);
+    try {
+      if (oauthRetry.provider === 'google') {
+        await loginWithGoogleIdToken?.(oauthRetry.credential, fields);
+      } else {
+        await loginWithAppleIdentityToken?.({
+          identityToken: oauthRetry.identityToken,
+          email: oauthRetry.email,
+          firstName: oauthRetry.firstName,
+          lastName: oauthRetry.lastName,
+          ...fields,
+        });
+      }
+      setOauthRetry(null);
+      toast({ title: 'Success', description: 'Signed in' });
+      onOAuthSuccess?.();
+    } catch (error) {
+      toast({
+        title: 'Sign-in failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto border-border/70 bg-card/80 backdrop-blur-xl shadow-float">
       <CardHeader>
         <CardTitle className="text-2xl text-center">Welcome to The Foyer</CardTitle>
-        <CardDescription className="text-center">
-          Franconia Mennonite Church
-        </CardDescription>
+        <CardDescription className="text-center">Franconia Mennonite Church</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1 text-muted-foreground">
@@ -505,11 +617,23 @@ const AuthForm = ({
                 <Input
                   id="dateOfBirth"
                   name="dateOfBirth"
-                  type="text"
-                  placeholder="YYYY-MM-DD"
+                  type="date"
+                  required
                   value={formData.dateOfBirth}
                   onChange={handleChange}
+                  aria-invalid={birthUnderAge}
                 />
+                <p className="text-sm text-muted-foreground">{BIRTH_DATE_HELPER}</p>
+                {birthProblem ? (
+                  <p
+                    className={
+                      birthUnderAge ? 'text-sm text-red-700' : 'text-sm text-muted-foreground'
+                    }
+                    role={birthUnderAge ? 'alert' : undefined}
+                  >
+                    {birthProblem}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
@@ -560,59 +684,101 @@ const AuthForm = ({
                   onChange={handleChange}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={votingMember}
+                  onChange={(event) => setVotingMember(event.target.checked)}
+                />
+                <span>{VOTING_MEMBER_CHECKBOX}</span>
+              </label>
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={acceptedTerms}
+                  onChange={(event) => setAcceptedTerms(event.target.checked)}
+                />
+                <span>
+                  I agree to the{' '}
+                  <a href="/terms" className="underline" target="_blank" rel="noreferrer">
+                    Terms of Use
+                  </a>{' '}
+                  and{' '}
+                  <a href="/privacy" className="underline" target="_blank" rel="noreferrer">
+                    Privacy Policy
+                  </a>
+                  .
+                </span>
+              </label>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || Boolean(birthProblem) || !votingMember || !acceptedTerms}
+              >
                 {isLoading ? 'Registering...' : 'Register'}
               </Button>
+              {oauthRetry ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={isLoading || Boolean(birthProblem) || !votingMember}
+                  onClick={() => void finishOAuth()}
+                >
+                  Continue
+                </Button>
+              ) : null}
             </form>
           </>
         )}
 
         {/* OAuth Section: only shown when at least one provider is configured */}
         {hasOAuth ? (
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <div className="mt-4 grid gap-2">
+              {loginWithGoogleIdToken && googleClientId ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || registerOAuthBlocked}
+                >
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#EA4335"
+                      d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.3 14.7 2.4 12 2.4 6.9 2.4 2.8 6.5 2.8 11.6S6.9 20.8 12 20.8c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.6H12z"
+                    />
+                  </svg>
+                  Continue with Google
+                </Button>
+              ) : null}
+              {loginWithAppleIdentityToken && appleClientId ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void handleAppleSignIn()}
+                  disabled={isLoading || registerOAuthBlocked}
+                >
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M16.4 12.7c0-2 1.6-3 1.7-3.1-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.9-3.5 2.2-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.1 2.7 2.1 1.1 0 1.5-.7 2.8-.7s1.6.7 2.8.7c1.2 0 1.9-1 2.6-2 .8-1.2 1.1-2.3 1.1-2.4-.1 0-2.1-.8-2.1-3.1zM14.5 6.5c.6-.7 1-1.7.9-2.7-.9.1-2 .6-2.6 1.3-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.3z"
+                    />
+                  </svg>
+                  Continue with Apple
+                </Button>
+              ) : null}
             </div>
           </div>
-          <div className="mt-4 grid gap-2">
-            {loginWithGoogleIdToken && googleClientId ? (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="#EA4335"
-                    d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.3 14.7 2.4 12 2.4 6.9 2.4 2.8 6.5 2.8 11.6S6.9 20.8 12 20.8c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.6H12z"
-                  />
-                </svg>
-                Continue with Google
-              </Button>
-            ) : null}
-            {loginWithAppleIdentityToken && appleClientId ? (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => void handleAppleSignIn()}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="currentColor"
-                    d="M16.4 12.7c0-2 1.6-3 1.7-3.1-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.9-3.5 2.2-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.1 2.7 2.1 1.1 0 1.5-.7 2.8-.7s1.6.7 2.8.7c1.2 0 1.9-1 2.6-2 .8-1.2 1.1-2.3 1.1-2.4-.1 0-2.1-.8-2.1-3.1zM14.5 6.5c.6-.7 1-1.7.9-2.7-.9.1-2 .6-2.6 1.3-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.3z"
-                  />
-                </svg>
-                Continue with Apple
-              </Button>
-            ) : null}
-          </div>
-        </div>
         ) : null}
       </CardContent>
       <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">

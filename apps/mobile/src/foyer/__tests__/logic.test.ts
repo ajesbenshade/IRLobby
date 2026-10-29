@@ -10,6 +10,8 @@ import {
   peopleCount,
   registrationFieldError,
   isChatGateError,
+  isNewAccountGateBody,
+  isNewAccountGateMessage,
   shouldSkipWhosComingSheet,
   whosGoingSummary,
 } from '../logic';
@@ -72,10 +74,23 @@ describe('going summary and registration', () => {
     expect(whosGoingSummary(2)).toBe('You + 1 child');
   });
 
-  it('surfaces the under-13 registration error from the API', () => {
-    expect(registrationFieldError({ date_of_birth: ['Accounts are not available under age 13.'] })).toBe(
-      'Accounts are not available under age 13.',
+  it('recognizes a new Google or Apple account that still needs the age gate', () => {
+    expect(isNewAccountGateBody({ date_of_birth: ['Accounts are for voting members 18 and older.'] })).toBe(true);
+    expect(isNewAccountGateBody({ voting_member_attested: ['You must confirm you are a voting member of Franconia Mennonite Church.'] })).toBe(true);
+    expect(isNewAccountGateBody({ detail: 'Invalid token.' })).toBe(false);
+    expect(isNewAccountGateMessage('400: Accounts are for voting members 18 and older.')).toBe(true);
+    expect(isNewAccountGateMessage('Invalid token.')).toBe(false);
+  });
+
+  it('surfaces the under-18 registration error and a missing voting-member checkbox', () => {
+    expect(registrationFieldError({ date_of_birth: ['Accounts are for voting members 18 and older.'] })).toBe(
+      'Accounts are for voting members 18 and older.',
     );
+    expect(
+      registrationFieldError({
+        voting_member_attested: ['You must confirm you are a voting member of Franconia Mennonite Church.'],
+      }),
+    ).toBe('You must confirm you are a voting member of Franconia Mennonite Church.');
   });
 
   it('treats the chat gate 403 as the going-only message', () => {

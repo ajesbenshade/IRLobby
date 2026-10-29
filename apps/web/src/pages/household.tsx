@@ -1,16 +1,20 @@
+import { Button } from '@/components/ui/button';
+import { householdChildBirthDateError } from '@/lib/accountAge';
+import { apiRequest } from '@/lib/queryClient';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-import { Button } from '@/components/ui/button';
-import { apiRequest } from '@/lib/queryClient';
 
 type Child = { id: number; name: string; date_of_birth: string; age: number };
 
 const bornLine = (iso: string, age: number) => {
   const date = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return `Born ${iso} · age ${age}`;
-  return `Born ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · age ${age}`;
+  return `Born ${date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })} · age ${age}`;
 };
 
 export default function HouseholdPage() {
@@ -29,7 +33,14 @@ export default function HouseholdPage() {
   });
   const addChild = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/users/household/', { name: name.trim(), date_of_birth: birthDate.trim() });
+      const problem = householdChildBirthDateError(birthDate.trim());
+      if (problem) {
+        throw new Error(problem);
+      }
+      await apiRequest('POST', '/api/users/household/', {
+        name: name.trim(),
+        date_of_birth: birthDate.trim(),
+      });
     },
     onSuccess: async () => {
       setName('');
@@ -38,7 +49,8 @@ export default function HouseholdPage() {
       setError(null);
       await queryClient.invalidateQueries({ queryKey: ['foyer-household'] });
     },
-    onError: (addError) => setError(addError instanceof Error ? addError.message : 'Unable to add this child.'),
+    onError: (addError) =>
+      setError(addError instanceof Error ? addError.message : 'Unable to add this child.'),
   });
   const removeChild = useMutation({
     mutationFn: async (id: number) => {
@@ -61,7 +73,10 @@ export default function HouseholdPage() {
       <p className="mt-4 text-xs font-bold tracking-wide text-[#6e6a68]">CHILDREN UNDER 18</p>
       <div className="mt-2 overflow-hidden rounded-2xl bg-white">
         {(children.data ?? []).map((child) => (
-          <div key={child.id} className="flex items-center gap-3 border-b border-[#e1dbd7] p-3 last:border-0">
+          <div
+            key={child.id}
+            className="flex items-center gap-3 border-b border-[#e1dbd7] p-3 last:border-0"
+          >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f9e8ee] text-xs font-semibold text-[#a2033f]">
               {child.name.replace(/\s+/g, '').slice(0, 2).toUpperCase()}
             </div>
@@ -69,7 +84,11 @@ export default function HouseholdPage() {
               <p className="font-semibold">{child.name}</p>
               <p className="text-sm text-[#6e6a68]">{bornLine(child.date_of_birth, child.age)}</p>
             </div>
-            <button type="button" className="font-semibold text-[#a2033f]" onClick={() => removeChild.mutate(child.id)}>
+            <button
+              type="button"
+              className="font-semibold text-[#a2033f]"
+              onClick={() => removeChild.mutate(child.id)}
+            >
               Remove
             </button>
           </div>
@@ -83,25 +102,46 @@ export default function HouseholdPage() {
             addChild.mutate();
           }}
         >
-          <input aria-label="Child name" className="w-full rounded-xl border border-[#e1dbd7] px-3 py-3" placeholder="Name" value={name} onChange={(event) => setName(event.target.value)} />
-          <input aria-label="Child birth date" className="w-full rounded-xl border border-[#e1dbd7] px-3 py-3" placeholder="YYYY-MM-DD" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} />
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <Button className="h-[54px] w-full rounded-full" disabled={!name.trim() || !birthDate.trim()}>
+          <input
+            aria-label="Child name"
+            className="w-full rounded-xl border border-[#e1dbd7] px-3 py-3"
+            placeholder="Name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <input
+            aria-label="Child birth date"
+            className="w-full rounded-xl border border-[#e1dbd7] px-3 py-3"
+            placeholder="YYYY-MM-DD"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+          />
+          {error || householdChildBirthDateError(birthDate) ? (
+            <p className="text-sm text-red-700" role="alert">
+              {householdChildBirthDateError(birthDate) || error}
+            </p>
+          ) : null}
+          <Button
+            className="h-[54px] w-full rounded-full"
+            disabled={
+              !name.trim() || !birthDate.trim() || Boolean(householdChildBirthDateError(birthDate))
+            }
+          >
             Save child
           </Button>
         </form>
       ) : (
-        <button type="button" className="mt-4 h-[54px] w-full rounded-full border-2 border-[#a2033f] font-semibold text-[#a2033f]" onClick={() => setAdding(true)}>
+        <button
+          type="button"
+          className="mt-4 h-[54px] w-full rounded-full border-2 border-[#a2033f] font-semibold text-[#a2033f]"
+          onClick={() => setAdding(true)}
+        >
           + Add child
         </button>
       )}
-      <div className="mt-6 rounded-2xl bg-[#f9e8ee] p-4">
-        <p className="font-semibold text-[#a2033f]">Teens 13 and older</p>
-        <p className="mt-1 text-sm">
-          Teens can have their own account instead of being listed here. They RSVP for themselves and join chats on their own.
-        </p>
-      </div>
-      <p className="mt-4 text-sm text-[#6e6a68]">Birth dates are used only to check age ranges on events.</p>
+      <p className="mt-4 text-sm text-[#6e6a68]">
+        Birth dates are used only to check age ranges on events.
+      </p>
     </div>
   );
 }

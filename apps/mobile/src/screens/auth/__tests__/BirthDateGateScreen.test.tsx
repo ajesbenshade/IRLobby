@@ -41,7 +41,7 @@ describe('BirthDateGateScreen (blocking step after Apple / Google sign-in)', () 
     expect(mockSaveBirthDate).not.toHaveBeenCalled();
   });
 
-  it('cannot pick an under-13 date: the picker flags it and Confirm stays disabled', async () => {
+  it('cannot pick an under-18 date: the picker flags it and Confirm stays disabled', async () => {
     render(<BirthDateGateScreen />);
     const now = new Date();
     const year = now.getFullYear() - 5;
@@ -65,11 +65,11 @@ describe('BirthDateGateScreen (blocking step after Apple / Google sign-in)', () 
     await waitFor(() => expect(mockSaveBirthDate).toHaveBeenCalledWith('1988-03-04'));
   });
 
-  it('maps a server under-13 rejection to the spec message and keeps the screen', async () => {
+  it('maps a server under-18 rejection to the spec message and keeps the screen', async () => {
     mockSaveBirthDate.mockRejectedValue(
       new AxiosError('Bad Request', '400', undefined, undefined, {
         status: 400,
-        data: { date_of_birth: ['Accounts are not available under age 13.'] },
+        data: { date_of_birth: ['Accounts are for voting members 18 and older.'] },
       } as never),
     );
     render(<BirthDateGateScreen />);

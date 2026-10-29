@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { auth as authCopy } from '@constants/copy';
-import { PICKER_COPY } from '@constants/foyerCopy';
+import { PICKER_COPY, VOTING_MEMBER_COPY } from '@constants/foyerCopy';
 import { RegisterScreen } from '../RegisterScreen';
 
 const mockSignUp = jest.fn();
@@ -65,7 +65,9 @@ const fillEverythingButBirthDate = () => {
   fireEvent.changeText(screen.getByLabelText('Username'), 'adal');
   fireEvent.changeText(screen.getByLabelText('Password'), 'longenough1');
   fireEvent.changeText(screen.getByLabelText(/^Confirm \w+$/i), 'longenough1');
-  fireEvent.press(screen.getByRole('checkbox'));
+  for (const box of screen.getAllByRole('checkbox')) {
+    fireEvent.press(box);
+  }
 };
 
 describe('RegisterScreen birth date is required', () => {
@@ -95,7 +97,37 @@ describe('RegisterScreen birth date is required', () => {
     await waitFor(() => expect(screen.queryByText(PICKER_COPY.birthRequired)).toBeNull());
     fireEvent.press(submit());
     await waitFor(() => expect(mockSignUp).toHaveBeenCalledTimes(1));
-    expect(mockSignUp.mock.calls[0][0]).toMatchObject({ dateOfBirth: '1988-03-04', termsAccepted: true });
+    expect(mockSignUp.mock.calls[0][0]).toMatchObject({
+      dateOfBirth: '1988-03-04',
+      termsAccepted: true,
+      votingMemberAttested: true,
+    });
+  });
+
+  it('keeps Create account disabled until the voting-member box is checked', async () => {
+    mockSignUp.mockResolvedValue({ id: 1 });
+    renderScreen();
+    fireEvent.changeText(screen.getByLabelText('First name'), 'Ada');
+    fireEvent.changeText(screen.getByLabelText('Last name'), 'Lovelace');
+    fireEvent.changeText(screen.getByLabelText('Email'), 'ada@example.com');
+    fireEvent.changeText(screen.getByLabelText('Username'), 'adal');
+    fireEvent.changeText(screen.getByLabelText('Password'), 'longenough1');
+    fireEvent.changeText(screen.getByLabelText(/^Confirm \w+$/i), 'longenough1');
+    fireEvent.press(screen.getByTestId('register-birth-date'));
+    fireEvent.press(await screen.findByLabelText('Month March'));
+    fireEvent.press(screen.getByLabelText('Year 1988'));
+    fireEvent.press(screen.getByLabelText('Next'));
+    fireEvent.press(screen.getByLabelText('March 4, 1988'));
+    fireEvent.press(screen.getByLabelText('Confirm'));
+    const boxes = screen.getAllByRole('checkbox');
+    fireEvent.press(boxes[1]);
+    expect(screen.getByLabelText(authCopy.register.googleCta).props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText(VOTING_MEMBER_COPY.helper)).toBeTruthy();
+    fireEvent.press(screen.getByText(authCopy.register.primaryCta));
+    expect(mockSignUp).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('register-voting-member'));
+    fireEvent.press(screen.getByText(authCopy.register.primaryCta));
+    await waitFor(() => expect(mockSignUp).toHaveBeenCalledTimes(1));
   });
 
   it('legacy irlobby mode keeps the birth date optional', async () => {

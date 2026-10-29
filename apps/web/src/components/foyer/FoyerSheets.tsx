@@ -1,8 +1,7 @@
+import { Button } from '@/components/ui/button';
+import { whosComingNote } from '@/lib/foyer';
 import { Calendar, CalendarArrowDown, ChevronRight, Mail } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-
-import { Button } from '@/components/ui/button';
-import { WHOS_COMING_NOTE } from '@/lib/foyer';
 
 export type WhosComingSheetData = {
   me: { name: string; eligible: boolean; reason?: string | null };
@@ -104,7 +103,7 @@ export function WhosComingDialog({
             </label>
           );
         })}
-        <p className="my-3 text-sm text-[#6e6a68]">{data.note || WHOS_COMING_NOTE}</p>
+        <p className="my-3 text-sm text-[#6e6a68]">{whosComingNote(data.note)}</p>
         <Button
           className="h-[54px] w-full rounded-full"
           disabled={pending || count < 1}

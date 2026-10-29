@@ -1,8 +1,6 @@
 import FriendsModal from '@/components/FriendsModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
@@ -32,7 +30,7 @@ import { fileToImageDataUrl } from '@/lib/profilePhoto';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, Copy, HelpCircle, LogOut, Settings, Star, Users } from 'lucide-react';
+import { Calendar, Copy, HelpCircle, LogOut, Settings, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -239,8 +237,6 @@ export default function Profile() {
     `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase() ||
     user.email?.charAt(0).toUpperCase() ||
     'U';
-  const eventsHosted = user.eventsHosted ?? 0;
-  const eventsAttended = user.eventsAttended ?? 0;
 
   return (
     <div className="bg-background min-h-screen pb-[calc(var(--bottom-nav-offset)+1rem)]">
@@ -477,54 +473,6 @@ export default function Profile() {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Activity Stats */}
-        <Card className="bg-white dark:bg-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Activity Stats</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-primary">{eventsHosted}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Events Hosted</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {eventsAttended}
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Events Attended</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {eventsHosted + eventsAttended}
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Total Activities</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Interests */}
-        <Card className="bg-white dark:bg-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Interests</h3>
-            <div className="flex flex-wrap gap-2">
-              {user.interests && user.interests.length > 0 ? (
-                user.interests.map((interest: string, index: number) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300"
-                  >
-                    {interest}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No interests added yet</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
         <div className="space-y-3">
           <Button
             variant="outline"

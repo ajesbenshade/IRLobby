@@ -159,6 +159,9 @@ test('profile sex is a selectable control and church search is gone', () => {
   assert.doesNotMatch(profilePage, /Search churches/);
   assert.doesNotMatch(profilePage, /Not a member anywhere\? Leave this blank\./);
   assert.doesNotMatch(profilePage, /Edit Profile/);
+  assert.doesNotMatch(profilePage, /Activity Stats/);
+  assert.doesNotMatch(profilePage, />Interests</);
+  assert.doesNotMatch(profilePage, />Reviews</);
   assert.doesNotMatch(profilePage, /createObjectURL/);
   assert.doesNotMatch(profilePage, /<span[\s\S]{0,120}Male/);
   assert.doesNotMatch(editModal, /createObjectURL/);

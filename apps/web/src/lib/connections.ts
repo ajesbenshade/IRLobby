@@ -20,7 +20,7 @@ const statusOf = (error: unknown): number | undefined => {
 };
 
 /**
- * GET connections `{ gathering, praying }`.
+ * GET /api/users/connections/ `{ gathering, praying }`.
  * Until that route is on the server, a 404 / 405 / 501 is an empty list (`unavailable`).
  * This does not call matches or prayers as a stand-in.
  */

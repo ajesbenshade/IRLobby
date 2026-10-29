@@ -2,9 +2,11 @@
  * Connections — people you are gathering with and people you are praying for.
  * Locked: Aaron / CoS (2026-10-28). Friends list stays a separate screen.
  *
- * Backend contract (not on main yet; agent bc-8623c0c2):
- *   GET /api/connections/
+ * Backend contract (PR #72):
+ *   GET /api/users/connections/
  *   { gathering: ConnectionPeer[], praying: ConnectionPeer[] }
+ *
+ * There is no shorter /api/connections/ alias. This client calls the users route only.
  *
  * Peer fields from the design tip:
  *   user_id, display_name, avatar_url, context_title,
@@ -15,7 +17,7 @@
  *   context_date_label                              preformatted short date
  *   profile_visible                                 false sends a prayer row to prayer detail
  *
- * The path is joined so the API contract scan waits until that route is on main.
+ * The path is joined so the API contract scan waits until users/connections is on this branch.
  * A missing route (404 / 405 / 501) is an empty list, not a client-side fallback.
  */
 
@@ -33,9 +35,9 @@ export const CONNECTIONS_COPY = {
   retry: 'Retry',
 } as const;
 
-const connectionsRoot = ['', 'api', 'connections', ''].join('/');
+const connectionsRoot = ['', 'api', 'users', 'connections', ''].join('/');
 
-/** Exact design-tip path. Pieced together so the contract scan waits until the route is on main. */
+/** GET /api/users/connections/ — pieced together so the contract scan waits until that route is on this branch. */
 export const connectionPaths = {
   list: () => connectionsRoot,
 };

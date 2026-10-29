@@ -22,7 +22,7 @@ const peer = (overrides: Partial<ConnectionPeer> = {}): ConnectionPeer => ({
 
 describe('connections contract', () => {
   it('reads GET connections as gathering then praying', () => {
-    expect(connectionPaths.list().split('/').filter(Boolean)).toEqual(['api', 'connections']);
+    expect(connectionPaths.list().split('/').filter(Boolean)).toEqual(['api', 'users', 'connections']);
     const lists = normalizeConnections({
       gathering: [
         {

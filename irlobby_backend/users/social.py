@@ -110,15 +110,15 @@ def same_church(user_a, user_b) -> bool:
     return user_a.church_id is not None and user_a.church_id == user_b.church_id
 
 
-def level_allows(viewer, owner) -> bool:
-    """Does the owner's chosen visibility level include this viewer?
+def level_includes(viewer, owner, level) -> bool:
+    """Does visibility `level` (a PROFILE_VISIBILITY_CHOICES value) include this viewer?
 
     only_me = nobody else, friends = accepted friends, church = same church (friends
     included, since each level contains the one below it), public = any logged-in user.
+    An unknown level includes nobody.
     """
     if viewer.id == owner.id:
         return True
-    level = owner.profile_visibility
     if level == "public":
         return True
     if level == "church":
@@ -126,6 +126,11 @@ def level_allows(viewer, owner) -> bool:
     if level == "friends":
         return are_friends(viewer, owner)
     return False
+
+
+def level_allows(viewer, owner) -> bool:
+    """Does the owner's chosen profile_visibility level include this viewer?"""
+    return level_includes(viewer, owner, owner.profile_visibility)
 
 
 def can_view_profile(viewer, owner) -> bool:
@@ -251,9 +256,10 @@ def birthday_is_shareable(owner, *, today: date | None = None) -> bool:
 
 def birthday_visible_to(viewer, owner, *, today: date | None = None) -> bool:
     """May `viewer` see `owner`'s month and day? Never for yourself (you have the full
-    profile), blocked pairs, minors, or anyone outside the owner's visibility level."""
+    profile), blocked pairs, minors, or anyone outside the owner's birthday_audience OR
+    profile_visibility level (the narrower of the two wins)."""
     if viewer.id == owner.id or not birthday_is_shareable(owner, today=today):
         return False
     if is_blocked_either_way(viewer.id, owner.id):
         return False
-    return level_allows(viewer, owner)
+    return level_includes(viewer, owner, owner.birthday_audience) and level_allows(viewer, owner)

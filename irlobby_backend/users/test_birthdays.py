@@ -1,4 +1,4 @@
-"""Household birth data, PATCH, show_birthday, GET /api/friends/birthdays/ and the daily push.
+"""Household birth data, PATCH, show_birthday, birthday_audience, GET /api/friends/birthdays/ and the daily push.
 
 Rules under test: only adults can share their own birthday (month and day, never the
 year); a child's birth date goes to the owning parent only and is used for age checks.
@@ -440,6 +440,7 @@ class ProfileCardBirthdayTests(APITestCase):
             dob=years_ago(self.today, 30, month=8, day=17),
             show_birthday=True,
             profile_visibility="public",
+            birthday_audience="public",  # default is friends; these tests vary profile_visibility
         )
         self.viewer = make("viewer")
         self.client.force_authenticate(self.viewer)
@@ -727,7 +728,9 @@ class BirthdayPushTaskTests(APITestCase):
             with env_patch.dict(os.environ, env):
                 if value is None:
                     os.environ.pop("BIRTHDAY_PUSH_ENABLED", None)
-                mod = importlib.reload(importlib.import_module(os.environ["DJANGO_SETTINGS_MODULE"]))
+                mod = importlib.reload(
+                    importlib.import_module(os.environ["DJANGO_SETTINGS_MODULE"])
+                )
             return mod.CELERY_BEAT_SCHEDULE
 
         try:
@@ -773,3 +776,307 @@ class BirthdayPushDisabledTests(APITestCase):
             result = send_birthday_notifications()
         push.assert_called_once()
         self.assertEqual(result["sent"], 1)
+
+
+AUDIENCES = ["only_me", "friends", "church", "public"]
+# Who is inside each level (profile card/push see the same rules as profile_visibility).
+AUDIENCE_EXPECT = {
+    "only_me": {"friend": False, "church_mate": False, "stranger": False},
+    "friends": {"friend": True, "church_mate": False, "stranger": False},
+    "church": {"friend": True, "church_mate": True, "stranger": False},
+    "public": {"friend": True, "church_mate": True, "stranger": True},
+}
+
+
+class BirthdayAudienceSettingTests(APITestCase):
+    def setUp(self):
+        self.user = make("adult")
+        self.client.force_authenticate(self.user)
+        self.url = reverse("user-profile")
+
+    def test_default_is_friends_and_returned_next_to_show_birthday(self):
+        self.assertEqual(self.user.birthday_audience, "friends")
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.data["birthday_audience"], "friends")
+        self.assertIn("show_birthday", resp.data)
+
+    def test_patch_round_trip_for_all_values(self):
+        for value in AUDIENCES:
+            resp = self.client.patch(self.url, {"birthday_audience": value}, format="json")
+            self.assertEqual(resp.status_code, 200, resp.data)
+            self.assertEqual(resp.data["birthday_audience"], value)
+            self.user.refresh_from_db()
+            self.assertEqual(self.user.birthday_audience, value)
+            self.assertEqual(self.client.get(self.url).data["birthday_audience"], value)
+
+    def test_invalid_value_is_400(self):
+        resp = self.client.patch(self.url, {"birthday_audience": "everyone"}, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("birthday_audience", resp.data)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.birthday_audience, "friends")
+
+    def test_minor_cannot_change_it(self):
+        teen = make("teen", dob=_safe_birthdate(15))
+        self.client.force_authenticate(teen)
+        resp = self.client.patch(self.url, {"birthday_audience": "public"}, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(
+            resp.data["birthday_audience"][0],
+            "Birthdays can only be shared by accounts 18 and older.",
+        )
+        teen.refresh_from_db()
+        self.assertEqual(teen.birthday_audience, "friends")
+
+    def test_no_date_of_birth_can_still_set_it(self):
+        User.objects.filter(pk=self.user.pk).update(date_of_birth=None)
+        self.client.force_authenticate(User.objects.get(pk=self.user.pk))
+        resp = self.client.patch(self.url, {"birthday_audience": "church"}, format="json")
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data["birthday_audience"], "church")
+        # show_birthday still needs a birth date.
+        resp = self.client.patch(self.url, {"show_birthday": True}, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("show_birthday", resp.data)
+
+    def test_becoming_a_minor_leaves_audience_alone(self):
+        self.client.patch(self.url, {"birthday_audience": "public"}, format="json")
+        resp = self.client.patch(
+            self.url, {"date_of_birth": _safe_birthdate(15).isoformat()}, format="json"
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data["birthday_audience"], "public")
+
+    def test_other_profile_updates_do_not_touch_it(self):
+        self.client.patch(self.url, {"birthday_audience": "church"}, format="json")
+        self.client.patch(self.url, {"bio": "Hi"}, format="json")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.birthday_audience, "church")
+
+    def test_children_have_no_birthday_audience_field(self):
+        field_names = {f.name for f in HouseholdDependent._meta.get_fields()}
+        self.assertNotIn("birthday_audience", field_names)
+
+
+class BirthdayAudienceCardTests(APITestCase):
+    """Profile card: month/day shows only to viewers inside BOTH levels (narrower wins)."""
+
+    def setUp(self):
+        self.today = ny_today()
+        self.church = Church.objects.create(name="C")
+        self.owner = make(
+            "owner",
+            dob=years_ago(self.today, 30, month=8, day=17),
+            show_birthday=True,
+            profile_visibility="public",
+            church=self.church,
+        )
+        self.friend = make("friend")
+        befriend(self.friend, self.owner)
+        self.church_mate = make("churchmate", church=self.church)
+        self.stranger = make("stranger")
+        self.url = reverse("user-profile-card", args=[self.owner.id])
+
+    def seen_by(self, viewer):
+        self.client.force_authenticate(viewer)
+        resp = self.client.get(self.url)
+        return resp.status_code == 200 and "birthday" in resp.data
+
+    def test_audience_matrix_with_public_profile(self):
+        viewers = {
+            "friend": self.friend,
+            "church_mate": self.church_mate,
+            "stranger": self.stranger,
+        }
+        for audience, results in AUDIENCE_EXPECT.items():
+            User.objects.filter(pk=self.owner.pk).update(birthday_audience=audience)
+            for label, expected in results.items():
+                self.assertEqual(self.seen_by(viewers[label]), expected, (audience, label))
+
+    def test_blocked_viewer_never_sees_it(self):
+        BlockedUser.objects.create(blocker=self.owner, blocked=self.friend)
+        for audience in AUDIENCES:
+            User.objects.filter(pk=self.owner.pk).update(birthday_audience=audience)
+            self.client.force_authenticate(self.friend)
+            self.assertEqual(self.client.get(self.url).status_code, 404, audience)
+        BlockedUser.objects.all().delete()
+        BlockedUser.objects.create(blocker=self.stranger, blocked=self.owner)
+        User.objects.filter(pk=self.owner.pk).update(birthday_audience="public")
+        self.client.force_authenticate(self.stranger)
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_default_audience_is_friends_only(self):
+        self.assertTrue(self.seen_by(self.friend))
+        self.assertFalse(self.seen_by(self.church_mate))
+        self.assertFalse(self.seen_by(self.stranger))
+
+    def test_public_audience_but_only_me_profile_is_hidden(self):
+        User.objects.filter(pk=self.owner.pk).update(
+            birthday_audience="public", profile_visibility="only_me"
+        )
+        self.assertFalse(self.seen_by(self.friend))
+        self.assertFalse(self.seen_by(self.church_mate))
+        self.assertFalse(self.seen_by(self.stranger))
+
+    def test_only_me_audience_but_public_profile_is_hidden_even_from_friends(self):
+        User.objects.filter(pk=self.owner.pk).update(
+            birthday_audience="only_me", profile_visibility="public"
+        )
+        self.assertFalse(self.seen_by(self.friend))
+        self.assertFalse(self.seen_by(self.church_mate))
+        self.assertFalse(self.seen_by(self.stranger))
+
+    def test_friends_audience_and_friends_profile_is_visible_to_friends(self):
+        User.objects.filter(pk=self.owner.pk).update(
+            birthday_audience="friends", profile_visibility="friends"
+        )
+        self.assertTrue(self.seen_by(self.friend))
+        self.assertFalse(self.seen_by(self.church_mate))
+
+    def test_church_audience_narrowed_by_friends_profile(self):
+        User.objects.filter(pk=self.owner.pk).update(
+            birthday_audience="church", profile_visibility="friends"
+        )
+        self.assertTrue(self.seen_by(self.friend))
+        self.assertFalse(self.seen_by(self.church_mate))
+
+    def test_minor_never_shows_whatever_the_audience(self):
+        User.objects.filter(pk=self.owner.pk).update(
+            birthday_audience="public", date_of_birth=_safe_birthdate(15)
+        )
+        self.assertFalse(self.seen_by(self.friend))
+
+    def test_card_never_exposes_birthday_audience_or_year(self):
+        for audience in AUDIENCES:
+            User.objects.filter(pk=self.owner.pk).update(birthday_audience=audience)
+            for viewer in (self.friend, self.church_mate, self.stranger):
+                self.client.force_authenticate(viewer)
+                resp = self.client.get(self.url)
+                self.assertNotIn("birthday_audience", resp.data)
+                self.assertNotIn("birthday_audience", str(resp.data))
+                self.assertNotIn(str(self.owner.date_of_birth.year), str(resp.data))
+
+    def test_own_profile_returns_audience_but_card_of_self_does_not_need_it(self):
+        self.client.force_authenticate(self.owner)
+        self.assertEqual(
+            self.client.get(reverse("user-profile")).data["birthday_audience"], "friends"
+        )
+
+
+class BirthdayAudienceFriendsListTests(APITestCase):
+    """GET /api/friends/birthdays/ stays friends-only and applies the same two levels."""
+
+    def setUp(self):
+        self.today = date(2026, 10, 2)
+        self.church = Church.objects.create(name="C")
+        self.me = make("me", church=self.church)
+        self.client.force_authenticate(self.me)
+        patcher = patch("users.social_views.ny_today", return_value=self.today)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def ids(self):
+        resp = self.client.get(reverse("friend-birthdays"))
+        self.assertEqual(resp.status_code, 200)
+        return [b["user_id"] for b in resp.data["birthdays"]]
+
+    def owner(self, name, *, friends=True, **extra):
+        extra.setdefault("show_birthday", True)
+        extra.setdefault("profile_visibility", "public")
+        extra.setdefault("church", self.church)
+        user = make(name, dob=date(1990, 10, 4), **extra)
+        if friends:
+            befriend(self.me, user)
+        return user
+
+    def test_each_audience_for_friend_church_mate_and_stranger(self):
+        for audience in AUDIENCES:
+            friend = self.owner(f"f{audience}", birthday_audience=audience)
+            church_mate = self.owner(f"c{audience}", friends=False, birthday_audience=audience)
+            stranger = self.owner(
+                f"s{audience}", friends=False, church=None, birthday_audience=audience
+            )
+            listed = self.ids()
+            self.assertEqual(
+                friend.id in listed, AUDIENCE_EXPECT[audience]["friend"], ("friend", audience)
+            )
+            # The list is friends-only, so non-friends never appear, even for public.
+            self.assertNotIn(church_mate.id, listed, ("church_mate", audience))
+            self.assertNotIn(stranger.id, listed, ("stranger", audience))
+
+    def test_blocked_friend_is_excluded_for_every_audience(self):
+        for audience in AUDIENCES:
+            friend = self.owner(f"b{audience}", birthday_audience=audience)
+            BlockedUser.objects.create(blocker=friend, blocked=self.me)
+            self.assertNotIn(friend.id, self.ids(), audience)
+
+    def test_default_is_friends_so_friend_is_listed(self):
+        friend = self.owner("dflt")
+        self.assertEqual(friend.birthday_audience, "friends")
+        self.assertEqual(self.ids(), [friend.id])
+
+    def test_narrower_wins(self):
+        public_but_private_profile = self.owner(
+            "a", birthday_audience="public", profile_visibility="only_me"
+        )
+        only_me_but_public_profile = self.owner(
+            "b", birthday_audience="only_me", profile_visibility="public"
+        )
+        both_friends = self.owner("c", birthday_audience="friends", profile_visibility="friends")
+        self.assertEqual(self.ids(), [both_friends.id])
+        self.assertNotIn(public_but_private_profile.id, self.ids())
+        self.assertNotIn(only_me_but_public_profile.id, self.ids())
+
+    def test_response_never_includes_audience(self):
+        self.owner("x", birthday_audience="church")
+        resp = self.client.get(reverse("friend-birthdays"))
+        self.assertNotIn("birthday_audience", str(resp.data))
+
+
+@override_settings(BIRTHDAY_PUSH_ENABLED=True)
+class BirthdayAudiencePushTests(APITestCase):
+    def setUp(self):
+        self.today = date(2026, 10, 2)
+        self.celebrant = make(
+            "bday", dob=date(1990, 10, 2), show_birthday=True, profile_visibility="public"
+        )
+        self.pal = make("pal")
+        befriend(self.pal, self.celebrant)
+
+    def run_task(self):
+        with (
+            patch("users.tasks.ny_today", return_value=self.today),
+            patch("users.tasks.send_push_to_user") as push,
+        ):
+            result = send_birthday_notifications()
+        return result, push
+
+    def test_friend_is_notified_for_each_audience_that_includes_friends(self):
+        for audience, results in AUDIENCE_EXPECT.items():
+            User.objects.filter(pk=self.celebrant.pk).update(birthday_audience=audience)
+            _, push = self.run_task()
+            self.assertEqual(push.called, results["friend"], audience)
+
+    def test_only_me_audience_sends_nothing(self):
+        User.objects.filter(pk=self.celebrant.pk).update(birthday_audience="only_me")
+        result, push = self.run_task()
+        push.assert_not_called()
+        self.assertEqual(result["sent"], 0)
+
+    def test_narrower_wins_in_push(self):
+        User.objects.filter(pk=self.celebrant.pk).update(
+            birthday_audience="public", profile_visibility="only_me"
+        )
+        _, push = self.run_task()
+        push.assert_not_called()
+        User.objects.filter(pk=self.celebrant.pk).update(
+            birthday_audience="friends", profile_visibility="friends"
+        )
+        _, push = self.run_task()
+        push.assert_called_once()
+
+    def test_non_friends_still_never_notified_for_public_audience(self):
+        Friendship.objects.all().delete()
+        User.objects.filter(pk=self.celebrant.pk).update(birthday_audience="public")
+        _, push = self.run_task()
+        push.assert_not_called()

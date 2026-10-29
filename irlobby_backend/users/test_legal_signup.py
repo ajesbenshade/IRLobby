@@ -8,17 +8,30 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from activities.test_foyer import _safe_birthdate
 from users.models import SocialAuthIdentity, User
 
 PW = "SuperSecret-123"
 
 
+def _adult_oauth(**extra):
+    body = {
+        "date_of_birth": _safe_birthdate(32).isoformat(),
+        "voting_member_attested": True,
+    }
+    body.update(extra)
+    return body
+
+
 def _register_body(**extra):
+    # Terms flags stay optional. An adult birth date and the voting-member checkbox are required.
     body = {
         "username": "newbie",
         "email": "newbie@example.com",
         "password": PW,
         "password_confirm": PW,
+        "date_of_birth": _safe_birthdate(30).isoformat(),
+        "voting_member_attested": True,
     }
     body.update(extra)
     return body
@@ -117,12 +130,12 @@ class SocialTermsTests(APITestCase):
         verify.return_value = {"sub": "apple-1"}
         response = self.client.post(
             reverse("apple_mobile_login"),
-            {
-                "identity_token": "t",
-                "terms_accepted": True,
-                "privacy_accepted": True,
-                "terms_version": "v3",
-            },
+            _adult_oauth(
+                identity_token="t",
+                terms_accepted=True,
+                privacy_accepted=True,
+                terms_version="v3",
+            ),
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -134,7 +147,9 @@ class SocialTermsTests(APITestCase):
     @patch("users.oauth_views.verify_apple_identity_token")
     def test_apple_login_without_flags_stamps_nothing_and_never_overwrites(self, verify):
         verify.return_value = {"sub": "apple-2"}
-        self.client.post(reverse("apple_mobile_login"), {"identity_token": "t"}, format="json")
+        self.client.post(
+            reverse("apple_mobile_login"), _adult_oauth(identity_token="t"), format="json"
+        )
         user = SocialAuthIdentity.objects.get(provider_user_id="apple-2").user
         self.assertIsNone(user.terms_accepted_at)
         self.client.post(
@@ -161,7 +176,7 @@ class SocialTermsTests(APITestCase):
         verify.return_value = {"sub": "g-1", "email": "g1@example.com", "email_verified": True}
         response = self.client.post(
             reverse("google_mobile_login"),
-            {"id_token": "a.b.c", "terms_accepted": True, "privacy_accepted": True},
+            _adult_oauth(id_token="a.b.c", terms_accepted=True, privacy_accepted=True),
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -174,7 +189,7 @@ class SocialTermsTests(APITestCase):
     def test_required_setting_only_applies_to_register(self, verify):
         verify.return_value = {"sub": "apple-3"}
         response = self.client.post(
-            reverse("apple_mobile_login"), {"identity_token": "t"}, format="json"
+            reverse("apple_mobile_login"), _adult_oauth(identity_token="t"), format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

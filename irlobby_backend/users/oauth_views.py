@@ -19,6 +19,7 @@ from .apple_signin import exchange_authorization_code
 from .models import SocialAuthIdentity
 from .social_auth import (
     SocialAuthConflict,
+    SocialSignupRejected,
     build_auth_error,
     build_auth_response,
     is_apple_oauth_configured,
@@ -455,7 +456,11 @@ def google_mobile_login(request):
             first_name=payload.get("given_name", "") or "",
             last_name=payload.get("family_name", "") or "",
             legal=legal_acceptance_from_data(request.data),
+            require_voting_member=True,
+            signup_data=request.data,
         )
+    except SocialSignupRejected as rejected:
+        return Response(rejected.errors, status=status.HTTP_400_BAD_REQUEST)
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
     return Response(build_auth_response(user, created=created), status=status.HTTP_200_OK)
@@ -493,7 +498,11 @@ def apple_mobile_login(request):
             first_name=first_name,
             last_name=last_name,
             legal=legal_acceptance_from_data(request.data),
+            require_voting_member=True,
+            signup_data=request.data,
         )
+    except SocialSignupRejected as rejected:
+        return Response(rejected.errors, status=status.HTTP_400_BAD_REQUEST)
     except SocialAuthConflict as error:
         return build_auth_error(str(error), status_code=status.HTTP_409_CONFLICT)
     _store_apple_refresh_token(

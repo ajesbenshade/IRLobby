@@ -417,13 +417,19 @@ class ShowBirthdaySettingTests(APITestCase):
         )
         self.assertEqual(resp.status_code, 400)
 
-    def test_becoming_a_minor_switches_it_off(self):
+    def test_setting_an_under_18_birth_date_is_rejected(self):
         self.client.patch(self.url, {"show_birthday": True}, format="json")
+        before = self.user.date_of_birth
         resp = self.client.patch(
             self.url, {"date_of_birth": _safe_birthdate(15).isoformat()}, format="json"
         )
-        self.assertEqual(resp.status_code, 200, resp.data)
-        self.assertIs(resp.data["show_birthday"], False)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(
+            resp.data["date_of_birth"][0], "Accounts are for voting members 18 and older."
+        )
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.date_of_birth, before)
+        self.assertTrue(self.user.show_birthday)
 
     def test_other_profile_updates_do_not_touch_it(self):
         self.client.patch(self.url, {"show_birthday": True}, format="json")

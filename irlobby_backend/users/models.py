@@ -33,6 +33,9 @@ class User(AbstractUser):
 
     # Profile fields used for gathering eligibility. Nullable so existing accounts migrate.
     date_of_birth = models.DateField(null=True, blank=True)
+    # Set when sign-up includes "I am a voting member of Franconia Mennonite Church."
+    # Null on accounts created before the checkbox. Not backfilled.
+    voting_member_attested_at = models.DateTimeField(null=True, blank=True)
     sex = models.CharField(max_length=16, blank=True, default="")
     church = models.ForeignKey(
         "activities.Church",

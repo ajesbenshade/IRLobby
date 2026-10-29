@@ -442,7 +442,7 @@ One row per other going account (household members are never listed). You are no
 ## Profile visibility, contact toggles, reports
 
 New fields on `GET/PATCH /api/users/profile/` (own profile; also in the login payloads):
-`profile_visibility` (`only_me` default | `friends` | `church` | `public`), `phone` (E.164, for example `+12155550123`; 10-digit US numbers are normalized; invalid → 400; empty clears), `show_email` (false), `show_phone` (false), `dm_from_shared_events` (false).
+`profile_visibility` (`only_me` default | `friends` | `church` | `public`), `phone` (E.164, for example `+12155550123`; 10-digit US numbers are normalized; invalid → 400; empty clears), `show_email` (false), `show_phone` (false), `dm_from_shared_events` (false), plus the mailing-address fields below.
 
 `GET /api/users/<id>/profile/` (the "profile card"; the path is final unless the mobile team prefers another):
 
@@ -451,12 +451,12 @@ New fields on `GET/PATCH /api/users/profile/` (own profile; also in the login pa
 ```
 
 - `friendship`: `none` | `friends` | `pending_outgoing` | `pending_incoming` | `self`.
-- `email` / `phone` appear only if the owner turned `show_email` / `show_phone` on AND the viewer is inside the owner's level. Levels nest: `public` = any logged-in user; `church` = same church (or accepted friend); `friends` = accepted friends; `only_me` = nobody else.
+- `email` / `phone` / `mailing_address` appear only if the owner turned `show_email` / `show_phone` / `show_mailing_address` on AND the viewer is inside the owner's level. Levels nest: `public` = any logged-in user; `church` = same church (or accepted friend); `friends` = accepted friends; `only_me` = nobody else. `mailing_address` also needs a saved street, city, state, and ZIP (see below).
 - Under-18 accounts are visible only to accepted friends regardless of the setting.
 - The `church` level includes accepted friends: an accepted friend sees a church-level profile even when they are not in the owner's church (or have no church). A non-friend from another church gets 404, and a pending request is not enough.
 - If the viewer is not allowed the full card but could still send a friend request (shared attended event, same church, or a public adult), they get `{ "id", "first_name", "friendship", "visible": false }` so the Add Friend button can work.
-- Otherwise 404. Blocked in either direction → 404. Your own id returns your own `email` and `phone`.
-- Never includes location, family, birth year or date, username or last name. The only birth data is `birthday: {month, day}` for an adult who chose to share it (see "Birthdays (additive)").
+- Otherwise 404. Blocked in either direction → 404. Your own id returns your own `email` and `phone`. Your own id includes `mailing_address` only when you turned `show_mailing_address` on and a full address is saved (the edit form uses `GET /api/users/profile/`, which always returns the raw fields).
+- Never includes location, family, birth year or date, username or last name. The only birth data is `birthday: {month, day}` for an adult who chose to share it (see "Birthdays (additive)"). The account City (`location` / `city`) is never used as the mailing city and is still never shown here.
 
 `POST /api/users/<id>/report/` `{ "reason": "inappropriate|spam|harassment|fake_profile|threat|other", "description"? }` → 201 `{ "id", "status" }` (creates an `AbuseReport`). Blocking uses the existing `POST /api/moderation/block/<id>/` and `DELETE /api/moderation/unblock/<id>/`; blocking now also removes any friendship.
 
@@ -506,6 +506,42 @@ Each child object is only `id` (the household member id, not a user id), `first_
 Birthday wishes to a parent are not implemented. 1:1 chat exists, and a message is plain text with no `style` field, so this release does not add a wish endpoint or a birthday-card message type. `POST /api/directory/wishes/` is not a route. When it ships, the intended call is that path with `{ "child_id": <household member id> }` from a signed-in Franconia adult who is accepted friends with the parent. The server would reuse the parent's 1:1 and store `style: "birthday_card"` plus the child's first name. Not friends would be 403. Anyone blocked, opted out, or asking about a child who is not listed would be 404.
 
 Gathering RSVP and host views are unchanged: hosts still do not see a child's birthday there. Adult `show_birthday` is unchanged.
+
+### Mailing address (optional)
+
+`GET/PATCH /api/users/profile/` (own profile, and the same user object on login) adds:
+
+- `mailing_street` (string, default `""`)
+- `mailing_street2` (string or `null`; apartment / suite; empty or `null` clears to `null`)
+- `mailing_city` (string, default `""`). This is **not** the account City. `location` / `city` on the same profile is unchanged by these fields, and saving `location` does not fill `mailing_city`.
+- `mailing_state` (2-letter USPS abbreviation, stored uppercase: 50 states, DC, PR, VI, GU, AS, MP, AA, AE, AP). Anything else → 400 `{"mailing_state": ["Use a 2-letter US state abbreviation."]}`.
+- `mailing_postal` (5-digit ZIP, or ZIP+4 stored as `12345-6789`). Nine digits and `12345 6789` are normalized to the hyphen form. Anything else → 400 `{"mailing_postal": ["Enter a 5-digit ZIP code, or a ZIP+4."]}`.
+- `show_mailing_address` (bool, default `false`).
+
+Rules:
+
+- `show_mailing_address: true` needs street + city + state + ZIP. Apartment is optional. Missing any of those → 400 `{"show_mailing_address": ["Add a street, city, state, and ZIP before showing your mailing address."]}`. State and ZIP are still checked when the flag is off.
+- Sending every address field empty stores no address (`""` / `null`). A partial address may be saved only while `show_mailing_address` is false.
+- Turning `show_mailing_address` off keeps the saved address and hides it from everyone else. The owner still sees the raw fields on `GET /api/users/profile/`.
+
+`GET /api/users/<id>/profile/` (member profile, the directory **detail**) adds `mailing_address` only when the viewer is inside the owner's `profile_visibility` **and** `show_mailing_address` is true **and** street, city, state, and ZIP are saved. Otherwise the key is absent (including the limited `visible: false` card, a 404, and show-off).
+
+```json
+"mailing_address": {
+  "street": "123 Main St",
+  "street2": "Apt 4",
+  "city": "Harleysville",
+  "state": "PA",
+  "postal": "19438",
+  "formatted": "123 Main St\nApt 4\nHarleysville, PA 19438"
+}
+```
+
+`street2` is `null` when there is no apartment. `formatted` is Street, then Apt on its own line when present, then `City, ST ZIP`.
+
+`GET /api/directory/` list results never include a mailing address. A list row stays avatar, first name, and last initial: no `mailing_address`, `mailing_street`, `mailing_street2`, `mailing_city`, `mailing_state`, `mailing_postal`, or `show_mailing_address`. This change does not add directory list rows. The same omission applies to friend lists, attendee lists, and every other list.
+
+Database: `users.User` mailing fields, migration `users/0018_user_mailing_address` (depends on `0016_user_show_birthday`; does not depend on the directory `0017`).
 
 ## Friends
 

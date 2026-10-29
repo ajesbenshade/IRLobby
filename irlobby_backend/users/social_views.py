@@ -1,7 +1,7 @@
 """Profile cards, reports, and friends for The Foyer.
 
 Rules live in users/social.py. Nothing here returns location, family, birth date,
-username, or (unless the owner allowed it) email or phone.
+username, or (unless the owner allowed it) email, phone, or mailing address.
 """
 
 from datetime import timedelta
@@ -20,6 +20,7 @@ from moderation.models import AbuseReport
 from moderation.reporting import notify_support_of_report, report_body
 from utils.sanitize import strip_html
 
+from .mailing import mailing_address_payload
 from .models import Friendship, User
 from .social import (
     birthday_in_year,
@@ -38,6 +39,16 @@ from .social import (
 from .throttles import FriendRequestThrottle
 
 BIO_PREVIEW_LENGTH = 160
+
+
+def _attach_mailing_address(body, owner) -> None:
+    """Add mailing_address only when the owner opted in and the address is complete.
+
+    The caller has already decided the viewer is allowed to see contact details.
+    """
+    address = mailing_address_payload(owner)
+    if address:
+        body["mailing_address"] = address
 
 
 def _card(user) -> dict:
@@ -69,16 +80,16 @@ def user_profile_card(request, user_id):
     owner = _other_user_404(viewer, user_id)
     state = friendship_state(viewer, owner)
     if owner.id == viewer.id:
-        return Response(
-            {
-                **_card(owner),
-                "bio": owner.bio[:BIO_PREVIEW_LENGTH],
-                "friendship": state,
-                "visible": True,
-                "email": owner.email,
-                "phone": owner.phone,
-            }
-        )
+        body = {
+            **_card(owner),
+            "bio": owner.bio[:BIO_PREVIEW_LENGTH],
+            "friendship": state,
+            "visible": True,
+            "email": owner.email,
+            "phone": owner.phone,
+        }
+        _attach_mailing_address(body, owner)
+        return Response(body)
     if not can_view_profile(viewer, owner):
         reachable = state in {"pending_incoming", "pending_outgoing"} or can_send_friend_request(
             viewer, owner
@@ -101,6 +112,7 @@ def user_profile_card(request, user_id):
             body["email"] = owner.email
         if owner.show_phone and owner.phone:
             body["phone"] = owner.phone
+        _attach_mailing_address(body, owner)
     # Month and day only (never the year), and only for an adult who chose to share it.
     if birthday_visible_to(viewer, owner):
         body["birthday"] = {"month": owner.date_of_birth.month, "day": owner.date_of_birth.day}

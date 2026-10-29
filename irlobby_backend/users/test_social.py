@@ -82,10 +82,16 @@ class PhoneNormalizationTests(APITestCase):
                 me.profile_visibility,
                 me.show_email,
                 me.show_phone,
+                me.show_mailing_address,
                 me.dm_from_shared_events,
                 me.phone,
+                me.mailing_street,
+                me.mailing_city,
+                me.mailing_state,
+                me.mailing_postal,
+                me.mailing_street2,
             ),
-            ("only_me", False, False, False, ""),
+            ("only_me", False, False, False, False, "", "", "", "", "", None),
         )
 
 

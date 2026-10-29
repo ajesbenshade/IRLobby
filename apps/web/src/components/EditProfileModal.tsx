@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { fileToImageDataUrl, profileImagePatch } from '@/lib/profilePhoto';
 import { apiRequest } from '@/lib/queryClient';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { API_ROUTES } from '@shared/schema';
@@ -73,13 +74,12 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return await apiRequest(API_ROUTES.USER_PROFILE, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          ...data,
-          profileImageUrl,
-          photoAlbum,
-        }),
+      const { profileImageUrl: droppedAvatar, photoAlbum: droppedAlbum, ...fields } = data;
+      void droppedAvatar;
+      void droppedAlbum;
+      return await apiRequest('PATCH', API_ROUTES.USER_PROFILE, {
+        ...fields,
+        ...profileImagePatch({ avatarUrl: profileImageUrl, photoAlbum }),
       });
     },
     onSuccess: () => {
@@ -108,24 +108,35 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
     );
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, isProfilePic = false) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    isProfilePic = false,
+  ) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Create a local URL for the image
-      const imageUrl = URL.createObjectURL(file);
-
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    try {
+      const imageUrl = await fileToImageDataUrl(file);
       if (isProfilePic) {
         setProfileImageUrl(imageUrl);
         form.setValue('profileImageUrl', imageUrl);
-      } else {
-        if (photoAlbum.length < 12) {
-          const newAlbum = [...photoAlbum, imageUrl];
-          setPhotoAlbum(newAlbum);
-          form.setValue('photoAlbum', newAlbum);
-        } else {
-          toast({ title: 'Maximum 12 photos allowed', variant: 'destructive' });
-        }
+        return;
       }
+      if (photoAlbum.length >= 12) {
+        toast({ title: 'Maximum 12 photos allowed', variant: 'destructive' });
+        return;
+      }
+      const newAlbum = [...photoAlbum, imageUrl];
+      setPhotoAlbum(newAlbum);
+      form.setValue('photoAlbum', newAlbum);
+    } catch (error) {
+      toast({
+        title: 'Could not use that photo',
+        description: error instanceof Error ? error.message : 'Try a smaller JPEG, PNG, or WebP.',
+        variant: 'destructive',
+      });
     }
   };
 

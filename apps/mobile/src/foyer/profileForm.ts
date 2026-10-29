@@ -46,7 +46,38 @@ export type ProfileDraft = {
   showEmail: boolean;
   showPhone: boolean;
   dmFromSharedEvents: boolean;
+  mailingStreet: string;
+  mailingStreet2: string;
+  mailingCity: string;
+  mailingState: string;
+  mailingPostal: string;
+  showMailingAddress: boolean;
+  showHouseholdInDirectory: boolean;
 };
+
+const US_STATES = new Set(
+  'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' '),
+);
+
+const normalizeZip = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 5) {
+    return digits;
+  }
+  if (digits.length === 9) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+  return value.trim();
+};
+
+/** Street, city, 2-letter state, and ZIP. Apt is optional. Blank is allowed. */
+export const mailingShowAllowed = (draft: Pick<ProfileDraft, 'mailingStreet' | 'mailingCity' | 'mailingState' | 'mailingPostal'>) =>
+  Boolean(
+    draft.mailingStreet.trim() &&
+      draft.mailingCity.trim() &&
+      US_STATES.has(draft.mailingState.trim().toUpperCase()) &&
+      /^\d{5}(?:-\d{4})?$/.test(normalizeZip(draft.mailingPostal)),
+  );
 
 /** The phone toggle stays off (and disabled) until a valid phone is entered. */
 export const phoneToggleEnabled = (phone: string) => isValidUsPhone(phone);
@@ -54,6 +85,10 @@ export const phoneToggleEnabled = (phone: string) => isValidUsPhone(phone);
 export const normalizeDraft = (draft: ProfileDraft): ProfileDraft => ({
   ...draft,
   showPhone: phoneToggleEnabled(draft.phone) ? draft.showPhone : false,
+  mailingState: draft.mailingState.trim().toUpperCase(),
+  mailingPostal: normalizeZip(draft.mailingPostal),
+  showMailingAddress: mailingShowAllowed(draft) ? draft.showMailingAddress : false,
+  showHouseholdInDirectory: draft.visibility !== 'only_me' ? draft.showHouseholdInDirectory : false,
 });
 
 export const buildProfilePatch = (draft: ProfileDraft, options: { isMinor: boolean }) => {
@@ -71,6 +106,13 @@ export const buildProfilePatch = (draft: ProfileDraft, options: { isMinor: boole
     phone: draft.phone.trim() ? toE164(draft.phone) : '',
     show_email: draft.showEmail,
     show_phone: normalized.showPhone,
+    mailing_street: normalized.mailingStreet.trim(),
+    mailing_street2: normalized.mailingStreet2.trim(),
+    mailing_city: normalized.mailingCity.trim(),
+    mailing_state: normalized.mailingState,
+    mailing_postal: normalized.mailingPostal,
+    show_mailing_address: normalized.showMailingAddress,
+    show_household_in_directory: normalized.showHouseholdInDirectory,
     // Under-18 accounts have no toggle; the server forces it off.
     ...(options.isMinor ? {} : { dm_from_shared_events: draft.dmFromSharedEvents }),
   };

@@ -41,6 +41,7 @@ import {
   formatPhoneForField,
   isDraftDirty,
   isUnder13Rejection,
+  mailingShowAllowed,
   phoneError,
   phoneToggleEnabled,
   type ProfileDraft,
@@ -64,6 +65,13 @@ const emptyDraft: ProfileDraft = {
   showEmail: false,
   showPhone: false,
   dmFromSharedEvents: false,
+  mailingStreet: '',
+  mailingStreet2: '',
+  mailingCity: '',
+  mailingState: '',
+  mailingPostal: '',
+  showMailingAddress: false,
+  showHouseholdInDirectory: false,
 };
 
 export const FoyerProfileCard = () => {
@@ -107,6 +115,13 @@ export const FoyerProfileCard = () => {
       showEmail: Boolean(user?.showEmail),
       showPhone: Boolean(user?.showPhone),
       dmFromSharedEvents: Boolean(user?.dmFromSharedEvents),
+      mailingStreet: user?.mailingStreet ?? '',
+      mailingStreet2: user?.mailingStreet2 ?? '',
+      mailingCity: user?.mailingCity ?? '',
+      mailingState: user?.mailingState ?? '',
+      mailingPostal: user?.mailingPostal ?? '',
+      showMailingAddress: Boolean(user?.showMailingAddress),
+      showHouseholdInDirectory: Boolean(user?.showHouseholdInDirectory),
     };
     setDraft(next);
     setBaseline(next);
@@ -248,6 +263,14 @@ export const FoyerProfileCard = () => {
           count={FAMILY_COPY.membersCount(familyCount)}
           onPress={() => navigation.navigate('Household')}
         />
+        <ToggleRow
+          label={PROFILE_COPY.showChildren}
+          helper={draft.visibility === 'only_me' ? PROFILE_COPY.showChildrenOnlyMe : PROFILE_COPY.showChildrenHelper}
+          accessibilityLabel={PROFILE_COPY.showChildren}
+          value={draft.visibility !== 'only_me' && draft.showHouseholdInDirectory}
+          disabled={draft.visibility === 'only_me'}
+          onChange={(value) => update('showHouseholdInDirectory', value)}
+        />
         <NavRow
           icon="account-group-outline"
           label={PROFILE_COPY.friendsRow}
@@ -370,6 +393,64 @@ export const FoyerProfileCard = () => {
           value={draft.showPhone && phoneToggleEnabled(draft.phone)}
           disabled={!phoneToggleEnabled(draft.phone)}
           onChange={(value) => update('showPhone', value)}
+        />
+      </View>
+      <View style={styles.rowsCard}>
+        <View style={styles.contactBlock}>
+          <Label text={PROFILE_COPY.mailingLabel} />
+          <TextInput
+            accessibilityLabel={PROFILE_COPY.mailingStreet}
+            value={draft.mailingStreet}
+            onChangeText={(value) => update('mailingStreet', value)}
+            placeholder={PROFILE_COPY.mailingStreet}
+            placeholderTextColor={appColors.softInk}
+            style={styles.input}
+          />
+          <TextInput
+            accessibilityLabel={PROFILE_COPY.mailingStreet2}
+            value={draft.mailingStreet2}
+            onChangeText={(value) => update('mailingStreet2', value)}
+            placeholder={PROFILE_COPY.mailingStreet2}
+            placeholderTextColor={appColors.softInk}
+            style={styles.input}
+          />
+          <TextInput
+            accessibilityLabel={PROFILE_COPY.mailingCity}
+            value={draft.mailingCity}
+            onChangeText={(value) => update('mailingCity', value)}
+            placeholder={PROFILE_COPY.mailingCity}
+            placeholderTextColor={appColors.softInk}
+            style={styles.input}
+          />
+          <View style={styles.searchRow}>
+            <TextInput
+              accessibilityLabel={PROFILE_COPY.mailingState}
+              value={draft.mailingState}
+              onChangeText={(value) => update('mailingState', value.slice(0, 2).toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={2}
+              placeholder={PROFILE_COPY.mailingState}
+              placeholderTextColor={appColors.softInk}
+              style={styles.searchInput}
+            />
+            <TextInput
+              accessibilityLabel={PROFILE_COPY.mailingPostal}
+              value={draft.mailingPostal}
+              onChangeText={(value) => update('mailingPostal', value)}
+              keyboardType="number-pad"
+              placeholder={PROFILE_COPY.mailingPostal}
+              placeholderTextColor={appColors.softInk}
+              style={styles.searchInput}
+            />
+          </View>
+          <Text style={styles.helper}>{PROFILE_COPY.mailingHelper}</Text>
+        </View>
+        <ToggleRow
+          label={PROFILE_COPY.showOnProfile}
+          accessibilityLabel={`${PROFILE_COPY.mailingLabel}: ${PROFILE_COPY.showOnProfile}`}
+          value={draft.showMailingAddress && mailingShowAllowed(draft)}
+          disabled={!mailingShowAllowed(draft)}
+          onChange={(value) => update('showMailingAddress', value)}
         />
       </View>
       <Text style={styles.helper}>{PROFILE_COPY.contactHelper}</Text>

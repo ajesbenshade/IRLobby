@@ -3,9 +3,11 @@ from django.urls import path
 from activities import foyer_views
 
 from . import social_views, views
+from .connections import connections
 
 urlpatterns = [
     path("profile/", views.UserProfileView.as_view(), name="user-profile"),
+    path("connections/", connections, name="user-connections"),
     path("household/", foyer_views.household_list_create, name="household"),
     path("household/<int:pk>/", foyer_views.household_detail, name="household-delete"),
     path("<int:user_id>/profile/", social_views.user_profile_card, name="user-profile-card"),

@@ -849,3 +849,87 @@ photos.
 `python manage.py find_orphan_photos` lists files under `media/event_photos/` with no
 `EventPhoto` row. It is a dry run unless `--delete` is passed.
 
+# Connections (additive)
+
+Profile → Connections. One call returns both sections. There was no gathering-connections
+route before this. `GET /api/matches/` is unchanged and is still the legacy match list
+(notifications and reviews). It is not this sheet. Nothing here opens a new way to message,
+and Pass / I'm praying / Stop praying keep their current paths and bodies. Stop praying
+removes a praying row only because that pray-er link is no longer active.
+
+`GET /api/users/connections/` (auth). 401 when anonymous. 200:
+
+```json
+{
+  "gathering": [
+    {
+      "user_id": 12,
+      "first_name": "Maria",
+      "last_initial": "G",
+      "display_name": "Maria G.",
+      "avatar_url": "https://…",
+      "context_title": "Saturday potluck",
+      "context_kind": "gathering",
+      "context_id": 44,
+      "context_date": "2026-10-17"
+    }
+  ],
+  "praying": [
+    {
+      "user_id": 9,
+      "first_name": "Sarah",
+      "last_initial": "L",
+      "display_name": "Sarah L.",
+      "avatar_url": "https://…",
+      "context_title": "Dad's surgery",
+      "context_kind": "prayer",
+      "context_id": 3
+    }
+  ]
+}
+```
+
+No pagination. Empty sections are `[]` (both keys are always present). No email, phone,
+username, last name, bio, or household member.
+
+**Gathering with.** Another account who shares a confirmed RSVP with you. Confirmed means
+`status` is `confirmed` and someone in that RSVP is actually going (`include_self`, or at
+least one household member). Pending and declined do not count. You are not listed. The
+host is listed only when they have their own confirmed RSVP. The gathering is not
+cancelled, and it has not finished more than 14 days ago. Finished means `end_time`, or
+`time` when there is no end, so an upcoming gathering and one still in progress both
+count. `context_id` is the gathering id. `context_date` is the start date in
+America/New_York (`YYYY-MM-DD`). `context_title` is the gathering title.
+
+A household member who has no account is never a row (including every child under 18).
+The account holder is the row when the rules below allow it.
+
+The other person is included only when you may open their full profile, the same rule as
+`visible: true` on `GET /api/users/<id>/profile/` (`can_view_profile`). `only_me` is
+nobody else. `friends` is accepted friends. `church` is the same church or accepted
+friends. `public` is any logged-in adult. An under-18 account is included only for an
+accepted friend, whatever their setting says. A limited profile card (`visible: false`)
+is not enough for a gathering row, because this row opens the member profile. Inactive
+accounts are left out.
+
+**Praying for.** One row per prayer request you are actively praying for (an I'm-praying
+row with status `praying`). The person is the prayer's author. Your own requests are not
+listed. Pass does not add a row. Stop praying (`POST /api/prayers/<id>/stop/`) keeps the
+participant row and sets it to `stopped`, and this list then omits it. `context_id` is
+the prayer id. `context_title` is the prayer title (the client adds the "Praying for:"
+prefix). There is no `context_date`. Other people who are also praying are not rows.
+
+`user_id` is the author's id when you may open their full profile (same rule as gathering).
+When you may not, `user_id` is `null` and `avatar_url` is `""`, and the row still opens
+the prayer: you are praying, so the prayer detail stays available, including after you
+leave the circle. `first_name`, `last_initial`, and `display_name` still come from the
+author, the same name the prayer detail already shows. `display_name` is the first name
+plus last initial (`Maria G.`), or the first name, or `Guest`.
+
+**Blocks.** Anyone blocked either way (you blocked them, or they blocked you) is omitted
+from both lists.
+
+Newest prayer first (`created_at`, then id). Gathering rows are upcoming and in-progress
+first (soonest start, then name), then gatherings that already finished (most recently
+finished, then name).
+

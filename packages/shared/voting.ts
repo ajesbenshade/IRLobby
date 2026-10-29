@@ -1,40 +1,19 @@
 /**
- * Voting tab — client contract. Locked: same chrome as Gatherings and Prayer,
- * ballots aimed at Circles (or the whole church), one cast per account.
+ * Voting tab — client contract for the live ballots API.
+ * Same chrome as Gatherings and Prayer. Audience is circles the caller admins,
+ * or whole church only when a church admin opts in. One cast per account.
  *
- * Paths are the tip shape. They are not on this server yet. A missing route
- * (404 / 405 / 501) is an empty list. Pieced together so the contract scan
- * waits until those routes exist.
+ *   GET    /api/votes/ballots/                 { open, closed }
+ *   POST   /api/votes/ballots/                 create
+ *   GET    /api/votes/ballots/<id>/
+ *   POST   /api/votes/ballots/<id>/vote/       { choice_id }
+ *   POST   /api/votes/ballots/<id>/close/      close early
+ *   GET    /api/circles/                       directory; reads is_admin
  *
- *   GET    /api/votes/                  page envelope, or { open, closed }
- *   POST   /api/votes/                  create
- *   GET    /api/votes/<id>/
- *   POST   /api/votes/<id>/cast/        { option_id }
- *   POST   /api/votes/<id>/close/       close early
- *   GET    /api/circles/                existing directory; reads is_admin
- *
- * Vote: id, title, description, closes_at, closed_at, results_mode
- *   (`after_close` | `live`), audience (`church` | `circles`), circles,
- *   church_name, options [{ id, label, count }], my_option_id, has_voted,
- *   can_close, created_at.
- *
- * Backend gaps (do not invent these here):
- * - No Vote, option, or Ballot models, and no votes routes. Unique (user, vote)
- *   has to live on the server.
- * - List visibility is server-side: whole-church, or the caller is in an
- *   audience circle. Household kids and people outside the circle must be
- *   left out. This client has no voting-member or kid flag
- *   (voting-members-accounts tip is not in this tree).
- * - Create must require a circle admin for every chosen circle, and a church
- *   admin when audience is church.
- * - Cast must reject a closed ballot, a second cast, and anyone outside the
- *   audience. The button only reflects that; it is not the check.
- * - While results_mode is after_close and the vote is still open, omit
- *   option counts. Close-early is limited to an audience circle admin or a
- *   church admin (`can_close`).
- * - The client reads the first page only and does not follow `next`.
- * - No public link, ranked or multi-select, changing a vote, named rolls,
- *   or non-admin circle create.
+ * A non-voting member (null voting_member_attested_at) gets `{ open: [], closed: [] }`
+ * on the list, or 403 `{ code: "not_voting_member" }` on create. Either one is the
+ * empty Voting tab, not an error. `vote_count` and `total_votes` are null while
+ * hidden. Null is not zero. The payload never includes who voted.
  */
 
 export const TITLE_MAX = 140;
@@ -79,6 +58,15 @@ export type Vote = {
   myOptionId: number | string | null;
   hasVoted: boolean;
   canClose: boolean;
+  /**
+   * From `total_votes`. Null means the API is hiding the tally.
+   * Undefined means this payload did not include the field.
+   */
+  totalVotes?: number | null;
+  /** From `results_visible`. False hides counts, including for a manager view that has not opened them. */
+  resultsVisible?: boolean | null;
+  /** From `can_vote`. False locks the ballot for this account. */
+  canVote?: boolean | null;
   /** Null when the payload leaves open vs closed to the close time. */
   status: 'open' | 'closed' | null;
   createdAt: string;
@@ -87,8 +75,8 @@ export type Vote = {
 export type VoteCreatePayload = {
   title: string;
   description: string;
-  options: string[];
-  audience: VoteAudience;
+  choices: string[];
+  whole_church: boolean;
   circle_ids: Array<number | string>;
   closes_at: string;
   results_mode: ResultsMode;
@@ -196,24 +184,22 @@ export const VOTE_RUBRIC: Array<{ title: string; body: string }> = [
   },
 ];
 
-/** What this repo still owes the tip. The screens call the contract anyway. */
+/** Live ballots API. The server owns audience, attestation, and the one-vote lock. */
 export const VOTING_BACKEND_GAPS = [
-  'No Vote, option, or Ballot models, and no /api/votes/ routes. One cast per account is a unique (user, vote) on the server.',
-  'List, create, and cast rules (circle membership, circle admin, church admin, household kids) are not enforced here. The client has no voting-member or kid flag.',
-  'After-close tallies must be omitted while a vote is open. Close-early belongs on can_close.',
-  'The client reads one page envelope and does not follow next.',
+  'vote_count and total_votes stay null until results_visible. A missing count is hidden, never shown as 0.',
+  'A non-voting member gets an empty list, or 403 not_voting_member. The Voting tab shows its empty state.',
+  'The API does not list who voted. my_choice_id is only this account.',
 ] as const;
 
-const votesRoot = ['', 'api', 'votes', ''].join('/');
-const circlesRoot = ['', 'api', 'circles', ''].join('/');
+export const NOT_VOTING_MEMBER_CODE = 'not_voting_member';
 
 export const votePaths = {
-  list: () => votesRoot,
-  create: () => votesRoot,
-  detail: (id: number | string) => `${votesRoot}${id}/`,
-  cast: (id: number | string) => `${votesRoot}${id}/cast/`,
-  close: (id: number | string) => `${votesRoot}${id}/close/`,
-  circles: () => circlesRoot,
+  list: () => '/api/votes/ballots/',
+  create: () => '/api/votes/ballots/',
+  detail: (id: number | string) => `/api/votes/ballots/${id}/`,
+  vote: (id: number | string) => `/api/votes/ballots/${id}/vote/`,
+  close: (id: number | string) => `/api/votes/ballots/${id}/close/`,
+  circles: () => '/api/circles/',
 };
 
 export class VoteClientError extends Error {
@@ -228,18 +214,45 @@ export class VoteClientError extends Error {
   }
 }
 
-/** The votes route is not on this server yet. */
+/** An older server with no ballots route. */
 export const isMissingVoteStatus = (status: number | undefined) =>
   status === 404 || status === 405 || status === 501;
+
+/** Attested gate. The list itself answers 200 with two empty arrays; create answers 403. */
+export const isVotingMemberDenied = (status: number | undefined, body: unknown) =>
+  status === 403 && asString(asRecord(body).code) === NOT_VOTING_MEMBER_CODE;
+
+/**
+ * Empty Voting tab: the route is missing, or this account is not a voting member.
+ * A normal empty church is a 200 `{ open: [], closed: [] }`, which is not an error.
+ */
+export const isEmptyVotingDegrade = (status: number | undefined, body?: unknown) =>
+  isMissingVoteStatus(status) || isVotingMemberDenied(status, body);
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 const asString = (value: unknown) => (typeof value === 'string' ? value : '');
 
-const asCount = (value: unknown) => {
-  const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : 0;
-  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
+/** A real tally, or null when the API omitted it or sent null. Never turns null into 0. */
+const asCount = (value: unknown): number | null => {
+  if (value == null || value === '') return null;
+  const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number)) return null;
+  return Math.max(0, Math.round(number));
+};
+
+const firstDefined = (...values: unknown[]) => {
+  for (const value of values) {
+    if (value !== undefined) return value;
+  }
+  return undefined;
+};
+
+const asFlag = (value: unknown): boolean | null => {
+  if (value === true) return true;
+  if (value === false) return false;
+  return null;
 };
 
 const asBool = (value: unknown) => value === true || value === 1 || value === 'true';
@@ -327,17 +340,39 @@ export const detailChips = (vote: Pick<Vote, 'audience' | 'circles' | 'churchNam
 ];
 
 export const talliesVisible = (vote: Vote, now = new Date()) => {
+  if (vote.resultsVisible === true) return true;
+  if (vote.resultsVisible === false) return false;
   if (!isVoteOpen(vote, now)) return true;
   return vote.resultsMode === 'live';
 };
 
-export const voteTotal = (vote: Pick<Vote, 'options'>) =>
-  vote.options.reduce((sum, option) => sum + (option.count ?? 0), 0);
+/** Sum of known counts. Null when any choice is hidden, so a missing tally is not added as zero. */
+export const voteTotal = (vote: Pick<Vote, 'options'>): number | null => {
+  let sum = 0;
+  for (const option of vote.options) {
+    if (option.count == null) return null;
+    sum += option.count;
+  }
+  return sum;
+};
 
-export const optionShare = (count: number | null, total: number) => {
-  if (count == null || total <= 0) return null;
+/** Prefer the API total. Null stays null. A payload without the field sums the choices. */
+export const visibleTotal = (vote: Pick<Vote, 'options' | 'totalVotes'>): number | null => {
+  if (vote.totalVotes === null) return null;
+  if (typeof vote.totalVotes === 'number') return vote.totalVotes;
+  return voteTotal(vote);
+};
+
+export const optionShare = (count: number | null, total: number | null) => {
+  if (count == null || total == null || total <= 0) return null;
   return Math.round((count / total) * 100);
 };
+
+/** One cast, and only when the API says this account is in the audience. */
+export const canCastVote = (
+  vote: Pick<Vote, 'status' | 'closesAt' | 'closedAt' | 'hasVoted' | 'canVote'>,
+  now = new Date(),
+) => isVoteOpen(vote, now) && !vote.hasVoted && vote.canVote !== false;
 
 export const sectionVotes = (votes: Vote[], now = new Date()) => {
   const open: Vote[] = [];
@@ -394,7 +429,7 @@ export const removeOption = (options: string[], index: number) => {
 export const setOption = (options: string[], index: number, value: string) =>
   options.map((option, item) => (item === index ? value : option));
 
-export const castPayload = (optionId: number | string) => ({ option_id: coerceId(optionId) });
+export const castPayload = (optionId: number | string) => ({ choice_id: coerceId(optionId) });
 
 /**
  * Post vote is allowed when the title, at least two distinct choices, an audience,
@@ -445,8 +480,8 @@ export const buildVoteCreate = (input: VoteCreateInput): VoteCreateResult => {
     payload: {
       title,
       description,
-      options,
-      audience: input.wholeChurch ? 'church' : 'circles',
+      choices: options,
+      whole_church: input.wholeChurch === true,
       circle_ids: input.wholeChurch ? [] : input.circleIds.map(coerceId),
       closes_at: closes.toISOString(),
       results_mode: input.resultsMode === 'live' ? 'live' : 'after_close',
@@ -481,25 +516,34 @@ export const normalizeVoteCircles = (value: unknown): VoteCircle[] => {
 
 const normalizeOptions = (value: unknown): VoteOption[] => {
   if (!Array.isArray(value)) return [];
-  const options: VoteOption[] = [];
+  const options: Array<VoteOption & { position: number | null; index: number }> = [];
   value.forEach((item, index) => {
     if (typeof item === 'string') {
       const label = item.trim();
-      if (label) options.push({ id: index, label, count: null });
+      if (label) options.push({ id: index, label, count: null, position: null, index });
       return;
     }
     const row = asRecord(item);
     const label = asString(row.label ?? row.text ?? row.title ?? row.name).trim();
     const id = asId(row.id) ?? index;
     if (!label) return;
-    const countRaw = row.count ?? row.votes ?? row.tally ?? row.ballot_count;
+    const countRaw = firstDefined(row.vote_count, row.voteCount, row.count, row.tally, row.ballot_count);
+    const position = typeof row.position === 'number' && Number.isFinite(row.position) ? row.position : null;
     options.push({
       id,
       label,
-      count: countRaw == null ? null : asCount(countRaw),
+      count: asCount(countRaw),
+      position,
+      index,
     });
   });
-  return options;
+  options.sort((a, b) => {
+    if (a.position == null && b.position == null) return a.index - b.index;
+    if (a.position == null) return 1;
+    if (b.position == null) return -1;
+    return a.position - b.position || a.index - b.index;
+  });
+  return options.map(({ id, label, count }) => ({ id, label, count }));
 };
 
 const normalizeStatus = (value: unknown): Vote['status'] => {
@@ -520,10 +564,14 @@ export const normalizeVote = (value: unknown): Vote | null => {
   const title = asString(raw.title).trim();
   if (id == null || !title) return null;
   const ballot = asRecord(raw.ballot ?? raw.my_ballot ?? raw.myBallot);
-  const myOptionId = asId(raw.my_option_id ?? raw.myOptionId ?? ballot.option_id ?? ballot.optionId);
+  const myOptionId = asId(
+    firstDefined(raw.my_choice_id, raw.myChoiceId, raw.my_option_id, raw.myOptionId, ballot.option_id, ballot.optionId),
+  );
   const audienceRaw = asString(raw.audience).toLowerCase();
   const wholeChurch = asBool(raw.whole_church ?? raw.wholeChurch) || audienceRaw === 'church';
   const closedAt = asString(raw.closed_at ?? raw.closedAt) || null;
+  const isOpen = asFlag(firstDefined(raw.is_open, raw.isOpen));
+  const totalRaw = firstDefined(raw.total_votes, raw.totalVotes);
   return {
     id,
     title,
@@ -533,12 +581,17 @@ export const normalizeVote = (value: unknown): Vote | null => {
     resultsMode: normalizeResultsMode(raw.results_mode ?? raw.resultsMode),
     audience: wholeChurch ? 'church' : 'circles',
     circles: normalizeVoteCircles(raw.circles ?? raw.circle_ids ?? raw.circleIds),
-    churchName: asString(raw.church_name ?? raw.churchName ?? asRecord(raw.church).name),
-    options: normalizeOptions(raw.options ?? raw.choices),
+    churchName: asString(
+      raw.church_name ?? raw.churchName ?? asRecord(raw.church).name ?? (wholeChurch ? raw.visibility_summary : ''),
+    ),
+    options: normalizeOptions(firstDefined(raw.choices, raw.options)),
     myOptionId,
     hasVoted: asBool(raw.has_voted ?? raw.hasVoted) || myOptionId != null,
     canClose: asBool(raw.can_close ?? raw.canClose ?? raw.can_manage ?? raw.canManage),
-    status: closedAt ? 'closed' : normalizeStatus(raw.status),
+    totalVotes: totalRaw === undefined ? undefined : asCount(totalRaw),
+    resultsVisible: asFlag(firstDefined(raw.results_visible, raw.resultsVisible)),
+    canVote: asFlag(firstDefined(raw.can_vote, raw.canVote)),
+    status: closedAt || isOpen === false ? 'closed' : isOpen === true ? 'open' : normalizeStatus(raw.status),
     createdAt: asString(raw.created_at ?? raw.createdAt),
   };
 };

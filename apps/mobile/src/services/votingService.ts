@@ -4,6 +4,7 @@ import {
   VOTING_COPY,
   VoteClientError,
   castPayload,
+  isEmptyVotingDegrade,
   isMissingVoteStatus,
   normalizeVote,
   normalizeVoteCircles,
@@ -24,6 +25,8 @@ export type VoteListResult = {
 const statusOf = (error: unknown): number | undefined =>
   axios.isAxiosError(error) ? error.response?.status : undefined;
 
+const bodyOf = (error: unknown): unknown => (axios.isAxiosError(error) ? error.response?.data : undefined);
+
 const messageOf = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) return fallback;
   const data = error.response?.data;
@@ -42,15 +45,16 @@ const raise = (error: unknown, fallback: string): never => {
 };
 
 /**
- * Thin voting client. Endpoints are the contract in `@shared/voting`.
- * A missing route returns an empty list so the tab can render until the tip API ships.
+ * Thin voting client. Same bearer `api` client as Directory, Connections, and Circles.
+ * List is `GET /api/votes/ballots/`. An empty list or a not-voting-member forbid
+ * is the empty tab. A missing route still degrades the same way.
  */
 export const fetchVotes = async (): Promise<VoteListResult> => {
   try {
     const response = await api.get(votePaths.list());
     return { votes: normalizeVoteList(response.data), unavailable: false };
   } catch (error) {
-    if (isMissingVoteStatus(statusOf(error))) return { votes: [], unavailable: true };
+    if (isEmptyVotingDegrade(statusOf(error), bodyOf(error))) return { votes: [], unavailable: true };
     return raise(error, VOTING_COPY.loadFailed);
   }
 };
@@ -81,7 +85,7 @@ export const createVote = async (payload: VoteCreatePayload): Promise<Vote> => {
 
 export const castVote = async (id: number | string, optionId: number | string): Promise<Vote | null> => {
   try {
-    const response = await api.post(votePaths.cast(id), castPayload(optionId));
+    const response = await api.post(votePaths.vote(id), castPayload(optionId));
     return normalizeVote(response.data);
   } catch (error) {
     return raise(error, VOTING_COPY.submitFailed);

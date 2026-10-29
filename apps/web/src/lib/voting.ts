@@ -2,8 +2,9 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   VOTING_COPY,
   VoteClientError,
-  isMissingVoteStatus,
   castPayload,
+  isEmptyVotingDegrade,
+  isMissingVoteStatus,
   normalizeVote,
   normalizeVoteCircles,
   normalizeVoteList,
@@ -22,6 +23,13 @@ const statusOf = (error: unknown): number | undefined => {
   if (typeof error === 'object' && error && 'status' in error) {
     const status = (error as { status?: unknown }).status;
     return typeof status === 'number' ? status : undefined;
+  }
+  return undefined;
+};
+
+const bodyOf = (error: unknown): unknown => {
+  if (typeof error === 'object' && error && 'body' in error) {
+    return (error as { body?: unknown }).body;
   }
   return undefined;
 };
@@ -50,13 +58,14 @@ const request = async (method: 'GET' | 'POST', url: string, body?: unknown) => {
   return readBody(response);
 };
 
-/** Same contract as the native client. See `@shared/voting`. */
+/** Same bearer client and contract as Directory, Connections, and Circles. See `@shared/voting`. */
 export async function fetchVotes(): Promise<VoteListResult> {
   try {
     const data = await request('GET', votePaths.list());
     return { votes: normalizeVoteList(data), unavailable: false };
   } catch (error) {
-    if (isMissingVoteStatus(statusOf(error))) return { votes: [], unavailable: true };
+    if (isEmptyVotingDegrade(statusOf(error), bodyOf(error)))
+      return { votes: [], unavailable: true };
     return raise(error, VOTING_COPY.loadFailed);
   }
 }
@@ -88,7 +97,7 @@ export async function castVote(
   optionId: number | string,
 ): Promise<Vote | null> {
   try {
-    return normalizeVote(await request('POST', votePaths.cast(id), castPayload(optionId)));
+    return normalizeVote(await request('POST', votePaths.vote(id), castPayload(optionId)));
   } catch (error) {
     return raise(error, VOTING_COPY.submitFailed);
   }

@@ -42,6 +42,7 @@ known-first-party = [
   "swipes",
   "users",
   "utils",
+  "votes",
 ]
 
 [tool.mypy]
@@ -65,6 +66,7 @@ source = [
   "swipes",
   "users",
   "utils",
+  "votes",
 ]
 omit = [
   "*/tests.py",

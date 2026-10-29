@@ -933,3 +933,190 @@ Newest prayer first (`created_at`, then id). Gathering rows are upcoming and in-
 first (soonest start, then name), then gatherings that already finished (most recently
 finished, then name).
 
+# Voting ballots
+
+Voting is its own tab (Discover · Gatherings · Prayer · Voting · Profile). This API is the
+ballot list, create, cast, and close. There is no mobile chrome here and no public link:
+every route requires auth, and nothing in the payload is a share URL or token.
+
+A ballot is never anonymous. The author is the signed-in account. Blocks do not hide
+ballots. Deleting a circle does not delete ballots that pointed at it.
+
+Audience matches prayer circles. `whole_church` false means the chosen circles. `whole_church`
+true means voting members of that church (circles on the same ballot are still returned).
+Circle admin is a circle membership with `is_admin`. The person who created the circle
+starts as that admin (Circles policy A). There is no separate ballot-admin role. A church
+admin has those powers for every circle in their own church, and is the only account that
+can set `whole_church`.
+
+Who may use it:
+
+- Seeing, creating, and casting require a voting member. Household children are not
+  accounts and cannot be attached to a cast. One account, one cast.
+- Until `voting_member_attested_at` exists on User (PR #75), a voting member is an account
+  whose age is 18 or older in America/New_York. A missing birth date is not a voting
+  member. The 403 detail in that case is `Voting is for adults 18 and older.`
+- When `voting_member_attested_at` is on the model, that column replaces the age check.
+  A non-null timestamp is a voting member (age is not checked again). A null timestamp is
+  not, and the 403 detail is `Voting is for voting members.` The code is always
+  `not_voting_member`.
+- A circle member who is a voting member sees ballots for circles they are in, and may
+  cast one vote while the ballot is open. They cannot change it.
+- A circle admin may create for circles they admin, close those ballots early, and see
+  results for them (including before close).
+- A church admin may create whole-church ballots, create for any circle in their church,
+  close any ballot in their church, and see results. Being a church admin does not cast a
+  vote on a circle ballot unless they are also in that circle (or the ballot is whole-church
+  and their `church_id` matches).
+- Not in the circle, in another church, or not a voting member: the list is empty and
+  detail, vote, and close are 404. They never see the ballot.
+
+A ballot is open when `closed_at` is null and `closes_at` is still in the future. Otherwise
+it is closed. `closed_at` is set only when someone closes it early. Reaching `closes_at`
+closes it with `closed_at` left null.
+
+Results: `vote_count` on each choice and `total_votes` are integers when `results_visible`
+is true, and `null` when it is false. `null` is not zero. Voters see counts while the
+ballot is open only when `results_mode` is `live`. `after_close` (the default) shows voters
+the counts once the ballot is closed. Circle admins of a targeted circle, and a church
+admin of that church, always see counts. The API never lists who voted. `my_choice_id` is
+only the caller's own choice.
+
+No pagination.
+
+## `GET /api/votes/ballots/` (auth)
+
+200:
+
+```json
+{
+  "open": [],
+  "closed": []
+}
+```
+
+Both keys are always present. Newest first inside each section (`created_at`, then id).
+A non-voting member, or an account with nothing they can see, gets two empty arrays (200,
+not 403).
+
+## `POST /api/votes/ballots/` (auth, voting member)
+
+```json
+{
+  "title": "Approve the 2027 budget",
+  "description": "Optional.",
+  "choices": ["Yes", "No"],
+  "whole_church": false,
+  "circle_ids": [3],
+  "closes_at": "2026-11-20T21:00:00Z",
+  "results_mode": "after_close"
+}
+```
+
+201 returns one ballot (shape below). Creating is limited to 10 per hour per account
+(`ballot_create`). Listing is not counted. 429 uses the usual limit error shape.
+
+| Field | Rule |
+|---|---|
+| `title` | Required. Tags stripped. 1–140 characters. |
+| `description` | Optional. Tags stripped. Up to 2000 characters. Omitted stores `""`. |
+| `choices` | Optional. Omitted or `null` stores `Yes` then `No`. Otherwise 2–6 labels, each 1–80 characters after tags and extra spaces are removed. Duplicates ignoring case are rejected. Order is kept. |
+| `whole_church` | Optional, default false. Church admin only. |
+| `circle_ids` | Circles you admin. A church admin may pick any circle in their church. Duplicates are ignored. When this is omitted or empty and `whole_church` is false, the server uses the first circle you admin (name, then id). It never defaults to whole church. |
+| `closes_at` | Required. ISO-8601. Must be in the future. |
+| `results_mode` | `after_close` (default) or `live`. |
+
+Not a voting member: **403**
+
+```json
+{ "detail": "Voting is for adults 18 and older.", "code": "not_voting_member" }
+```
+
+Create validation errors are lists, same as the rest of this API. No church:
+
+```json
+{ "church": ["Join a church before creating a ballot."] }
+```
+
+A circle admin who sets `whole_church`: **400** `whole_church` — `Only a church admin can open a ballot to the whole church.`
+A member who names a circle they do not admin: **400** `circle_ids` — `Choose circles you admin.`
+A member who sends no circle: **400** `circle_ids` — `Only a circle admin can create a ballot.`
+A church admin who sends neither a circle nor whole church: **400** `circle_ids` — `Choose at least one circle, or turn on whole church.`
+
+## `GET /api/votes/ballots/<id>/` (auth)
+
+200 is one ballot. 404 when it is missing or the caller cannot see it (same body as other
+404s: `{ "detail": "Not found." }`).
+
+```json
+{
+  "id": 1,
+  "title": "Approve the 2027 budget",
+  "description": "",
+  "whole_church": false,
+  "circles": [{ "id": 3, "name": "Young Adults" }],
+  "church_id": 1,
+  "author": { "id": 2, "first_name": "Sarah", "last_initial": "L", "display_name": "Sarah L." },
+  "closes_at": "2026-11-20T21:00:00Z",
+  "closed_at": null,
+  "is_open": true,
+  "results_mode": "after_close",
+  "results_visible": false,
+  "has_voted": false,
+  "my_choice_id": null,
+  "can_vote": true,
+  "can_close": false,
+  "visibility_summary": "Young Adults",
+  "choices": [
+    { "id": 10, "label": "Yes", "position": 0, "vote_count": null },
+    { "id": 11, "label": "No", "position": 1, "vote_count": null }
+  ],
+  "total_votes": null,
+  "created_at": "2026-10-29T14:00:00Z"
+}
+```
+
+`author` is `null` if that account was deleted. Circles are sorted by name.
+`visibility_summary` is `Whole church` when `whole_church` is true, otherwise the circle
+names joined with commas. `can_vote` is true only when the ballot is open, the caller is
+in the audience, and they have not voted. `can_close` is true only when they may manage it
+and it is still open. There is no update and no delete.
+
+## `POST /api/votes/ballots/<id>/vote/` (auth)
+
+```json
+{ "choice_id": 10 }
+```
+
+201 returns the ballot. The cast is the signed-in account. Extra keys (including any
+household member id) are ignored. A second cast is **400**:
+
+```json
+{ "detail": "You already voted on this ballot.", "code": "already_voted" }
+```
+
+Closed (early or because `closes_at` passed): **400** `{ "detail": "This ballot is closed.", "code": "ballot_closed" }`.
+
+Choice from another ballot, or an unknown id: **400** `{ "choice_id": "Choose one of this ballot's choices." }`.
+
+Visible but not in the audience (a church admin outside the circle): **403**
+
+```json
+{ "detail": "You are not in the group that votes on this ballot.", "code": "not_eligible" }
+```
+
+Not visible: **404**.
+
+## `POST /api/votes/ballots/<id>/close/` (auth)
+
+Empty body. Circle admin of any targeted circle, or a church admin of that church. 200
+returns the ballot. Closing early sets `closed_at`. Calling it again is 200 and does not
+change `closed_at`. A ballot that has already reached `closes_at` stays closed with
+`closed_at` null. A voting member who can see it but cannot manage it: **403**
+
+```json
+{ "detail": "Only a circle admin can close this ballot.", "code": "not_ballot_admin" }
+```
+
+Not visible: **404**.
+

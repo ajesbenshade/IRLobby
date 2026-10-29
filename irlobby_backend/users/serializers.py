@@ -13,9 +13,19 @@ from activities.models import Church
 from utils.media import validate_image_reference, validate_image_reference_list
 from utils.sanitize import strip_html
 
+from .mailing import MailingAddressError, clean_mailing_address
 from .models import Invite, PushDeviceToken, User
 from .reliability import build_reliability_summary
 from .social import BIRTHDAY_MINOR_ERROR, BIRTHDAY_NO_DOB_ERROR
+
+MAILING_FIELDS = (
+    "mailing_street",
+    "mailing_street2",
+    "mailing_city",
+    "mailing_state",
+    "mailing_postal",
+    "show_mailing_address",
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -62,6 +72,14 @@ class UserSerializer(serializers.ModelSerializer):
     next_host_available_at = serializers.SerializerMethodField()
     household_child_count = serializers.SerializerMethodField()
     phone = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    # Wider than the stored column so "pa" / "19438 1234" can be normalized before save.
+    mailing_street = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    mailing_street2 = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=255
+    )
+    mailing_city = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    mailing_state = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    mailing_postal = serializers.CharField(required=False, allow_blank=True, max_length=16)
 
     class Meta:
         model = User
@@ -110,6 +128,12 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "show_email",
             "show_phone",
+            "mailing_street",
+            "mailing_street2",
+            "mailing_city",
+            "mailing_state",
+            "mailing_postal",
+            "show_mailing_address",
             "dm_from_shared_events",
             "show_birthday",
         )
@@ -165,7 +189,41 @@ class UserSerializer(serializers.ModelSerializer):
             ):
                 raise serializers.ValidationError({"date_of_birth": MINOR_DEPENDENT_ACCOUNT_ERROR})
         self._validate_show_birthday(attrs, dob)
+        self._validate_mailing_address(attrs)
         return attrs
+
+    def _validate_mailing_address(self, attrs):
+        """State and ZIP are checked whenever they are saved. Show requires a full address.
+
+        Street, city, state, and ZIP are required together only when show_mailing_address
+        is true. Apartment (mailing_street2) is optional. Clearing every field stores no
+        address. Turning show off does not wipe a saved address. These fields are not the
+        account City (`location`).
+        """
+        if not any(key in attrs for key in MAILING_FIELDS):
+            return
+        current = {}
+        for key in MAILING_FIELDS:
+            if key in attrs:
+                current[key] = attrs[key]
+            elif self.instance is not None:
+                current[key] = getattr(self.instance, key)
+            else:
+                current[key] = False if key == "show_mailing_address" else None
+        try:
+            cleaned = clean_mailing_address(
+                street=current["mailing_street"],
+                street2=current["mailing_street2"],
+                city=current["mailing_city"],
+                state=current["mailing_state"],
+                postal=current["mailing_postal"],
+                show=bool(current["show_mailing_address"]),
+            )
+        except MailingAddressError as exc:
+            raise serializers.ValidationError(exc.errors) from exc
+        for key in MAILING_FIELDS:
+            if key in attrs:
+                attrs[key] = cleaned[key]
 
     def _validate_show_birthday(self, attrs, dob):
         """Only accounts that are 18 or older, with a birth date, can share a birthday."""

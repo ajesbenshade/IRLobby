@@ -57,6 +57,16 @@ class User(AbstractUser):
     phone = models.CharField(max_length=16, blank=True, default="")
     show_email = models.BooleanField(default=False)
     show_phone = models.BooleanField(default=False)
+    # Optional mailing address. Separate from `location` (the account City). Empty strings
+    # mean no address is stored. street2 is null when there is no apartment/suite.
+    # Never returned to other people unless show_mailing_address is on and profile_visibility
+    # includes them. Never included on directory list rows.
+    mailing_street = models.CharField(max_length=255, blank=True, default="")
+    mailing_street2 = models.CharField(max_length=255, blank=True, null=True, default=None)
+    mailing_city = models.CharField(max_length=120, blank=True, default="")
+    mailing_state = models.CharField(max_length=2, blank=True, default="")
+    mailing_postal = models.CharField(max_length=10, blank=True, default="")
+    show_mailing_address = models.BooleanField(default=False)
     # Adults only: let people who attended a shared event with you start a 1:1 chat.
     dm_from_shared_events = models.BooleanField(default=False)
     # Adults only: let people inside profile_visibility see your birthday (month and day,

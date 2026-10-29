@@ -16,12 +16,13 @@ import { appColors, appTypography } from '@theme/index';
 import {
   VOTING_COPY,
   VoteClientError,
+  canCastVote,
   detailChips,
   isVoteOpen,
   optionShare,
   talliesVisible,
+  visibleTotal,
   voteRowSubline,
-  voteTotal,
 } from '@shared/voting';
 
 type Navigation = NativeStackNavigationProp<MainStackParamList, 'VotingDetail'>;
@@ -60,9 +61,10 @@ export const VoteBallotScreen = () => {
 
   const open = vote ? isVoteOpen(vote) : false;
   const showTallies = vote ? talliesVisible(vote) : false;
-  const locked = Boolean(vote && (vote.hasVoted || !open));
+  const canCast = vote ? canCastVote(vote) : false;
+  const locked = Boolean(vote) && !canCast;
   const selected = vote?.hasVoted && vote.myOptionId != null ? String(vote.myOptionId) : picked;
-  const total = vote ? voteTotal(vote) : 0;
+  const total = vote ? visibleTotal(vote) : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -119,7 +121,7 @@ export const VoteBallotScreen = () => {
               })}
             </View>
             {open && !showTallies ? <Text style={styles.helper}>{VOTING_COPY.resultsHidden}</Text> : null}
-            {open && !vote.hasVoted ? (
+            {canCast ? (
               <>
                 <PillButton
                   label={VOTING_COPY.submit}

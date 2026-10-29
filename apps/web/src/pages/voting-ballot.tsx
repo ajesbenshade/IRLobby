@@ -3,12 +3,13 @@ import { castVote, closeVote, fetchVote } from '@/lib/voting';
 import {
   VOTING_COPY,
   VoteClientError,
+  canCastVote,
   detailChips,
   isVoteOpen,
   optionShare,
   talliesVisible,
+  visibleTotal,
   voteRowSubline,
-  voteTotal,
 } from '@shared/voting';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft } from 'lucide-react';
@@ -52,9 +53,10 @@ export default function VotingBallotPage() {
 
   const open = vote ? isVoteOpen(vote) : false;
   const showTallies = vote ? talliesVisible(vote) : false;
-  const locked = Boolean(vote && (vote.hasVoted || !open));
+  const canCast = vote ? canCastVote(vote) : false;
+  const locked = Boolean(vote) && !canCast;
   const selected = vote?.hasVoted && vote.myOptionId != null ? String(vote.myOptionId) : picked;
-  const total = vote ? voteTotal(vote) : 0;
+  const total = vote ? visibleTotal(vote) : null;
 
   return (
     <div className={wide ? '' : 'min-h-[100dvh] bg-[#f6f1ee] px-4 pb-10'}>
@@ -144,7 +146,7 @@ export default function VotingBallotPage() {
           {open && !showTallies ? (
             <p className="mt-3 text-sm text-[#6e6a68]">{VOTING_COPY.resultsHidden}</p>
           ) : null}
-          {open && !vote.hasVoted ? (
+          {canCast ? (
             <>
               <button
                 type="button"

@@ -1,17 +1,22 @@
 import {
   DEFAULT_OPTIONS,
+  NOT_VOTING_MEMBER_CODE,
   VOTING_BACKEND_GAPS,
   VOTING_COPY,
   VOTE_RUBRIC,
   addOption,
   audienceChip,
   buildVoteCreate,
+  canCastVote,
   canCreateVote,
   castPayload,
   detailChips,
   formatClosedOn,
   formatClosesAt,
   initialAdminCircleIds,
+  isEmptyVotingDegrade,
+  isVoteOpen,
+  isVotingMemberDenied,
   normalizeVote,
   normalizeVoteCircles,
   normalizeVoteList,
@@ -19,6 +24,7 @@ import {
   removeOption,
   sectionVotes,
   talliesVisible,
+  visibleTotal,
   votePaths,
   voteRowSubline,
   type Vote,
@@ -83,8 +89,8 @@ describe('create a vote', () => {
       payload: {
         title: 'Affirm the 2027 budget',
         description: 'As presented Sunday.',
-        options: ['Yes', 'No'],
-        audience: 'circles',
+        choices: ['Yes', 'No'],
+        whole_church: false,
         circle_ids: [4],
         closes_at: '2026-11-01T20:00:00.000Z',
         results_mode: 'after_close',
@@ -102,7 +108,7 @@ describe('create a vote', () => {
       buildVoteCreate({ ...baseInput, wholeChurch: true, isChurchAdmin: true, circleIds: [4], resultsMode: 'live' }),
     ).toMatchObject({
       ok: true,
-      payload: { audience: 'church', circle_ids: [], results_mode: 'live' },
+      payload: { whole_church: true, circle_ids: [], results_mode: 'live' },
     });
   });
 
@@ -209,19 +215,137 @@ describe('tip payload', () => {
       isAdmin: true,
       isMember: true,
     });
-    expect(castPayload('4')).toEqual({ option_id: 4 });
+    expect(castPayload('4')).toEqual({ choice_id: 4 });
   });
 
-  it('calls the tip paths and records the backend gaps', () => {
-    expect(votePaths.list().endsWith('/votes/')).toBe(true);
-    expect(votePaths.detail(8).endsWith('/votes/8/')).toBe(true);
-    expect(votePaths.cast(8).endsWith('/votes/8/cast/')).toBe(true);
-    expect(votePaths.close(8).endsWith('/votes/8/close/')).toBe(true);
-    expect(votePaths.circles().endsWith('/circles/')).toBe(true);
-    expect(VOTING_BACKEND_GAPS.join(' ')).toMatch(/unique/);
-    expect(VOTING_BACKEND_GAPS.join(' ')).toMatch(/kid/);
+  it('calls the live ballots paths', () => {
+    expect(votePaths.list()).toBe('/api/votes/ballots/');
+    expect(votePaths.create()).toBe('/api/votes/ballots/');
+    expect(votePaths.detail(8)).toBe('/api/votes/ballots/8/');
+    expect(votePaths.vote(8)).toBe('/api/votes/ballots/8/vote/');
+    expect(votePaths.close(8)).toBe('/api/votes/ballots/8/close/');
+    expect(votePaths.circles()).toBe('/api/circles/');
+    expect(VOTING_BACKEND_GAPS.join(' ')).toMatch(/null/);
+    expect(VOTING_BACKEND_GAPS.join(' ')).toMatch(/not_voting_member/);
+    expect(VOTING_BACKEND_GAPS.join(' ')).toMatch(/who voted/);
     expect(VOTING_COPY.submitOnce).toBe('Members submit once.');
     expect(VOTING_COPY.emptyTitle).toBe('No votes yet');
     expect(VOTING_COPY.submitFailed).toBe("Couldn't submit your vote. Try again.");
+  });
+});
+
+describe('live ballots API', () => {
+  const hidden = {
+    id: 1,
+    title: 'Approve the 2027 budget',
+    description: '',
+    whole_church: false,
+    circles: [{ id: 3, name: 'Young Adults' }],
+    closes_at: '2026-11-20T21:00:00Z',
+    closed_at: null,
+    is_open: true,
+    results_mode: 'after_close',
+    results_visible: false,
+    has_voted: false,
+    my_choice_id: null,
+    can_vote: true,
+    can_close: false,
+    visibility_summary: 'Young Adults',
+    choices: [
+      { id: 11, label: 'No', position: 1, vote_count: null },
+      { id: 10, label: 'Yes', position: 0, vote_count: null },
+    ],
+    total_votes: null,
+    created_at: '2026-10-29T14:00:00Z',
+    voters: [{ id: 9, name: 'Should not surface' }],
+  };
+
+  it('keeps null counts hidden and does not invent a voter list', () => {
+    const vote = normalizeVote(hidden);
+    expect(vote?.options.map((option) => option.label)).toEqual(['Yes', 'No']);
+    expect(vote?.options.map((option) => option.count)).toEqual([null, null]);
+    expect(vote?.totalVotes).toBeNull();
+    expect(visibleTotal(vote!)).toBeNull();
+    expect(vote?.myOptionId).toBeNull();
+    expect(vote?.hasVoted).toBe(false);
+    expect(vote?.resultsVisible).toBe(false);
+    expect(vote?.canVote).toBe(true);
+    expect(vote?.status).toBe('open');
+    expect(talliesVisible(vote!, now)).toBe(false);
+    expect(canCastVote(vote!, now)).toBe(true);
+    expect(vote).not.toHaveProperty('voters');
+    expect(normalizeVoteList({ open: [], closed: [] })).toEqual([]);
+    expect(normalizeVoteList({ open: [hidden], closed: [] })).toHaveLength(1);
+  });
+
+  it('shows a real zero and locks a second cast', () => {
+    const live = normalizeVote({
+      ...hidden,
+      results_mode: 'live',
+      results_visible: true,
+      has_voted: true,
+      my_choice_id: 10,
+      can_vote: false,
+      total_votes: 1,
+      choices: [
+        { id: 10, label: 'Yes', position: 0, vote_count: 1 },
+        { id: 11, label: 'No', position: 1, vote_count: 0 },
+      ],
+    });
+    expect(live?.options.map((option) => option.count)).toEqual([1, 0]);
+    expect(live?.totalVotes).toBe(1);
+    expect(visibleTotal(live!)).toBe(1);
+    expect(live?.myOptionId).toBe(10);
+    expect(live?.hasVoted).toBe(true);
+    expect(talliesVisible(live!, now)).toBe(true);
+    expect(canCastVote(live!, now)).toBe(false);
+    expect(optionShare(0, 1)).toBe(0);
+    expect(optionShare(null, 1)).toBeNull();
+  });
+
+  it('lets a manager see after-close counts while the ballot is open, and blocks a church admin who is not in the audience', () => {
+    const managed = normalizeVote({
+      ...hidden,
+      results_visible: true,
+      can_vote: false,
+      can_close: true,
+      total_votes: 2,
+      choices: [
+        { id: 10, label: 'Yes', position: 0, vote_count: 2 },
+        { id: 11, label: 'No', position: 1, vote_count: 0 },
+      ],
+    });
+    expect(talliesVisible(managed!, now)).toBe(true);
+    expect(canCastVote(managed!, now)).toBe(false);
+    expect(managed?.canClose).toBe(true);
+    expect(managed?.options[1].count).toBe(0);
+  });
+
+  it('treats a closed ballot with null closed_at as closed, and a forbid as the empty tab', () => {
+    const expired = normalizeVote({
+      ...hidden,
+      closes_at: '2026-10-28T14:00:00.000Z',
+      is_open: false,
+      results_visible: true,
+      can_vote: false,
+      total_votes: 0,
+      choices: [
+        { id: 10, label: 'Yes', position: 0, vote_count: 0 },
+        { id: 11, label: 'No', position: 1, vote_count: 0 },
+      ],
+    });
+    expect(expired?.status).toBe('closed');
+    expect(isVoteOpen(expired!, now)).toBe(false);
+    expect(talliesVisible(expired!, now)).toBe(true);
+    expect(expired?.options[0].count).toBe(0);
+    expect(visibleTotal(expired!)).toBe(0);
+    expect(isVotingMemberDenied(403, { code: NOT_VOTING_MEMBER_CODE, detail: 'Voting is for voting members.' })).toBe(
+      true,
+    );
+    expect(isVotingMemberDenied(403, { code: 'not_eligible' })).toBe(false);
+    expect(isEmptyVotingDegrade(403, { code: NOT_VOTING_MEMBER_CODE })).toBe(true);
+    expect(isEmptyVotingDegrade(404)).toBe(true);
+    expect(isEmptyVotingDegrade(500)).toBe(false);
+    expect(normalizeVoteList({ open: [], closed: [] })).toEqual([]);
   });
 });

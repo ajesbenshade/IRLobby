@@ -153,11 +153,49 @@ describe('Discover swipe card (Foyer)', () => {
     expect(screen.queryByText(/nearby/)).toBeNull();
     fireEvent.press(screen.getByText('Filters'));
     expect(screen.getByText('Filter gatherings')).toBeTruthy();
-    for (const legacy of ['Tune the deck', 'Nearby', '10 km', '25 km', 'Everyone', 'Friends', 'Category', 'Neighborhood', 'Tags']) {
+    expect(screen.getByText('Narrow Discover to gatherings that fit you.')).toBeTruthy();
+    expect(screen.getByText('Type')).toBeTruthy();
+    expect(screen.getByText('Audience')).toBeTruthy();
+    expect(screen.getByText('Ages')).toBeTruthy();
+    expect(screen.getByText('All types')).toBeTruthy();
+    expect(screen.getByText('Everyone')).toBeTruthy();
+    expect(screen.getByText('All ages')).toBeTruthy();
+    expect(screen.getByText('Adults (18+)')).toBeTruthy();
+    for (const legacy of ['Tune the deck', 'Nearby', '10 km', '25 km', 'Friends', 'Category', 'Neighborhood', 'Tags', 'Price', 'Skill Level']) {
       expect(screen.queryByText(legacy)).toBeNull();
     }
     expect(screen.queryByPlaceholderText('Low-key, rooftop, hike')).toBeNull();
     expect(screen.getByText('Starts after')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Small groups'));
+    fireEvent.press(screen.getByText('Men'));
+    fireEvent.press(screen.getByText('Adults (18+)'));
+    await waitFor(() => {
+      const match = mockFetchActivities.mock.calls
+        .map((call) => call[0] as Record<string, unknown> | undefined)
+        .find(
+          (filters) =>
+            filters?.type === 'small_groups' && filters?.audience === 'men' && filters?.ages === 'adults',
+        );
+      expect(match).toBeTruthy();
+      expect(match).not.toHaveProperty('category');
+      expect(match).not.toHaveProperty('price_min');
+      expect(match).not.toHaveProperty('skill_level');
+      expect(match).not.toHaveProperty('tags');
+      expect(match).not.toHaveProperty('age_restriction');
+    });
+
+    fireEvent.press(screen.getByText('Clear'));
+    await waitFor(() => {
+      const last = mockFetchActivities.mock.calls.at(-1)?.[0] as {
+        type?: string;
+        audience?: string;
+        ages?: string;
+      };
+      expect(last?.type).toBeUndefined();
+      expect(last?.audience).toBeUndefined();
+      expect(last?.ages).toBeUndefined();
+    });
   });
 
   it('Foyer: Pick your church card shows above the deck when the member has no church', async () => {

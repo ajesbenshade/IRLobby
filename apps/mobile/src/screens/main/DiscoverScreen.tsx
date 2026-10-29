@@ -72,6 +72,13 @@ import {
   GOING_COPY,
   discoverCountLabel,
 } from '@constants/foyerCopy';
+import {
+  AGES_CHOICES,
+  AUDIENCE_CHOICES,
+  GATHERING_TYPE_CHOICES,
+  foyerGatheringQuery,
+  type GatheringChoice,
+} from '@foyer/discoverGatheringFilters';
 import { useMapCenter } from '@foyer/mapLocation';
 import { discoverGoingButton, gatheringRequiresApproval, joinButtonFor } from '@foyer/approval';
 import { useDetectedCapabilities } from '@foyer/capabilities';
@@ -154,6 +161,9 @@ export const DiscoverScreen = () => {
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
   const [dateFilterPicker, setDateFilterPicker] = useState<'from' | 'to' | null>(null);
+  const [gatheringType, setGatheringType] = useState('');
+  const [audienceChoice, setAudienceChoice] = useState('');
+  const [agesChoice, setAgesChoice] = useState('');
   const foyerMode = isFoyerMode();
   const [tonightOnly, setTonightOnly] = useState(!foyerMode);
   const [whosComing, setWhosComing] = useState<WhosComingResponse | null>(null);
@@ -195,8 +205,19 @@ export const DiscoverScreen = () => {
     };
   }, [tonightOnly]);
 
-  const discoverFilters: ActivityFetchFilters = useMemo(
-    () => ({
+  const discoverFilters: ActivityFetchFilters = useMemo(() => {
+    const dateFrom = normalizeDateFilter(dateFromFilter, false);
+    const dateTo = normalizeDateFilter(dateToFilter, true);
+    if (foyerMode) {
+      return foyerGatheringQuery({
+        gatheringType,
+        audience: audienceChoice,
+        ages: agesChoice,
+        dateFrom,
+        dateTo,
+      });
+    }
+    return {
       category: categoryFilter.trim() || undefined,
       location: locationFilter.trim() || undefined,
       tags: (() => {
@@ -210,30 +231,28 @@ export const DiscoverScreen = () => {
       skill_level: skillFilter.trim() || undefined,
       age_restriction: ageFilter.trim() || undefined,
       visibility: visibilityFilter.trim() || undefined,
-      date_from:
-        !foyerMode && tonightOnly
-          ? tonightWindow.date_from
-          : normalizeDateFilter(dateFromFilter, false),
-      date_to:
-        !foyerMode && tonightOnly ? tonightWindow.date_to : normalizeDateFilter(dateToFilter, true),
-    }),
-    [
-      ageFilter,
-      categoryFilter,
-      dateFromFilter,
-      dateToFilter,
-      distanceFilter,
-      locationFilter,
-      normalizeDateFilter,
-      skillFilter,
-      tagFilter,
-      foyerMode,
-      tonightOnly,
-      tonightWindow.date_from,
-      tonightWindow.date_to,
-      visibilityFilter,
-    ],
-  );
+      date_from: tonightOnly ? tonightWindow.date_from : dateFrom,
+      date_to: tonightOnly ? tonightWindow.date_to : dateTo,
+    };
+  }, [
+    ageFilter,
+    agesChoice,
+    audienceChoice,
+    categoryFilter,
+    dateFromFilter,
+    dateToFilter,
+    distanceFilter,
+    gatheringType,
+    locationFilter,
+    normalizeDateFilter,
+    skillFilter,
+    tagFilter,
+    foyerMode,
+    tonightOnly,
+    tonightWindow.date_from,
+    tonightWindow.date_to,
+    visibilityFilter,
+  ]);
 
   const {
     data: activities = [],
@@ -310,13 +329,19 @@ export const DiscoverScreen = () => {
         tonightOnly ? 'tonight' : '',
         tonightOnly ? '' : dateFromFilter,
         tonightOnly ? '' : dateToFilter,
+        gatheringType,
+        audienceChoice,
+        agesChoice,
       ].filter((value) => value.trim().length > 0).length,
     [
       ageFilter,
+      agesChoice,
+      audienceChoice,
       categoryFilter,
       dateFromFilter,
       dateToFilter,
       distanceFilter,
+      gatheringType,
       locationFilter,
       skillFilter,
       tagFilter,
@@ -493,6 +518,9 @@ export const DiscoverScreen = () => {
     setVisibilityFilter('');
     setDateFromFilter('');
     setDateToFilter('');
+    setGatheringType('');
+    setAudienceChoice('');
+    setAgesChoice('');
     setTonightOnly(!isFoyerMode());
     setCurrentIndex(0);
   }, []);
@@ -548,6 +576,32 @@ export const DiscoverScreen = () => {
   const discoverGoing = discoverGoingButton({ join: currentJoinButton, full: currentFull, cancelled: currentActivity ? isActivityCancelled(currentActivity) : false });
   const foyerHostName = currentActivity ? hostDisplayName(currentActivity) : '';
   const foyerHostAvatar = currentActivity ? hostAvatarUrl(currentActivity) : null;
+
+  const chooseGatheringFilter = (current: string, next: string, setValue: (value: string) => void) => {
+    setValue(current === next && next !== '' ? '' : next);
+    setCurrentIndex(0);
+  };
+
+  const renderGatheringChoices = (
+    label: string,
+    choices: readonly GatheringChoice[],
+    value: string,
+    setValue: (next: string) => void,
+  ) => (
+    <View>
+      <Text style={styles.filterFieldLabel}>{label}</Text>
+      <View style={styles.chipRow}>
+        {choices.map((choice) => (
+          <Chip
+            key={`${label}-${choice.label}`}
+            label={choice.label}
+            selected={value === choice.value}
+            onPress={() => chooseGatheringFilter(value, choice.value, setValue)}
+          />
+        ))}
+      </View>
+    </View>
+  );
 
   return (
     <>
@@ -641,8 +695,10 @@ export const DiscoverScreen = () => {
                   Clear
                 </AppButton>
               </View>
-              {/* Legacy deck filters: distance in km, Everyone/Friends visibility, free-text category/tags.
-                  Foyer hosts can't set visibility and gatherings are church-wide, so Foyer filters by date only. */}
+              {foyerMode
+                ? renderGatheringChoices('Type', GATHERING_TYPE_CHOICES, gatheringType, setGatheringType)
+                : null}
+              {/* Legacy deck filters stay off Foyer. Foyer uses Type, dates, Audience, and Ages. */}
               {foyerMode ? null : (
                 <>
                   <View style={styles.chipRow}>
@@ -727,6 +783,12 @@ export const DiscoverScreen = () => {
                         setDateToFilter('');
                       }}
                     />
+                  ) : null}
+                  {foyerMode ? (
+                    <>
+                      {renderGatheringChoices('Audience', AUDIENCE_CHOICES, audienceChoice, setAudienceChoice)}
+                      {renderGatheringChoices('Ages', AGES_CHOICES, agesChoice, setAgesChoice)}
+                    </>
                   ) : null}
                   <DatePickerSheet
                     visible={dateFilterPicker != null}
@@ -1329,6 +1391,11 @@ const styles = StyleSheet.create({
   },
   filterSubtitle: {
     color: appColors.mutedInk,
+  },
+  filterFieldLabel: {
+    color: appColors.ink,
+    fontWeight: '600',
+    marginTop: 4,
   },
   chipRow: {
     flexDirection: 'row',

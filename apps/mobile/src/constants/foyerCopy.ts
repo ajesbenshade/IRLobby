@@ -731,7 +731,7 @@ export const DELETE_ACCOUNT_COPY = {
 /** Discover filters and map in Foyer mode (beta readiness items 9 and 13). */
 export const DISCOVER_FILTER_COPY = {
   title: 'Filter gatherings',
-  subtitle: 'Show gatherings between two dates.',
+  subtitle: 'Narrow Discover to gatherings that fit you.',
   mapTitle: 'On the map',
   mapSubtitle: 'Tap a pin to see that gathering.',
 } as const;

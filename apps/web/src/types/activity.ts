@@ -55,10 +55,19 @@ export interface ChatMessage {
   message: string;
   createdAt: string;
 }
-/** Discover sheet state. Only location, distance, and dates are sent to the list API. */
+/**
+ * Discover sheet state. Query mapping lives in buildActivitySearchParams:
+ * location, radius, dates, and type / audience / ages (omitted on the defaults).
+ */
 export interface ActivityFilters {
   location: string;
   maxDistance: number[];
   dateFrom: Date | null;
   dateTo: Date | null;
+  /** Design label. "All types" is omitted from the query. */
+  gatheringType: string;
+  /** Design label. "Everyone" is omitted from the query. */
+  audience: string;
+  /** Design label. "All ages" is omitted from the query. */
+  ages: string;
 }

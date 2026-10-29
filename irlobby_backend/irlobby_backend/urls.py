@@ -30,6 +30,7 @@ from rest_framework_simplejwt.views import (
 from activities import foyer_views
 from irlobby_backend.legal_pages import privacy_policy, support_page, terms_of_use
 from irlobby_backend.stripe_bounce import stripe_app_bounce
+from users.directory_views import DirectoryListView
 from users.oauth_views import apple_mobile_login, google_mobile_login
 from users.views import (
     CookieTokenRefreshView,
@@ -242,6 +243,7 @@ urlpatterns = [
     path("api/auth/twitter/", include("users.oauth_urls")),
     path("api/config/", app_config, name="app-config"),
     path("api/users/", include("users.urls")),
+    path("api/directory/", DirectoryListView.as_view(), name="directory-list"),
     path("api/churches/", foyer_views.church_list_create, name="church-list"),
     path(
         "api/public/calendar.ics", foyer_views.public_calendar_ics_view, name="public-calendar-ics"

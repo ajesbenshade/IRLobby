@@ -89,6 +89,75 @@ describe('social sign-in request bodies carry the legal flags (Login and Sign up
   });
 });
 
+describe('register sends the voting-member checkbox with the birth date', () => {
+  it('posts voting_member_attested true only when the box was checked', async () => {
+    const { api } = jest.requireMock('../apiClient') as { api: { post: jest.Mock } };
+    const { register } = jest.requireActual('../authService') as typeof import('../authService');
+    api.post.mockReset();
+    api.post.mockResolvedValue({ data: { access: 'a', refresh: 'r', user: { id: 1, email: 'a@b.co' } } });
+    await register({
+      email: 'a@b.co',
+      password: 'longenough1',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      username: 'adal',
+      dateOfBirth: '1988-03-04',
+      termsAccepted: true,
+      votingMemberAttested: true,
+    });
+    expect(api.post.mock.calls[0][0]).toBe('/api/users/register/');
+    expect(api.post.mock.calls[0][1]).toMatchObject({
+      date_of_birth: '1988-03-04',
+      voting_member_attested: true,
+      terms_accepted: true,
+      privacy_accepted: true,
+    });
+    expect(api.post.mock.calls[0][1]).not.toHaveProperty('voting_member_attested_at');
+
+    api.post.mockClear();
+    await register({
+      email: 'a@b.co',
+      password: 'longenough1',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      dateOfBirth: '1988-03-04',
+    });
+    expect(api.post.mock.calls[0][1]).not.toHaveProperty('voting_member_attested');
+  });
+});
+
+describe('Google and Apple sign-in send the voting-member gate only for a new account', () => {
+  it('posts date_of_birth and voting_member_attested when the signup gate is filled', async () => {
+    const { api } = jest.requireMock('../apiClient') as { api: { post: jest.Mock } };
+    const { loginWithGoogleIdToken, buildAppleAuthBody } = jest.requireActual('../authService') as typeof import('../authService');
+    const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const idToken = `${encode({ alg: 'none' })}.${encode({ iss: 'https://accounts.google.com', aud: 'web.apps.googleusercontent.com', sub: 'g' })}.sig`;
+    api.post.mockReset();
+    api.post.mockResolvedValue({ data: { access: 'a', refresh: 'r', user: { id: 1, email: 'a@b.co', date_of_birth: '1988-03-04' } } });
+    await loginWithGoogleIdToken(idToken, { acceptedLegal: true, dateOfBirth: '1988-03-04', votingMemberAttested: true }).catch(() => undefined);
+    expect(api.post.mock.calls[0][1]).toMatchObject({
+      id_token: idToken,
+      date_of_birth: '1988-03-04',
+      voting_member_attested: true,
+    });
+    expect(
+      buildAppleAuthBody({
+        identityToken: 'tok',
+        authorizationCode: 'c',
+        dateOfBirth: '1988-03-04',
+        votingMemberAttested: true,
+      }),
+    ).toMatchObject({
+      identity_token: 'tok',
+      authorization_code: 'c',
+      date_of_birth: '1988-03-04',
+      voting_member_attested: true,
+    });
+    expect(buildAppleAuthBody({ identityToken: 'tok' })).not.toHaveProperty('voting_member_attested');
+    expect(buildAppleAuthBody({ identityToken: 'tok' })).not.toHaveProperty('date_of_birth');
+  });
+});
+
 describe('saveBirthDate (birth date step after social sign-in)', () => {
   it('PATCHes /api/users/profile/ with date_of_birth and returns the user with the date', async () => {
     const { api } = jest.requireMock('../apiClient') as { api: { patch?: jest.Mock } };

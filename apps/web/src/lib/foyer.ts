@@ -4,7 +4,17 @@ export const CHAT_GATE_MESSAGE = 'Chat opens for people who are going.';
 export const CALENDAR_ADDRESS_WARNING =
   "Public gatherings appear on your church's website calendar, with their location, after a church admin approves them.";
 export const WHOS_COMING_NOTE =
+  'Only children in your household are listed. They don’t have their own accounts.';
+
+const RETIRED_TEEN_ACCOUNT_NOTE =
   'Only children in your household are listed. Teens with their own account RSVP for themselves.';
+
+/** Prefer the current household note when the server still sends the retired teen-account line. */
+export const whosComingNote = (serverNote?: string | null): string => {
+  const trimmed = serverNote?.trim();
+  if (!trimmed || trimmed === RETIRED_TEEN_ACCOUNT_NOTE) return WHOS_COMING_NOTE;
+  return trimmed;
+};
 
 export type GatheringLike = {
   title?: string | null;
@@ -42,7 +52,9 @@ export const hostDisplayName = (activity: GatheringLike) => activity.host_name?.
 export const coverPhotoUrl = (activity: GatheringLike) =>
   activity.cover_photo_url?.trim() || activity.images?.find((item) => item?.trim()) || null;
 
-export const parseCapacity = (raw: string): { ok: true; capacity: number | null } | { ok: false; message: string } => {
+export const parseCapacity = (
+  raw: string,
+): { ok: true; capacity: number | null } | { ok: false; message: string } => {
   const trimmed = raw.trim();
   if (!trimmed) return { ok: true, capacity: null };
   if (!/^\d+$/.test(trimmed)) {
@@ -80,7 +92,9 @@ export async function compressImageFile(file: File): Promise<Blob> {
     throw new Error('Unable to prepare that photo.');
   }
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.7));
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', 0.7),
+  );
   if (!blob) {
     throw new Error('Unable to prepare that photo.');
   }

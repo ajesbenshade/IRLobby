@@ -28,12 +28,30 @@ import { appColors, appTypography, loginGradients, spacing } from '@theme/index'
 import { getErrorMessage } from '@utils/error';
 import { refreshAppConfig, useAppConfig } from '@services/appConfig';
 import { persistLegalAcceptance } from '@services/authService';
+import { OAuthSignupGate } from '@components/foyer/OAuthSignupGate';
+import { isNewAccountGateBody, isNewAccountGateMessage } from '@foyer/logic';
+import axios from 'axios';
 import { useLegalSheet } from '@components/foyer/LegalWebViewSheet';
 import { LegalConsentText } from '@components/foyer/LegalConsentText';
 
 import type { AuthStackParamList } from '@navigation/types';
 
 const EMAIL_PATTERN = /\S+@\S+\.\S+/;
+
+type PendingOAuth =
+  | { provider: 'google'; idToken: string }
+  | {
+      provider: 'apple';
+      identityToken: string;
+      authorizationCode?: string | null;
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    };
+
+const isNewAccountGate = (error: unknown) =>
+  isNewAccountGateBody(axios.isAxiosError(error) ? error.response?.data : null) ||
+  isNewAccountGateMessage(getErrorMessage(error, ''));
 
 /** Login shows "By continuing you agree to the Terms of Use and Privacy Policy." on the same screen as the social buttons. */
 const LOGIN_ACCEPTED_LEGAL = true;
@@ -59,6 +77,7 @@ export const LoginScreen = ({ navigation }: Props) => {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [signInToast, setSignInToast] = useState<'google' | null>(null);
   const [googleRetryNonce, setGoogleRetryNonce] = useState(0);
+  const [pendingOAuth, setPendingOAuth] = useState<PendingOAuth | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -120,16 +139,25 @@ export const LoginScreen = ({ navigation }: Props) => {
         throw new Error('Apple sign-in did not return an identity token.');
       }
 
-      const result = await signInWithAppleIdentityToken({
+      const appleSignIn = {
         identityToken: credential.identityToken,
         authorizationCode: credential.authorizationCode,
         email: credential.email,
         firstName: credential.fullName?.givenName,
         lastName: credential.fullName?.familyName,
         acceptedLegal: LOGIN_ACCEPTED_LEGAL,
-      });
-      await persistLegalAcceptance();
-      return result;
+      };
+      try {
+        const result = await signInWithAppleIdentityToken(appleSignIn);
+        await persistLegalAcceptance();
+        setPendingOAuth(null);
+        return result;
+      } catch (appleSignInError) {
+        if (isNewAccountGate(appleSignInError)) {
+          setPendingOAuth({ provider: 'apple', ...appleSignIn });
+        }
+        throw appleSignInError;
+      }
     },
   });
 
@@ -189,6 +217,42 @@ export const LoginScreen = ({ navigation }: Props) => {
     await signInWithAppleAsync();
   }, [isBusy, signInWithAppleAsync]);
 
+  const [gatePending, setGatePending] = useState(false);
+  const finishOAuthSignup = useCallback(
+    async (value: { dateOfBirth: string; votingMemberAttested: true }) => {
+      if (!pendingOAuth || gatePending) return;
+      setGatePending(true);
+      setFormError(null);
+      try {
+        if (pendingOAuth.provider === 'google') {
+          await signInWithGoogleIdToken(pendingOAuth.idToken, {
+            acceptedLegal: LOGIN_ACCEPTED_LEGAL,
+            dateOfBirth: value.dateOfBirth,
+            votingMemberAttested: true,
+          });
+        } else {
+          await signInWithAppleIdentityToken({
+            identityToken: pendingOAuth.identityToken,
+            authorizationCode: pendingOAuth.authorizationCode,
+            email: pendingOAuth.email,
+            firstName: pendingOAuth.firstName,
+            lastName: pendingOAuth.lastName,
+            acceptedLegal: LOGIN_ACCEPTED_LEGAL,
+            dateOfBirth: value.dateOfBirth,
+            votingMemberAttested: true,
+          });
+        }
+        await persistLegalAcceptance();
+        setPendingOAuth(null);
+      } catch (gateError) {
+        setFormError(getErrorMessage(gateError, authCopy.login.fallbackError));
+      } finally {
+        setGatePending(false);
+      }
+    },
+    [gatePending, pendingOAuth, signInWithAppleIdentityToken, signInWithGoogleIdToken],
+  );
+
   return (
     <LinearGradient colors={[...loginGradients.dressed]} style={styles.root}>
       <StatusBar barStyle="dark-content" />
@@ -205,6 +269,9 @@ export const LoginScreen = ({ navigation }: Props) => {
 
             <View style={styles.stack}>
               <Text style={styles.heading}>{authCopy.login.title}</Text>
+              {pendingOAuth ? (
+                <OAuthSignupGate pending={gatePending} onSubmit={(value) => void finishOAuthSignup(value)} />
+              ) : null}
               {isAppleAvailable ? (
                 <AppleSignInButton
                   mode="continue"
@@ -221,7 +288,17 @@ export const LoginScreen = ({ navigation }: Props) => {
                 onIdToken={async (idToken) => {
                   setFormError(null);
                   setSignInToast(null);
-                  await signInWithGoogleAsync(idToken);
+                  try {
+                    await signInWithGoogleAsync(idToken);
+                    setPendingOAuth(null);
+                  } catch (googleSignInError) {
+                    if (isNewAccountGate(googleSignInError)) {
+                      setPendingOAuth({ provider: 'google', idToken });
+                      setFormError(getErrorMessage(googleSignInError, authCopy.login.fallbackError));
+                      return;
+                    }
+                    handleSocialExchangeError(googleSignInError);
+                  }
                 }}
                 onError={(googleSignInError) => {
                   handleSocialExchangeError(googleSignInError);

@@ -44,7 +44,7 @@ describe('WhosComingSheet eligibility', () => {
     expect(screen.getByText('Not eligible: ages 13–17')).toBeTruthy();
     expect(screen.getByText('Add family member')).toBeTruthy();
     expect(
-      screen.getByText("Family members under 13 are RSVP names only — they don't have accounts."),
+      screen.getByText("Children under 18 are RSVP names only — they don't have accounts."),
     ).toBeTruthy();
 
     fireEvent.press(screen.getByText('Confirm RSVP'));

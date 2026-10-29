@@ -124,6 +124,18 @@ describe('profile payload', () => {
     expect(ageFromIso('1988-12-31', new Date(2026, 9, 1))).toBe(37);
     expect(ageFromIso(null)).toBeNull();
   });
+  it('omits an unchanged birth date so a stored under-18 date is not sent again', () => {
+    expect(buildProfilePatch(draft, { isMinor: false, originalDateOfBirth: draft.dateOfBirth })).not.toHaveProperty(
+      'date_of_birth',
+    );
+    expect(
+      buildProfilePatch({ ...draft, dateOfBirth: '2012-03-04' }, { isMinor: true, originalDateOfBirth: '2012-03-04' }),
+    ).not.toHaveProperty('date_of_birth');
+    expect(
+      buildProfilePatch({ ...draft, dateOfBirth: '1990-01-02' }, { isMinor: false, originalDateOfBirth: '1988-03-04' })
+        .date_of_birth,
+    ).toBe('1990-01-02');
+  });
 });
 
 describe('under-13 server rejection', () => {
@@ -132,6 +144,8 @@ describe('under-13 server rejection', () => {
   it('recognises the age message and ignores other errors', () => {
     expect(isUnder13Rejection('You must be at least 13 years old.')).toBe(true);
     expect(isUnder13Rejection('Accounts are not available under age 13.')).toBe(true);
+    expect(isUnder13Rejection('Accounts are for voting members 18 and older.')).toBe(true);
+    expect(isUnder13Rejection('Birthdays can only be shared by accounts 18 and older.')).toBe(false);
     expect(isUnder13Rejection('Enter a valid phone number.')).toBe(false);
     expect(isUnder13Rejection(null)).toBe(false);
   });

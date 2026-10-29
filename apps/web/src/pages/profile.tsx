@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { ACCOUNT_AGE_ERROR, accountBirthDateError } from '@/lib/accountAge';
 import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
 import {
   FRANCONIA_CHURCH_NAME,
@@ -78,6 +79,9 @@ export default function Profile() {
   const serverShowChildren = user?.showHouseholdKnown
     ? Boolean(user.showHouseholdInDirectory)
     : false;
+  const storedBirthDate = user?.dateOfBirth ?? '';
+  const [birthDate, setBirthDate] = useState(storedBirthDate);
+  const [birthError, setBirthError] = useState<string | null>(null);
   const [sex, setSex] = useState<ProfileSex>(serverSex);
   const [mailing, setMailing] = useState<MailingDraft>(serverMailing);
   const [showChildren, setShowChildren] = useState(serverShowChildren);
@@ -97,6 +101,14 @@ export default function Profile() {
       setShowChildren(serverShowChildren);
     }
   }, [serverSex, serverMailing, serverShowChildren, user?.mailingKnown, user?.showHouseholdKnown]);
+
+  useEffect(() => {
+    if (formEdited.current) {
+      return;
+    }
+    setBirthDate(storedBirthDate);
+    setBirthError(null);
+  }, [storedBirthDate]);
 
   const chooseSex = (value: ProfileSex) => {
     formEdited.current = true;
@@ -119,9 +131,11 @@ export default function Profile() {
   const baselineMailing = user?.mailingKnown ? serverMailing : acceptedMailing ?? emptyMailing();
   const baselineShowChildren = user?.showHouseholdKnown
     ? normalizeShowChildren(visibility, serverShowChildren)
-    : acceptedChildren ?? false;
+    : (acceptedChildren ?? false);
+  const birthChanged = birthDate !== storedBirthDate;
   const dirty =
     sex !== serverSex ||
+    birthChanged ||
     JSON.stringify(savedMailing) !== JSON.stringify(baselineMailing) ||
     savedShowChildren !== baselineShowChildren;
 
@@ -138,6 +152,13 @@ export default function Profile() {
         variant: 'destructive',
       });
       return;
+    }
+    if (birthChanged) {
+      const problem = accountBirthDateError(birthDate);
+      if (problem) {
+        setBirthError(problem);
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -159,13 +180,17 @@ export default function Profile() {
       const response = await apiRequest(
         'PATCH',
         API_ROUTES.USER_PROFILE,
-        profileSaveBody({
-          sex,
-          churchId,
-          mailing,
-          showHouseholdInDirectory: showChildren,
-          visibility,
-        }),
+        {
+          ...profileSaveBody({
+            sex,
+            churchId,
+            mailing,
+            showHouseholdInDirectory: showChildren,
+            visibility,
+          }),
+          // An unchanged under-18 date is left off the request so other fields can still save.
+          ...(birthChanged ? { date_of_birth: birthDate } : {}),
+        },
       );
       if (!response.ok) {
         throw new Error('Failed to save profile');
@@ -177,6 +202,11 @@ export default function Profile() {
       toast({ title: 'Profile saved' });
     } catch (error) {
       console.error('Profile save failed:', error);
+      const message = error instanceof Error ? error.message : ACCOUNT_AGE_ERROR;
+      if (message.includes(ACCOUNT_AGE_ERROR)) {
+        setBirthError(ACCOUNT_AGE_ERROR);
+        return;
+      }
       toast({
         title: 'Could not save profile',
         description: 'Check your connection and try again.',
@@ -290,11 +320,27 @@ export default function Profile() {
           Birth date
           <input
             className="mt-1 w-full rounded-xl border border-[#e1dbd7] bg-white px-3 py-3 font-normal"
-            defaultValue={user.dateOfBirth ?? ''}
-            placeholder="YYYY-MM-DD"
+            type="date"
+            value={birthDate}
             aria-label="Birth date"
+            aria-invalid={Boolean(birthError)}
+            onChange={(event) => {
+              const next = event.target.value;
+              formEdited.current = true;
+              setBirthDate(next);
+              if (!next || next === storedBirthDate) {
+                setBirthError(null);
+                return;
+              }
+              setBirthError(accountBirthDateError(next));
+            }}
           />
         </label>
+        {birthError ? (
+          <p className="mb-3 text-sm text-red-700" role="alert">
+            {birthError}
+          </p>
+        ) : null}
         <p className="mb-1 text-sm font-semibold" id="profile-sex-label">
           Sex
         </p>

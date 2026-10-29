@@ -64,7 +64,7 @@ describe('Add family member sheet', () => {
   it('shows the subtitle under the title and the under-13 note above Add (not in Edit)', () => {
     const view = render(<AddFamilyMemberSheet visible onCancel={jest.fn()} onAdded={jest.fn()} />);
     expect(view.getByText("Add your children under 18 so hosts know who's coming.")).toBeTruthy();
-    expect(view.getByText("Family members under 13 are RSVP names only — they don't have accounts.")).toBeTruthy();
+    expect(view.getByText("Children under 18 are RSVP names only — they don't have accounts.")).toBeTruthy();
   });
 
   it('the empty birthday wheel opens on the year 2016 (ten years back)', async () => {

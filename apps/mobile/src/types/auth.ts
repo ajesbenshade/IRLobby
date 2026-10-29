@@ -55,6 +55,8 @@ export interface AuthUser {
   stripeConnectDetailsSubmitted?: boolean;
   canSellTickets?: boolean;
   dateOfBirth?: string | null;
+  /** ISO time the voting-member box was checked. Null when the account never attested. Read-only. */
+  votingMemberAttestedAt?: string | null;
   sex?: 'male' | 'female' | '';
   // latitude / longitude are not sent by the backend yet (Church has no coordinates); optional so maps center on the church once they are.
   church?: {
@@ -101,6 +103,8 @@ export interface RegisterPayload extends LoginPayload {
   lastName: string;
   username?: string;
   dateOfBirth?: string;
+  /** Password sign-up checkbox. Sent as `voting_member_attested: true`. */
+  votingMemberAttested?: boolean;
   sex?: 'male' | 'female';
 }
 

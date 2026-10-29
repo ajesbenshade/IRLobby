@@ -36,7 +36,7 @@ import { appColors, appTypography, radii } from '@theme/index';
  *
  *  - day:        calendar grid; header opens the month/year wheel; Done writes the day.
  *  - birthdate:  wheel step (Cancel + Next) -> day grid step (Back + Confirm). Confirm stays
- *                disabled until a day is picked and while the person would be under 13.
+ *                disabled until a day is picked and while the person would be under 18.
  *  - monthYear:  wheel only (Cancel + Confirm). Months after the current month are greyed and
  *                cannot be confirmed (family birth month and year).
  */
@@ -57,7 +57,7 @@ type DayProps = CommonProps & {
   value: DayValue | null;
   limits: DayLimits;
   onDone: (value: DayValue) => void;
-  /** Birth date only. Default 13. */
+  /** Birth date only. Default 18 (account holders). Family birthdays pass 0. */
   minAge?: number;
   /** Birth date only: the empty wheel opens this many years back (default 30; family members use 10 = about 2016). */
   defaultYearsBack?: number;

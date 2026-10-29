@@ -123,11 +123,12 @@ describe('isValidSignUpBirthDate (birth date is required at sign-up)', () => {
       expect(isValidSignUpBirthDate(value as never, now)).toBe(false);
     }
   });
-  it('rejects future dates and anyone under 13, accepts exactly 13 today', () => {
+  it('rejects future dates and anyone under 18, accepts exactly 18 today', () => {
     expect(isValidSignUpBirthDate('2026-10-03', now)).toBe(false);
     expect(isValidSignUpBirthDate('2020-01-01', now)).toBe(false);
-    expect(isValidSignUpBirthDate('2013-10-03', now)).toBe(false);
-    expect(isValidSignUpBirthDate('2013-10-02', now)).toBe(true);
+    expect(isValidSignUpBirthDate('2013-10-02', now)).toBe(false);
+    expect(isValidSignUpBirthDate('2008-10-03', now)).toBe(false);
+    expect(isValidSignUpBirthDate('2008-10-02', now)).toBe(true);
     expect(isValidSignUpBirthDate('1988-03-04', now)).toBe(true);
   });
 });

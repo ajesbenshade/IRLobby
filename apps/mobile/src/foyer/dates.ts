@@ -191,9 +191,9 @@ export const formatGatheringWhen = (iso: string | null | undefined): string => {
   return `${day} · ${formatTimeOfDay(parsed.getHours() * 60 + parsed.getMinutes())}`;
 };
 
-// ---- Minimum age (accounts are not available under 13) ----
+// ---- Minimum age (accounts are for voting members 18 and older) ----
 
-export const MIN_ACCOUNT_AGE = 13;
+export const MIN_ACCOUNT_AGE = 18;
 
 /** The latest birth date that is already `years` old on `now` (device-local today). Feb 29 clamps to Feb 28. */
 export const latestBirthDateForAge = (years: number, now = new Date()): DayValue => {
@@ -202,12 +202,12 @@ export const latestBirthDateForAge = (years: number, now = new Date()): DayValue
   return { year, month: today.month, day: Math.min(today.day, daysInMonth(year, today.month)) };
 };
 
-/** True when someone born on `birth` has not yet turned `minAge` on `now` (turning 13 today is NOT under). */
+/** True when someone born on `birth` has not yet turned `minAge` on `now` (turning that age today is NOT under). */
 export const isUnderAge = (birth: DayValue, minAge = MIN_ACCOUNT_AGE, now = new Date()): boolean =>
   compareDays(birth, latestBirthDateForAge(minAge, now)) > 0;
 
 /**
- * Sign-up needs a real birth date that is allowed (1900 to today) and old enough (13+), so the under-13 check
+ * Sign-up needs a real birth date that is allowed (1900 to today) and old enough (18+), so the under-18 check
  * cannot be skipped by leaving the field empty.
  */
 export const isValidSignUpBirthDate = (iso: string | null | undefined, now = new Date()): boolean => {

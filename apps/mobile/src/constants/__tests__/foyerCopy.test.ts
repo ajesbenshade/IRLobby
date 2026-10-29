@@ -3,11 +3,14 @@ import {
   CHAT_COPY,
   FAMILY_COPY,
   FRIEND_COPY,
+  BIRTH_GATE_COPY,
   GOING_COPY,
   MEMBER_COPY,
   MESSAGING_COPY,
   PHOTO_COPY,
+  PICKER_COPY,
   PROFILE_COPY,
+  VOTING_MEMBER_COPY,
 } from '../foyerCopy';
 import { EVENT_PHOTOS_HELPER, MAX_EVENT_PHOTOS } from '../activity';
 
@@ -28,6 +31,13 @@ describe('final copy (Oct 1 late)', () => {
     expect(GOING_COPY.notEligible('ages 13–17')).toBe('Not eligible: ages 13–17');
     expect(FAMILY_COPY.intro).toBe('Add your children under 18 so you can RSVP for them. Only you can see this list.');
     expect(FAMILY_COPY.title).toBe('My family');
+    expect(GOING_COPY.underThirteenNote).toBe("Children under 18 are RSVP names only — they don't have accounts.");
+    expect(PICKER_COPY.under13).toBe('Accounts are for voting members 18 and older.');
+    expect(VOTING_MEMBER_COPY.checkbox).toBe('I am a voting member of Franconia Mennonite Church.');
+    expect(VOTING_MEMBER_COPY.helper).toBe(
+      'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
+    );
+    expect(BIRTH_GATE_COPY.body).toBe(VOTING_MEMBER_COPY.helper);
   });
   it('friends, profile, chat', () => {
     expect(FRIEND_COPY.cancelRequestBody('Maria')).toBe("Maria won't be told. You can send a new request later.");

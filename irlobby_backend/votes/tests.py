@@ -1,8 +1,8 @@
 """Voting ballots: audience, one cast, and who may see results.
 
-Until users.voting_member_attested_at exists (PR #75), adults 18+ are voting
-members. When that column is present, a non-null timestamp is the gate and
-these tests attest 18+ accounts so the same cases still pass.
+``voting_member_attested_at`` is the gate. These tests attest 18+ accounts so
+the same cases pass. Age 18 in America/New_York is covered only by patching the
+column absent.
 """
 
 from datetime import timedelta
@@ -596,15 +596,22 @@ class BallotApiTests(APITestCase):
             )
             self.assertEqual(voted.status_code, status.HTTP_201_CREATED)
 
-    def test_age_gate_message_when_the_attested_column_is_absent(self):
-        if model_has_voting_member_field():
-            self.skipTest("voting_member_attested_at is on User")
-        self.assertEqual(not_voting_member_detail(), "Voting is for adults 18 and older.")
-        self.assertTrue(is_voting_member(self.member))
-        self.assertFalse(is_voting_member(self.youth))
-        self.assertFalse(is_voting_member(self.no_dob))
-        birthday = make_user("eighteen", self.church, dob=years_ago(18), first_name="Eighteen")
-        self.assertTrue(is_voting_member(birthday))
+    def test_age_gate_is_only_the_fallback_when_the_column_is_absent(self):
+        with patch("votes.eligibility.model_has_voting_member_field", return_value=False):
+            self.assertEqual(not_voting_member_detail(), "Voting is for adults 18 and older.")
+            set_attested(self.circle_admin, None)
+            set_attested(self.member, None)
+            self.assertTrue(is_voting_member(self.member))
+            self.assertFalse(is_voting_member(self.youth))
+            self.assertFalse(is_voting_member(self.no_dob))
+            birthday = make_user("eighteen", self.church, dob=years_ago(18), first_name="Eighteen")
+            set_attested(birthday, None)
+            self.assertTrue(is_voting_member(birthday))
+            denied = self.create(self.youth, circle_ids=[self.young.id])
+            self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(denied.data["detail"], "Voting is for adults 18 and older.")
+            created = self.create(self.circle_admin, circle_ids=[self.young.id])
+            self.assertEqual(created.status_code, status.HTTP_201_CREATED)
 
     @override_settings(REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"ballot_create": "2/min"}})
     def test_creating_ballots_is_rate_limited(self):

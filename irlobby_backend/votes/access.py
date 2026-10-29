@@ -6,8 +6,9 @@ Visibility follows prayer circles, then the voting-member gate:
 - Otherwise only voting members of the chosen circles, plus the author.
 - A church admin who is a voting member sees every ballot in their church.
 - Someone outside the circle, in another church, or not a voting member gets nothing.
-  Household children are not accounts. Under-18 accounts are not voting members
-  until ``voting_member_attested_at`` exists; then that timestamp is the gate.
+  Household children are not accounts. A voting member has a non-null
+  ``voting_member_attested_at``. Age 18 in America/New_York is only the fallback
+  when that column is absent.
 
 Casting is stricter than seeing: the account must be in the audience (a chosen
 circle, or the church when the ballot is whole-church). Church-admin sight does

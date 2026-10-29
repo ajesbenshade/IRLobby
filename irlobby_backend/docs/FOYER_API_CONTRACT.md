@@ -1046,13 +1046,13 @@ Who may use it:
 
 - Seeing, creating, and casting require a voting member. Household children are not
   accounts and cannot be attached to a cast. One account, one cast.
-- Until `voting_member_attested_at` exists on User (PR #75), a voting member is an account
-  whose age is 18 or older in America/New_York. A missing birth date is not a voting
-  member. The 403 detail in that case is `Voting is for adults 18 and older.`
-- When `voting_member_attested_at` is on the model, that column replaces the age check.
-  A non-null timestamp is a voting member (age is not checked again). A null timestamp is
-  not, and the 403 detail is `Voting is for voting members.` The code is always
-  `not_voting_member`.
+- `voting_member_attested_at` is on User (`users/0019`, PR #75). A non-null timestamp is
+  a voting member. Age is not checked again. A null timestamp is not a voting member,
+  including accounts created before the checkbox (the column is not backfilled). The 403
+  detail is `Voting is for voting members.` The code is `not_voting_member`.
+- Age 18 or older in America/New_York is only the fallback if that column is absent. A
+  missing birth date is not a voting member in that fallback. The 403 detail is then
+  `Voting is for adults 18 and older.` with the same code.
 - A circle member who is a voting member sees ballots for circles they are in, and may
   cast one vote while the ballot is open. They cannot change it.
 - A circle admin may create for circles they admin, close those ballots early, and see
@@ -1122,8 +1122,10 @@ not 403).
 Not a voting member: **403**
 
 ```json
-{ "detail": "Voting is for adults 18 and older.", "code": "not_voting_member" }
+{ "detail": "Voting is for voting members.", "code": "not_voting_member" }
 ```
+
+That string is the live gate (`voting_member_attested_at` null). `Voting is for adults 18 and older.` is returned only when the column is absent.
 
 Create validation errors are lists, same as the rest of this API. No church:
 

@@ -3,12 +3,14 @@
 Circle admin is an existing circle membership with ``is_admin`` (the person who
 created the circle starts as that admin). There is no separate ballot role.
 
-``voting_member_attested_at`` (PR #75, users migration 0019 on that branch) is
-not on main yet. When that column exists, a non-null timestamp is the gate for
-seeing, casting, and creating. Until then, an account is a voting member when
-their age is 18 or older in America/New_York (the same clock as gatherings).
-A missing birth date is not a voting member. Household children are not accounts
-and have no path on these routes.
+``voting_member_attested_at`` is on User (``users/0019``, PR #75). A non-null
+timestamp is the gate for seeing, casting, and creating. Age is not checked
+again. A null timestamp is not a voting member, including accounts created
+before the checkbox (that column is not backfilled).
+
+Age 18 or older in America/New_York is only the fallback when that column is
+absent. A missing birth date is not a voting member in that fallback. Household
+children are not accounts and have no path on these routes.
 """
 
 from __future__ import annotations

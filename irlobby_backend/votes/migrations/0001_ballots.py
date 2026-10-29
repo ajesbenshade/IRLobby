@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('prayers', '0002_circle_join_policy_a'),
         ('activities', '0018_church_has_website_calendar'),
+        ('users', '0019_user_voting_member_attested_at'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

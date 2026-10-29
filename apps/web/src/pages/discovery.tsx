@@ -101,9 +101,16 @@ export default function Discovery() {
 
   const currentActivity = activities.find((activity) => activity.id === selectedActivityId);
 
+  const leaveDiscover = (activityId: number) => {
+    setPassedGatherings((previous) =>
+      previous.includes(activityId) ? previous : [...previous, activityId],
+    );
+  };
+
   const advanceAfterRsvp = (activity: Activity & GatheringLike) => {
     setWhosComing(null);
     setGoingActivity(activity);
+    leaveDiscover(activity.id);
   };
 
   const goingDialog = goingActivity ? (
@@ -176,11 +183,9 @@ export default function Discovery() {
     setFilters(newFilters);
   };
 
-  // Same as a Foyer left-swipe: hide the card for this visit, and do not record a swipe.
+  // Pass matches a left-swipe: the card leaves this visit and no RSVP is recorded.
   const passGathering = (activityId: number) => {
-    setPassedGatherings((previous) =>
-      previous.includes(activityId) ? previous : [...previous, activityId],
-    );
+    leaveDiscover(activityId);
   };
 
   const noActivities = !isLoading && activities.length === 0;
@@ -445,14 +450,14 @@ export default function Discovery() {
                   <div className="mt-3 flex gap-2">
                     <button
                       type="button"
-                      className="h-14 w-[110px] rounded-full border border-[#c8beba] bg-white text-base font-semibold"
+                      className="h-14 min-h-11 flex-1 rounded-full border border-[#c8beba] bg-white text-base font-semibold"
                       onClick={() => passGathering(activity.id)}
                     >
                       Pass
                     </button>
                     <button
                       type="button"
-                      className="h-14 flex-1 rounded-full bg-[#a2033f] text-base font-semibold text-white"
+                      className="h-14 min-h-11 flex-1 rounded-full bg-[#a2033f] text-base font-semibold text-white"
                       onClick={() => {
                         setSelectedActivityId(activity.id);
                         void handleJoin(activity);

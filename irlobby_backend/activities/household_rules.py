@@ -1,8 +1,9 @@
 """Account and household age rules.
 
-- No accounts under 13.
+- New accounts must be 18 or older. Legacy 13–17 accounts are left in place.
 - A 13–17 year old with their own account cannot also be stored as a dependent.
 - A parent must be 18 or older to add a child under 18.
+- Household children must be under 18. An 18-year-old is refused.
 - A household may also list one spouse: an adult with no birth data and no account.
 """
 
@@ -20,12 +21,21 @@ def normalize_name(value: str) -> str:
     return " ".join((value or "").lower().split())
 
 
+ACCOUNT_MIN_AGE = 18
+ACCOUNT_AGE_ERROR = "Accounts are for voting members 18 and older."
+
+
 def account_age_error(dob) -> str | None:
+    """Reject a birth date that would create or store an under-18 account.
+
+    ``None`` is not an error here. Callers that require a birth date (sign-up) check
+    that themselves. Existing accounts are not rewritten.
+    """
     if dob is None:
         return None
     age = age_on(dob, ny_today())
-    if age is not None and age < 13:
-        return "Accounts are not available under age 13."
+    if age is not None and age < ACCOUNT_MIN_AGE:
+        return ACCOUNT_AGE_ERROR
     return None
 
 

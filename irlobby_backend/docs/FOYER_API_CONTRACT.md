@@ -10,15 +10,23 @@ Giving and donations are out of scope for this build. There is no gift amount, C
 
 `POST /api/users/register/` (no auth)
 
-Extra optional fields: `date_of_birth` (`YYYY-MM-DD`), `sex` (`male` | `female`).
+Required on create: `date_of_birth` (`YYYY-MM-DD`) and `voting_member_attested` (`true`). Optional: `sex` (`male` | `female`).
 
-Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters).
-
-A birth date that makes the person under 13 is rejected:
+`voting_member_attested` is the checkbox "I am a voting member of Franconia Mennonite Church." CamelCase `votingMemberAttested` is accepted. `true` stores `voting_member_attested_at` as the server time. The client cannot send that timestamp. Missing or `false` is **400**:
 
 ```json
-{ "date_of_birth": ["Accounts are not available under age 13."] }
+{ "voting_member_attested": ["You must confirm you are a voting member of Franconia Mennonite Church."] }
 ```
+
+A missing birth date, or one that makes the person under 18, is **400** on register. The same string is returned when `PATCH /api/users/profile/` sets `date_of_birth` (aliases `birthDate`, `birth_date`) to an under-18 date:
+
+```json
+{ "date_of_birth": ["Accounts are for voting members 18 and older."] }
+```
+
+Accounts are 18 and older. A 13–17 birth date cannot create an account. Rows that are already 13–17 are not migrated or deleted; those members can still update other profile fields. Sending their under-18 birth date again is rejected, and the stored date is left as it is. CoS/Aaron decide later whether to move those accounts onto a household or require them to age up.
+
+Optional terms acceptance (see "Terms at sign-up" below): `terms_accepted`, `privacy_accepted` (bools), `terms_version`, `privacy_version` (strings, up to 32 characters). Apple and Google sign-in are unchanged: they still create an account without this checkbox or a birth date.
 
 `GET/PATCH /api/users/profile/` (auth)
 
@@ -26,8 +34,9 @@ New fields:
 
 | Field | Read | Write |
 |---|---|---|
-| `date_of_birth` | yes | yes, aliases `birthDate`, `birth_date` |
+| `date_of_birth` | yes | yes, aliases `birthDate`, `birth_date`. Under 18 is rejected with the string above |
 | `sex` | yes | `male` or `female` |
+| `voting_member_attested_at` | ISO datetime, or `null` when the account never checked the voting-member box | no |
 | `church` | `{ "id", "name", "is_verified", "has_website_calendar" }` or `null` | no |
 | `church_id` | id or `null` | yes, aliases `churchId`; `null` clears it |
 | `is_church_admin` | bool | no |
@@ -78,8 +87,8 @@ Seeded verified churches: Franconia, Souderton, Blooming Glen, Plains, Zion, Per
 201 returns the child object. Rules:
 
 - Parent must have a birth date and be 18 or older (`parent` error).
-- Child must be under 18 (`date_of_birth` error).
-- A 13–17 year old who already has an account with the same birth date and the same name (first name, full name, or username) cannot be stored as a dependent (`name` error).
+- The child must be under 18. Adding someone who is 18 or older is **400** `{ "date_of_birth": "Only children under 18 can be added to a household." }` (same text on `PATCH` when a birth date would make them 18 or older). Children under 18, including 13–17, can still be added.
+- A 13–17 year old who already has an account with the same birth date and the same name (first name, full name, or username) cannot be stored as a dependent (`name` error). New 13–17 accounts are no longer created; this still applies to accounts that already exist.
 
 `DELETE /api/users/household/<id>/` (auth) → 204. Only that parent's child.
 
@@ -831,7 +840,7 @@ The same checks run again: real date, not in the future, under 18, and a 13-17 c
 
 `GET/PATCH /api/users/profile/` has a new field `show_birthday` (bool, default `false`), readable and writable on your own profile.
 
-- `show_birthday: true` is rejected with 400 `{"show_birthday": ["Birthdays can only be shared by accounts 18 and older."]}` when the account is under 18, or `["Add your birth date before sharing your birthday."]` when no birth date is on file. If a birth-date change makes the account a minor, `show_birthday` is switched off.
+- `show_birthday: true` is rejected with 400 `{"show_birthday": ["Birthdays can only be shared by accounts 18 and older."]}` when the account is under 18, or `["Add your birth date before sharing your birthday."]` when no birth date is on file. A profile birth date under 18 is rejected (see Profile and registration), so an adult account cannot be turned into a minor through this field. Legacy under-18 accounts are left unchanged.
 - Other people can see only your **month and day, never the year**, and only when all of these hold: `show_birthday` is on; you are 18 or older; the viewer is inside your `profile_visibility` level (`only_me` = nobody, `friends` = accepted friends, `church` = same church or friends, `public` = any logged-in user, same rules as email/phone); and nobody blocked the other.
 - Household children in the church Directory use a separate opt-in, `show_household_in_directory` (see "Directory"). `show_birthday` does not list them, and the Directory opt-in does not change this birthday card.
 - `GET /api/users/<id>/profile/` adds `"birthday": {"month": 8, "day": 17}` to the full card when those hold, otherwise the key is absent. Feb 29 birthdays show as 2/29.

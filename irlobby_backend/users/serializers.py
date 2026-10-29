@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from activities.eligibility import age_on, ny_today
 from activities.household_rules import (
+    ACCOUNT_AGE_ERROR,
     MINOR_DEPENDENT_ACCOUNT_ERROR,
     account_age_error,
     dependent_blocks_minor_account,
@@ -25,6 +26,10 @@ MAILING_FIELDS = (
     "mailing_state",
     "mailing_postal",
     "show_mailing_address",
+)
+
+VOTING_MEMBER_ATTESTATION_ERROR = (
+    "You must confirm you are a voting member of Franconia Mennonite Church."
 )
 
 
@@ -137,8 +142,9 @@ class UserSerializer(serializers.ModelSerializer):
             "dm_from_shared_events",
             "show_birthday",
             "show_household_in_directory",
+            "voting_member_attested_at",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "voting_member_attested_at")
 
     def to_internal_value(self, data):
         if hasattr(data, "copy"):
@@ -323,6 +329,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     sex = serializers.CharField(required=False, allow_blank=True)
+    # Checkbox: "I am a voting member of Franconia Mennonite Church."
+    voting_member_attested = serializers.BooleanField(
+        write_only=True, required=False, default=False
+    )
     terms_accepted = serializers.BooleanField(write_only=True, required=False, default=False)
     privacy_accepted = serializers.BooleanField(write_only=True, required=False, default=False)
     terms_version = serializers.CharField(
@@ -343,6 +353,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "date_of_birth",
             "sex",
+            "voting_member_attested",
             "terms_accepted",
             "privacy_accepted",
             "terms_version",
@@ -357,6 +368,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             ("privacyAccepted", "privacy_accepted"),
             ("termsVersion", "terms_version"),
             ("privacyVersion", "privacy_version"),
+            ("votingMemberAttested", "voting_member_attested"),
+            ("birthDate", "date_of_birth"),
+            ("birth_date", "date_of_birth"),
         ):
             if camel in data and snake not in data:
                 data[snake] = data[camel]
@@ -366,6 +380,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         error = account_age_error(value)
         if error:
             raise serializers.ValidationError(error)
+        return value
+
+    def validate_voting_member_attested(self, value):
+        if value is not True:
+            raise serializers.ValidationError(VOTING_MEMBER_ATTESTATION_ERROR)
         return value
 
     def validate_sex(self, value):
@@ -380,7 +399,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords don't match")
         dob = attrs.get("date_of_birth")
-        if dob is not None and dependent_blocks_minor_account(
+        if dob is None:
+            raise serializers.ValidationError({"date_of_birth": ACCOUNT_AGE_ERROR})
+        if dependent_blocks_minor_account(
             first_name=attrs.get("first_name", ""),
             last_name=attrs.get("last_name", ""),
             username=attrs.get("username", ""),
@@ -401,6 +422,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
+        validated_data.pop("voting_member_attested", None)
+        validated_data["voting_member_attested_at"] = timezone.now()
         acceptance = {
             key: validated_data.pop(key, default)
             for key, default in (

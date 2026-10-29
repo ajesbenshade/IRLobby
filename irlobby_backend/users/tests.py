@@ -1002,6 +1002,8 @@ class UserAccountWorkflowTests(APITestCase):
                 "email": "new-account@example.com",
                 "password": "password123",
                 "password_confirm": "password123",
+                "date_of_birth": "1990-06-15",
+                "voting_member_attested": True,
             },
             format="json",
         )

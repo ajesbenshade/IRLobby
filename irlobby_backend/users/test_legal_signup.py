@@ -8,17 +8,21 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from activities.test_foyer import _safe_birthdate
 from users.models import SocialAuthIdentity, User
 
 PW = "SuperSecret-123"
 
 
 def _register_body(**extra):
+    # Terms flags stay optional. An adult birth date and the voting-member checkbox are required.
     body = {
         "username": "newbie",
         "email": "newbie@example.com",
         "password": PW,
         "password_confirm": PW,
+        "date_of_birth": _safe_birthdate(30).isoformat(),
+        "voting_member_attested": True,
     }
     body.update(extra)
     return body

@@ -172,7 +172,10 @@ class FoyerAccountAndRsvpTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("13", str(response.data))
+        self.assertEqual(
+            response.data["date_of_birth"][0],
+            "Accounts are for voting members 18 and older.",
+        )
         self.assertFalse(User.objects.filter(email="child@example.com").exists())
 
     def test_parent_rsvp_for_a_child_counts_people_toward_capacity(self):

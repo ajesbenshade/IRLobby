@@ -23,6 +23,7 @@ from activities.eligibility import (
     ny_today,
 )
 from activities.household_rules import (
+    ACCOUNT_AGE_ERROR,
     account_age_error,
     dependent_blocks_minor_account,
     dependent_create_errors,
@@ -135,7 +136,9 @@ class FoyerRuleUnitTests(TestCase):
 
     def test_household_age_rules(self):
         self.assertIsNone(account_age_error(None))
-        self.assertIn("13", account_age_error(_safe_birthdate(10)))
+        self.assertEqual(account_age_error(_safe_birthdate(10)), ACCOUNT_AGE_ERROR)
+        self.assertEqual(account_age_error(_safe_birthdate(16)), ACCOUNT_AGE_ERROR)
+        self.assertIsNone(account_age_error(_safe_birthdate(18)))
         self.assertIsNone(minor_account_for_dependent("", _safe_birthdate(15)))
         self.assertIsNone(minor_account_for_dependent("Kid", _safe_birthdate(10)))
         self.assertFalse(

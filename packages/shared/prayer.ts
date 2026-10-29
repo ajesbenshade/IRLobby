@@ -3,13 +3,12 @@
  * Whole church is an opt-in toggle and defaults off. The circle picker stays on create.
  * There is no whole-church-only mode.
  *
- * Paths match Backend PR #60 (not merged here). Lists use the page envelope
- * `{ count, next, previous, results }`. A missing route (404 / 405 / 501) is an empty state.
+ * Lists use the page envelope `{ count, next, previous, results }`.
+ * A missing route (404 / 405 / 501) is an empty state.
  *
- *   GET    /api/circles/                         { church_id, circles: [{ id, name, church_id, member_count, is_member }] }
- *   POST   /api/circles/                         { name }
- *   POST   /api/circles/<id>/join/
- *   POST   /api/circles/<id>/leave/
+ * Circle directory and membership live in `@shared/circles` (join policy A).
+ * The prayer picker only lists circles with `membership_state` `joined`.
+ * Whole church still defaults off.
  *   POST   /api/prayers/                         { title, details, circle_ids, whole_church }
  *   GET    /api/prayers/                         Discover deck
  *   GET    /api/prayers/active/                  Prayer tab, Active
@@ -28,6 +27,8 @@
  * Discover filter is client-side: gatherings from /api/activities/, prayers from /api/prayers/.
  */
 
+import { isJoinedCircle, normalizeCircleSummaries, type MembershipState } from './circles';
+
 export const TITLE_MAX = 140;
 export const DETAILS_MAX = 2000;
 
@@ -40,8 +41,11 @@ export type PrayerCircle = {
   name: string;
   churchId?: number | string | null;
   memberCount?: number;
-  /** True when the caller already belongs. The picker defaults to the first of these. */
+  description?: string;
+  /** True only when `membershipState` is `joined` (or a legacy row with `is_member`). */
   isMember?: boolean;
+  isAdmin?: boolean;
+  membershipState?: MembershipState;
 };
 
 export type PrayerAuthor = {
@@ -180,9 +184,8 @@ export const prayerPaths = {
   pass: (id: number | string) => `${prayersRoot}${id}/pass/`,
   chat: (id: number | string) => `${prayersRoot}${id}/chat/`,
   report: (id: number | string) => `${prayersRoot}${id}/report/`,
+  /** Directory. Membership actions are `circlePaths` in `@shared/circles`. */
   circles: () => circlesRoot,
-  circleJoin: (id: number | string) => `${circlesRoot}${id}/join/`,
-  circleLeave: (id: number | string) => `${circlesRoot}${id}/leave/`,
 };
 
 export class PrayerClientError extends Error {
@@ -325,31 +328,17 @@ const coerceId = (id: number | string): number | string => {
   return /^\d+$/.test(id) ? Number(id) : id;
 };
 
-export const normalizeCircles = (value: unknown): PrayerCircle[] => {
-  const record = asRecord(value);
-  const raw = Array.isArray(value) ? value : record.circles ?? record.results ?? [];
-  if (!Array.isArray(raw)) return [];
-  const circles: PrayerCircle[] = [];
-  for (const item of raw) {
-    if (typeof item === 'string' || typeof item === 'number') {
-      const id = asId(item);
-      if (id != null) circles.push({ id, name: String(item), isMember: true });
-      continue;
-    }
-    const row = asRecord(item);
-    const id = asId(row.id);
-    if (id == null) continue;
-    const membership = row.is_member ?? row.isMember;
-    circles.push({
-      id,
-      name: asString(row.name) || String(id),
-      churchId: asId(row.church_id ?? row.churchId),
-      memberCount: asCount(row.member_count ?? row.memberCount),
-      isMember: membership == null ? true : asBool(membership),
-    });
-  }
-  return circles;
-};
+export const normalizeCircles = (value: unknown): PrayerCircle[] =>
+  normalizeCircleSummaries(value).map((circle) => ({
+    id: circle.id,
+    name: circle.name,
+    churchId: circle.churchId,
+    memberCount: circle.memberCount,
+    description: circle.description,
+    isMember: circle.isMember,
+    isAdmin: circle.isAdmin,
+    membershipState: circle.membershipState,
+  }));
 
 const normalizeAuthor = (raw: Record<string, unknown>): PrayerAuthor => {
   const author = asRecord(raw.author ?? raw.posted_by ?? raw.postedBy ?? raw.user);
@@ -473,10 +462,10 @@ export const buildPrayerCreate = (input: PrayerCreateInput): PrayerCreateResult 
   };
 };
 
-/** Select the first circle the person belongs to, once, until they change it. */
+/** Select the first joined circle, once, until they change it. Pending and invited do not count. */
 export const initialCircleIds = (circles: PrayerCircle[], untouched: boolean, current: Array<number | string>) => {
   if (!untouched || current.length > 0 || circles.length === 0) return current;
-  const member = circles.find((circle) => circle.isMember !== false);
+  const member = circles.find((circle) => isJoinedCircle(circle));
   return member ? [member.id] : current;
 };
 

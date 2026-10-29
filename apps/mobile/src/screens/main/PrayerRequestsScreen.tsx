@@ -54,6 +54,15 @@ export const PrayerRequestsScreen = () => {
           <MaterialCommunityIcons name="plus" size={26} color={appColors.white} />
         </Pressable>
       </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.navigate('Circles')}
+        style={styles.circlesEntry}
+        testID="prayer-circles"
+      >
+        <Text style={styles.circlesEntryText}>Circles</Text>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={appColors.mutedInk} />
+      </Pressable>
       <View style={styles.segment}>
         {(['active', 'mine'] as const).map((value) => {
           const selected = scope === value;
@@ -110,6 +119,19 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { flex: 1, fontFamily: appTypography.heading, fontSize: 34, lineHeight: 40, color: appColors.ink, fontWeight: '700' },
   plus: { width: 48, height: 48, borderRadius: 24, backgroundColor: appColors.primary, alignItems: 'center', justifyContent: 'center' },
+  circlesEntry: {
+    marginTop: 16,
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: appColors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: appColors.line,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  circlesEntryText: { fontFamily: appTypography.bodySemibold, fontSize: 17, color: appColors.ink },
   segment: { flexDirection: 'row', backgroundColor: '#efe8e4', borderRadius: 14, padding: 4, marginTop: 16 },
   segmentItem: { flex: 1, minHeight: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: appColors.white },

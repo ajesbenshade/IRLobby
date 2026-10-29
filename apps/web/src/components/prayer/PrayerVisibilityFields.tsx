@@ -10,6 +10,7 @@ type Props = {
   wholeChurch: boolean;
   onChangeWholeChurch: (value: boolean) => void;
   circlesStatus: 'loading' | 'ready' | 'empty' | 'unavailable' | 'error';
+  onBrowseCircles?: () => void;
 };
 
 /** Circle picker plus the whole-church toggle. The toggle starts off. */
@@ -20,6 +21,7 @@ export default function PrayerVisibilityFields({
   wholeChurch,
   onChangeWholeChurch,
   circlesStatus,
+  onBrowseCircles,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -80,6 +82,18 @@ export default function PrayerVisibilityFields({
             ) : null}
             {circlesStatus === 'empty' || circlesStatus === 'unavailable' ? (
               <p className="mt-3 text-sm text-[#6e6a68]">{PRAYER_COPY.circlesEmpty}</p>
+            ) : null}
+            {onBrowseCircles && (circlesStatus === 'empty' || circlesStatus === 'unavailable') ? (
+              <button
+                type="button"
+                className="mt-3 font-semibold text-[#a2033f]"
+                onClick={() => {
+                  setOpen(false);
+                  onBrowseCircles();
+                }}
+              >
+                Circles
+              </button>
             ) : null}
             {circlesStatus === 'error' ? (
               <p className="mt-3 text-sm text-[#6e6a68]">{PRAYER_COPY.circlesFailed}</p>

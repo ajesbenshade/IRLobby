@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/queryClient';
+import { pickerCircles } from '@shared/circles';
 import {
   PRAYER_COPY,
   PrayerClientError,
@@ -145,29 +146,14 @@ export async function reportPrayerRequest(id: number | string): Promise<'sent' |
   }
 }
 
-export async function joinPrayerCircle(id: number | string): Promise<void> {
-  try {
-    await request('POST', prayerPaths.circleJoin(id), {});
-  } catch (error) {
-    return raise(error, PRAYER_COPY.circlesFailed);
-  }
-}
-
-export async function leavePrayerCircle(id: number | string): Promise<void> {
-  try {
-    await request('POST', prayerPaths.circleLeave(id), {});
-  } catch (error) {
-    return raise(error, PRAYER_COPY.circlesFailed);
-  }
-}
-
+/** Joined circles only. Pending, invited, and open join are not a way onto a prayer. */
 export async function fetchPrayerCircles(): Promise<{
   circles: PrayerCircle[];
   unavailable: boolean;
 }> {
   try {
     return {
-      circles: normalizeCircles(await request('GET', prayerPaths.circles())),
+      circles: pickerCircles(normalizeCircles(await request('GET', prayerPaths.circles()))),
       unavailable: false,
     };
   } catch (error) {

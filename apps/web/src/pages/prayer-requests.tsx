@@ -35,6 +35,13 @@ export default function PrayerRequestsPage() {
           <Plus className="h-6 w-6" aria-hidden />
         </Link>
       </div>
+      <Link
+        to="/app/circles"
+        className="mt-4 flex min-h-[52px] items-center justify-between rounded-2xl border border-[#e1dbd7] bg-white px-4"
+      >
+        <span className="text-[17px] font-semibold">Circles</span>
+        <ChevronRight className="h-5 w-5 text-[#6e6a68]" aria-hidden />
+      </Link>
       <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl bg-[#efe8e4] p-1" role="tablist">
         {(['active', 'mine'] as const).map((value) => {
           const selected = scope === value;

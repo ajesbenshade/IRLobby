@@ -16,6 +16,7 @@ type Props = {
   wholeChurch: boolean;
   onChangeWholeChurch: (value: boolean) => void;
   circlesStatus: 'loading' | 'ready' | 'empty' | 'unavailable' | 'error';
+  onBrowseCircles?: () => void;
 };
 
 /** Circle picker plus the whole-church toggle. The toggle starts off. */
@@ -26,6 +27,7 @@ export const PrayerVisibilityFields = ({
   wholeChurch,
   onChangeWholeChurch,
   circlesStatus,
+  onBrowseCircles,
 }: Props) => {
   const [open, setOpen] = useState(false);
 
@@ -68,6 +70,18 @@ export const PrayerVisibilityFields = ({
         {circlesStatus === 'loading' ? <Text style={styles.helper}>{PRAYER_COPY.circlesLoading}</Text> : null}
         {circlesStatus === 'empty' || circlesStatus === 'unavailable' ? (
           <Text style={styles.helper}>{PRAYER_COPY.circlesEmpty}</Text>
+        ) : null}
+        {onBrowseCircles && (circlesStatus === 'empty' || circlesStatus === 'unavailable') ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setOpen(false);
+              onBrowseCircles();
+            }}
+            style={styles.browse}
+          >
+            <Text style={styles.browseText}>Circles</Text>
+          </Pressable>
         ) : null}
         {circlesStatus === 'error' ? <Text style={styles.helper}>{PRAYER_COPY.circlesFailed}</Text> : null}
         {circles.map((circle) => {
@@ -120,6 +134,8 @@ const styles = StyleSheet.create({
   },
   toggleLabel: { flex: 1, fontFamily: appTypography.bodySemibold, fontSize: 16, color: appColors.ink },
   helper: { color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 14, lineHeight: 20 },
+  browse: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  browseText: { color: appColors.primary, fontFamily: appTypography.bodySemibold, fontSize: 16 },
   sheetTitle: { fontFamily: appTypography.heading, fontSize: 28, lineHeight: 34, color: appColors.ink, marginBottom: 8 },
   circleRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12 },
   circleName: { flex: 1, fontFamily: appTypography.bodyRegular, fontSize: 17, color: appColors.ink },

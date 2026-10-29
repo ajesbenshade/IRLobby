@@ -1,5 +1,5 @@
 import PrayerVisibilityFields from '@/components/prayer/PrayerVisibilityFields';
-import { createPrayerRequest, fetchPrayerCircles, joinPrayerCircle } from '@/lib/prayer';
+import { createPrayerRequest, fetchPrayerCircles } from '@/lib/prayer';
 import {
   PRAYER_COPY,
   PrayerClientError,
@@ -43,17 +43,7 @@ export default function PrayerCreatePage() {
     : 'ready';
   const draft = buildPrayerCreate({ title, details, circleIds, wholeChurch });
   const post = useMutation({
-    mutationFn: async (payload: PrayerCreatePayload) => {
-      const selected = circleRows.filter(
-        (circle) =>
-          payload.circle_ids.some((id) => String(id) === String(circle.id)) &&
-          circle.isMember === false,
-      );
-      for (const circle of selected) {
-        await joinPrayerCircle(circle.id);
-      }
-      return createPrayerRequest(payload);
-    },
+    mutationFn: (payload: PrayerCreatePayload) => createPrayerRequest(payload),
     onSuccess: async (prayer) => {
       await queryClient.invalidateQueries({ queryKey: ['prayer-requests'] });
       navigate(`/app/prayer/${prayer.id}`, { replace: true });
@@ -125,6 +115,7 @@ export default function PrayerCreatePage() {
         wholeChurch={wholeChurch}
         onChangeWholeChurch={setWholeChurch}
         circlesStatus={circlesStatus}
+        onBrowseCircles={() => navigate('/app/circles')}
       />
       <p className="mt-6 text-[15px] leading-6 text-[#6e6a68]">{PRAYER_COPY.noDatePlace}</p>
       {error ? <p className="mt-3 text-sm text-red-800">{error}</p> : null}

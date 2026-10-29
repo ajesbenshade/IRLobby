@@ -96,6 +96,12 @@ export type MainStackParamList = {
   GatheringChat: { activityId: number | string; conversationId?: number | string; title?: string };
   /** Prayer tab create form. Circle picker, whole-church toggle off by default. */
   PrayerCreate: undefined;
+  /** Church circles directory. Join policy A: request, invite, admin approval. */
+  Circles: undefined;
+  CircleCreate: undefined;
+  CircleDetail: { circleId: number | string; showInvite?: boolean };
+  CircleInvite: { circleId: number | string; name?: string };
+  CircleManage: { circleId: number | string; name?: string };
   PrayerDetail: { prayerId: number | string };
   /** Shared prayer chat. Reuses gathering-chat chrome, labeled Prayer chat. */
   PrayerChat: { prayerId: number | string; title?: string };

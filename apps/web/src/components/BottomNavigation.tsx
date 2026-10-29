@@ -10,7 +10,7 @@ export const navItems = [
 ];
 
 export function currentNavId(path: string) {
-  if (path.startsWith('/app/prayer')) return 'prayer';
+  if (path.startsWith('/app/prayer') || path.startsWith('/app/circles')) return 'prayer';
   // Host/create stays a route, entered from Gatherings +. It is not its own primary item.
   if (
     path.startsWith('/app/gatherings') ||

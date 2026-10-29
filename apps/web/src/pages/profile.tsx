@@ -103,6 +103,12 @@ export default function Profile() {
         </label>
         <p className="mb-3 text-xs text-[#6e6a68]">Not a member anywhere? Leave this blank.</p>
         <Link
+          to="/app/circles"
+          className="mb-3 flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
+        >
+          <span className="font-semibold">Circles</span>
+        </Link>
+        <Link
           to="/app/household"
           className="flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
         >

@@ -8,9 +8,10 @@ const mockRefreshProfile = jest.fn().mockResolvedValue(undefined);
 const mockSignOut = jest.fn();
 const mockPatch = jest.fn().mockResolvedValue({});
 const mockUpdateOnboarding = jest.fn().mockResolvedValue({});
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn(), getState: () => ({ routeNames: [] }) }),
+  useNavigation: () => ({ navigate: mockNavigate, getState: () => ({ routeNames: [] }) }),
 }));
 
 // Stable reference: ProfileScreen resets its form in an effect keyed on `user`.
@@ -124,6 +125,7 @@ describe('ProfileScreen (Foyer mode)', () => {
   beforeEach(() => {
     mockIsFoyerMode.mockReturnValue(true);
     mockRefreshProfile.mockClear();
+    mockNavigate.mockClear();
   });
 
   afterEach(() => {
@@ -140,7 +142,14 @@ describe('ProfileScreen (Foyer mode)', () => {
     expect(screen.getByText('Church calendar')).toBeTruthy();
     expect(screen.queryByText('Photo album (0/12)')).toBeNull();
     expect(screen.queryByText('Starter avatars')).toBeNull();
-    expect(screen.queryByLabelText('Connections')).toBeNull();
+    expect(screen.getByLabelText('Connections')).toBeTruthy();
+  });
+
+  it('opens Connections for people you are gathering with or praying for', () => {
+    renderScreen();
+    fireEvent.press(screen.getByLabelText('Connections'));
+    expect(mockNavigate).toHaveBeenCalledWith('Connections');
+    expect(mockNavigate).not.toHaveBeenCalledWith('Friends');
   });
 
   it('Help opens an email to support (subject "The Foyer help"), never the irlobby.com help page', async () => {

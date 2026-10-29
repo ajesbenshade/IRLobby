@@ -207,6 +207,11 @@ export const MainNavigator = () => (
       component={isFoyerMode() ? FoyerFriendsScreen : FriendsScreen}
       options={isFoyerMode() ? { headerShown: false, title: 'Friends' } : { title: 'Connections' }}
     />
+    <Stack.Screen
+      name="Connections"
+      component={FriendsScreen}
+      options={isFoyerMode() ? { headerShown: false, title: 'Connections' } : { title: 'Connections' }}
+    />
     <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ title: 'Reviews' }} />
     <Stack.Screen
       name="Notifications"

@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
+import { CONNECTIONS_COPY } from '@shared/connections';
 import { API_ROUTES } from '@shared/schema';
 
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
@@ -247,6 +248,11 @@ export const FoyerProfileCard = () => {
           label={PROFILE_COPY.myFamilyRow}
           count={FAMILY_COPY.membersCount(familyCount)}
           onPress={() => navigation.navigate('Household')}
+        />
+        <NavRow
+          icon="account-heart-outline"
+          label={CONNECTIONS_COPY.title}
+          onPress={() => navigation.navigate('Connections')}
         />
         <NavRow
           icon="account-group-outline"

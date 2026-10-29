@@ -32,6 +32,8 @@ export type MainStackParamList = {
   Settings: undefined;
   Account: undefined;
   Friends: undefined;
+  /** People you are gathering with or praying for. Distinct from the Friends list. */
+  Connections: undefined;
   Reviews: undefined;
   Notifications: undefined;
   HelpSupport: { title: string; url: string } | undefined;

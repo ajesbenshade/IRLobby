@@ -258,6 +258,7 @@ urlpatterns = [
     path("api/activities/", include("activities.urls")),
     path("api/circles/", include("prayers.circle_urls")),
     path("api/prayers/", include("prayers.urls")),
+    path("api/votes/", include("votes.urls")),
     path("api/swipes/", include("swipes.urls")),
     path("api/matches/", include("matches.urls")),
     path("api/messages/", include("chat.urls")),

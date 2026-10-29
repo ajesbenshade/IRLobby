@@ -25,16 +25,7 @@ evaluator(exports, module);
 
 const { buildActivitySearchParams } = module.exports;
 
-const DROPPED = [
-  'price_min',
-  'price_max',
-  'skill_level',
-  'tags',
-  'age_restriction',
-  'category',
-  'audience',
-  'ages',
-];
+const DROPPED = ['price_min', 'price_max', 'skill_level', 'tags', 'age_restriction', 'category'];
 
 test('returns empty string when no filters provided', () => {
   assert.equal(buildActivitySearchParams({}), '');
@@ -58,7 +49,9 @@ test('sends date_from and date_to when both dates are set', () => {
     tags: ['outdoors', 'social'],
     ageRestriction: '21+',
     category: 'Nightlife',
-    audience: 'men',
+    gatheringType: 'All types',
+    audience: 'Everyone',
+    ages: 'All ages',
   });
   const entries = new URLSearchParams(params);
   assert.equal(entries.get('location'), 'Austin');
@@ -68,7 +61,46 @@ test('sends date_from and date_to when both dates are set', () => {
   for (const key of DROPPED) {
     assert.equal(entries.get(key), null, key);
   }
+  assert.equal(entries.get('type'), null);
+  assert.equal(entries.get('audience'), null);
+  assert.equal(entries.get('ages'), null);
   assert.equal([...entries.keys()].sort().join(','), 'date_from,date_to,location,radius');
+});
+
+test('sends type, audience, and ages slugs and omits the defaults', () => {
+  const selected = new URLSearchParams(
+    buildActivitySearchParams({
+      maxDistance: [25],
+      gatheringType: 'Small groups',
+      audience: 'Women',
+      ages: 'Adults (18+)',
+    }),
+  );
+  assert.equal(selected.get('type'), 'small_groups');
+  assert.equal(selected.get('audience'), 'women');
+  assert.equal(selected.get('ages'), 'adults');
+  assert.equal(selected.get('radius'), '25');
+  assert.equal(selected.get('category'), null);
+
+  const defaults = new URLSearchParams(
+    buildActivitySearchParams({
+      gatheringType: 'All types',
+      audience: 'Everyone',
+      ages: 'All ages',
+    }),
+  );
+  assert.equal(defaults.get('type'), null);
+  assert.equal(defaults.get('audience'), null);
+  assert.equal(defaults.get('ages'), null);
+
+  const unknown = new URLSearchParams(
+    buildActivitySearchParams({
+      gatheringType: 'Nightlife',
+      audience: 'Friends',
+      ages: '21+',
+    }),
+  );
+  assert.equal(unknown.toString(), '');
 });
 
 test('omits a blank location and does not invent a radius', () => {

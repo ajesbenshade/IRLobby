@@ -21,6 +21,12 @@ export interface ActivityFetchFilters {
   price_max?: number;
   date_from?: string;
   date_to?: string;
+  /** Church gathering slug. Omit for All types. */
+  type?: string;
+  /** everyone is omitted; men or women when the member picks one. */
+  audience?: string;
+  /** kids_family, youth, or adults. Omit for All ages. */
+  ages?: string;
 }
 
 export const fetchActivities = async (

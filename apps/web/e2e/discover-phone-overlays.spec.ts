@@ -157,6 +157,9 @@ test('phone discover bell survives a paginated inbox and filter stays on screen'
   await expect(page.getByText('Narrow Discover to gatherings that fit you.')).toBeVisible();
   await expect(page.getByPlaceholder('City or church / place')).toBeVisible();
   await expect(page.getByText('Within: 25 miles')).toBeVisible();
+  await expect(page.getByLabel('Type')).toBeVisible();
+  await expect(page.getByLabel('Audience')).toBeVisible();
+  await expect(page.getByLabel('Ages')).toBeVisible();
   await expect(page.getByText('Price Range')).toHaveCount(0);
   await expect(page.getByText('Skill Level')).toHaveCount(0);
   await expect(page.getByText('Nightlife')).toHaveCount(0);
@@ -176,10 +179,35 @@ test('phone discover bell survives a paginated inbox and filter stays on screen'
     'tags',
     'age_restriction',
     'category',
+    'type',
     'audience',
+    'ages',
   ]) {
     expect(applied.searchParams.get(dropped)).toBeNull();
   }
+
+  await page.getByRole('button', { name: 'Open discovery filters' }).click();
+  await page.getByLabel('Type').click();
+  await page.getByRole('option', { name: 'Small groups', exact: true }).click();
+  const audience = page.getByLabel('Audience');
+  await audience.scrollIntoViewIfNeeded();
+  await audience.click();
+  await page.getByRole('option', { name: 'Women', exact: true }).click();
+  const ages = page.getByLabel('Ages');
+  await ages.scrollIntoViewIfNeeded();
+  await ages.click();
+  await page.getByRole('option', { name: 'Adults (18+)', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.getByTestId('discover-filter-sheet')).toHaveCount(0);
+  await expect.poll(() => activityUrls.at(-1) ?? '').toContain('type=small_groups');
+  const narrowed = new URL(activityUrls.at(-1) ?? 'http://127.0.0.1/api/activities/');
+  expect(narrowed.searchParams.get('type')).toBe('small_groups');
+  expect(narrowed.searchParams.get('audience')).toBe('women');
+  expect(narrowed.searchParams.get('ages')).toBe('adults');
+  expect(narrowed.searchParams.get('category')).toBeNull();
+  expect(narrowed.searchParams.get('price_min')).toBeNull();
+  expect(narrowed.searchParams.get('skill_level')).toBeNull();
+  expect(narrowed.searchParams.get('tags')).toBeNull();
   await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
 });

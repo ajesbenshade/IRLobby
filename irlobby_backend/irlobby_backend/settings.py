@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     "users",
     "activities",
     "prayers",
+    "votes",
     "moderation",
     "swipes",
     "matches",
@@ -179,6 +180,7 @@ REST_FRAMEWORK = {
         # Circle create, per signed-in user. Invite sends have their own bucket.
         "circle_create": config("CIRCLE_CREATE_THROTTLE_RATE", default="10/hour"),
         "circle_invite": config("CIRCLE_INVITE_THROTTLE_RATE", default="30/hour"),
+        "ballot_create": config("BALLOT_CREATE_THROTTLE_RATE", default="10/hour"),
     },
 }
 

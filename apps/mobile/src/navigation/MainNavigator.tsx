@@ -33,6 +33,7 @@ import { VoteBallotScreen } from '@screens/main/VoteBallotScreen';
 import { VotingScreen } from '@screens/main/VotingScreen';
 import { FoyerFriendsScreen } from '@screens/main/FoyerFriendsScreen';
 import { FriendsScreen } from '@screens/main/FriendsScreen';
+import { DirectoryScreen } from '@screens/main/DirectoryScreen';
 import { MemberProfileScreen } from '@screens/main/MemberProfileScreen';
 import { MessagingScreen } from '@screens/main/MessagingScreen';
 import { PhotoGalleryScreen } from '@screens/main/PhotoGalleryScreen';
@@ -302,6 +303,7 @@ export const MainNavigator = () => (
       options={{ title: 'Edit event' }}
     />
     <Stack.Screen name="Household" component={MyFamilyScreen} options={{ headerShown: false, title: 'My family' }} />
+    <Stack.Screen name="Directory" component={DirectoryScreen} options={{ headerShown: false, title: 'Directory' }} />
     <Stack.Screen name="PhotoGallery" component={PhotoGalleryScreen} options={{ headerShown: false, title: 'Photos' }} />
     <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ headerShown: false, title: 'Profile' }} />
     <Stack.Screen name="DirectChat" component={DirectChatScreen} options={{ headerShown: false, title: 'Chat' }} />

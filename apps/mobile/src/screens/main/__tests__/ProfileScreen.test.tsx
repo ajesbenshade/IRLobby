@@ -145,6 +145,12 @@ describe('ProfileScreen (Foyer mode)', () => {
     expect(screen.getByLabelText('Connections')).toBeTruthy();
   });
 
+  it('opens Directory from Profile and does not treat it as a tab', () => {
+    renderScreen();
+    fireEvent.press(screen.getByLabelText('Directory, People in our church'));
+    expect(mockNavigate).toHaveBeenCalledWith('Directory');
+  });
+
   it('opens Connections for people you are gathering with or praying for', () => {
     renderScreen();
     fireEvent.press(screen.getByLabelText('Connections'));

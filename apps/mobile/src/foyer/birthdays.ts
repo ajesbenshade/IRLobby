@@ -4,8 +4,9 @@ import { FEATURES } from '@constants/features';
  * Birthday policy (Aaron's decision, Oct 2):
  *  - ONLY the primary account holder can share their OWN birthday: an adult opt-in `Show my birthday`, default off,
  *    month and day only (never the year), never for anyone under 18.
- *  - Family members' (household) birthdays are NEVER shown or shareable to anyone. There is no per-child switch, flag or
- *    string. They exist only to check a gathering's age range, and only the parent sees them (My family, RSVP list).
+ *  - Household birthdays stay off gatherings, RSVP, and host views. There is no per-child switch.
+ *    They exist to check a gathering's age range, and only the parent sees the full date (My family, RSVP list).
+ *    The church Directory is the exception: one parent opt-in can show a child's first name and month/day, never a year.
  *  - Hosts and guests see a family member's name and age band only.
  *
  * The own-birthday UI and the friends card stay OFF (EXPO_PUBLIC_FOYER_BIRTHDAYS, default off) and also need their backend

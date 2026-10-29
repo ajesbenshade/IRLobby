@@ -1,3 +1,4 @@
+import { ProfileVisibilitySection } from '@/components/directory/ProfileVisibilitySection';
 import FriendsModal from '@/components/FriendsModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,7 @@ import { fileToImageDataUrl } from '@/lib/profilePhoto';
 import { apiRequest } from '@/lib/queryClient';
 import { API_ROUTES } from '@shared/schema';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, Copy, HelpCircle, LogOut, Settings, Users } from 'lucide-react';
+import { Calendar, ChevronRight, Copy, HelpCircle, LogOut, Settings, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -115,10 +116,10 @@ export default function Profile() {
 
   const savedMailing = normalizeMailing(mailing);
   const savedShowChildren = normalizeShowChildren(visibility, showChildren);
-  const baselineMailing = user?.mailingKnown ? serverMailing : (acceptedMailing ?? emptyMailing());
+  const baselineMailing = user?.mailingKnown ? serverMailing : acceptedMailing ?? emptyMailing();
   const baselineShowChildren = user?.showHouseholdKnown
     ? normalizeShowChildren(visibility, serverShowChildren)
-    : (acceptedChildren ?? false);
+    : acceptedChildren ?? false;
   const dirty =
     sex !== serverSex ||
     JSON.stringify(savedMailing) !== JSON.stringify(baselineMailing) ||
@@ -322,6 +323,16 @@ export default function Profile() {
         <p className="text-[15px] text-[#222222]">{FRANCONIA_CHURCH_NAME}</p>
         <p className="mb-3 mt-1 text-xs text-[#6e6a68]">This app is for Franconia.</p>
         <Link
+          to="/app/directory"
+          className="mb-3 flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
+        >
+          <span>
+            <span className="block font-semibold">Directory</span>
+            <span className="block text-sm text-[#6e6a68]">People in our church</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-[#6e6a68]" aria-hidden />
+        </Link>
+        <Link
           to="/app/circles"
           className="mb-3 flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
         >
@@ -336,8 +347,8 @@ export default function Profile() {
             {user.householdChildCount == null
               ? 'Children'
               : user.householdChildCount === 1
-                ? '1 child'
-                : `${user.householdChildCount} children`}
+              ? '1 child'
+              : `${user.householdChildCount} children`}
           </span>
         </Link>
         <div className="mt-3 rounded-2xl bg-white px-4 py-4 shadow-sm">
@@ -364,6 +375,7 @@ export default function Profile() {
             {childrenDirectoryEnabled(visibility) ? SHOW_CHILDREN_HELPER : SHOW_CHILDREN_ONLY_ME}
           </p>
         </div>
+        <ProfileVisibilitySection />
         <p className="mb-1 mt-4 text-[11.5px] font-bold tracking-wide text-[#6e6a68]">CONTACT</p>
         <label className="mb-3 block text-sm font-semibold">
           {MAILING_LABEL}

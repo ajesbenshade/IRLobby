@@ -290,15 +290,20 @@ export const FoyerProfileCard = () => {
           onChange={(value) => update('showHouseholdInDirectory', value)}
         />
         <NavRow
-          icon="account-heart-outline"
-          label={CONNECTIONS_COPY.title}
-          onPress={() => navigation.navigate('Connections')}
-        />
-        <NavRow
           icon="account-group-outline"
           label={PROFILE_COPY.friendsRow}
           count={FRIEND_COPY.profileRowCount(friendCount)}
           onPress={() => navigation.navigate('Friends')}
+        />
+        <NavRow
+          icon="account-multiple-outline"
+          label="Circles"
+          onPress={() => navigation.navigate('Circles')}
+        />
+        <NavRow
+          icon="account-heart-outline"
+          label={CONNECTIONS_COPY.title}
+          onPress={() => navigation.navigate('Connections')}
           last
         />
       </View>

@@ -73,6 +73,14 @@ class CirclePolicyTests(APITestCase):
         self.assertEqual(long.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("description", long.data)
 
+    def test_any_church_member_can_create_a_circle(self):
+        self.client.force_authenticate(self.anna)
+        response = self.client.post(
+            reverse("circle-list"), {"name": "Care Team"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertTrue(response.data["is_admin"])
+
     def test_directory_search_states_and_church_scope(self):
         self.client.force_authenticate(self.admin)
         self.client.post(reverse("circle-list"), {"name": "Parents"}, format="json")
@@ -400,6 +408,33 @@ class CirclePolicyTests(APITestCase):
                 circle_id=self.circle_id, user=self.anna, is_admin=True
             ).exists()
         )
+
+    def test_circle_has_creator_and_at_most_two_additional_admins(self):
+        extra = make_user("maria", self.church, first_name="Maria")
+        CircleMembership.objects.create(circle_id=self.circle_id, user=self.anna)
+        CircleMembership.objects.create(circle_id=self.circle_id, user=self.pete)
+        CircleMembership.objects.create(circle_id=self.circle_id, user=extra)
+        self.client.force_authenticate(self.admin)
+
+        for person in (self.anna, self.pete):
+            response = self.client.post(
+                reverse("circle-member-make-admin", args=[self.circle_id, person.id])
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        full = self.client.post(
+            reverse("circle-member-make-admin", args=[self.circle_id, extra.id])
+        )
+        self.assertEqual(full.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(full.data["code"], "admin_cap")
+        self.assertEqual(
+            CircleMembership.objects.filter(circle_id=self.circle_id, is_admin=True).count(), 3
+        )
+
+        already_admin = self.client.post(
+            reverse("circle-member-make-admin", args=[self.circle_id, self.anna.id])
+        )
+        self.assertEqual(already_admin.status_code, status.HTTP_200_OK)
 
     def test_people_search_skips_members_and_blocked_people(self):
         CircleMembership.objects.create(circle_id=self.circle_id, user=self.pete)

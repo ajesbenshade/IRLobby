@@ -176,7 +176,7 @@ const firstFieldMessage = (value: unknown): string | null => {
 
 const ACCOUNT_AGE_ERROR = 'Accounts are for voting members 18 and older.';
 const VOTING_MEMBER_ATTESTATION_ERROR =
-  'You must confirm you are a voting member of Franconia Mennonite Church.';
+  'You must confirm you are a voting member of your church.';
 
 /** True when Google/Apple rejected a new account that did not send an 18+ birth date and the checkbox. */
 export const isNewAccountGateBody = (data: unknown): boolean => {

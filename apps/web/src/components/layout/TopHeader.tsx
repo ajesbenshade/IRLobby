@@ -29,9 +29,6 @@ export default function TopHeader({
           <span className="font-display text-[22px] font-bold leading-none text-foreground md:text-[26px]">
             The Foyer
           </span>
-          <span className="truncate text-[11px] text-muted-foreground">
-            Franconia Mennonite Church
-          </span>
         </Link>
         <Separator orientation="vertical" className="hidden h-6 md:block" />
 

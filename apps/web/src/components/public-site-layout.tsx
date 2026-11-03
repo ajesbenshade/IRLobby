@@ -19,7 +19,6 @@ function PublicWordmark() {
       </span>
       <span className="flex flex-col">
         <span className="font-display text-[22px] font-bold leading-none">The Foyer</span>
-        <span className="text-[11px] text-[#6e6a68]">Franconia Mennonite Church</span>
       </span>
     </span>
   );

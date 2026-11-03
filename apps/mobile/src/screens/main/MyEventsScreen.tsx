@@ -7,7 +7,6 @@ import { Button, Text } from 'react-native-paper';
 import { AccentPill, AppScrollView, EmptyStatePanel, PageHeader, PanelCard, SectionIntro, StatCard } from '@components/AppChrome';
 import { RefreshControl, Text as NativeText, View } from '@components/RNCompat';
 import { AppButton } from '@components/ui/Button';
-import { FoyerHeader } from '@components/FoyerHeader';
 import { isFoyerMode, isTicketingUiEnabled } from '@constants/appMode';
 import { FoyerGatherings } from '@screens/main/FoyerGatherings';
 import { config } from '@constants/config';
@@ -109,7 +108,6 @@ const MyEventsScreenLegacy = () => {
         />
       }
     >
-      <FoyerHeader />
       <PageHeader
         eyebrow="Gatherings"
         title={activeSegment === 'events' ? 'Plans you are hosting' : 'People already aligned'}

@@ -55,11 +55,11 @@ test('household children stay under 18', () => {
 test('voting-member helper and checkbox match the tip', () => {
   assert.equal(
     accountAge.VOTING_MEMBER_CHECKBOX,
-    'I am a voting member of Franconia Mennonite Church.',
+    'I am a voting member of my church.',
   );
   assert.equal(
     accountAge.BIRTH_DATE_HELPER,
-    'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
+    'Accounts are for voting members 18 and older. Children under 18 are added under a parent’s My family.',
   );
   assert.equal(
     accountAge.CHILDREN_RSVP_NOTE,
@@ -71,7 +71,7 @@ test('a new Google or Apple account 400 is the voting-member gate', () => {
   assert.equal(
     accountAge.isVotingGateBody({
       date_of_birth: ['Accounts are for voting members 18 and older.'],
-      voting_member_attested: ['You must confirm you are a voting member of Franconia Mennonite Church.'],
+      voting_member_attested: ['You must confirm you are a voting member of your church.'],
     }),
     true,
   );

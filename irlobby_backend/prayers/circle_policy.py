@@ -27,6 +27,8 @@ ALREADY_INVITED = "You already have an invite to this circle. Accept it to join.
 INVITE_CAP = 50
 INVITE_CAP_MESSAGE = "This circle already has 50 pending invites."
 INVITE_BATCH_MAX = 50
+MAX_CIRCLE_ADMINS = 3
+ADMIN_CAP_MESSAGE = "A circle can have up to 3 admins, including the creator."
 PEOPLE_SEARCH_LIMIT = 20
 MEMBER_PREVIEW_LIMIT = 8
 
@@ -493,6 +495,9 @@ def make_admin(circle, user_id) -> CircleMembership:
         _lock_circle(circle.pk)
         membership = _membership_for_update(circle, user_id)
         if not membership.is_admin:
+            admin_count = CircleMembership.objects.filter(circle=circle, is_admin=True).count()
+            if admin_count >= MAX_CIRCLE_ADMINS:
+                raise ValidationError({"detail": ADMIN_CAP_MESSAGE, "code": "admin_cap"})
             membership.is_admin = True
             membership.save(update_fields=["is_admin"])
     return membership

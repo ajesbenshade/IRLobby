@@ -160,5 +160,5 @@ export const brandElevation = {
 
 export const brand = {
   name: 'The Foyer',
-  tagline: 'Gatherings for Franconia Mennonite Church',
+  tagline: 'Gatherings for your community',
 } as const;

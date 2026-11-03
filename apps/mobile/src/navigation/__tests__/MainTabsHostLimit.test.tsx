@@ -99,7 +99,7 @@ describe('primary tabs', () => {
     render(<MainNavigator />);
     expect(screen.getByText('Discover')).toBeTruthy();
     expect(screen.getByText('Gatherings')).toBeTruthy();
-    expect(screen.getByText('Prayer')).toBeTruthy();
+    expect(screen.getByText('Prayers')).toBeTruthy();
     expect(screen.getByText('Voting')).toBeTruthy();
     expect(screen.getByText('Profile')).toBeTruthy();
     expect(screen.queryByText('Host')).toBeNull();

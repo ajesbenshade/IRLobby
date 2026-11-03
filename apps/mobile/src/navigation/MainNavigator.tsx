@@ -184,7 +184,7 @@ const MainTabs = () => {
   >
     <Tab.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Activity" component={MyEventsScreen} options={{ title: 'Gatherings' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
-    <Tab.Screen name="Prayer" component={PrayerRequestsScreen} options={{ title: 'Prayer' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
+    <Tab.Screen name="Prayer" component={PrayerRequestsScreen} options={{ title: 'Prayers' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen name="Voting" component={VotingScreen} options={{ title: 'Voting' }} listeners={{ tabPress: () => { void safeSelectionHaptic(); } }} />
     <Tab.Screen
       name="Chat"

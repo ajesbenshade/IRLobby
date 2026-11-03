@@ -12,10 +12,10 @@ Giving and donations are out of scope for this build. There is no gift amount, C
 
 Required on create: `date_of_birth` (`YYYY-MM-DD`) and `voting_member_attested` (`true`). Optional: `sex` (`male` | `female`).
 
-`voting_member_attested` is the checkbox "I am a voting member of Franconia Mennonite Church." CamelCase `votingMemberAttested` is accepted. `true` stores `voting_member_attested_at` as the server time. The client cannot send that timestamp. Missing or `false` is **400**:
+`voting_member_attested` is the checkbox "I am a voting member of my church." CamelCase `votingMemberAttested` is accepted. `true` stores `voting_member_attested_at` as the server time. The client cannot send that timestamp. Missing or `false` is **400**:
 
 ```json
-{ "voting_member_attested": ["You must confirm you are a voting member of Franconia Mennonite Church."] }
+{ "voting_member_attested": ["You must confirm you are a voting member of your church."] }
 ```
 
 A missing birth date, or one that makes the person under 18, is **400** on register. The same string is returned when `PATCH /api/users/profile/` sets `date_of_birth` (aliases `birthDate`, `birth_date`) to an under-18 date:
@@ -331,13 +331,13 @@ Those eleven keys are the only event fields. No birth dates, emails, children, c
 
 Optional `?from=YYYY-MM-DD` replaces that lower bound with midnight `America/New_York` on that date (use it to show older gatherings, or to start later). A blank `from` uses the default. Any other value (not exactly `YYYY-MM-DD`, or not a real date) returns **400** `{"detail": "from must be a date in the form YYYY-MM-DD."}`.
 
-`GET /api/public/calendar.ics` → `text/calendar; charset=utf-8`. `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. Same events only, with the same past-event default and `?from=` (400 on a bad value). Subscribe in Apple Calendar by swapping the scheme: `webcal://<host>/api/public/calendar.ics` (same path, no Authorization header).
+`GET /api/public/calendar.ics` → `text/calendar; charset=utf-8`. `PRODID:-//The Foyer//EN`. Same events only, with the same past-event default and `?from=` (400 on a bad value). Subscribe in Apple Calendar by swapping the scheme: `webcal://<host>/api/public/calendar.ics` (same path, no Authorization header).
 
 Feed properties:
 
 | Property | Value |
 |---|---|
-| `X-WR-CALNAME` | `Franconia Mennonite Church – The Foyer` (en dash) |
+| `X-WR-CALNAME` | `Church gatherings – The Foyer` (en dash) |
 | `X-WR-TIMEZONE` | `America/New_York` |
 | `UID` | `foyer-activity-<id>@franconiamennonite.org` (stable) |
 | `DTSTAMP` | UTC time the file was generated |
@@ -385,7 +385,7 @@ Any other gathering uses an unguessable token that is only returned inside the a
 
 The token is a stable Django signature of the gathering id (`salt` `foyer-event-ics`). It does not change between requests. A missing token, a bad signature, a forged id, or a deleted gathering is `404` with an empty body. `GET /api/public/events/<id>.ics` is also `404` unless that id is on the approved public calendar, so private ids cannot be walked.
 
-Both files are `text/calendar; charset=utf-8` and use `PRODID:-//Franconia Mennonite Church//The Foyer//EN`. The per-gathering file contains only title (`SUMMARY`), start (`DTSTART`), end (`DTEND` when the end is after the start), location, description, and host name (the description begins with `Host: <name>`). It has no `ATTENDEE`, email, household, minor, or other contact data. `Cache-Control` is `public, max-age=300` for the public file and `private, max-age=300` for the token file.
+Both files are `text/calendar; charset=utf-8` and use `PRODID:-//The Foyer//EN`. The per-gathering file contains only title (`SUMMARY`), start (`DTSTART`), end (`DTEND` when the end is after the start), location, description, and host name (the description begins with `Host: <name>`). It has no `ATTENDEE`, email, household, minor, or other contact data. `Cache-Control` is `public, max-age=300` for the public file and `private, max-age=300` for the token file.
 
 If `end_time` is null, or not after the start, the `.ics` omits `DTEND`. Google and Outlook links still send a positive range by using the start plus one hour. A start and end that fall on America/New_York midnights a whole number of days apart are still written as UTC instants, not a zero-length event.
 
@@ -1212,4 +1212,3 @@ change `closed_at`. A ballot that has already reached `closes_at` stays closed w
 ```
 
 Not visible: **404**.
-

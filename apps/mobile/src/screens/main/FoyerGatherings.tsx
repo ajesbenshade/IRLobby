@@ -7,7 +7,6 @@ import { Text } from 'react-native-paper';
 
 import { AppScrollView } from '@components/AppChrome';
 import { EventLimitSheet } from '@components/foyer/EventLimitSheet';
-import { FoyerHeader } from '@components/FoyerHeader';
 import { GRAYSCALE_IMAGE_STYLE } from '@components/foyer/ui';
 import { RefreshControl, View } from '@components/RNCompat';
 import { HOST_LIMIT_NOTE_SPACE, HostLimitNote } from '@components/foyer/HostLimitNote';
@@ -107,7 +106,6 @@ export const FoyerGatherings = () => {
         />
       }
     >
-      <FoyerHeader />
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
           Your gatherings

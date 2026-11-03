@@ -29,7 +29,7 @@ MAILING_FIELDS = (
 )
 
 VOTING_MEMBER_ATTESTATION_ERROR = (
-    "You must confirm you are a voting member of Franconia Mennonite Church."
+    "You must confirm you are a voting member of your church."
 )
 
 
@@ -329,7 +329,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     sex = serializers.CharField(required=False, allow_blank=True)
-    # Checkbox: "I am a voting member of Franconia Mennonite Church."
+    # Checkbox: "I am a voting member of my church."
     voting_member_attested = serializers.BooleanField(
         write_only=True, required=False, default=False
     )

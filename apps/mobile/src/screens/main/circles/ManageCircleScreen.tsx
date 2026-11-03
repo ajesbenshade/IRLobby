@@ -45,6 +45,7 @@ export const ManageCircleScreen = () => {
     retry: false,
   });
   const rows = members.data ?? [];
+  const adminCount = rows.filter((person) => person.isAdmin).length;
 
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['circle-requests', String(circleId)] });
@@ -168,6 +169,7 @@ export const ManageCircleScreen = () => {
           : null}
         {tab === 'admins' ? (
           <>
+            {adminCount >= 3 ? <Text style={styles.empty}>{CIRCLE_COPY.adminLimit}</Text> : null}
             {rows
               .filter((person) => person.isAdmin)
               .map((person) => (
@@ -193,11 +195,13 @@ export const ManageCircleScreen = () => {
                   <Text style={styles.name}>{person.name}</Text>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: adminCount >= 3 }}
+                    disabled={adminCount >= 3}
                     onPress={() => {
                       setNotice(null);
                       promote.mutate(person.id);
                     }}
-                    style={styles.secondary}
+                    style={[styles.secondary, adminCount >= 3 ? styles.disabled : null]}
                   >
                     <Text style={styles.secondaryText}>{CIRCLE_COPY.makeAdmin}</Text>
                   </Pressable>
@@ -237,6 +241,7 @@ const styles = StyleSheet.create({
   primary: { minHeight: 40, borderRadius: 999, backgroundColor: appColors.primary, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: appColors.white, fontFamily: appTypography.bodySemibold, fontSize: 15 },
   secondary: { alignSelf: 'flex-start', minHeight: 40, borderRadius: 999, borderWidth: 1, borderColor: appColors.line, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  disabled: { opacity: 0.45 },
   secondaryText: { color: appColors.ink, fontFamily: appTypography.bodySemibold, fontSize: 15 },
   empty: { textAlign: 'center', marginTop: 24, color: appColors.mutedInk, fontFamily: appTypography.bodyRegular, fontSize: 16 },
   error: { color: appColors.danger, fontFamily: appTypography.bodyRegular, fontSize: 15 },

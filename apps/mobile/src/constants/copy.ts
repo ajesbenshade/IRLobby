@@ -2,8 +2,8 @@ import { DELETE_ACCOUNT_COPY } from './foyerCopy';
 /**
  * Centralized user-facing strings for the mobile app.
  *
- * Voice & tone: short, confident, warm, low-friction. Pair with The Foyer
- * and Franconia Mennonite Church. Keep new strings under ~10 words for
+ * Voice & tone: short, confident, warm, low-friction. Pair with The Foyer.
+ * Keep new strings under ~10 words for
  * headlines and ~18 for subtitles.
  *
  * Add new strings here rather than inline so future copy passes (and

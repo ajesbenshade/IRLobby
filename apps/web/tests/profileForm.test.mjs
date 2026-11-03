@@ -147,8 +147,8 @@ test('profile sex is a selectable control and church search is gone', () => {
   assert.equal(PROFILE_SEX_HELPER, "Only used for men's or women's events");
   assert.match(profilePage, /\{PROFILE_SEX_HELPER\}/);
   assert.match(profilePage, /profileSaveBody\(\{/);
-  assert.match(profilePage, /\{FRANCONIA_CHURCH_NAME\}/);
-  assert.match(profilePage, /This app is for Franconia\./);
+  assert.match(profilePage, /\{user\?\.church\?\.name \?\? 'Your church'\}/);
+  assert.doesNotMatch(profilePage, /This app is for Franconia\./);
   assert.match(profilePage, /avatar_url: dataUrl/);
   assert.match(profilePage, /Change profile photo/);
   assert.match(profilePage, /SHOW_CHILDREN_LABEL/);

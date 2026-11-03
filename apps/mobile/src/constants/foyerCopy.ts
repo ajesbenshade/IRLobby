@@ -471,16 +471,16 @@ export const HOST_FORM_COPY = {
 /** Blocking birth-date step after Apple / Google sign-in when the account has no birth date. */
 export const BIRTH_GATE_COPY = {
   title: 'Birth date',
-  body: 'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
+  body: 'Accounts are for voting members 18 and older. Children under 18 are added under a parent’s My family.',
   continue: 'Continue',
   signOut: 'Sign out',
   saveFailed: COMMON_COPY.genericError,
 } as const;
 
-/** Password sign-up: required Franconia voting-member attestation. */
+/** Password sign-up: required voting-member attestation. */
 export const VOTING_MEMBER_COPY = {
-  checkbox: 'I am a voting member of Franconia Mennonite Church.',
-  helper: 'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
+  checkbox: 'I am a voting member of my church.',
+  helper: 'Accounts are for voting members 18 and older. Children under 18 are added under a parent’s My family.',
 } as const;
 
 export const PICKER_COPY = {

@@ -310,7 +310,7 @@ class ActivitySerializer(serializers.ModelSerializer):
                 church = Church.objects.filter(name=FRANCONIA_CHURCH_NAME).first()
                 if church is None:
                     raise serializers.ValidationError(
-                        {"host_kind": "Franconia Mennonite Church is not configured."}
+                        {"host_kind": "The church is not configured."}
                     )
                 validated_data["host_church"] = church
         elif list_on and admin:

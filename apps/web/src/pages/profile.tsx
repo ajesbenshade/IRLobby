@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { ACCOUNT_AGE_ERROR, accountBirthDateError } from '@/lib/accountAge';
 import { churchSubscribeUrl, copyChurchCalendarLink, openCalendarUrl } from '@/lib/calendar';
 import {
-  FRANCONIA_CHURCH_NAME,
   MAILING_HELPER,
   MAILING_LABEL,
   PROFILE_SEX_HELPER,
@@ -366,8 +365,7 @@ export default function Profile() {
         </div>
         <p className="mb-3 text-xs text-[#6e6a68]">{PROFILE_SEX_HELPER}</p>
         <p className="mb-1 text-[11.5px] font-bold tracking-wide text-[#6e6a68]">CHURCH</p>
-        <p className="text-[15px] text-[#222222]">{FRANCONIA_CHURCH_NAME}</p>
-        <p className="mb-3 mt-1 text-xs text-[#6e6a68]">This app is for Franconia.</p>
+        <p className="text-[15px] text-[#222222]">{user?.church?.name ?? 'Your church'}</p>
         <Link
           to="/app/directory"
           className="mb-3 flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm"
@@ -504,7 +502,7 @@ export default function Profile() {
             <p className="font-semibold text-[#222222]">Church calendar</p>
           </div>
           <p className="mt-3 text-[15px] leading-snug text-[#6e6a68]">
-            Subscribe to see every Franconia gathering in your own calendar. It updates
+            Subscribe to see every gathering from your church in your own calendar. It updates
             automatically.
           </p>
           <button

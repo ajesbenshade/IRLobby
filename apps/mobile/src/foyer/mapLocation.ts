@@ -11,7 +11,7 @@ export const USE_LOCATION_KEY = '@irlobby/maps/use-my-location';
 
 export type MapCenter = { latitude: number; longitude: number };
 
-/** Franconia, PA (Franconia Mennonite Church area). */
+/** Franconia, PA. */
 export const FRANCONIA_CENTER: MapCenter = { latitude: 40.2866, longitude: -75.3877 };
 /**
  * The user's home church as the account payload exposes it. `latitude` / `longitude` are NOT sent by the backend today (the

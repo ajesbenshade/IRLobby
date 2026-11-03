@@ -71,6 +71,7 @@ export const CIRCLE_COPY = {
   removeMember: 'Remove from circle',
   makeAdmin: 'Make admin',
   removeAdmin: 'Remove admin',
+  adminLimit: 'A circle can have up to 3 admins, including the creator.',
   lastAdmin: 'Circles need at least one admin.',
   report: 'Report circle',
   emptyDirectory: 'No circles yet. Create one for your group.',

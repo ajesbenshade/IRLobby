@@ -36,6 +36,7 @@ export default function CircleManagePage() {
     retry: false,
   });
   const rows = members.data ?? [];
+  const adminCount = rows.filter((person) => person.isAdmin).length;
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['circle-requests', circleId] });
     await queryClient.invalidateQueries({ queryKey: ['circle-members', circleId] });
@@ -180,6 +181,9 @@ export default function CircleManagePage() {
       ) : null}
       {tab === 'admins' ? (
         <ul className="mt-4 space-y-3">
+          {adminCount >= 3 ? (
+            <li className="text-center text-sm text-[#6e6a68]">{CIRCLE_COPY.adminLimit}</li>
+          ) : null}
           {members.isError ? (
             <li className="text-sm text-red-800">{CIRCLE_COPY.loadFailed}</li>
           ) : null}
@@ -214,7 +218,8 @@ export default function CircleManagePage() {
                 <p className="font-semibold">{person.name}</p>
                 <button
                   type="button"
-                  className="mt-3 min-h-10 rounded-full border border-[#e1dbd7] px-4 text-sm font-semibold"
+                  disabled={adminCount >= 3}
+                  className={`mt-3 min-h-10 rounded-full border border-[#e1dbd7] px-4 text-sm font-semibold ${adminCount >= 3 ? 'cursor-not-allowed opacity-50' : ''}`}
                   onClick={() => {
                     setNotice(null);
                     promote.mutate(person.id);

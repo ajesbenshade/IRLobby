@@ -143,7 +143,7 @@ export default function FoyerHostPage() {
         <div className="mb-4 rounded-2xl border border-[#e1dbd7] bg-white p-4">
           <p className="text-xs font-bold text-[#6e6a68]">Admin only</p>
           <label className="mt-2 flex items-center justify-between gap-3 font-semibold">
-            Host as Franconia Mennonite Church
+            Host as the church
             <input type="checkbox" checked={hostAsChurch} onChange={(event) => setHostAsChurch(event.target.checked)} />
           </label>
           <p className="mt-1 text-sm text-[#6e6a68]">The church is shown as host.</p>

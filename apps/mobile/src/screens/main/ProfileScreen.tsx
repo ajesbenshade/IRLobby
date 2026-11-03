@@ -21,7 +21,6 @@ import { Image, RefreshControl, Text as NativeText, View } from "@components/RNC
 import { AppButton } from "@components/ui/Button";
 import { Field } from "@components/ui/Field";
 import { ProfileCompletionRing } from "@components/ProfileCompletionRing";
-import { FoyerHeader } from "@components/FoyerHeader";
 import { FoyerProfileCard } from "@components/FoyerProfileCard";
 import { SUPPORT_COPY } from "@constants/foyerCopy";
 import { PickChurchCard } from "@components/foyer/PickChurchCard";
@@ -204,15 +203,9 @@ export const ProfileScreen = () => {
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void onRefresh()} />
         }
       >
-        <FoyerHeader />
         <PickChurchCard surface="profile" />
         <FoyerProfileCard />
         <PanelCard style={styles.menuCard}>
-          <ProfileMenuRow
-            icon="account-group-outline"
-            title="Circles"
-            onPress={() => navigation.navigate("Circles")}
-          />
           <ProfileMenuRow
             icon="cog-outline"
             title="Settings"
@@ -246,7 +239,6 @@ export const ProfileScreen = () => {
         <RefreshControl refreshing={isRefreshing} onRefresh={() => void onRefresh()} />
       }
     >
-      <FoyerHeader />
       <PageHeader
         eyebrow="Your vibe"
         title="Show people why they should say yes"

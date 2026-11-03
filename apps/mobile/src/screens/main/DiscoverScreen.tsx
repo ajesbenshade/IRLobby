@@ -15,7 +15,6 @@ import {
   PanelCard,
 } from '@components/AppChrome';
 import { AddToCalendarSheet } from '@components/AddToCalendarSheet';
-import { FoyerHeader } from '@components/FoyerHeader';
 import { CancelRsvpSheet } from '@components/foyer/CancelRsvpSheet';
 import { DatePickerSheet, PickerField } from '@components/foyer/DatePickerSheet';
 import { PillButton, Toast } from '@components/foyer/ui';
@@ -609,7 +608,6 @@ export const DiscoverScreen = () => {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
-      <FoyerHeader />
       <PageHeader
         eyebrow={foyerMode ? undefined : 'Discover'}
         title={

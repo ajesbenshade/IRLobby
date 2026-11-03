@@ -4,10 +4,10 @@ export const MIN_ACCOUNT_AGE = 18;
 
 export const ACCOUNT_AGE_ERROR = 'Accounts are for voting members 18 and older.';
 
-export const VOTING_MEMBER_CHECKBOX = 'I am a voting member of Franconia Mennonite Church.';
+export const VOTING_MEMBER_CHECKBOX = 'I am a voting member of my church.';
 
 export const BIRTH_DATE_HELPER =
-  'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.';
+  'Accounts are for voting members 18 and older. Children under 18 are added under a parent’s My family.';
 
 export const BIRTH_DATE_REQUIRED = 'Choose your birth date to continue.';
 

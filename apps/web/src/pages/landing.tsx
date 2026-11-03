@@ -21,8 +21,8 @@ export default function Landing() {
   return (
     <div className="min-h-[100dvh] w-full bg-[#ece6e2] text-[#222222]">
       <PublicMetadata
-        title="The Foyer — Franconia Mennonite Church"
-        description="The Foyer is the gatherings app for Franconia Mennonite Church."
+        title="The Foyer — Gatherings for your community"
+        description="The Foyer is for gathering with your community."
         canonicalPath="/"
       />
       <main
@@ -32,7 +32,7 @@ export default function Landing() {
         <div className="mb-6 flex flex-col items-center text-center">
           <img src="/app-icon.png" alt="" className="h-16 w-16 rounded-2xl ring-1 ring-[#e1dbd7]" />
           <h1 className="mt-3 font-display text-[28px] font-bold leading-none">The Foyer</h1>
-          <p className="mt-1 text-sm text-[#6e6a68]">Franconia Mennonite Church</p>
+          <p className="mt-1 text-sm text-[#6e6a68]">Gather with your community</p>
         </div>
         <AuthForm
           onAuthenticated={handleAuth}

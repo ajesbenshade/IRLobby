@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   name: 'The Foyer',
   slug: 'irlobby',
   version: '1.0.0',
-  description: 'The Foyer — gatherings for Franconia Mennonite Church.',
+  description: 'The Foyer — gatherings for your community.',
   orientation: 'portrait',
   icon: './assets/AppIcon-1024.png',
   scheme: googleReversedClientIdScheme ? ['irlobby', googleReversedClientIdScheme] : 'irlobby',

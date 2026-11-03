@@ -35,8 +35,8 @@ PUBLIC_EVENT_FIELDS = (
     "cover_photo_url",
     "is_full",
 )
-ICS_PRODID = "-//Franconia Mennonite Church//The Foyer//EN"
-CHURCH_CALENDAR_NAME = "Franconia Mennonite Church – The Foyer"
+ICS_PRODID = "-//The Foyer//EN"
+CHURCH_CALENDAR_NAME = "Church gatherings – The Foyer"
 CHURCH_TIMEZONE = "America/New_York"
 ICS_TOKEN_SALT = "foyer-event-ics"
 _SIGNER = Signer(salt=ICS_TOKEN_SALT)

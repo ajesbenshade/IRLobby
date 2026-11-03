@@ -522,7 +522,7 @@ const AuthForm = ({
     <Card className="w-full max-w-md mx-auto border-border/70 bg-card/80 backdrop-blur-xl shadow-float">
       <CardHeader>
         <CardTitle className="text-2xl text-center">Welcome to The Foyer</CardTitle>
-        <CardDescription className="text-center">Franconia Mennonite Church</CardDescription>
+        <CardDescription className="text-center">Gather with your community</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1 text-muted-foreground">
@@ -782,7 +782,7 @@ const AuthForm = ({
         ) : null}
       </CardContent>
       <CardFooter className="flex flex-col items-center space-y-2 text-sm text-muted-foreground">
-        <p>The Foyer — Franconia Mennonite Church</p>
+        <p>The Foyer</p>
         <div className="flex space-x-4">
           <a href="/privacy" className="hover:underline">
             Privacy Policy

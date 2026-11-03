@@ -33,9 +33,9 @@ describe('final copy (Oct 1 late)', () => {
     expect(FAMILY_COPY.title).toBe('My family');
     expect(GOING_COPY.underThirteenNote).toBe("Children under 18 are RSVP names only — they don't have accounts.");
     expect(PICKER_COPY.under13).toBe('Accounts are for voting members 18 and older.');
-    expect(VOTING_MEMBER_COPY.checkbox).toBe('I am a voting member of Franconia Mennonite Church.');
+    expect(VOTING_MEMBER_COPY.checkbox).toBe('I am a voting member of my church.');
     expect(VOTING_MEMBER_COPY.helper).toBe(
-      'The Foyer is for Franconia voting members. Children under 18 are added under a parent’s My family.',
+      'Accounts are for voting members 18 and older. Children under 18 are added under a parent’s My family.',
     );
     expect(BIRTH_GATE_COPY.body).toBe(VOTING_MEMBER_COPY.helper);
   });

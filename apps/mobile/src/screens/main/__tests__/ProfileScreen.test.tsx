@@ -143,6 +143,7 @@ describe('ProfileScreen (Foyer mode)', () => {
     expect(screen.queryByText('Photo album (0/12)')).toBeNull();
     expect(screen.queryByText('Starter avatars')).toBeNull();
     expect(screen.getByLabelText('Connections')).toBeTruthy();
+    expect(screen.getByLabelText('Circles')).toBeTruthy();
   });
 
   it('opens Directory from Profile and does not treat it as a tab', () => {
@@ -156,6 +157,12 @@ describe('ProfileScreen (Foyer mode)', () => {
     fireEvent.press(screen.getByLabelText('Connections'));
     expect(mockNavigate).toHaveBeenCalledWith('Connections');
     expect(mockNavigate).not.toHaveBeenCalledWith('Friends');
+  });
+
+  it('opens Circles from Profile', () => {
+    renderScreen();
+    fireEvent.press(screen.getByLabelText('Circles'));
+    expect(mockNavigate).toHaveBeenCalledWith('Circles');
   });
 
   it('Help opens an email to support (subject "The Foyer help"), never the irlobby.com help page', async () => {

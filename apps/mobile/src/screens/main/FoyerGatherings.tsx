@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
   mutedText: { color: '#7a7572' },
   chatMuted: { backgroundColor: appColors.white, borderWidth: 1.5, borderColor: appColors.primary },
   // No paddingBottom here: AppScrollView adds tab bar height + safe area + 16 inside the tabs.
-  container: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
+  container: { gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { flex: 1, fontFamily: appTypography.heading, fontSize: 28, lineHeight: 36, color: appColors.ink },
+  title: { flex: 1, fontFamily: appTypography.heading, fontSize: 34, lineHeight: 40, color: appColors.ink, fontWeight: '700' },
   plus: {
     width: 48,
     height: 48,

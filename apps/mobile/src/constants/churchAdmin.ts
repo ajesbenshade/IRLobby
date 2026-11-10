@@ -16,4 +16,4 @@ export const PRIVACY_URL = 'https://irlobby.com/privacy';
 
 /** Version strings sent as terms_version / privacy_version when someone accepts at sign-up. */
 export const TERMS_VERSION = '2026-10-18';
-export const PRIVACY_VERSION = '2026-10-18';
+export const PRIVACY_VERSION = '2026-10-19';

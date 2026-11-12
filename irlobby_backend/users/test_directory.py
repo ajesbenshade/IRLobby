@@ -1,4 +1,4 @@
-"""Church Directory list: Franconia adults, and opted-in household children."""
+"""Church Directory list: the viewer's church, and opted-in household children."""
 
 from datetime import date, timedelta
 from unittest.mock import patch
@@ -61,24 +61,116 @@ class DirectoryApiTests(APITestCase):
         response = self.client.get(DIRECTORY_URL)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_non_franconia_viewers_get_an_empty_page(self):
-        make("maria", "Maria", self.franconia, profile_visibility="church")
-        souderton = make("soud", "Sam", self.souderton, profile_visibility="church")
-        unchurched = make("none", "Pat", None, profile_visibility="church")
-        short = Church.objects.create(name="Franconia")
-        almost = make("almost", "Al", short, profile_visibility="church")
-        for viewer in (souderton, unchurched, almost):
-            page = self.listed(viewer)
-            self.assertEqual(page.data["count"], 0)
-            self.assertEqual(page.data["results"], [])
-            self.assertIsNone(page.data["next"])
-            self.assertIsNone(page.data["previous"])
+    def test_viewer_in_church_a_sees_only_church_a(self):
+        blooming = Church.objects.get(name="Blooming Glen Mennonite Church")
+        ada = make("ada", "Ada", blooming, profile_visibility="church")
+        make("ben", "Ben", blooming, profile_visibility="only_me")
+        make("fran", "Fran", self.franconia, profile_visibility="church")
+        make("sam", "Sam", self.souderton, profile_visibility="church")
+        viewer = make("glen", "Glen", blooming, profile_visibility="only_me")
+        self.assertEqual(self.ids(viewer), [ada.id])
 
-    def test_friend_outside_franconia_still_sees_an_empty_page(self):
+    def test_non_franconia_viewer_sees_their_church_not_franconia(self):
+        make(
+            "fran",
+            "Fran",
+            self.franconia,
+            profile_visibility="church",
+            email="fran-leak@example.com",
+            phone="+12155550100",
+        )
+        sam = make("sam", "Sam", self.souderton, profile_visibility="church")
+        viewer = make("sue", "Sue", self.souderton, profile_visibility="only_me")
+        page = self.listed(viewer)
+        self.assertEqual(page.data["count"], 1)
+        self.assertEqual([row["id"] for row in page.data["results"]], [sam.id])
+        self.assertEqual(set(page.data["results"][0]), ROW_KEYS)
+        body = str(page.content)
+        self.assertNotIn("Fran", body)
+        self.assertNotIn("fran-leak@example.com", body)
+        self.assertNotIn("+12155550100", body)
+
+    def test_franconia_viewer_still_sees_franconia(self):
+        maria = make("maria", "Maria", self.franconia, profile_visibility="church")
+        make("sam", "Sam", self.souderton, profile_visibility="church")
+        short = Church.objects.create(name="Franconia")
+        make("almost", "Al", short, profile_visibility="church")
+        self.assertEqual(self.ids(), [maria.id])
+
+    def test_viewer_with_no_church_gets_an_empty_page(self):
+        make("maria", "Maria", self.franconia, profile_visibility="church")
+        make("sam", "Sam", self.souderton, profile_visibility="church")
+        unchurched = make("none", "Pat", None, profile_visibility="church")
+        page = self.listed(unchurched)
+        self.assertEqual(page.data["count"], 0)
+        self.assertEqual(page.data["results"], [])
+        self.assertIsNone(page.data["next"])
+        self.assertIsNone(page.data["previous"])
+
+    def test_friendship_does_not_widen_the_directory_past_the_viewers_church(self):
         maria = make("maria", "Maria", self.franconia, profile_visibility="church")
         friend = make("pal", "Pat", self.souderton, profile_visibility="church")
         Friendship.objects.create(requester=friend, recipient=maria, status="accepted")
-        self.assertEqual(self.ids(friend), [])
+        self.assertEqual(self.ids(friend), [friend.id])
+        self.assertEqual(self.ids(), [maria.id])
+
+    def test_household_children_stay_inside_the_viewers_church(self):
+        souderton_parent = make(
+            "sparent",
+            "Sara",
+            self.souderton,
+            profile_visibility="church",
+            email="sara-leak@example.com",
+            phone="+12155550111",
+        )
+        souderton_parent.show_household_in_directory = True
+        souderton_parent.save(update_fields=["show_household_in_directory"])
+        pippa = HouseholdDependent.objects.create(
+            parent=souderton_parent,
+            name="Pippa Secret",
+            relationship="child",
+            date_of_birth=date(2015, 3, 4),
+        )
+        franconia_parent = make("fparent", "Frank", self.franconia, profile_visibility="church")
+        franconia_parent.show_household_in_directory = True
+        franconia_parent.save(update_fields=["show_household_in_directory"])
+        HouseholdDependent.objects.create(
+            parent=franconia_parent,
+            name="Nina",
+            relationship="child",
+            date_of_birth=date(2016, 5, 6),
+        )
+
+        souderton_page = self.listed(
+            make("sue", "Sue", self.souderton, profile_visibility="only_me")
+        )
+        self.assertEqual(
+            [row["id"] for row in souderton_page.data["results"]], [souderton_parent.id]
+        )
+        self.assertEqual(
+            souderton_page.data["results"][0]["household_children"],
+            [{"id": pippa.id, "first_name": "Pippa", "birth_month": 3, "birth_day": 4}],
+        )
+        souderton_body = str(souderton_page.content)
+        self.assertNotIn("Nina", souderton_body)
+        self.assertNotIn("Secret", souderton_body)
+        self.assertNotIn("sara-leak@example.com", souderton_body)
+        self.assertNotIn("+12155550111", souderton_body)
+
+        minor = make("sminor", "Mia", self.souderton, age=16, profile_visibility="only_me")
+        minor_page = self.listed(minor)
+        self.assertEqual([row["id"] for row in minor_page.data["results"]], [souderton_parent.id])
+        self.assertEqual(minor_page.data["results"][0]["household_children"], [])
+        self.assertNotIn("Pippa", str(minor_page.content))
+
+        franconia_page = self.listed()
+        self.assertEqual(
+            [row["id"] for row in franconia_page.data["results"]], [franconia_parent.id]
+        )
+        self.assertEqual(
+            franconia_page.data["results"][0]["household_children"][0]["first_name"], "Nina"
+        )
+        self.assertNotIn("Pippa", str(franconia_page.content))
 
     def test_church_visibility_is_listed_and_other_levels_are_not(self):
         listed = make(

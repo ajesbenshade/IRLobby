@@ -1,4 +1,4 @@
-"""GET /api/directory/ — paginated Franconia church directory."""
+"""GET /api/directory/ — paginated directory of the viewer's church."""
 
 from rest_framework import generics, serializers
 from rest_framework.pagination import PageNumberPagination
@@ -31,7 +31,7 @@ class DirectoryEntrySerializer(serializers.Serializer):
 
 
 class DirectoryListView(generics.ListAPIView):
-    """Signed-in Franconia members. Anyone else who is signed in gets an empty page."""
+    """Signed-in members of a church. A viewer with no church gets an empty page."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = DirectoryEntrySerializer

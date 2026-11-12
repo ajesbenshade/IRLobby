@@ -16,7 +16,8 @@
  * - `POST /api/directory/wishes/` `{ child_id }` is specified and not implemented. No chat `style`
  *   field exists. Wish falls back to a plain 1:1 to the parent, with the child's name in the text,
  *   and only when the viewer is already friends with that parent.
- * - A non-Franconia viewer gets 200 and an empty page. The client shows the empty-directory copy.
+ * - The list is the viewer's home church. A viewer with no church gets 200 and an empty page.
+ *   The client shows the empty-directory copy. The list is never every church.
  */
 
 export const DIRECTORY_SERVER_SEARCH_AFTER = 200;

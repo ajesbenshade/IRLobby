@@ -477,7 +477,7 @@ Phone numbers are never present in any other response (chat, attendees, who's-co
 
 `GET /api/directory/?q=&page=` (auth)
 
-Paginated list of Franconia Mennonite Church members for a signed-in member of that church. The church is the seeded row named exactly `Franconia Mennonite Church` (the same row the website calendar uses). Page shape matches the other list endpoints (`PageNumberPagination`, page size 20):
+Paginated list of members of the signed-in viewer's home church (`viewer.church_id`). A Franconia Mennonite Church member sees that directory because it is their church. The response is never a list of every church. Page shape matches the other list endpoints (`PageNumberPagination`, page size 20):
 
 ```json
 {
@@ -499,8 +499,8 @@ Paginated list of Franconia Mennonite Church members for a signed-in member of t
 ```
 
 - **401** when not signed in.
-- A signed-in member of another church, or someone with no church, gets **200** with an empty page (`count: 0`, `results: []`). A church whose name is only "Franconia" is not this church. Friends outside Franconia do not get a wider list.
-- Listed people: active Franconia members whose `profile_visibility` is `church`. `only_me`, `friends`, and `public` are left out. You are included when you qualify.
+- A signed-in viewer with no `church_id` gets **200** with an empty page (`count: 0`, `results: []`). A member of one church does not see another church's members. Friendship does not widen the list.
+- Listed people: active members of the viewer's church whose `profile_visibility` is `church`. `only_me`, `friends`, and `public` are left out. You are included when you qualify.
 - Age uses `America/New_York` and the same calendar math as `age_on`. Under-18 accounts are never rows. An account with no birth date is listed (the rest of the app treats that as an adult). Feb 29 birthdays stay 17 through Feb 28 of a non-leap year and turn 18 on March 1.
 - People blocked in either direction are left out (`BlockedUser`, the same helper as friends and prayers).
 - Sorted A–Z by first name, then last name, then id. Name sorting is case-insensitive.
@@ -508,13 +508,13 @@ Paginated list of Franconia Mennonite Church members for a signed-in member of t
 - Each adult row is only `id`, `first_name`, `last_initial`, `avatar_url`, and `household_children`. `last_initial` is one capital letter from the last name, or `""` when there is no last name. `avatar_url` is `""` when unset. No email, phone, city, mailing address, bio, sex, or birth date.
 - Opening an adult uses the existing `GET /api/users/<id>/profile/` card and its visibility checks. There is no separate directory detail URL, and no profile URL for a child.
 
-`household_children` is always a list. It is empty unless every one of these holds: the parent row is listed (`profile_visibility` `church`), the parent has `show_household_in_directory` on, and the viewer is a Franconia member with a birth date that makes them 18 or older. A viewer with no birth date can see adult rows and still gets `[]` for children. A block either way removes the parent row, so that parent's children are not shown either.
+`household_children` is always a list. It is empty unless every one of these holds: the parent row is listed (`profile_visibility` `church`), the parent has `show_household_in_directory` on, and the viewer belongs to that same church and has a birth date that makes them 18 or older. A viewer with no birth date can see adult rows and still gets `[]` for children. A block either way removes the parent row, so that parent's children are not shown either.
 
 Each child object is only `id` (the household member id, not a user id), `first_name`, `birth_month`, and `birth_day`. No year, last name, photo, sex, mailing address, email, or phone. `first_name` is the first word of the household member's stored name. Children are under-18 household members with a full `date_of_birth`. A month-and-year-only child, a spouse, and any household row that is 18 or older are left out. A 13–17 year old who already has a user account (the same name and birth-date match the household rules use) is left out of `household_children` and is also not an adult row. Children are never top-level `results` entries. Nested children are sorted by first name, then id.
 
 `show_household_in_directory` (bool, default `false`) is on `GET/PATCH /api/users/profile/` and on the user object in login and auth-status payloads, with the other profile fields. Patching it does not require `profile_visibility` to already be `church`; the Directory still hides the children until it is. Migration `users/0017_user_show_household_in_directory`. No other new columns.
 
-Birthday wishes to a parent are not implemented. 1:1 chat exists, and a message is plain text with no `style` field, so this release does not add a wish endpoint or a birthday-card message type. `POST /api/directory/wishes/` is not a route. When it ships, the intended call is that path with `{ "child_id": <household member id> }` from a signed-in Franconia adult who is accepted friends with the parent. The server would reuse the parent's 1:1 and store `style: "birthday_card"` plus the child's first name. Not friends would be 403. Anyone blocked, opted out, or asking about a child who is not listed would be 404.
+Birthday wishes to a parent are not implemented. 1:1 chat exists, and a message is plain text with no `style` field, so this release does not add a wish endpoint or a birthday-card message type. `POST /api/directory/wishes/` is not a route. When it ships, the intended call is that path with `{ "child_id": <household member id> }` from a signed-in adult in the parent's church who is accepted friends with the parent. The server would reuse the parent's 1:1 and store `style: "birthday_card"` plus the child's first name. Not friends would be 403. Anyone blocked, opted out, or asking about a child who is not listed would be 404.
 
 Gathering RSVP and host views are unchanged: hosts still do not see a child's birthday there. Adult `show_birthday` is unchanged.
 

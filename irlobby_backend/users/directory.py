@@ -1,7 +1,8 @@
-"""Who appears in the Franconia church Directory.
+"""Who appears in the viewer's church Directory.
 
 Adults are users. Household children are nested under a parent and are never rows of
-their own. Gathering, profile-card, and friend birthday rules live elsewhere.
+their own. The list is that viewer's home church only. Gathering, profile-card, and
+friend birthday rules live elsewhere.
 """
 
 from __future__ import annotations
@@ -13,20 +14,10 @@ from django.db.models.functions import Lower
 
 from activities.eligibility import age_on, ny_today
 from activities.household_rules import minor_account_for_dependent
-from activities.models import FRANCONIA_CHURCH_NAME, Church, HouseholdDependent
+from activities.models import HouseholdDependent
 
 from .models import User
 from .social import blocked_user_ids
-
-
-def franconia_church_id() -> int | None:
-    """Id of the seeded Franconia Mennonite Church row, or None when it is missing."""
-    return Church.objects.filter(name=FRANCONIA_CHURCH_NAME).values_list("id", flat=True).first()
-
-
-def is_franconia_member(user) -> bool:
-    church_id = franconia_church_id()
-    return church_id is not None and getattr(user, "church_id", None) == church_id
 
 
 def at_least_18_q(today: date | None = None) -> Q:
@@ -58,7 +49,12 @@ def viewer_is_directory_adult(viewer) -> bool:
 
 
 def viewer_may_see_household_children(viewer) -> bool:
-    return is_franconia_member(viewer) and viewer_is_directory_adult(viewer)
+    """An adult with a home church may see opted-in children of that church.
+
+    No church, or no birth date, does not. The queryset already limits rows to
+    ``viewer.church_id``, so this never opens another church's children.
+    """
+    return getattr(viewer, "church_id", None) is not None and viewer_is_directory_adult(viewer)
 
 
 def child_first_name(name: str) -> str:
@@ -116,9 +112,12 @@ def household_children_for(parent) -> list[dict]:
 
 
 def directory_queryset(viewer, query: str | None = None):
-    """Franconia members with church visibility, 18+ (or no birth date), not blocked."""
-    church_id = franconia_church_id()
-    if church_id is None or getattr(viewer, "church_id", None) != church_id:
+    """Members of the viewer's church with church visibility, 18+ (or no birth date), not blocked.
+
+    A viewer with no ``church_id`` gets an empty queryset. This is never every church.
+    """
+    church_id = getattr(viewer, "church_id", None)
+    if church_id is None:
         return User.objects.none()
     hidden = blocked_user_ids(viewer)
     qs = User.objects.filter(
